@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { TripBookingSection } from '@/components/travel/TripBookingSection';
 import { TripDetailActions } from '@/components/trips/TripDetailActions';
 import { formatTripDate, formatAgeRange, getTripStatus } from '@/lib/utils/trip';
 import { getInitialsFromNames } from '@/lib/utils/user';
@@ -129,6 +130,14 @@ export default async function TripDetailPage({ params }: PageProps) {
                   isCreator={isCreator}
                   isParticipant={!!isParticipant}
                   isFavorited={trip.isFavorited}
+                />
+
+                <TripBookingSection
+                  tripId={trip.id}
+                  destination={trip.destination}
+                  startDate={trip.startDate}
+                  endDate={trip.endDate}
+                  maxParticipants={trip.maxParticipants}
                 />
               </CardContent>
             </Card>

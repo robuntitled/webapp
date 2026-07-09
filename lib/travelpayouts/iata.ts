@@ -1,0 +1,177 @@
+/** Mappa destinazioni comuni (italiano/inglese) → codice IATA aeroporto/città. */
+const DESTINATION_IATA: Record<string, string> = {
+  thailandia: 'BKK',
+  thailand: 'BKK',
+  bangkok: 'BKK',
+  phuket: 'HKT',
+  bali: 'DPS',
+  indonesia: 'DPS',
+  giappone: 'TYO',
+  japan: 'TYO',
+  tokyo: 'TYO',
+  osaka: 'OSA',
+  'new york': 'NYC',
+  usa: 'NYC',
+  'stati uniti': 'NYC',
+  londra: 'LON',
+  london: 'LON',
+  'regno unito': 'LON',
+  parigi: 'PAR',
+  paris: 'PAR',
+  francia: 'PAR',
+  barcellona: 'BCN',
+  barcelona: 'BCN',
+  spagna: 'BCN',
+  madrid: 'MAD',
+  lisbona: 'LIS',
+  lisbon: 'LIS',
+  portogallo: 'LIS',
+  amsterdam: 'AMS',
+  olanda: 'AMS',
+  berlino: 'BER',
+  berlin: 'BER',
+  germania: 'BER',
+  roma: 'ROM',
+  rome: 'ROM',
+  milano: 'MIL',
+  milan: 'MIL',
+  italia: 'ROM',
+  napoli: 'NAP',
+  naples: 'NAP',
+  venezia: 'VCE',
+  venice: 'VCE',
+  firenze: 'FLR',
+  florence: 'FLR',
+  sicilia: 'CTA',
+  palermo: 'PMO',
+  catania: 'CTA',
+  sardegna: 'CAG',
+  cagliari: 'CAG',
+  grecia: 'ATH',
+  greece: 'ATH',
+  atene: 'ATH',
+  athens: 'ATH',
+  santorini: 'JTR',
+  mykonos: 'JMK',
+  croazia: 'ZAG',
+  croatia: 'ZAG',
+  dubrovnik: 'DBV',
+  split: 'SPU',
+  zagabria: 'ZAG',
+  zagreb: 'ZAG',
+  marocco: 'RAK',
+  morocco: 'RAK',
+  marrakech: 'RAK',
+  marocco_marrakech: 'RAK',
+  egitto: 'CAI',
+  egypt: 'CAI',
+  cairo: 'CAI',
+  'sharm el sheikh': 'SSH',
+  dubai: 'DXB',
+  'emirati arabi': 'DXB',
+  uae: 'DXB',
+  malesia: 'KUL',
+  malaysia: 'KUL',
+  'kuala lumpur': 'KUL',
+  vietnam: 'SGN',
+  'ho chi minh': 'SGN',
+  hanoi: 'HAN',
+  cambogia: 'PNH',
+  cambodia: 'PNH',
+  'siem reap': 'REP',
+  sri_lanka: 'CMB',
+  'sri lanka': 'CMB',
+  colombo: 'CMB',
+  maldive: 'MLE',
+  maldives: 'MLE',
+  islanda: 'REK',
+  iceland: 'REK',
+  norvegia: 'OSL',
+  norway: 'OSL',
+  oslo: 'OSL',
+  svezia: 'STO',
+  sweden: 'STO',
+  stockholm: 'STO',
+  portogallo_algarve: 'FAO',
+  algarve: 'FAO',
+  canarie: 'LPA',
+  'isole canarie': 'LPA',
+  tenerife: 'TFS',
+  'costa rica': 'SJO',
+  messico: 'MEX',
+  mexico: 'MEX',
+  cancun: 'CUN',
+  cuba: 'HAV',
+  havana: 'HAV',
+  peru: 'LIM',
+  perù: 'LIM',
+  lima: 'LIM',
+  machu_picchu: 'CUZ',
+  cusco: 'CUZ',
+  brasile: 'RIO',
+  brazil: 'RIO',
+  'rio de janeiro': 'RIO',
+  argentina: 'BUE',
+  'buenos aires': 'BUE',
+  australia: 'SYD',
+  sydney: 'SYD',
+  melbourne: 'MEL',
+  'nuova zelanda': 'AKL',
+  'new zealand': 'AKL',
+  auckland: 'AKL',
+  india: 'DEL',
+  delhi: 'DEL',
+  mumbai: 'BOM',
+  goa: 'GOI',
+  cina: 'PEK',
+  china: 'PEK',
+  pechino: 'PEK',
+  beijing: 'PEK',
+  shanghai: 'SHA',
+  'hong kong': 'HKG',
+  singapore: 'SIN',
+  'corea del sud': 'SEL',
+  'south korea': 'SEL',
+  seoul: 'SEL',
+};
+
+function normalizeDestination(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/['']/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Risolve un testo destinazione (es. "Thailandia", "Bangkok, Thailandia") in codice IATA.
+ * Restituisce null se non trovato — in quel caso il link WL apre il form vuoto.
+ */
+export function resolveDestinationIata(destination: string): string | null {
+  if (!destination?.trim()) return null;
+
+  const normalized = normalizeDestination(destination);
+
+  if (/^[A-Z]{3}$/i.test(normalized)) {
+    return normalized.toUpperCase();
+  }
+
+  if (DESTINATION_IATA[normalized]) {
+    return DESTINATION_IATA[normalized];
+  }
+
+  const parts = normalized.split(/[,/|-]/).map((p) => p.trim());
+  for (const part of parts) {
+    if (DESTINATION_IATA[part]) return DESTINATION_IATA[part];
+  }
+
+  for (const [key, iata] of Object.entries(DESTINATION_IATA)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return iata;
+    }
+  }
+
+  return null;
+}

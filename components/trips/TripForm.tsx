@@ -20,6 +20,7 @@ import { Calendar as CalendarIcon, Image as ImageIcon, RotateCw } from 'lucide-r
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { FlightPriceEstimate } from '@/components/travel/FlightPriceEstimate';
 import type { TripWithRelations } from '@/types/trip';
 
 type PexelsImage = {
@@ -68,6 +69,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
   const [imageResults, setImageResults] = useState<PexelsImage[]>([]);
   const [selectedImageUrl, setSelectedImageUrl] = useState(initialTrip?.imageUrl ?? '');
   const [pexelsPage, setPexelsPage] = useState(1);
+  const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
 
   const handleImageSearch = async () => {
     if (!destination) return;
@@ -298,15 +300,29 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
         <Label htmlFor="price" className="text-base font-semibold">
           6. Prezzo Stimato a Persona (€)
         </Label>
+        <FlightPriceEstimate
+          destination={destination}
+          startDate={startDate}
+          endDate={endDate}
+          onSuggestPrice={(price) => {
+            setSuggestedPrice(price);
+            toast.success(`Prezzo volo indicativo applicato: ${price}€`);
+          }}
+        />
         <Input
           name="price"
           id="price"
           type="number"
-          defaultValue={initialTrip?.price}
-          placeholder="Es: 1500"
+          key={suggestedPrice ?? initialTrip?.price ?? 'empty'}
+          defaultValue={suggestedPrice ?? initialTrip?.price}
+          placeholder="Es: 1500 (puoi usare la stima volo sopra)"
           required
           min="1"
         />
+        <p className="text-xs text-muted-foreground">
+          La stima copre il volo da cache API. Aggiungi manualmente hotel, attività e margine
+          organizzativo al prezzo finale a persona.
+        </p>
       </div>
 
       <div className="pt-6">
