@@ -13,7 +13,8 @@
     "db:gdpr": "node scripts/apply-gdpr.mjs",
     "db:social": "node scripts/apply-social.mjs",
     "db:composer": "node scripts/apply-composer.mjs",
-    "db:chat": "node scripts/apply-chat.mjs"
+    "db:chat": "node scripts/apply-chat.mjs",
+    "deploy:vercel": "node scripts/vercel-deploy.mjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",
