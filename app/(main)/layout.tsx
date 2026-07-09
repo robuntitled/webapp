@@ -1,4 +1,4 @@
-import { Navbar } from "../../components/layout/Navbar"; // <-- PERCORSO RELATIVO CORRETTO
+import { Navbar } from '@/components/layout/Navbar';
 
 export default function MainLayout({
   children,
@@ -8,10 +8,7 @@ export default function MainLayout({
   return (
     <div>
       <Navbar />
-      {/* Aggiungiamo il padding qui, per spingere in basso solo il contenuto delle pagine interne */}
-      <main className="pt-16">
-        {children}
-      </main>
+      <main className="pt-16 flex-1">{children}</main>
     </div>
   );
 }

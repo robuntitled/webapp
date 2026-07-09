@@ -1,37 +1,50 @@
 'use server';
 
-import { auth } from '../auth';
-import { supabaseAdmin } from '../lib/supabase-admin';
+import { auth } from '@/auth';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { parseTripFormData } from '@/lib/validations/trip';
+import { ZodError } from 'zod';
+
+function toTripRecord(parsed: ReturnType<typeof parseTripFormData>) {
+  return {
+    title: parsed.title,
+    destination: parsed.destination,
+    start_date: parsed.startDate,
+    end_date: parsed.endDate,
+    description: parsed.description,
+    image_url: parsed.image_url || null,
+    price: parsed.price,
+    min_participants: parsed.minParticipants,
+    max_participants: parsed.maxParticipants,
+    min_age: parsed.minAge,
+    max_age: parsed.maxAge,
+  };
+}
 
 export async function createTrip(formData: FormData) {
-  const supabase = supabaseAdmin;
-  
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Devi essere loggato per creare un viaggio.');
   }
 
-  const tripData = {
-    title: formData.get('title') as string,
-    destination: formData.get('destination') as string,
-    start_date: formData.get('startDate') as string,
-    end_date: formData.get('endDate') as string,
-    description: formData.get('description') as string,
-    image_url: formData.get('image_url') as string,
-    price: Number(formData.get('price')),
-    min_participants: Number(formData.get('minParticipants')),
-    max_participants: Number(formData.get('maxParticipants')),
-    min_age: Number(formData.get('minAge')),
-    max_age: Number(formData.get('maxAge')),
-    creator_id: session.user.id,
-  };
-  
-  const { data, error } = await supabase
-    .from('trips')
-    .insert([tripData])
-    .select();
+  let parsed;
+  try {
+    parsed = parseTripFormData(formData);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new Error(error.issues[0]?.message ?? 'Dati del viaggio non validi');
+    }
+    throw error;
+  }
+
+  const { error } = await supabaseAdmin.from('trips').insert([
+    {
+      ...toTripRecord(parsed),
+      creator_id: session.user.id,
+    },
+  ]);
 
   if (error) {
     console.error('Errore nella creazione del viaggio:', error);
@@ -39,5 +52,38 @@ export async function createTrip(formData: FormData) {
   }
 
   revalidatePath('/dashboard');
-  redirect('/dashboard');
+  revalidatePath('/dashboard/miei-viaggi');
+  redirect('/dashboard/miei-viaggi');
+}
+
+export async function updateTrip(tripId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Devi essere loggato per modificare un viaggio.');
+  }
+
+  let parsed;
+  try {
+    parsed = parseTripFormData(formData);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new Error(error.issues[0]?.message ?? 'Dati del viaggio non validi');
+    }
+    throw error;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('trips')
+    .update(toTripRecord(parsed))
+    .match({ id: tripId, creator_id: session.user.id });
+
+  if (error) {
+    console.error('Errore nella modifica del viaggio:', error);
+    throw new Error(error.message);
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/miei-viaggi');
+  revalidatePath(`/viaggi/${tripId}`);
+  redirect('/dashboard/miei-viaggi');
 }

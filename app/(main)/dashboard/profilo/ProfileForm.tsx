@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { updateUserProfile, updateUserAvatar } from '../../../../actions/user';
+import { updateUserProfile, updateUserAvatar } from '@/actions/user';
+import type { UserProfile } from '@/types/user';
+import { getInitialsFromNames } from '@/lib/utils/user';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -17,14 +19,14 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import imageCompression from 'browser-image-compression';
+import Link from 'next/link';
+import { MIN_AGE_YEARS } from '@/lib/privacy/constants';
 
-const getInitials = (firstName?: string | null, lastName?: string | null): string => {
-  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  if (firstName) return firstName.substring(0, 2).toUpperCase();
-  return 'U';
-};
-
-export default function ProfileForm({ userProfile }: { userProfile: any }) {
+export default function ProfileForm({
+  userProfile,
+}: {
+  userProfile: UserProfile | null;
+}) {
   const [birthDate, setBirthDate] = useState<Date | undefined>(
     userProfile?.birth_date ? new Date(userProfile.birth_date) : undefined
   );
@@ -33,12 +35,15 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(userProfile?.image);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(userProfile?.image ?? null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const phoneParts = userProfile?.phone_number?.split(' ') || ['+39', ''];
-  const [phonePrefix, setPhonePrefix] = useState(phoneParts[0]);
-  const [phoneNumber, setPhoneNumber] = useState(phoneParts[1]);
+  const phoneParts = userProfile?.phone_number?.split(' ') ?? [];
+  const [phonePrefix, setPhonePrefix] = useState(phoneParts[0] ?? '+39');
+  const [phoneNumber, setPhoneNumber] = useState(phoneParts.slice(1).join(' '));
+  const [gender, setGender] = useState(userProfile?.gender ?? '');
+  const [privacyConsent, setPrivacyConsent] = useState(userProfile?.privacy_consent ?? false);
+  const [marketingConsent, setMarketingConsent] = useState(userProfile?.marketing_consent ?? false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,7 +78,9 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
         // Ricarichiamo la pagina per vedere la nuova immagine ovunque
         window.location.reload();
       }
-    } catch (error: any) { setMessage(`Errore: ${error.message}`); }
+    } catch (error) {
+      setMessage(`Errore: ${error instanceof Error ? error.message : 'Errore imprevisto'}`);
+    }
     setIsSubmitting(false);
   };
 
@@ -90,13 +97,32 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
       formData.set('birth_date', '');
     }
     
-    // Aggiungiamo il prefisso al formData
-    formData.append('phone_prefix', phonePrefix);
+    if (!privacyConsent) {
+      setMessage('Errore: Il consenso privacy è obbligatorio.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    formData.set('phone_prefix', phonePrefix);
+    formData.set('phone_number', phoneNumber);
+    formData.set('gender', gender);
+    if (privacyConsent) {
+      formData.set('privacy_consent', 'on');
+    } else {
+      formData.delete('privacy_consent');
+    }
+    if (marketingConsent) {
+      formData.set('marketing_consent', 'on');
+    } else {
+      formData.delete('marketing_consent');
+    }
 
     try {
       const result = await updateUserProfile(formData);
       setMessage(result.message);
-    } catch (error: any) { setMessage(`Errore: ${error.message}`); }
+    } catch (error) {
+      setMessage(`Errore: ${error instanceof Error ? error.message : 'Errore imprevisto'}`);
+    }
     setIsSubmitting(false);
   };
 
@@ -109,7 +135,9 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
           <div className="relative">
             <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
               <AvatarImage src={avatarPreview ?? undefined} style={{ objectFit: 'cover' }} />
-              <AvatarFallback className="text-3xl">{getInitials(userProfile?.first_name, userProfile?.last_name)}</AvatarFallback>
+              <AvatarFallback className="text-3xl">
+                {getInitialsFromNames(userProfile?.first_name, userProfile?.last_name)}
+              </AvatarFallback>
             </Avatar>
             <Button type="button" size="icon" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full" onClick={() => fileInputRef.current?.click()}><Camera className="h-4 w-4" /></Button>
             <input type="file" ref={fileInputRef} className="hidden" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} />
@@ -117,7 +145,7 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
           <div>
             <CardTitle className="text-2xl">{fullName || 'Utente'}</CardTitle>
             <CardDescription>Aggiorna i tuoi dati personali e le preferenze.</CardDescription>
-            {avatarFile && <div className="mt-2 flex items-center space-x-2"><Button size="sm" onClick={handleAvatarSubmit} disabled={isSubmitting}>{isSubmitting ? "Carico..." : "Salva Foto"}</Button><Button size="sm" variant="ghost" onClick={() => { setAvatarFile(null); setAvatarPreview(userProfile?.image); }}>Annulla</Button></div>}
+            {avatarFile && <div className="mt-2 flex items-center space-x-2"><Button size="sm" onClick={handleAvatarSubmit} disabled={isSubmitting}>{isSubmitting ? "Carico..." : "Salva Foto"}</Button><Button size="sm" variant="ghost" onClick={() => { setAvatarFile(null); setAvatarPreview(userProfile?.image ?? null); }}>Annulla</Button></div>}
           </div>
         </div>
       </CardHeader>
@@ -128,14 +156,30 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
               <div className="space-y-2"><Label htmlFor="first_name">Nome *</Label><Input id="first_name" name="first_name" defaultValue={userProfile?.first_name ?? ''} required /></div>
               <div className="space-y-2"><Label htmlFor="last_name">Cognome *</Label><Input id="last_name" name="last_name" defaultValue={userProfile?.last_name ?? ''} required /></div>
-              <div className="space-y-2"><Label>Data di Nascita *</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal h-10", !birthDate && "text-muted-foreground")} type="button"><CalendarIcon className="mr-2 h-4 w-4" />{birthDate ? format(birthDate, "PPP", { locale: it }) : <span>Scegli una data</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={birthDate} onSelect={setBirthDate} captionLayout="dropdown-buttons" fromYear={1940} toYear={new Date().getFullYear() - 18} initialFocus /></PopoverContent></Popover></div>
-              <div className="space-y-2"><Label>Sesso *</Label><RadioGroup name="gender" defaultValue={userProfile?.gender} className="flex items-center space-x-4 pt-2" required><div className="flex items-center space-x-2"><RadioGroupItem value="uomo" id="male" /><Label htmlFor="male">Uomo</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="donna" id="female" /><Label htmlFor="female">Donna</Label></div></RadioGroup></div>
+              <div className="space-y-2"><Label>Data di nascita (facoltativa, min. {MIN_AGE_YEARS} anni)</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal h-10", !birthDate && "text-muted-foreground")} type="button"><CalendarIcon className="mr-2 h-4 w-4" />{birthDate ? format(birthDate, "PPP", { locale: it }) : <span>Scegli una data</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={birthDate} onSelect={setBirthDate} captionLayout="dropdown" fromYear={1940} toYear={new Date().getFullYear() - MIN_AGE_YEARS} initialFocus /></PopoverContent></Popover></div>
+              <div className="space-y-2">
+                <Label>Sesso (facoltativo)</Label>
+                <RadioGroup
+                  value={gender}
+                  onValueChange={setGender}
+                  className="flex items-center space-x-4 pt-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="uomo" id="male" />
+                    <Label htmlFor="male">Uomo</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="donna" id="female" />
+                    <Label htmlFor="female">Donna</Label>
+                  </div>
+                </RadioGroup>
+              </div>
             </div>
           </div>
           <div className="border-t pt-6 space-y-4">
-             <h3 className="font-semibold text-lg border-b pb-2">Contatti e Residenza</h3>
+             <h3 className="font-semibold text-lg border-b pb-2">Contatti e residenza (facoltativi)</h3>
              <div className="space-y-2">
-                <Label htmlFor="phone_number">Numero di Telefono *</Label>
+                <Label htmlFor="phone_number">Numero di telefono</Label>
                 <div className="flex gap-2">
                     <Select name="phone_prefix" defaultValue={phonePrefix} onValueChange={setPhonePrefix}>
                         <SelectTrigger className="w-[120px]"><SelectValue placeholder="Pref." /></SelectTrigger>
@@ -171,23 +215,57 @@ export default function ProfileForm({ userProfile }: { userProfile: any }) {
                           <SelectItem value="+41">+41 CH</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Input id="phone_number" name="phone_number" type="tel" defaultValue={phoneNumber} required className="flex-grow" />
+                    <Input
+                      id="phone_number"
+                      name="phone_number"
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="flex-grow"
+                    />
                 </div>
               </div>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-                <div className="space-y-2 sm:col-span-3"><Label htmlFor="address_street">Via / Piazza *</Label><Input id="address_street" name="address_street" defaultValue={userProfile?.address_street ?? ''} required /></div>
-                <div className="space-y-2 sm:col-span-2"><Label htmlFor="address_number">N° Civico *</Label><Input id="address_number" name="address_number" defaultValue={userProfile?.address_number ?? ''} required /></div>
+                <div className="space-y-2 sm:col-span-3"><Label htmlFor="address_street">Via / Piazza</Label><Input id="address_street" name="address_street" defaultValue={userProfile?.address_street ?? ''} /></div>
+                <div className="space-y-2 sm:col-span-2"><Label htmlFor="address_number">N° Civico</Label><Input id="address_number" name="address_number" defaultValue={userProfile?.address_number ?? ''} /></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                 <div className="space-y-2"><Label htmlFor="address_city">Città *</Label><Input id="address_city" name="address_city" defaultValue={userProfile?.address_city ?? ''} required /></div>
-                 <div className="space-y-2"><Label htmlFor="address_postal_code">CAP *</Label><Input id="address_postal_code" name="address_postal_code" defaultValue={userProfile?.address_postal_code ?? ''} required /></div>
-                 <div className="space-y-2"><Label htmlFor="country">Paese *</Label><Input id="country" name="country" defaultValue={userProfile?.country ?? ''} required /></div>
+                 <div className="space-y-2"><Label htmlFor="address_city">Città</Label><Input id="address_city" name="address_city" defaultValue={userProfile?.address_city ?? ''} /></div>
+                 <div className="space-y-2"><Label htmlFor="address_postal_code">CAP</Label><Input id="address_postal_code" name="address_postal_code" defaultValue={userProfile?.address_postal_code ?? ''} /></div>
+                 <div className="space-y-2"><Label htmlFor="country">Paese</Label><Input id="country" name="country" defaultValue={userProfile?.country ?? ''} /></div>
             </div>
           </div>
           <div className="space-y-4 pt-6 border-t">
             <h3 className="font-semibold text-lg border-b pb-2">Consensi</h3>
-            <div className="items-top flex space-x-2 pt-4"><Checkbox id="privacy" name="privacy_consent" defaultChecked={userProfile?.privacy_consent} required /><div className="grid gap-1.5 leading-none"><label htmlFor="privacy" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Autorizzo il trattamento dei dati personali. *</label></div></div>
-            <div className="items-top flex space-x-2"><Checkbox id="marketing" name="marketing_consent" defaultChecked={userProfile?.marketing_consent} /><div className="grid gap-1.5 leading-none"><label htmlFor="marketing" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Acconsento a ricevere email di marketing.</label></div></div>
+            <div className="items-top flex space-x-2 pt-4">
+              <Checkbox
+                id="privacy"
+                checked={privacyConsent}
+                onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+                required
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="privacy" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Ho letto l&apos;{' '}
+                  <Link href="/privacy" className="text-blue-600 hover:underline" target="_blank">
+                    Informativa Privacy
+                  </Link>{' '}
+                  e autorizzo il trattamento dei dati. *
+                </label>
+              </div>
+            </div>
+            <div className="items-top flex space-x-2">
+              <Checkbox
+                id="marketing"
+                checked={marketingConsent}
+                onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="marketing" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Acconsento a ricevere email di marketing.
+                </label>
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between border-t pt-6">

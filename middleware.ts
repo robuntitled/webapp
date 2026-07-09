@@ -1,11 +1,34 @@
-// middleware.ts
 import NextAuth from 'next-auth';
-import { authConfig } from './auth.config';
+import { NextResponse } from 'next/server';
+import { authConfig } from '@/auth.config';
+import { GDPR_PUBLIC_PATHS } from '@/lib/auth-session';
 
-// Il middleware ora usa solo la configurazione "leggera"
-export default NextAuth(authConfig).auth;
+const { auth } = NextAuth(authConfig);
 
-// Opzionale: Specifica su quali rotte deve girare il middleware
+const GDPR_PUBLIC = new Set(GDPR_PUBLIC_PATHS);
+
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+  const session = req.auth;
+
+  if (session?.user?.id && !session.user.privacyConsentAccepted) {
+    const isExempt =
+      GDPR_PUBLIC.has(pathname) || pathname.startsWith('/api');
+    if (!isExempt) {
+      return NextResponse.redirect(new URL('/completa-registrazione', req.nextUrl));
+    }
+  }
+
+  if (
+    pathname === '/completa-registrazione' &&
+    session?.user?.privacyConsentAccepted
+  ) {
+    return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
+  }
+
+  return NextResponse.next();
+});
+
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

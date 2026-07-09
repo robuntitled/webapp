@@ -1,0 +1,20 @@
+/** Valori placeholder mostrati finché LEGAL_* non è compilato in .env.local */
+export const LEGAL_PLACEHOLDERS = {
+  companyName: '[Ragione sociale da definire]',
+  tradeName: 'NomadLink',
+  vatId: '[P.IVA da definire]',
+  fiscalCode: '[Codice fiscale da definire]',
+  addressLine: '[Indirizzo sede legale da definire]',
+  city: '[Città da definire]',
+  province: '[Provincia da definire]',
+  postalCode: '[CAP da definire]',
+  country: 'Italia',
+  privacyEmail: 'privacy@nomadlink.it',
+  supportEmail: 'supporto@nomadlink.it',
+  dpoEmail: '[Email DPO / referente privacy da definire]',
+  pec: '[PEC da definire]',
+  phone: '[Telefono da definire]',
+  rea: '[Iscrizione REA / CCIAA da definire]',
+  shareCapital: '[Capitale sociale da definire]',
+  websiteUrl: 'https://nomadlink.it',
+} as const;

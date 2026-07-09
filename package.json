@@ -6,10 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "db:security": "node scripts/apply-security.mjs",
+    "db:verify-security": "node scripts/verify-security.mjs",
+    "db:gdpr": "node scripts/apply-gdpr.mjs"
   },
   "dependencies": {
-    "@auth/supabase-adapter": "^1.9.1",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.2",
@@ -24,7 +27,6 @@
     "@radix-ui/react-switch": "^1.2.5",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
-    "@types/bcryptjs": "^3.0.0",
     "bcryptjs": "^3.0.2",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
@@ -39,16 +41,20 @@
     "react": "^19.0.0",
     "react-day-picker": "^9.7.0",
     "react-dom": "^19.0.0",
+    "server-only": "^0.0.1",
     "sonner": "^2.0.5",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "pg": "^8.22.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

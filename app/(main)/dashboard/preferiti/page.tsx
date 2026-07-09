@@ -1,53 +1,8 @@
-import { auth } from '../../../../auth';
+import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { supabaseAdmin } from '../../../../lib/supabase-admin'; // <-- IMPORT CORRETTO
-import { TripCard, TripWithRelations } from '../../../../components/trips/TripCard';
+import { fetchFavoriteTrips } from '@/lib/data/trips';
+import { FavoriteTripCard } from '@/components/trips/FavoriteTripCard';
 import { Heart } from 'lucide-react';
-
-// Questa funzione ora usa il client Admin per recuperare i dati
-async function getFavoriteTrips(userId: string) {
-  const supabase = supabaseAdmin; // <-- CLIENT CORRETTO
-
-  // Step 1: Trova tutti gli ID dei viaggi che l'utente ha messo tra i preferiti
-  const { data: favoriteRelations, error: favError } = await supabase
-    .from('favorite_trips')
-    .select('trip_id')
-    .eq('user_id', userId);
-
-  if (favError) {
-    console.error("Errore nel recuperare i preferiti:", favError);
-    return [];
-  }
-  if (!favoriteRelations || favoriteRelations.length === 0) {
-    return [];
-  }
-  const tripIds = favoriteRelations.map(fav => fav.trip_id);
-
-  // Step 2: Ora recuperiamo tutti i dettagli dei viaggi che corrispondono a quegli ID
-  const { data: trips, error: tripsError } = await supabase
-    .from('trips')
-    .select(`
-      id, title, destination, description, price,
-      startDate: start_date, 
-      endDate: end_date, 
-      minParticipants: min_participants, 
-      maxParticipants: max_participants, 
-      minAge: min_age, 
-      maxAge: max_age, 
-      imageUrl: image_url,
-      creator:users(*),
-      favorite_trips(user_id)
-    `)
-    .in('id', tripIds)
-    .order('createdAt', { ascending: false });
-
-  if (tripsError) {
-    console.error("Errore nel recuperare i dettagli dei viaggi preferiti:", tripsError);
-    return [];
-  }
-
-  return trips;
-}
 
 export default async function FavoritesPage() {
   const session = await auth();
@@ -56,7 +11,7 @@ export default async function FavoritesPage() {
     redirect('/');
   }
 
-  const favoriteTrips = await getFavoriteTrips(session.user.id);
+  const favoriteTrips = await fetchFavoriteTrips(session.user.id);
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -66,9 +21,9 @@ export default async function FavoritesPage() {
       </div>
 
       {favoriteTrips.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="space-y-4">
           {favoriteTrips.map((trip) => (
-            <TripCard key={trip.id} trip={trip as TripWithRelations} />
+            <FavoriteTripCard key={trip.id} trip={trip} session={session} />
           ))}
         </div>
       ) : (

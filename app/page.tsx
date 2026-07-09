@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Mail, KeyRound, ArrowRight, User } from 'lucide-react';
-import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
-import { signIn } from "next-auth/react";
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
+import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
+import { HeroBackground } from '@/components/brand/HeroBackground';
+import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Camera } from 'lucide-react';
 
 export default function LoginPage() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -16,6 +19,9 @@ export default function LoginPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -26,12 +32,25 @@ export default function LoginPage() {
     setError('');
 
     if (isRegisterMode) {
-      // --- Logica di REGISTRAZIONE ---
+      if (!privacyAccepted || !termsAccepted) {
+        setError('Devi accettare l\'informativa privacy e i termini di servizio.');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ firstName, lastName, email, password }),
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            email,
+            password,
+            privacyConsent: true,
+            termsAccepted: true,
+            marketingConsent: marketingAccepted,
+          }),
         });
 
         if (!response.ok) {
@@ -41,17 +60,16 @@ export default function LoginPage() {
 
         const result = await signIn('credentials', { email, password, redirect: false });
         if (result?.ok) {
-            router.push('/dashboard');
+          router.push('/dashboard');
         } else {
-            setError('Registrazione riuscita. Prova ad accedere.');
+          setError('Registrazione riuscita. Prova ad accedere.');
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Errore imprevisto');
       } finally {
         setIsLoading(false);
       }
     } else {
-      // --- Logica di LOGIN ---
       try {
         const result = await signIn('credentials', {
           redirect: false,
@@ -64,7 +82,7 @@ export default function LoginPage() {
         } else if (result?.ok) {
           router.push('/dashboard');
         }
-      } catch (err) {
+      } catch {
         setError('Si è verificato un errore inaspettato.');
       } finally {
         setIsLoading(false);
@@ -73,72 +91,162 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative flex items-center justify-center min-h-screen">
-      <Image
-        src="/images/login-background.jpg"
-        alt="Sfondo di un paesaggio di viaggio"
-        fill
-        style={{objectFit:"cover"}}
-        className="-z-10"
-        quality={90}
-      />
-      
-      <div className="z-10 w-full max-w-md p-8 space-y-6 bg-white/90 dark:bg-slate-950/90 backdrop-blur-sm rounded-2xl shadow-2xl">
-          <div className="text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">NomadLink</h1>
-              <p className="mt-2 text-slate-600 dark:text-slate-400">{isRegisterMode ? 'Crea il tuo account per iniziare' : 'Il tuo prossimo viaggio di gruppo inizia qui.'}</p>
-          </div>
+    <main className="relative min-h-screen">
+      <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="gradient" />
 
-          <div className="space-y-2">
-            <Button variant="outline" className="w-full" onClick={() => signIn('google', { redirectTo: '/dashboard' })}>
-              <GoogleIcon className="w-4 h-4 mr-2" />
-              Continua con Google
-            </Button>
-            <Button className="w-full bg-[#1877F2] text-white hover:bg-[#166eab]" onClick={() => signIn('facebook', { redirectTo: '/dashboard' })}>
-              <FacebookIcon className="w-4 h-4 mr-2" />
-              Continua con Facebook
-            </Button>
+      <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
+        {/* Brand panel — visibile su desktop */}
+        <div className="hidden lg:flex lg:w-1/2 flex-col justify-end p-12 pb-20">
+          <div className="flex items-center gap-3 mb-6">
+            <Image src="/assets/logo.png" alt="" width={48} height={48} className="rounded-xl" />
+            <span className="font-display text-3xl font-semibold text-white">NomadLink</span>
           </div>
+          <h1 className="font-display text-5xl xl:text-6xl font-semibold text-white leading-[1.1] max-w-lg">
+            Il mondo, visto da chi lo vive.
+          </h1>
+          <p className="mt-6 text-lg text-white/75 max-w-md leading-relaxed">
+            Viaggi di gruppo autentici, raccontati attraverso la fotografia di chi li ha vissuti
+            sul posto.
+          </p>
+          <p className="mt-8 flex items-center gap-2 text-sm text-white/50">
+            <Camera className="h-4 w-4" />
+            Foto originali da ogni angolo del pianeta
+          </p>
+        </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-300" /></div>
-            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white/90 dark:bg-slate-950/90 text-slate-500 backdrop-blur-sm">oppure</span></div>
-          </div>
+        {/* Form panel */}
+        <div className="flex flex-1 items-center justify-center px-4 py-16 lg:py-12">
+          <div className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
+            <div className="text-center lg:text-left">
+              <div className="flex items-center justify-center lg:justify-start gap-2 mb-4 lg:hidden">
+                <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-lg" />
+                <span className="font-display text-2xl font-semibold">NomadLink</span>
+              </div>
+              <h2 className="font-display text-2xl font-semibold text-foreground">
+                {isRegisterMode ? 'Crea il tuo account' : 'Bentornato'}
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                {isRegisterMode
+                  ? 'Unisciti alla community di viaggiatori'
+                  : 'Accedi per scoprire il tuo prossimo viaggio'}
+              </p>
+            </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full h-11 rounded-xl bg-background/80"
+                onClick={() => signIn('google', { redirectTo: '/dashboard' })}
+              >
+                <GoogleIcon className="w-4 h-4 mr-2" />
+                Continua con Google
+              </Button>
+              <Button
+                className="w-full h-11 rounded-xl bg-[#1877F2] hover:bg-[#166eab] text-white"
+                onClick={() => signIn('facebook', { redirectTo: '/dashboard' })}
+              >
+                <FacebookIcon className="w-4 h-4 mr-2" />
+                Continua con Facebook
+              </Button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                <span className="bg-transparent px-3 text-muted-foreground">oppure email</span>
+              </div>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
               {isRegisterMode && (
-                  <>
-                    <div className="grid w-full items-center gap-1.5">
-                        <Label htmlFor="firstName" className="text-slate-800 dark:text-slate-200">Nome</Label>
-                        <Input type="text" id="firstName" placeholder="Il tuo nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                    </div>
-                    <div className="grid w-full items-center gap-1.5">
-                        <Label htmlFor="lastName" className="text-slate-800 dark:text-slate-200">Cognome</Label>
-                        <Input type="text" id="lastName" placeholder="Il tuo cognome" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-                    </div>
-                  </>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="firstName">Nome</Label>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                      className="h-11 rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lastName">Cognome</Label>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                      className="h-11 rounded-xl"
+                    />
+                  </div>
+                </div>
               )}
-              <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="email" className="text-slate-800 dark:text-slate-200">Email</Label>
-                  <Input type="email" id="email" placeholder="nome@esempio.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  type="email"
+                  id="email"
+                  placeholder="nome@esempio.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-11 rounded-xl"
+                />
               </div>
-              <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="password" className="text-slate-800 dark:text-slate-200">Password</Label>
-                  <Input type="password" id="password" placeholder="La tua password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={isRegisterMode ? 8 : undefined}
+                  className="h-11 rounded-xl"
+                />
               </div>
 
-              {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-              
-              <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? 'Caricamento...' : (isRegisterMode ? 'Registrati' : 'Accedi')}
-              </Button>
-          </form>
+              {isRegisterMode && (
+                <ConsentCheckboxes
+                  privacyAccepted={privacyAccepted}
+                  termsAccepted={termsAccepted}
+                  marketingAccepted={marketingAccepted}
+                  onPrivacyChange={setPrivacyAccepted}
+                  onTermsChange={setTermsAccepted}
+                  onMarketingChange={setMarketingAccepted}
+                />
+              )}
 
-          <div className="text-center text-sm">
-              <Button variant="link" onClick={() => setIsRegisterMode(!isRegisterMode)}>
-                  {isRegisterMode ? 'Hai già un account? Accedi' : 'Non hai un account? Registrati'}
+              {error && (
+                <p className="text-sm text-destructive text-center bg-destructive/10 rounded-lg py-2 px-3">
+                  {error}
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-11 rounded-xl text-base font-medium"
+              >
+                {isLoading ? 'Caricamento...' : isRegisterMode ? 'Registrati' : 'Accedi'}
               </Button>
+            </form>
+
+            <p className="text-center text-sm text-muted-foreground">
+              {isRegisterMode ? 'Hai già un account?' : 'Non hai un account?'}{' '}
+              <button
+                type="button"
+                onClick={() => setIsRegisterMode(!isRegisterMode)}
+                className="font-medium text-primary hover:underline"
+              >
+                {isRegisterMode ? 'Accedi' : 'Registrati'}
+              </button>
+            </p>
           </div>
+        </div>
       </div>
     </main>
   );

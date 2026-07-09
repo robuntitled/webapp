@@ -22,6 +22,15 @@
 
 # misc
 .DS_Store
+
+# Foto provvisorie / duplicate (le canonicali sono in heroes/ e trips/)
+public/images/archive/
+public/images/_DSC*.JPG
+public/images/image*.JPG
+public/images/dashboard-background.jpg
+public/images/placeholder-viaggio.jpg
+public/images/Screenshot*
+public/images/image0.png
 *.pem
 
 # debug
