@@ -68,7 +68,7 @@ export async function createTrip(formData: FormData) {
 
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/miei-viaggi');
-  redirect('/dashboard/miei-viaggi');
+  redirect(`/viaggi/${created.id}`);
 }
 
 export async function updateTrip(tripId: string, formData: FormData) {

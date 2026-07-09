@@ -113,7 +113,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
     <form action={action} className="space-y-8">
       <div className="space-y-2">
         <Label htmlFor="title" className="text-base font-semibold">
-          1. Dai un titolo al tuo viaggio
+          1. Come si chiama l&apos;avventura?
         </Label>
         <Input
           name="title"
@@ -127,7 +127,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="destination" className="text-base font-semibold">
-          2. Scegli la destinazione e la copertina
+          2. Dove andiamo? (e scegli la copertina)
         </Label>
         <div className="flex items-center space-x-2">
           <Input
@@ -242,7 +242,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
       </div>
 
       <div className="space-y-3">
-        <Label className="text-base font-semibold">4. Chi viene in viaggio?</Label>
+        <Label className="text-base font-semibold">4. Pianifichi da solo o con la crew?</Label>
         <input type="hidden" name="planningMode" value={planningMode} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
@@ -280,7 +280,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-2">
-          <Label className="text-base font-semibold">5. Dettagli gruppo</Label>
+          <Label className="text-base font-semibold">5. Quanti siete al massimo?</Label>
           <Input type="hidden" name="minAge" value={minAge} />
           <Input type="hidden" name="maxAge" value={maxAge} />
           <Select value={ageRange} onValueChange={handleAgeRangeChange} required>
@@ -326,7 +326,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="description" className="text-base font-semibold">
-          6. Descrivi l&apos;itinerario
+          6. Il piano (gli amici in relax lo leggeranno qui)
         </Label>
         <Textarea
           name="description"
@@ -340,7 +340,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="price" className="text-base font-semibold">
-          7. Prezzo Stimato a Persona (€)
+          7. Budget indicativo a persona (€)
         </Label>
         <FlightPriceEstimate
           destination={destination}
@@ -362,8 +362,8 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
           min="1"
         />
         <p className="text-xs text-muted-foreground">
-          La stima copre il volo da cache API. Aggiungi manualmente hotel, attività e margine
-          organizzativo al prezzo finale a persona.
+          Usa la stima volo come base — poi aggiungi hotel e attività. Dopo il lancio potrai
+          monitorare i prezzi reali nel Radar e prenotare via affiliate.
         </p>
       </div>
 

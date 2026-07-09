@@ -96,7 +96,7 @@ export function PriceWatchPanel({ tripId, canManage, migrationReady = true }: Pr
   }
 
   return (
-    <Card className="rounded-2xl border-0 shadow-md">
+    <Card id="radar" className="rounded-2xl border-0 shadow-md scroll-mt-24">
       <CardContent className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -33,7 +33,7 @@ export async function Navbar() {
             href="/dashboard"
             className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            Cerca Viaggi
+            Scopri viaggi
           </Link>
           {session?.user && (
             <>
@@ -41,7 +41,7 @@ export async function Navbar() {
                 href="/dashboard/crea"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                Crea Viaggio
+                Organizza
               </Link>
               <Link
                 href="/dashboard/miei-viaggi"

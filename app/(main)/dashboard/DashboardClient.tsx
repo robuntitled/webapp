@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { TripCard } from '@/components/trips/TripCard';
-import type { TripWithRelations } from '@/types/trip';
+import type { TripPlanningMode, TripWithRelations } from '@/types/trip';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -15,8 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Calendar as CalendarIcon, RotateCcw, X, Search, Compass } from 'lucide-react';
+import { Calendar as CalendarIcon, RotateCcw, X, Search, Compass, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { type Session } from 'next-auth';
@@ -31,56 +30,56 @@ export default function DashboardClient({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [date, setDate] = useState<Date | undefined>();
-  const [ageRange, setAgeRange] = useState('');
-  const [priceRange, setPriceRange] = useState([50, 5000]);
+  const [planningFilter, setPlanningFilter] = useState<'all' | TripPlanningMode>('all');
 
   const filteredTrips = useMemo(() => {
-    let [min, max] = [0, 999];
-    if (ageRange) {
-      [min, max] = ageRange.split('-').map(Number);
-    }
     return initialTrips.filter((trip) => {
       const textMatch =
         !searchTerm ||
         trip.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.destination.toLowerCase().includes(searchTerm.toLowerCase());
+        trip.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trip.creator?.first_name?.toLowerCase().includes(searchTerm.toLowerCase());
       const dateMatch = !date || (trip.startDate && new Date(trip.startDate) >= date);
-      const ageMatch = !ageRange || (trip.minAge <= max && trip.maxAge >= min);
-      const minPrice = priceRange[0];
-      const maxPrice = priceRange[1];
-      const priceMatch =
-        Number(trip.price) >= minPrice &&
-        (maxPrice === 5000 ? true : Number(trip.price) <= maxPrice);
-      return textMatch && dateMatch && ageMatch && priceMatch;
+      const mode = trip.planningMode ?? 'group';
+      const modeMatch = planningFilter === 'all' || mode === planningFilter;
+      return textMatch && dateMatch && modeMatch;
     });
-  }, [initialTrips, searchTerm, date, ageRange, priceRange]);
+  }, [initialTrips, searchTerm, date, planningFilter]);
 
   const handleResetFilters = () => {
     setSearchTerm('');
     setDate(undefined);
-    setAgeRange('');
-    setPriceRange([50, 5000]);
+    setPlanningFilter('all');
   };
 
   return (
     <div className="relative z-0 container mx-auto px-4 pt-10 pb-24">
       <div className="text-center max-w-3xl mx-auto mb-10">
         <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
-          Esplora il mondo
+          Meno WhatsApp, più viaggio
         </p>
         <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-          Dove ti porta il prossimo viaggio?
+          Trova un viaggio e unisciti in modalità relax
         </h1>
-        <p className="mt-4 text-lg text-white/70 max-w-xl mx-auto">
-          Scopri avventure di gruppo selezionate — ogni destinazione raccontata in prima persona.
+        <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
+          Qui gli amici organizzano al posto tuo. Tu guardi il piano, i prezzi e dici solo
+          &quot;ci sto&quot; — zero Excel, zero caos di gruppo.
         </p>
+        {session?.user && (
+          <Button asChild className="mt-6 rounded-full gap-2">
+            <Link href="/dashboard/crea">
+              <Plus className="h-4 w-4" />
+              Organizza il tuo viaggio
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="glass-panel rounded-3xl p-6 md:p-8 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 text-foreground">
             <Search className="h-5 w-5 text-primary" />
-            <span className="font-medium">Cerca il tuo viaggio</span>
+            <span className="font-medium">Cerca viaggi di amici</span>
           </div>
           <Button
             variant="ghost"
@@ -98,7 +97,7 @@ export default function DashboardClient({
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Destinazione, paese, esperienza..."
+              placeholder="Destinazione o nome dell'organizzatore..."
               className="h-12 pl-10 pr-10 rounded-xl text-base"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -144,42 +143,22 @@ export default function DashboardClient({
             </div>
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-                Fascia d&apos;età
+                Tipo di viaggio
               </Label>
               <Select
-                value={ageRange}
-                onValueChange={(v) => setAgeRange(v === 'all' ? '' : v)}
+                value={planningFilter}
+                onValueChange={(v) => setPlanningFilter(v as 'all' | TripPlanningMode)}
               >
                 <SelectTrigger className="h-11 rounded-xl">
-                  <SelectValue placeholder="Qualsiasi età" />
+                  <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutte le età</SelectItem>
-                  <SelectItem value="18-25">18–25</SelectItem>
-                  <SelectItem value="26-35">26–35</SelectItem>
-                  <SelectItem value="36-45">36–45</SelectItem>
-                  <SelectItem value="46-59">46–59</SelectItem>
-                  <SelectItem value="60-999">60+</SelectItem>
+                  <SelectItem value="all">Tutti i viaggi</SelectItem>
+                  <SelectItem value="group">🎉 Con gli amici</SelectItem>
+                  <SelectItem value="solo">🧳 Solo (aperto al gruppo)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-3 pt-1">
-            <Label className="flex justify-between text-muted-foreground text-xs uppercase tracking-wide">
-              <span>Budget</span>
-              <span className="font-semibold text-accent normal-case tracking-normal text-sm">
-                {priceRange[0]}€ – {priceRange[1] === 5000 ? '5.000+' : `${priceRange[1]}€`}
-              </span>
-            </Label>
-            <Slider
-              value={priceRange}
-              onValueChange={setPriceRange}
-              max={5000}
-              min={50}
-              step={50}
-              className="py-2"
-            />
           </div>
         </div>
       </div>
@@ -189,7 +168,7 @@ export default function DashboardClient({
           <>
             <p className="text-white/60 text-sm mb-6">
               {filteredTrips.length} {filteredTrips.length === 1 ? 'viaggio' : 'viaggi'}{' '}
-              {searchTerm || date || ageRange ? 'trovati' : 'disponibili'}
+              {searchTerm || date || planningFilter !== 'all' ? 'trovati' : 'da unirti'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredTrips.map((trip) => (
@@ -206,13 +185,16 @@ export default function DashboardClient({
               Nessun viaggio trovato
             </h3>
             <p className="mt-2 text-white/60 max-w-md mx-auto">
-              Prova a modificare i filtri o{' '}
               {session?.user ? (
-                <Link href="/dashboard/crea" className="text-accent hover:underline font-medium">
-                  crea il primo viaggio
-                </Link>
+                <>
+                  Sii il primo a organizzare qualcosa —{' '}
+                  <Link href="/dashboard/crea" className="text-accent hover:underline font-medium">
+                    crea un viaggio
+                  </Link>{' '}
+                  e invita gli amici svogliati.
+                </>
               ) : (
-                'torna più tardi'
+                'Accedi per scoprire i viaggi organizzati dagli amici.'
               )}
             </p>
           </div>

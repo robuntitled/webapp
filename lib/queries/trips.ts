@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getParticipantCount } from '@/lib/trips/display';
+import type { TripParticipantRole } from '@/lib/trips/roles';
 import type { TripWithRelations } from '@/types/trip';
 
 export const TRIP_LIST_SELECT = `
@@ -12,7 +14,8 @@ export const TRIP_LIST_SELECT = `
   planningMode: planning_mode,
   imageUrl: image_url,
   creator:users(id, first_name, last_name, image),
-  favorite_trips(user_id)
+  favorite_trips(user_id),
+  trip_participants(user_id, role)
 `;
 
 export const TRIP_DETAIL_SELECT = `
@@ -37,16 +40,30 @@ type RawTrip = Omit<TripWithRelations, 'isFavorited'> & {
 
 export function mapTripsWithFavorites(
   trips: RawTrip[] | null | undefined,
-  userId?: string
+  userId?: string,
+  options?: { myRole?: TripParticipantRole }
 ): TripWithRelations[] {
   if (!trips) return [];
 
-  return trips.map((trip) => ({
-    ...trip,
-    isFavorited: userId
-      ? (trip.favorite_trips?.some((fav) => fav.user_id === userId) ?? false)
-      : false,
-  }));
+  return trips.map((trip) => {
+    const myParticipant = userId
+      ? trip.trip_participants?.find((p) => p.user_id === userId)
+      : undefined;
+    const resolvedRole =
+      options?.myRole ??
+      (userId && trip.creator?.id === userId
+        ? 'owner'
+        : (myParticipant?.role as TripParticipantRole | undefined));
+
+    return {
+      ...trip,
+      myRole: resolvedRole,
+      participantCount: getParticipantCount(trip.trip_participants),
+      isFavorited: userId
+        ? (trip.favorite_trips?.some((fav) => fav.user_id === userId) ?? false)
+        : false,
+    };
+  });
 }
 
 export async function getAllTrips(supabase: SupabaseClient, userId?: string) {
@@ -97,7 +114,7 @@ export async function getCreatedTrips(supabase: SupabaseClient, userId: string) 
 export async function getJoinedTrips(supabase: SupabaseClient, userId: string) {
   const { data: participations, error: pError } = await supabase
     .from('trip_participants')
-    .select('trip_id')
+    .select('trip_id, role')
     .eq('user_id', userId);
 
   if (pError || !participations?.length) {
@@ -105,6 +122,9 @@ export async function getJoinedTrips(supabase: SupabaseClient, userId: string) {
     return [];
   }
 
+  const roleByTripId = new Map(
+    participations.map((p) => [p.trip_id, p.role as TripParticipantRole])
+  );
   const tripIds = participations.map((p) => p.trip_id);
 
   const { data, error } = await supabase
@@ -119,7 +139,12 @@ export async function getJoinedTrips(supabase: SupabaseClient, userId: string) {
     return [];
   }
 
-  return mapTripsWithFavorites(data as unknown as RawTrip[], userId);
+  return (data as unknown as RawTrip[]).map((trip) => {
+    const [mapped] = mapTripsWithFavorites([trip], userId, {
+      myRole: roleByTripId.get(trip.id) ?? 'viewer',
+    });
+    return mapped;
+  });
 }
 
 export async function getFavoriteTrips(supabase: SupabaseClient, userId: string) {

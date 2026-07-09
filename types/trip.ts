@@ -38,6 +38,8 @@ export type TripWithRelations = {
   planningMode?: TripPlanningMode;
   creator: TripCreator | null;
   isFavorited: boolean;
+  myRole?: TripParticipantRole;
+  participantCount?: number;
   trip_participants?: TripParticipant[];
   favorite_trips?: { user_id: string }[];
 };
