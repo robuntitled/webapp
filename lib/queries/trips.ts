@@ -27,6 +27,7 @@ export const TRIP_DETAIL_SELECT = `
   minAge: min_age,
   maxAge: max_age,
   planningMode: planning_mode,
+  composerVersion: composer_version,
   imageUrl: image_url,
   creator_id,
   creator:users(id, first_name, last_name, image),

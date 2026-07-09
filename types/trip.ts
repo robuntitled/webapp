@@ -36,6 +36,7 @@ export type TripWithRelations = {
   minAge: number;
   maxAge: number;
   planningMode?: TripPlanningMode;
+  composerVersion?: number | null;
   creator: TripCreator | null;
   isFavorited: boolean;
   myRole?: TripParticipantRole;

@@ -41,7 +41,7 @@ export async function Navbar() {
                 href="/dashboard/crea"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                Organizza
+                Componi viaggio
               </Link>
               <Link
                 href="/dashboard/miei-viaggi"
@@ -66,7 +66,7 @@ export async function Navbar() {
                 <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
                   <Link href="/dashboard/crea">
                     <Plus className="h-4 w-4" />
-                    Crea
+                    Componi
                   </Link>
                 </Button>
               )}

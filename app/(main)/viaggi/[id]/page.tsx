@@ -2,7 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
+import { fetchComposerItinerary } from '@/lib/data/composer';
 import { fetchTripById } from '@/lib/data/trips';
+import { ComposerItineraryView } from '@/components/composer/ComposerItineraryView';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +49,8 @@ export default async function TripDetailPage({ params }: PageProps) {
   );
   const canManagePrices = userRole === 'owner' || userRole === 'editor';
   const showInvite = isCreator || userRole === 'owner' || userRole === 'editor';
+  const composerItinerary =
+    (trip.composerVersion ?? 0) >= 1 ? await fetchComposerItinerary(trip.id) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,14 +95,18 @@ export default async function TripDetailPage({ params }: PageProps) {
       <div className="container mx-auto px-4 py-10 max-w-5xl -mt-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <Card className="rounded-2xl border-0 shadow-lg">
-              <CardContent className="p-8">
-                <h2 className="font-display text-2xl font-semibold mb-4">L&apos;esperienza</h2>
-                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed text-base">
-                  {trip.description}
-                </p>
-              </CardContent>
-            </Card>
+            {composerItinerary && composerItinerary.length > 0 ? (
+              <ComposerItineraryView days={composerItinerary} />
+            ) : (
+              <Card className="rounded-2xl border-0 shadow-lg">
+                <CardContent className="p-8">
+                  <h2 className="font-display text-2xl font-semibold mb-4">L&apos;esperienza</h2>
+                  <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed text-base">
+                    {trip.description}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <PriceWatchPanel tripId={trip.id} canManage={canManagePrices} />
 
