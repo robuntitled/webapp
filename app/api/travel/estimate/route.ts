@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { fetchCheapestFlightQuote, isDataApiConfigured } from '@/lib/travelpayouts/data-api';
+import { buildTripFlightSearchUrl } from '@/lib/travelpayouts/flight-search';
 
 const querySchema = z.object({
   destination: z.string().min(2).max(200),
@@ -53,18 +54,34 @@ export async function GET(request: Request) {
     });
 
     if (!quote) {
+      const affiliateUrl = buildTripFlightSearchUrl({
+        destination,
+        startDate,
+        endDate,
+        originIata: origin?.toUpperCase(),
+      });
+
       return NextResponse.json({
         configured: true,
         found: false,
+        affiliateUrl,
         message:
-          'Nessun prezzo in cache per questa rotta. Prova a cambiare destinazione o date, oppure inserisci il prezzo manualmente.',
+          'Nessun prezzo in cache per questa rotta. Apri la ricerca affiliate per tariffe aggiornate.',
       });
     }
+
+    const affiliateUrl = buildTripFlightSearchUrl({
+      destination,
+      startDate,
+      endDate,
+      originIata: origin?.toUpperCase(),
+    });
 
     return NextResponse.json({
       configured: true,
       found: true,
       quote,
+      affiliateUrl,
       disclaimer:
         'Prezzo da cache Travelpayouts (non in tempo reale). Può variare al momento della prenotazione.',
     });

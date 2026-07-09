@@ -1,15 +1,21 @@
 import Link from 'next/link';
 import { AffiliateDisclosure } from '@/components/travel/AffiliateDisclosure';
+import { AffiliateSearchCard } from '@/components/travel/AffiliateSearchCard';
 import { TravelpayoutsSetupNotice } from '@/components/travel/TravelpayoutsSetupNotice';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { buildTripHotelSearchUrl } from '@/lib/travelpayouts/flight-search';
 import { getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export default function PrenotaHotelPage() {
   const config = getTravelpayoutsConfig();
-  const hotelUrl = buildTripHotelSearchUrl();
+  const start = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const end = new Date(Date.now() + 37 * 86400000).toISOString().slice(0, 10);
+  const hotelUrl = buildTripHotelSearchUrl(undefined, {
+    destination: 'Barcellona',
+    startDate: start,
+    endDate: end,
+  });
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
@@ -22,28 +28,19 @@ export default function PrenotaHotelPage() {
         </Button>
         <h1 className="font-display text-3xl font-semibold">Cerca hotel</h1>
         <p className="text-muted-foreground mt-1">
-          Alloggi sul motore brandizzato NomadLink — il pagamento avviene sul fornitore partner.
+          Partner Travelpayouts / Hotellook — link affiliate con tracciamento NomadLink.
         </p>
       </div>
 
       {!config.isConfigured && <TravelpayoutsSetupNotice />}
 
-      {config.isConfigured && hotelUrl && (
-        <Card className="rounded-2xl border-0 shadow-lg">
-          <CardContent className="p-8 text-center space-y-4">
-            <p className="text-muted-foreground">
-              Abilita la ricerca hotel nel pannello White Label (integrazione Booking.com). Il
-              dominio attivo è{' '}
-              <strong className="text-foreground">{config.hotelDomain}</strong>.
-            </p>
-            <Button asChild size="lg">
-              <a href={hotelUrl} target="_blank" rel="noopener noreferrer">
-                Apri ricerca hotel
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+      {config.isConfigured && (
+        <AffiliateSearchCard
+          flightUrl={null}
+          hotelUrl={hotelUrl}
+          destination="Barcellona"
+          title="Motore hotel affiliate"
+        />
       )}
 
       {config.isConfigured && <AffiliateDisclosure />}

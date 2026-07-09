@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { AffiliateDisclosure } from '@/components/travel/AffiliateDisclosure';
+import { AffiliateSearchCard } from '@/components/travel/AffiliateSearchCard';
 import { TravelpayoutsFlightWidget } from '@/components/travel/TravelpayoutsFlightWidget';
 import { TravelpayoutsSetupNotice } from '@/components/travel/TravelpayoutsSetupNotice';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
 } from '@/lib/travelpayouts/flight-search';
 import { getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
 import { formatTripDate } from '@/lib/utils/trip';
-import { ArrowLeft, BedDouble, ExternalLink, Plane } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,11 @@ export default async function TripPrenotaPage({ params, searchParams }: PageProp
     endDate: trip.endDate,
     adults: Math.min(trip.maxParticipants, 9),
   });
-  const hotelUrl = buildTripHotelSearchUrl(trip.id);
+  const hotelUrl = buildTripHotelSearchUrl(trip.id, {
+    destination: trip.destination,
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+  });
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
@@ -70,56 +75,13 @@ export default async function TripPrenotaPage({ params, searchParams }: PageProp
 
       {config.isConfigured && (
         <>
-          {config.mode === 'subdomain' && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card className="rounded-2xl border-0 shadow-md">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Plane className="h-5 w-5 text-primary" />
-                    <h2 className="font-display text-xl font-semibold">Voli</h2>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Motore di ricerca su{' '}
-                    <strong className="text-foreground">{config.flightsDomain}</strong> con
-                    destinazione e date precompilate.
-                  </p>
-                  {flightUrl ? (
-                    <Button asChild className="w-full justify-between">
-                      <a href={flightUrl} target="_blank" rel="noopener noreferrer">
-                        Apri ricerca voli
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-amber-700">
-                      Impossibile precompilare la ricerca: verifica la destinazione o le date del
-                      viaggio.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-2xl border-0 shadow-md">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <BedDouble className="h-5 w-5 text-primary" />
-                    <h2 className="font-display text-xl font-semibold">Hotel</h2>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Cerca alloggi sul sottodominio brandizzato NomadLink. Abilita hotel nel pannello
-                    White Label (Booking.com).
-                  </p>
-                  {hotelUrl && (
-                    <Button asChild variant="outline" className="w-full justify-between">
-                      <a href={hotelUrl} target="_blank" rel="noopener noreferrer">
-                        Apri ricerca hotel
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+          {(config.mode === 'subdomain' || config.mode === 'affiliate') && (
+            <AffiliateSearchCard
+              flightUrl={flightUrl}
+              hotelUrl={hotelUrl}
+              destination={trip.destination}
+              title={focus === 'hotel' ? 'Cerca hotel' : 'Cerca voli'}
+            />
           )}
 
           {config.mode === 'widget' && config.wlId && (

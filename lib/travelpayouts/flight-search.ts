@@ -1,3 +1,9 @@
+import {
+  buildAviasalesAffiliateUrl,
+  buildHotellookAffiliateUrl,
+  PROGRAM_HOTELLOOK,
+  wrapTpMediaAffiliateUrl,
+} from '@/lib/travelpayouts/affiliate-links';
 import { buildMarkerParam, getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
 import { resolveDestinationIata } from '@/lib/travelpayouts/iata';
 
@@ -100,28 +106,51 @@ export function buildWhiteLabelUrl(options: WhiteLabelUrlOptions): string {
 
 export function buildTripFlightSearchUrl(params: FlightSearchParams): string | null {
   const config = getTravelpayoutsConfig();
-  if (!config.flightsDomain || !config.marker) return null;
+  if (!config.marker) return null;
 
   const flightSearch = buildFlightSearchCode(params);
   const subId = params.subId ?? (params.tripId ? `trip_${params.tripId}_voli` : 'voli');
 
-  return buildWhiteLabelUrl({
-    domain: config.flightsDomain,
-    marker: config.marker,
-    subId,
-    flightSearch,
-  });
+  if (config.flightsDomain && flightSearch) {
+    return buildWhiteLabelUrl({
+      domain: config.flightsDomain,
+      marker: config.marker,
+      subId,
+      flightSearch,
+    });
+  }
+
+  return buildAviasalesAffiliateUrl(params, config.marker);
 }
 
-export function buildTripHotelSearchUrl(tripId?: string): string | null {
+export function buildTripHotelSearchUrl(
+  tripId?: string,
+  hotelParams?: { destination: string; startDate: string; endDate: string }
+): string | null {
   const config = getTravelpayoutsConfig();
-  if (!config.hotelDomain || !config.marker) return null;
+  if (!config.marker) return null;
 
   const subId = tripId ? `trip_${tripId}_hotel` : 'hotel';
 
-  return buildWhiteLabelUrl({
-    domain: config.hotelDomain,
-    marker: config.marker,
-    subId,
-  });
+  if (config.hotelDomain) {
+    return buildWhiteLabelUrl({
+      domain: config.hotelDomain,
+      marker: config.marker,
+      subId,
+    });
+  }
+
+  if (!hotelParams) {
+    return wrapTpMediaAffiliateUrl(
+      config.marker,
+      PROGRAM_HOTELLOOK,
+      'https://search.hotellook.com/',
+      subId
+    );
+  }
+
+  return buildHotellookAffiliateUrl(
+    { ...hotelParams, tripId, subId },
+    config.marker
+  );
 }

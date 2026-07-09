@@ -96,7 +96,11 @@ export async function refreshHotelPriceWatch(params: {
   startDate: string;
   endDate: string;
 }): Promise<PriceWatchRow | null> {
-  const affiliateUrl = buildTripHotelSearchUrl(params.tripId);
+  const affiliateUrl = buildTripHotelSearchUrl(params.tripId, {
+    destination: params.destination,
+    startDate: params.startDate,
+    endDate: params.endDate,
+  });
 
   const payload = {
     trip_id: params.tripId,

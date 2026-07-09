@@ -30,7 +30,8 @@ export type TravelpayoutsConfig = {
   defaultOriginIata: string;
   hasDataApi: boolean;
   isConfigured: boolean;
-  mode: 'subdomain' | 'widget' | 'api' | 'none';
+  mode: 'subdomain' | 'widget' | 'affiliate' | 'api' | 'none';
+  hasAffiliate: boolean;
 };
 
 function normalizeDomain(value: string | undefined): string | null {
@@ -53,11 +54,13 @@ export function getTravelpayoutsConfig(): TravelpayoutsConfig {
   const hasDataApi = Boolean(process.env.TRAVELPAYOUTS_API_TOKEN?.trim());
   const hasSubdomain = Boolean(flightsDomain && marker);
   const hasWidget = Boolean(wlId);
-  const isConfigured = hasSubdomain || hasWidget || hasDataApi;
+  const hasAffiliate = Boolean(marker);
+  const isConfigured = hasSubdomain || hasWidget || hasAffiliate || hasDataApi;
 
   let mode: TravelpayoutsConfig['mode'] = 'none';
   if (hasSubdomain) mode = 'subdomain';
   else if (hasWidget) mode = 'widget';
+  else if (hasAffiliate) mode = 'affiliate';
   else if (hasDataApi) mode = 'api';
 
   return {
@@ -67,6 +70,7 @@ export function getTravelpayoutsConfig(): TravelpayoutsConfig {
     hotelDomain,
     defaultOriginIata,
     hasDataApi,
+    hasAffiliate,
     isConfigured,
     mode,
   };

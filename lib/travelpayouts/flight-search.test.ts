@@ -59,7 +59,7 @@ describe('buildTripFlightSearchUrl', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns null when subdomain is not configured', () => {
+  it('returns null when marker is missing', () => {
     vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_FLIGHTS_DOMAIN', '');
     vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_MARKER', '');
 
@@ -71,6 +71,22 @@ describe('buildTripFlightSearchUrl', () => {
         tripId: 'trip-1',
       })
     ).toBeNull();
+  });
+
+  it('falls back to tp.media affiliate when only marker is set', () => {
+    vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_FLIGHTS_DOMAIN', '');
+    vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_MARKER', '777');
+    vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA', 'ROM');
+
+    const url = buildTripFlightSearchUrl({
+      destination: 'Thailandia',
+      startDate: '2026-08-01',
+      endDate: '2026-08-15',
+      tripId: 'trip-1',
+    });
+
+    expect(url).toContain('tp.media');
+    expect(url).toContain('marker=777.trip_trip_1_voli');
   });
 
   it('builds full white label url when configured', () => {

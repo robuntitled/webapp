@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +34,42 @@ export function BlockEditorPanel({
   onRemove,
 }: BlockEditorPanelProps) {
   const [flightLoading, setFlightLoading] = useState(false);
+  const [affiliateUrl, setAffiliateUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !block || (block.type !== 'flight' && block.type !== 'hotel')) {
+      setAffiliateUrl(null);
+      return;
+    }
+
+    const existing =
+      typeof block.content.affiliateUrl === 'string' ? block.content.affiliateUrl : null;
+    if (existing) {
+      setAffiliateUrl(existing);
+      return;
+    }
+
+    const params = new URLSearchParams({
+      destination: draft.destination,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+    });
+
+    void fetch(`/api/travel/links?${params}`)
+      .then((r) => r.json())
+      .then((data: { flightUrl?: string; hotelUrl?: string }) => {
+        const url = block.type === 'flight' ? data.flightUrl : data.hotelUrl;
+        if (url) {
+          setAffiliateUrl(url);
+          onUpdate(block.id, (b) => ({
+            ...b,
+            content: { ...b.content, affiliateUrl: url },
+          }));
+        }
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, block?.id, block?.type, draft.destination, draft.startDate, draft.endDate]);
 
   if (!block) return null;
 
@@ -57,21 +93,32 @@ export function BlockEditorPanel({
       const response = await fetch(`/api/travel/estimate?${params}`);
       const data = await response.json();
 
-      if (!response.ok || !data.found) {
-        toast.message(data.message ?? 'Nessun volo in cache — aggiungi un\'alternativa manuale');
+      const quote = data.quote;
+      const updates: Record<string, unknown> = {
+        affiliateUrl: data.affiliateUrl ?? affiliateUrl,
+      };
+
+      if (response.ok && data.found && quote) {
+        Object.assign(updates, {
+          title: `Volo ${quote.origin} → ${quote.destination}`,
+          price: quote.price,
+          currency: quote.currency,
+          airline: quote.airline,
+          origin: quote.origin,
+          destination: quote.destination,
+        });
+        patchContent(updates);
+        toast.success(`Volo trovato: ${quote.price} ${quote.currency} ✈️`);
         return;
       }
 
-      const quote = data.quote;
-      patchContent({
-        title: `Volo ${quote.origin} → ${quote.destination}`,
-        price: quote.price,
-        currency: quote.currency,
-        airline: quote.airline,
-        origin: quote.origin,
-        destination: quote.destination,
-      });
-      toast.success(`Volo trovato: ${quote.price} ${quote.currency} ✈️`);
+      if (data.affiliateUrl) {
+        patchContent(updates);
+        toast.message(data.message ?? 'Nessun prezzo in cache — apri la ricerca affiliate');
+        return;
+      }
+
+      toast.message(data.message ?? 'Configura NEXT_PUBLIC_TRAVELPAYOUTS_MARKER su Vercel');
     } catch {
       toast.error('Errore ricerca volo');
     } finally {
@@ -153,6 +200,18 @@ export function BlockEditorPanel({
                   />
                 </div>
               </div>
+              {Boolean(affiliateUrl || (typeof block.content.affiliateUrl === 'string' && block.content.affiliateUrl)) && (
+                <Button asChild variant="secondary" className="w-full">
+                  <a
+                    href={affiliateUrl ?? String(block.content.affiliateUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                  >
+                    Apri ricerca voli affiliate
+                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
             </>
           )}
 
@@ -187,6 +246,18 @@ export function BlockEditorPanel({
                   />
                 </div>
               </div>
+              {Boolean(affiliateUrl || (typeof block.content.affiliateUrl === 'string' && block.content.affiliateUrl)) && (
+                <Button asChild variant="secondary" className="w-full">
+                  <a
+                    href={affiliateUrl ?? String(block.content.affiliateUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                  >
+                    Cerca hotel su Hotellook
+                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
             </div>
           )}
 
