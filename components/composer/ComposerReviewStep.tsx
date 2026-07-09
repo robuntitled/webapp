@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { BLOCK_META, getBlockDisplayPrice, getBlockDisplayTitle } from '@/lib/composer/blocks';
 import { estimateTripBudget, formatComposerDayLabel } from '@/lib/composer/days';
 import type { ComposerDraft } from '@/types/composer';
+import { TripMap } from '@/components/maps/TripMap';
+import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { ChevronLeft, Loader2, Rocket } from 'lucide-react';
 
 type ComposerReviewStepProps = {
@@ -23,6 +25,7 @@ export function ComposerReviewStep({
 }: ComposerReviewStepProps) {
   const budget = estimateTripBudget(draft.days);
   const blockCount = draft.days.reduce((n, d) => n + d.blocks.length, 0);
+  const pins = buildPinsFromDraft(draft);
 
   return (
     <motion.div
@@ -40,6 +43,15 @@ export function ComposerReviewStep({
           <span className="text-accent font-bold">{budget}€</span>/persona
         </p>
       </div>
+
+      {pins.length > 0 && (
+        <TripMap
+          destination={draft.destination}
+          pins={pins}
+          className="h-[240px] md:h-[280px]"
+          interactive={false}
+        />
+      )}
 
       <Card className="composer-glass border-0 rounded-3xl overflow-hidden">
         <CardContent className="p-0 divide-y divide-border/50">

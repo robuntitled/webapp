@@ -141,6 +141,16 @@
   .composer-block {
     backdrop-filter: blur(8px);
   }
+
+  .trip-map-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    font-size: 13px;
+  }
   .text-gradient-hero {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/80;
   }
