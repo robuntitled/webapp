@@ -9,6 +9,7 @@ export const TRIP_LIST_SELECT = `
   maxParticipants: max_participants,
   minAge: min_age,
   maxAge: max_age,
+  planningMode: planning_mode,
   imageUrl: image_url,
   creator:users(id, first_name, last_name, image),
   favorite_trips(user_id)
@@ -22,11 +23,12 @@ export const TRIP_DETAIL_SELECT = `
   maxParticipants: max_participants,
   minAge: min_age,
   maxAge: max_age,
+  planningMode: planning_mode,
   imageUrl: image_url,
   creator_id,
   creator:users(id, first_name, last_name, image),
   favorite_trips(user_id),
-  trip_participants(user_id)
+  trip_participants(user_id, role, user:users(id, first_name, last_name, image))
 `;
 
 type RawTrip = Omit<TripWithRelations, 'isFavorited'> & {
@@ -109,6 +111,7 @@ export async function getJoinedTrips(supabase: SupabaseClient, userId: string) {
     .from('trips')
     .select(TRIP_LIST_SELECT)
     .in('id', tripIds)
+    .neq('creator_id', userId)
     .order('createdAt', { ascending: false });
 
   if (error) {

@@ -5,8 +5,21 @@ export type TripCreator = {
   image: string | null;
 };
 
+import type { TripParticipantRole } from '@/lib/trips/roles';
+
+export type TripPlanningMode = 'solo' | 'group';
+
+export type TripParticipantUser = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  image: string | null;
+};
+
 export type TripParticipant = {
   user_id: string;
+  role?: TripParticipantRole;
+  user?: TripParticipantUser | null;
 };
 
 export type TripWithRelations = {
@@ -22,6 +35,7 @@ export type TripWithRelations = {
   maxParticipants: number;
   minAge: number;
   maxAge: number;
+  planningMode?: TripPlanningMode;
   creator: TripCreator | null;
   isFavorited: boolean;
   trip_participants?: TripParticipant[];

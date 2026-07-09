@@ -9,7 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TripBookingSection } from '@/components/travel/TripBookingSection';
+import { PriceWatchPanel } from '@/components/trips/PriceWatchPanel';
 import { TripDetailActions } from '@/components/trips/TripDetailActions';
+import { TripCrewCard } from '@/components/trips/TripCrewCard';
+import { TripInviteCard } from '@/components/trips/TripInviteCard';
+import { TripRoleBadge } from '@/components/trips/TripRoleBadge';
+import { resolveUserTripRole } from '@/lib/trips/roles';
+import type { TripParticipantRole } from '@/lib/trips/roles';
 import { formatTripDate, formatAgeRange, getTripStatus } from '@/lib/utils/trip';
 import { getInitialsFromNames } from '@/lib/utils/user';
 import { CakeSlice, CalendarDays, MapPin, Users, ArrowLeft } from 'lucide-react';
@@ -32,7 +38,15 @@ export default async function TripDetailPage({ params }: PageProps) {
   const imageUrl = trip.imageUrl || DEFAULT_TRIP_IMAGE;
   const status = getTripStatus(trip.startDate, trip.endDate);
   const isCreator = session?.user?.id === trip.creator?.id;
-  const isParticipant = trip.trip_participants?.some((p) => p.user_id === session?.user?.id);
+  const participant = trip.trip_participants?.find((p) => p.user_id === session?.user?.id);
+  const isParticipant = !!participant;
+  const userRole = resolveUserTripRole(
+    session?.user?.id,
+    trip.creator?.id,
+    participant?.role as TripParticipantRole | undefined
+  );
+  const canManagePrices = userRole === 'owner' || userRole === 'editor';
+  const showInvite = isCreator || userRole === 'owner' || userRole === 'editor';
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,16 +76,21 @@ export default async function TripDetailPage({ params }: PageProps) {
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold text-white max-w-4xl leading-tight">
             {trip.title}
           </h1>
-          <p className="mt-3 flex items-center text-lg text-white/80">
-            <MapPin className="mr-2 h-5 w-5 text-accent" />
-            {trip.destination}
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-lg text-white/80">
+            <p className="flex items-center">
+              <MapPin className="mr-2 h-5 w-5 text-accent" />
+              {trip.destination}
+            </p>
+            <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm">
+              {trip.planningMode === 'solo' ? '🧳 Solo (aperto al gruppo)' : '🎉 Con gli amici'}
+            </Badge>
+          </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-10 max-w-5xl -mt-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <Card className="rounded-2xl border-0 shadow-lg">
               <CardContent className="p-8">
                 <h2 className="font-display text-2xl font-semibold mb-4">L&apos;esperienza</h2>
@@ -80,6 +99,16 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </p>
               </CardContent>
             </Card>
+
+            <PriceWatchPanel tripId={trip.id} canManage={canManagePrices} />
+
+            <TripCrewCard
+              planningMode={trip.planningMode}
+              participants={trip.trip_participants}
+              creatorId={trip.creator?.id}
+            />
+
+            {showInvite && <TripInviteCard tripId={trip.id} tripTitle={trip.title} />}
           </div>
 
           <div className="lg:col-span-1">
@@ -124,11 +153,17 @@ export default async function TripDetailPage({ params }: PageProps) {
                   </div>
                 )}
 
+                {userRole && (
+                  <div className="flex justify-center pb-1">
+                    <TripRoleBadge role={userRole} />
+                  </div>
+                )}
+
                 <TripDetailActions
                   tripId={trip.id}
                   session={session}
                   isCreator={isCreator}
-                  isParticipant={!!isParticipant}
+                  isParticipant={isParticipant}
                   isFavorited={trip.isFavorited}
                 />
 

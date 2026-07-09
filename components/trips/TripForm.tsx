@@ -70,6 +70,9 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
   const [selectedImageUrl, setSelectedImageUrl] = useState(initialTrip?.imageUrl ?? '');
   const [pexelsPage, setPexelsPage] = useState(1);
   const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
+  const [planningMode, setPlanningMode] = useState<'solo' | 'group'>(
+    initialTrip?.planningMode ?? 'group'
+  );
 
   const handleImageSearch = async () => {
     if (!destination) return;
@@ -238,9 +241,46 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
         </div>
       </div>
 
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">4. Chi viene in viaggio?</Label>
+        <input type="hidden" name="planningMode" value={planningMode} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setPlanningMode('solo')}
+            className={`rounded-xl border-2 p-4 text-left transition ${
+              planningMode === 'solo'
+                ? 'border-primary bg-primary/5'
+                : 'border-muted hover:border-primary/40'
+            }`}
+          >
+            <span className="text-lg">🧳</span>
+            <p className="font-medium mt-2">Solo io (per ora)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pianifica in pace — altri potranno unirsi dopo.
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPlanningMode('group')}
+            className={`rounded-xl border-2 p-4 text-left transition ${
+              planningMode === 'group'
+                ? 'border-primary bg-primary/5'
+                : 'border-muted hover:border-primary/40'
+            }`}
+          >
+            <span className="text-lg">🎉</span>
+            <p className="font-medium mt-2">Con gli amici</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Invita chi è svogliato: entra in modalità relax.
+            </p>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-2">
-          <Label className="text-base font-semibold">4. Dettagli Gruppo</Label>
+          <Label className="text-base font-semibold">5. Dettagli gruppo</Label>
           <Input type="hidden" name="minAge" value={minAge} />
           <Input type="hidden" name="maxAge" value={maxAge} />
           <Select value={ageRange} onValueChange={handleAgeRangeChange} required>
@@ -262,9 +302,10 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
             name="minParticipants"
             type="number"
             placeholder="Min. Partecipanti"
-            defaultValue={initialTrip?.minParticipants}
+            defaultValue={initialTrip?.minParticipants ?? (planningMode === 'solo' ? 1 : 2)}
+            key={`min-${planningMode}`}
             required
-            min="2"
+            min="1"
             className="h-11"
           />
         </div>
@@ -274,9 +315,10 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
             name="maxParticipants"
             type="number"
             placeholder="Max. Partecipanti"
-            defaultValue={initialTrip?.maxParticipants}
+            defaultValue={initialTrip?.maxParticipants ?? (planningMode === 'solo' ? 4 : 8)}
+            key={`max-${planningMode}`}
             required
-            min="2"
+            min="1"
             className="h-11"
           />
         </div>
@@ -284,7 +326,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="description" className="text-base font-semibold">
-          5. Descrivi l&apos;itinerario
+          6. Descrivi l&apos;itinerario
         </Label>
         <Textarea
           name="description"
@@ -298,7 +340,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="price" className="text-base font-semibold">
-          6. Prezzo Stimato a Persona (€)
+          7. Prezzo Stimato a Persona (€)
         </Label>
         <FlightPriceEstimate
           destination={destination}

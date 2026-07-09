@@ -10,7 +10,8 @@
     "test": "vitest run",
     "db:security": "node scripts/apply-security.mjs",
     "db:verify-security": "node scripts/verify-security.mjs",
-    "db:gdpr": "node scripts/apply-gdpr.mjs"
+    "db:gdpr": "node scripts/apply-gdpr.mjs",
+    "db:social": "node scripts/apply-social.mjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",

@@ -9,8 +9,9 @@ export const createTripSchema = z
     description: z.string().min(10, 'La descrizione deve avere almeno 10 caratteri').max(5000),
     image_url: z.union([z.string().url(), z.literal('')]).optional(),
     price: z.coerce.number().positive('Il prezzo deve essere maggiore di 0'),
-    minParticipants: z.coerce.number().int().min(2, 'Minimo 2 partecipanti'),
-    maxParticipants: z.coerce.number().int().min(2, 'Minimo 2 partecipanti'),
+    planningMode: z.enum(['solo', 'group']).default('group'),
+    minParticipants: z.coerce.number().int().min(1, 'Minimo 1 partecipante'),
+    maxParticipants: z.coerce.number().int().min(1, 'Minimo 1 partecipante'),
     minAge: z.coerce.number().int().min(18, 'Età minima 18 anni'),
     maxAge: z.coerce.number().int().min(18),
   })
@@ -25,7 +26,14 @@ export const createTripSchema = z
   .refine((data) => data.maxAge >= data.minAge, {
     message: 'L\'età massima deve essere >= all\'età minima',
     path: ['maxAge'],
-  });
+  })
+  .refine(
+    (data) => data.planningMode !== 'solo' || data.minParticipants === 1,
+    {
+      message: 'In modalità solo il minimo deve essere 1',
+      path: ['minParticipants'],
+    }
+  );
 
 export const updateTripSchema = createTripSchema;
 
@@ -42,5 +50,6 @@ export function parseTripFormData(formData: FormData) {
     maxParticipants: formData.get('maxParticipants'),
     minAge: formData.get('minAge'),
     maxAge: formData.get('maxAge'),
+    planningMode: formData.get('planningMode') || 'group',
   });
 }

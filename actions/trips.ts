@@ -20,6 +20,7 @@ function toTripRecord(parsed: ReturnType<typeof parseTripFormData>) {
     max_participants: parsed.maxParticipants,
     min_age: parsed.minAge,
     max_age: parsed.maxAge,
+    planning_mode: parsed.planningMode,
   };
 }
 
@@ -39,16 +40,30 @@ export async function createTrip(formData: FormData) {
     throw error;
   }
 
-  const { error } = await supabaseAdmin.from('trips').insert([
-    {
-      ...toTripRecord(parsed),
-      creator_id: session.user.id,
-    },
-  ]);
+  const { data: created, error } = await supabaseAdmin
+    .from('trips')
+    .insert([
+      {
+        ...toTripRecord(parsed),
+        creator_id: session.user.id,
+      },
+    ])
+    .select('id')
+    .single();
 
-  if (error) {
+  if (error || !created) {
     console.error('Errore nella creazione del viaggio:', error);
-    throw new Error(error.message);
+    throw new Error(error?.message ?? 'Creazione viaggio fallita');
+  }
+
+  const { error: ownerError } = await supabaseAdmin.from('trip_participants').insert({
+    trip_id: created.id,
+    user_id: session.user.id,
+    role: 'owner',
+  });
+
+  if (ownerError && ownerError.code !== '23505') {
+    console.error('Errore assegnazione ruolo organizzatore:', ownerError);
   }
 
   revalidatePath('/dashboard');

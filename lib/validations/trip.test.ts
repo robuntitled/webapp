@@ -36,4 +36,22 @@ describe('createTripSchema', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('accepts solo planning with one participant', () => {
+    const result = createTripSchema.safeParse({
+      title: 'Viaggio solitario',
+      destination: 'Lisbona',
+      startDate: '2026-09-01',
+      endDate: '2026-09-07',
+      description: 'Un weekend da solo, poi forse si unisce qualcuno.',
+      price: 400,
+      planningMode: 'solo',
+      minParticipants: 1,
+      maxParticipants: 4,
+      minAge: 18,
+      maxAge: 999,
+    });
+
+    expect(result.success).toBe(true);
+  });
 });

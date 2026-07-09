@@ -53,7 +53,7 @@ export function TripDetailActions({
     startJoin(async () => {
       try {
         await joinTrip(tripId);
-        toast.success('Ti sei unito al viaggio!');
+        toast.success('Sei dentro! Modalità relax attiva 🏖️');
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Errore imprevisto');
@@ -84,7 +84,7 @@ export function TripDetailActions({
       {session?.user && !isCreator && !isParticipant && (
         <Button onClick={handleJoin} disabled={joinPending}>
           <LogIn className="mr-2 h-4 w-4" />
-          {joinPending ? 'Mi unisco...' : 'Unisciti al viaggio'}
+          {joinPending ? 'Entro...' : 'Ci sto! (zero pianificazione)'}
         </Button>
       )}
 

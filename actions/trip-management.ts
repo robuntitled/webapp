@@ -59,7 +59,7 @@ export async function joinTrip(tripId: string) {
 
   const { error: insertError } = await supabaseAdmin
     .from('trip_participants')
-    .insert({ user_id: userId, trip_id: tripId });
+    .insert({ user_id: userId, trip_id: tripId, role: 'viewer' });
 
   if (insertError) {
     if (insertError.code === '23505') {
