@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Trash2, ExternalLink, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { BLOCK_META, createAlternativeId } from '@/lib/composer/blocks';
 import type { ComposerBlock, ComposerDraft } from '@/types/composer';
@@ -35,6 +36,9 @@ export function BlockEditorPanel({
 }: BlockEditorPanelProps) {
   const [flightLoading, setFlightLoading] = useState(false);
   const [affiliateUrl, setAffiliateUrl] = useState<string | null>(null);
+  const [showAltForm, setShowAltForm] = useState(false);
+  const [altLabel, setAltLabel] = useState('');
+  const [altPrice, setAltPrice] = useState('');
 
   useEffect(() => {
     if (!open || !block || (block.type !== 'flight' && block.type !== 'hotel')) {
@@ -70,6 +74,14 @@ export function BlockEditorPanel({
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, block?.id, block?.type, draft.destination, draft.startDate, draft.endDate]);
+
+  useEffect(() => {
+    if (!open) {
+      setShowAltForm(false);
+      setAltLabel('');
+      setAltPrice('');
+    }
+  }, [open]);
 
   if (!block) return null;
 
@@ -126,11 +138,9 @@ export function BlockEditorPanel({
     }
   };
 
-  const addAlternative = () => {
-    const label = prompt('Nome alternativa (es. Volo con scalo, Hotel zona centro)');
-    if (!label?.trim()) return;
-    const priceStr = prompt('Prezzo indicativo (€, opzionale)');
-    const price = priceStr ? Number(priceStr) : null;
+  const submitAlternative = () => {
+    if (!altLabel.trim()) return;
+    const price = altPrice ? Number(altPrice) : null;
 
     onUpdate(block.id, (b) => ({
       ...b,
@@ -138,39 +148,53 @@ export function BlockEditorPanel({
         ...b.alternatives,
         {
           id: createAlternativeId(),
-          label: label.trim(),
+          label: altLabel.trim(),
           price: Number.isFinite(price) ? price : null,
           currency: 'EUR',
         },
       ],
     }));
+    setAltLabel('');
+    setAltPrice('');
+    setShowAltForm(false);
     toast.success('Alternativa aggiunta');
   };
 
+  const inputClass =
+    'composer-input h-11 rounded-xl bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 focus:border-accent/40';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2">
-            <span>{meta.emoji}</span>
-            Modifica {meta.label}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="composer-editor-dialog max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-white/10 bg-slate-950/95 backdrop-blur-xl text-white p-0 gap-0">
+        <div className={`h-2 bg-gradient-to-r ${meta.color.split(' ').slice(0, 2).join(' ')}`} />
 
-        <div className="space-y-4 pt-2">
+        <div className="p-6 space-y-5">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="font-display text-xl flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xl">
+                {meta.emoji}
+              </span>
+              <div>
+                <span className="block text-white">Modifica {meta.label}</span>
+                <span className="block text-xs font-normal text-white/40 mt-0.5">{meta.hint}</span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
           <div className="space-y-2">
-            <Label>Titolo</Label>
+            <Label className="text-white/50 text-xs uppercase tracking-wider">Titolo</Label>
             <Input
+              className={inputClass}
               value={String(block.content.title ?? '')}
               onChange={(e) => patchContent({ title: e.target.value })}
             />
           </div>
 
           {block.type === 'flight' && (
-            <>
+            <div className="space-y-3">
               <Button
                 type="button"
-                className="w-full"
+                className="w-full rounded-xl h-11 shadow-lg shadow-sky-500/10"
                 onClick={() => void searchFlight()}
                 disabled={flightLoading}
               >
@@ -183,8 +207,9 @@ export function BlockEditorPanel({
               </Button>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Prezzo (€)</Label>
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Prezzo (€)</Label>
                   <Input
+                    className={inputClass}
                     type="number"
                     value={block.content.price != null ? String(block.content.price) : ''}
                     onChange={(e) =>
@@ -193,15 +218,16 @@ export function BlockEditorPanel({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Compagnia</Label>
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Compagnia</Label>
                   <Input
+                    className={inputClass}
                     value={String(block.content.airline ?? '')}
                     onChange={(e) => patchContent({ airline: e.target.value })}
                   />
                 </div>
               </div>
-              {Boolean(affiliateUrl || (typeof block.content.affiliateUrl === 'string' && block.content.affiliateUrl)) && (
-                <Button asChild variant="secondary" className="w-full">
+              {Boolean(affiliateUrl || block.content.affiliateUrl) && (
+                <Button asChild variant="secondary" className="w-full rounded-xl bg-white/10 hover:bg-white/15 text-white border-0">
                   <a
                     href={affiliateUrl ?? String(block.content.affiliateUrl)}
                     target="_blank"
@@ -212,14 +238,15 @@ export function BlockEditorPanel({
                   </a>
                 </Button>
               )}
-            </>
+            </div>
           )}
 
           {block.type === 'hotel' && (
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label>Zona / quartiere</Label>
+                <Label className="text-white/50 text-xs uppercase tracking-wider">Zona / quartiere</Label>
                 <Input
+                  className={inputClass}
                   value={String(block.content.area ?? '')}
                   onChange={(e) => patchContent({ area: e.target.value })}
                   placeholder="Es. Centro storico, Seminyak..."
@@ -227,8 +254,9 @@ export function BlockEditorPanel({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Notti</Label>
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Notti</Label>
                   <Input
+                    className={inputClass}
                     type="number"
                     min={1}
                     value={String(block.content.nights ?? 1)}
@@ -236,8 +264,9 @@ export function BlockEditorPanel({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Prezzo totale (€)</Label>
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Prezzo totale (€)</Label>
                   <Input
+                    className={inputClass}
                     type="number"
                     value={block.content.price != null ? String(block.content.price) : ''}
                     onChange={(e) =>
@@ -246,8 +275,8 @@ export function BlockEditorPanel({
                   />
                 </div>
               </div>
-              {Boolean(affiliateUrl || (typeof block.content.affiliateUrl === 'string' && block.content.affiliateUrl)) && (
-                <Button asChild variant="secondary" className="w-full">
+              {Boolean(affiliateUrl || block.content.affiliateUrl) && (
+                <Button asChild variant="secondary" className="w-full rounded-xl bg-white/10 hover:bg-white/15 text-white border-0">
                   <a
                     href={affiliateUrl ?? String(block.content.affiliateUrl)}
                     target="_blank"
@@ -263,8 +292,9 @@ export function BlockEditorPanel({
 
           {(block.type === 'attraction' || block.type === 'activity') && (
             <div className="space-y-2">
-              <Label>Luogo / descrizione</Label>
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Luogo / descrizione</Label>
               <Textarea
+                className={`${inputClass} min-h-[88px] resize-none`}
                 value={String(block.content.place ?? block.content.description ?? '')}
                 onChange={(e) =>
                   patchContent(
@@ -280,8 +310,9 @@ export function BlockEditorPanel({
 
           {block.type === 'meal' && (
             <div className="space-y-2">
-              <Label>Dove mangiare</Label>
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Dove mangiare</Label>
               <Input
+                className={inputClass}
                 value={String(block.content.place ?? '')}
                 onChange={(e) => patchContent({ place: e.target.value })}
               />
@@ -290,8 +321,9 @@ export function BlockEditorPanel({
 
           {block.type === 'note' && (
             <div className="space-y-2">
-              <Label>Nota per la crew</Label>
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Nota per la crew</Label>
               <Textarea
+                className={`${inputClass} min-h-[100px] resize-none`}
                 value={String(block.content.body ?? '')}
                 onChange={(e) => patchContent({ body: e.target.value })}
                 rows={4}
@@ -299,16 +331,70 @@ export function BlockEditorPanel({
             </div>
           )}
 
-          <div className="rounded-xl border p-3 space-y-2 bg-muted/30">
+          <div className="rounded-2xl border border-white/10 p-4 space-y-3 bg-white/[0.02]">
             <div className="flex items-center justify-between">
-              <Label className="text-sm">Alternative ({block.alternatives.length})</Label>
-              <Button type="button" size="sm" variant="outline" onClick={addAlternative}>
-                <Plus className="mr-1 h-3.5 w-3.5" />
-                Aggiungi
-              </Button>
+              <Label className="text-white/60 text-xs uppercase tracking-wider">
+                Alternative ({block.alternatives.length})
+              </Label>
+              {!showAltForm && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs text-accent hover:text-accent hover:bg-accent/10 rounded-lg"
+                  onClick={() => setShowAltForm(true)}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Aggiungi
+                </Button>
+              )}
             </div>
-            {block.alternatives.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
+
+            {showAltForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-2 pb-1"
+              >
+                <Input
+                  className={inputClass}
+                  placeholder="Nome alternativa (es. Volo con scalo)"
+                  value={altLabel}
+                  onChange={(e) => setAltLabel(e.target.value)}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Input
+                    className={`${inputClass} flex-1`}
+                    type="number"
+                    placeholder="Prezzo € (opzionale)"
+                    value={altPrice}
+                    onChange={(e) => setAltPrice(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="h-11 w-11 rounded-xl shrink-0"
+                    onClick={submitAlternative}
+                    disabled={!altLabel.trim()}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-11 w-11 rounded-xl shrink-0 text-white/40 hover:text-white"
+                    onClick={() => setShowAltForm(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {block.alternatives.length === 0 && !showAltForm ? (
+              <p className="text-xs text-white/35 leading-relaxed">
                 Confronta voli, hotel o attività diverse — scegli quella che preferisci.
               </p>
             ) : (
@@ -316,10 +402,10 @@ export function BlockEditorPanel({
                 {block.alternatives.map((alt) => (
                   <li
                     key={alt.id}
-                    className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer transition ${
+                    className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition-all ${
                       block.selectedAlternativeId === alt.id
-                        ? 'border-primary bg-primary/5'
-                        : 'hover:bg-muted/50'
+                        ? 'border-accent/50 bg-accent/10 text-white'
+                        : 'border-white/8 hover:bg-white/[0.04] text-white/80'
                     }`}
                     onClick={() =>
                       onUpdate(block.id, (b) => ({
@@ -329,42 +415,42 @@ export function BlockEditorPanel({
                     }
                   >
                     <span className="truncate">{alt.label}</span>
-                    <span className="shrink-0 font-medium tabular-nums">
+                    <span className="shrink-0 font-semibold tabular-nums text-accent">
                       {alt.price != null ? `${alt.price}€` : '—'}
                     </span>
                   </li>
                 ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="w-full text-xs"
-                  onClick={() =>
-                    onUpdate(block.id, (b) => ({ ...b, selectedAlternativeId: null }))
-                  }
-                >
-                  Usa opzione principale
-                </Button>
+                {block.alternatives.length > 0 && (
+                  <button
+                    type="button"
+                    className="w-full text-xs text-white/35 hover:text-white/60 py-1 transition-colors"
+                    onClick={() =>
+                      onUpdate(block.id, (b) => ({ ...b, selectedAlternativeId: null }))
+                    }
+                  >
+                    Usa opzione principale
+                  </button>
+                )}
               </ul>
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             <Button
               type="button"
               variant="destructive"
               size="sm"
-              className="rounded-full"
+              className="rounded-full bg-rose-600/80 hover:bg-rose-600"
               onClick={() => {
                 onRemove(block.id);
                 onOpenChange(false);
               }}
             >
               <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Rimuovi blocco
+              Rimuovi
             </Button>
             {typeof block.content.affiliateUrl === 'string' && block.content.affiliateUrl && (
-              <Button asChild size="sm" variant="outline" className="rounded-full">
+              <Button asChild size="sm" variant="outline" className="rounded-full border-white/15 text-white hover:bg-white/10">
                 <a
                   href={block.content.affiliateUrl}
                   target="_blank"

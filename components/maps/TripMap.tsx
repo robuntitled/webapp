@@ -3,10 +3,12 @@
 import { useEffect, useRef } from 'react';
 import type { MapPin } from '@/lib/maps/pins';
 import { resolveDestinationCoords } from '@/lib/maps/coordinates';
+import type { DestinationMeta } from '@/types/composer';
 import 'leaflet/dist/leaflet.css';
 
 type TripMapProps = {
   destination: string;
+  destinationMeta?: DestinationMeta | null;
   pins: MapPin[];
   activeDayIndex?: number;
   highlightedPinId?: string | null;
@@ -20,6 +22,7 @@ const DAY_COLORS = ['#0ea5e9', '#f97316', '#8b5cf6', '#10b981', '#ec4899', '#eab
 
 export function TripMap({
   destination,
+  destinationMeta,
   pins,
   activeDayIndex,
   highlightedPinId,
@@ -42,7 +45,8 @@ export function TripMap({
     void import('leaflet').then((L) => {
       if (cancelled || !containerRef.current) return;
 
-      const center = resolveDestinationCoords(destination) ?? { lat: 41.9, lng: 12.5 };
+      const center =
+        resolveDestinationCoords(destination, destinationMeta) ?? { lat: 41.9, lng: 12.5 };
 
       const map = L.map(containerRef.current, {
         zoomControl: interactive,
@@ -72,7 +76,7 @@ export function TripMap({
       markersRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destination]);
+  }, [destination, destinationMeta?.lat, destinationMeta?.lng]);
 
   useEffect(() => {
     const map = mapRef.current;

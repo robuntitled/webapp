@@ -2,42 +2,18 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TripMap } from '@/components/maps/TripMap';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
-import {
-  BLOCK_META,
-  createEmptyBlock,
-  getBlockDisplayPrice,
-  getBlockDisplayTitle,
-} from '@/lib/composer/blocks';
+import { createEmptyBlock } from '@/lib/composer/blocks';
 import { formatComposerDayLabel } from '@/lib/composer/days';
 import { BlockEditorPanel } from '@/components/composer/BlockEditorPanel';
+import { BlockCard } from '@/components/composer/plan/BlockCard';
+import { BlockPalette } from '@/components/composer/plan/BlockPalette';
+import { ComposerPlanToolbar, type PlanViewMode } from '@/components/composer/plan/ComposerPlanToolbar';
+import { DaySelector } from '@/components/composer/plan/DaySelector';
 import type { ComposerBlock, ComposerBlockType, ComposerDay, ComposerDraft } from '@/types/composer';
-import {
-  ChevronLeft,
-  ChevronRight,
-  GripVertical,
-  LayoutGrid,
-  Map as MapIcon,
-  MessageCircle,
-  Pencil,
-  Plus,
-} from 'lucide-react';
-
-const PALETTE_TYPES: ComposerBlockType[] = [
-  'flight',
-  'hotel',
-  'attraction',
-  'activity',
-  'meal',
-  'transport',
-  'free_time',
-  'note',
-];
-
-type ViewMode = 'split' | 'plan' | 'map';
+import { MessageCircle, Sparkles } from 'lucide-react';
 
 type ComposerPlanStepProps = {
   draft: ComposerDraft;
@@ -50,7 +26,7 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
   const [activeDayIndex, setActiveDayIndex] = useState(1);
   const [editingBlock, setEditingBlock] = useState<ComposerBlock | null>(null);
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('plan');
+  const [viewMode, setViewMode] = useState<PlanViewMode>('split');
 
   const activeDay = draft.days.find((d) => d.dayIndex === activeDayIndex) ?? draft.days[0];
 
@@ -103,253 +79,178 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
     }));
   };
 
+  const moveBlock = (index: number, direction: -1 | 1) => {
+    if (!activeDay) return;
+    const target = index + direction;
+    if (target < 0 || target >= activeDay.blocks.length) return;
+    const blocks = [...activeDay.blocks];
+    [blocks[index], blocks[target]] = [blocks[target], blocks[index]];
+    updateDay(activeDay.dayIndex, (d) => ({
+      ...d,
+      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
+    }));
+  };
+
   const totalBlocks = draft.days.reduce((n, d) => n + d.blocks.length, 0);
-
-  const viewButtons = [
-    { id: 'split' as const, label: 'Split', icon: LayoutGrid, hideMobile: true },
-    { id: 'plan' as const, label: 'Piano', icon: GripVertical },
-    { id: 'map' as const, label: 'Mappa', icon: MapIcon },
-  ];
-
   const showPlan = viewMode === 'split' || viewMode === 'plan';
   const showMap = viewMode === 'split' || viewMode === 'map';
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="sticky top-16 z-30 composer-glass border-b border-white/10">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="rounded-full text-white/80 shrink-0"
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            Meta
-          </Button>
+      <ComposerPlanToolbar
+        draft={draft}
+        viewMode={viewMode}
+        totalBlocks={totalBlocks}
+        onBack={onBack}
+        onReview={onReview}
+        onViewChange={setViewMode}
+      />
 
-          <div className="flex rounded-full bg-white/10 p-0.5 gap-0.5">
-            {viewButtons.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setViewMode(v.id)}
-                className={`items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition md:px-4 ${
-                  v.hideMobile ? 'hidden lg:flex' : 'flex'
-                } ${
-                  viewMode === v.id
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-white/70 hover:text-white'
-                }`}
-              >
-                <v.icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{v.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <Button type="button" size="sm" className="rounded-full shrink-0" onClick={onReview} disabled={totalBlocks === 0}>
-            Rivedi
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="container mx-auto px-4 pb-3 overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
-            {draft.days.map((day) => (
-              <button
-                key={day.dayIndex}
-                type="button"
-                onClick={() => setActiveDayIndex(day.dayIndex)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition whitespace-nowrap ${
-                  day.dayIndex === activeDayIndex
-                    ? 'bg-accent text-accent-foreground shadow-md'
-                    : 'bg-white/10 text-white/70 hover:bg-white/15'
-                }`}
-              >
-                Giorno {day.dayIndex}
-                {day.blocks.length > 0 && (
-                  <span className="ml-1.5 opacity-70">· {day.blocks.length}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="container mx-auto px-4 py-4">
+        <DaySelector
+          days={draft.days}
+          activeDayIndex={activeDayIndex}
+          onSelect={setActiveDayIndex}
+        />
       </div>
 
-      <div className="flex-1 container mx-auto px-4 py-5">
+      <div className="flex-1 container mx-auto px-4 pb-6">
         <div
           className={`grid gap-5 h-full ${
             viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1'
           }`}
         >
-          {showPlan && (
+          {showPlan && activeDay && (
             <motion.div
               layout
-              className="space-y-4 min-h-0 flex flex-col"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              className="flex flex-col gap-4 min-h-0"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              {activeDay && (
-                <>
-                  <div className="composer-glass rounded-2xl p-4 shrink-0">
+              <div className="composer-day-header rounded-2xl p-5 shrink-0">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/20 text-lg font-bold text-accent tabular-nums">
+                    {activeDay.dayIndex}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
                     <Input
-                      className="font-display text-lg border-0 bg-transparent focus-visible:ring-0 px-0 text-white"
+                      className="font-display text-xl md:text-2xl border-0 bg-transparent focus-visible:ring-0 px-0 h-auto text-white placeholder:text-white/30"
                       value={activeDay.title}
                       onChange={(e) =>
                         updateDay(activeDay.dayIndex, (d) => ({ ...d, title: e.target.value }))
                       }
+                      placeholder="Titolo della giornata..."
                     />
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-white/45 flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-accent/60" />
                       {formatComposerDayLabel(activeDay.date, activeDay.dayIndex)}
                     </p>
                   </div>
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 shrink-0">
-                    {PALETTE_TYPES.map((type) => {
-                      const meta = BLOCK_META[type];
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => addBlock(type)}
-                          className="composer-glass rounded-xl p-2.5 text-center hover:bg-accent/15 hover:border-accent/30 border border-transparent transition group"
-                          title={meta.hint}
-                        >
-                          <span className="text-xl block group-hover:scale-110 transition-transform">
-                            {meta.emoji}
-                          </span>
-                          <span className="text-[10px] text-white/60 mt-1 block truncate">
-                            {meta.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div className="composer-glass rounded-2xl p-4 shrink-0">
+                <BlockPalette onAdd={addBlock} />
+              </div>
 
-                  <div className="flex-1 overflow-y-auto space-y-3 min-h-[200px] max-h-[50vh] lg:max-h-none pr-1">
-                    <AnimatePresence mode="popLayout">
-                      {activeDay.blocks.length === 0 ? (
-                        <motion.div
-                          key="empty"
-                          className="composer-glass rounded-2xl border-2 border-dashed border-white/20 p-10 text-center"
-                        >
-                          <p className="text-3xl mb-2">🗺️</p>
-                          <p className="text-white font-medium">Aggiungi blocchi o clicca sulla mappa</p>
-                          <p className="text-xs text-white/50 mt-2">
-                            Ogni tappa apparirà sulla mappa in tempo reale
-                          </p>
-                        </motion.div>
-                      ) : (
-                        activeDay.blocks.map((block, index) => {
-                          const meta = BLOCK_META[block.type];
-                          const price = getBlockDisplayPrice(block);
-                          return (
-                            <motion.div
-                              key={block.id}
-                              layout
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              onMouseEnter={() => setHighlightedPinId(block.id)}
-                              onMouseLeave={() => setHighlightedPinId(null)}
-                              className={`composer-block rounded-2xl border bg-gradient-to-br ${meta.color} p-4 cursor-pointer`}
-                              onClick={() => {
-                                setEditingBlock(block);
-                                setHighlightedPinId(block.id);
-                              }}
-                            >
-                              <div className="flex items-start gap-3">
-                                <span className="text-lg">{meta.emoji}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                    {meta.label}
-                                  </p>
-                                  <p className="font-semibold truncate">{getBlockDisplayTitle(block)}</p>
-                                  {price != null && (
-                                    <p className="text-sm font-bold text-primary tabular-nums">{price}€</p>
-                                  )}
-                                </div>
-                                <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
-                              </div>
-                              <div className="flex gap-1 mt-2 ml-8" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 text-xs"
-                                  disabled={index === 0}
-                                  onClick={() => {
-                                    const blocks = [...activeDay.blocks];
-                                    [blocks[index - 1], blocks[index]] = [blocks[index], blocks[index - 1]];
-                                    updateDay(activeDay.dayIndex, (d) => ({
-                                      ...d,
-                                      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
-                                    }));
-                                  }}
-                                >
-                                  ↑
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 text-xs"
-                                  disabled={index === activeDay.blocks.length - 1}
-                                  onClick={() => {
-                                    const blocks = [...activeDay.blocks];
-                                    [blocks[index], blocks[index + 1]] = [blocks[index + 1], blocks[index]];
-                                    updateDay(activeDay.dayIndex, (d) => ({
-                                      ...d,
-                                      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
-                                    }));
-                                  }}
-                                >
-                                  ↓
-                                </Button>
-                              </div>
-                            </motion.div>
-                          );
-                        })
-                      )}
-                    </AnimatePresence>
-                  </div>
+              <div className="flex-1 overflow-y-auto space-y-0 min-h-[220px] max-h-[52vh] lg:max-h-none pr-1 composer-scroll">
+                <AnimatePresence mode="popLayout">
+                  {activeDay.blocks.length === 0 ? (
+                    <motion.div
+                      key="empty"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="composer-empty-day rounded-2xl p-12 text-center"
+                    >
+                      <motion.div
+                        animate={{ y: [0, -6, 0] }}
+                        transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                        className="text-5xl mb-4"
+                      >
+                        🗺️
+                      </motion.div>
+                      <p className="font-display text-xl font-semibold text-white">
+                        La tua giornata è una tela bianca
+                      </p>
+                      <p className="text-sm text-white/45 mt-2 max-w-xs mx-auto leading-relaxed">
+                        Aggiungi blocchi dal menu sopra, oppure clicca direttamente sulla mappa
+                        per segnare una tappa.
+                      </p>
+                    </motion.div>
+                  ) : (
+                    activeDay.blocks.map((block, index) => (
+                      <BlockCard
+                        key={block.id}
+                        block={block}
+                        index={index}
+                        total={activeDay.blocks.length}
+                        isHighlighted={highlightedPinId === block.id}
+                        onEdit={() => {
+                          setEditingBlock(block);
+                          setHighlightedPinId(block.id);
+                        }}
+                        onMoveUp={() => moveBlock(index, -1)}
+                        onMoveDown={() => moveBlock(index, 1)}
+                        onHover={(hovering) =>
+                          setHighlightedPinId(hovering ? block.id : null)
+                        }
+                      />
+                    ))
+                  )}
+                </AnimatePresence>
+              </div>
 
-                  <div className="composer-glass rounded-xl p-3 flex items-center gap-3 shrink-0">
-                    <MessageCircle className="h-4 w-4 text-accent shrink-0" />
-                    <p className="text-xs text-white/60">
-                      Dopo il lancio la <strong className="text-white/80">chat crew</strong> si apre qui —
-                      niente più thread WhatsApp persi.
-                    </p>
-                  </div>
-                </>
-              )}
+              <div className="composer-crew-hint rounded-2xl p-4 flex items-center gap-3 shrink-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                  <MessageCircle className="h-4 w-4 text-accent" />
+                </div>
+                <p className="text-xs text-white/55 leading-relaxed">
+                  Dopo il lancio si apre la{' '}
+                  <strong className="text-white/80">chat crew</strong> — niente più thread
+                  WhatsApp persi tra amici.
+                </p>
+              </div>
             </motion.div>
           )}
 
           {showMap && (
-            <motion.div layout className="flex flex-col gap-3 min-h-[320px] lg:min-h-[calc(100vh-14rem)]">
-              <TripMap
-                destination={draft.destination}
-                pins={pins}
-                activeDayIndex={activeDayIndex}
-                highlightedPinId={highlightedPinId}
-                className="flex-1 min-h-[300px] lg:min-h-0"
-                onPinClick={(pin) => {
-                  if (pin.blockId) {
-                    setActiveDayIndex(pin.dayIndex);
-                    setHighlightedPinId(pin.blockId);
-                    const day = draft.days.find((d) => d.dayIndex === pin.dayIndex);
-                    const block = day?.blocks.find((b) => b.id === pin.blockId);
-                    if (block) setEditingBlock(block);
-                  }
-                }}
-                onMapClick={addPinFromMap}
-              />
-              <p className="text-[11px] text-white/45 text-center px-2">
-                I colori indicano il giorno · Clicca un pin per modificarlo
-              </p>
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="flex flex-col gap-3 min-h-[340px] lg:min-h-[calc(100vh-16rem)]"
+            >
+              <div className="composer-map-frame flex-1 flex flex-col min-h-[300px] lg:min-h-0">
+                <TripMap
+                  destination={draft.destination}
+                  destinationMeta={draft.destinationMeta}
+                  pins={pins}
+                  activeDayIndex={activeDayIndex}
+                  highlightedPinId={highlightedPinId}
+                  className="flex-1 min-h-[300px] lg:min-h-0 border-0 rounded-2xl"
+                  onPinClick={(pin) => {
+                    if (pin.blockId) {
+                      setActiveDayIndex(pin.dayIndex);
+                      setHighlightedPinId(pin.blockId);
+                      const day = draft.days.find((d) => d.dayIndex === pin.dayIndex);
+                      const block = day?.blocks.find((b) => b.id === pin.blockId);
+                      if (block) setEditingBlock(block);
+                    }
+                  }}
+                  onMapClick={addPinFromMap}
+                />
+              </div>
+              <div className="flex items-center justify-center gap-4 text-[10px] text-white/35">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-sky-500" /> Giorno attivo
+                </span>
+                <span>·</span>
+                <span>Clicca un pin per modificarlo</span>
+                <span>·</span>
+                <span>Clicca la mappa per aggiungere</span>
+              </div>
             </motion.div>
           )}
         </div>
