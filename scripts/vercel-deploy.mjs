@@ -13,7 +13,7 @@
 
 import { spawnSync } from 'node:child_process';
 
-const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '548437';
+const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '748861';
 const ORIGIN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA || 'ROM';
 const API_TOKEN = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
 

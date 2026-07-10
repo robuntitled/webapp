@@ -17,7 +17,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_TRAVELPAYOUTS_MARKER:
-      process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '548437',
+      process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '748861',
     NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA:
       process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA || 'ROM',
   },
