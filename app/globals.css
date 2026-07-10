@@ -142,6 +142,81 @@
     backdrop-filter: blur(8px);
   }
 
+  .text-gradient-composer {
+    background: linear-gradient(135deg, oklch(0.78 0.14 45), oklch(0.72 0.1 200), oklch(0.85 0.08 80));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .composer-search-glow {
+    position: relative;
+  }
+
+  .composer-search-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, oklch(0.68 0.16 45 / 0%), oklch(0.45 0.12 220 / 0%));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+    filter: blur(12px);
+  }
+
+  .composer-search-glow-active::before {
+    opacity: 1;
+    background: linear-gradient(135deg, oklch(0.68 0.16 45 / 35%), oklch(0.45 0.12 220 / 25%));
+  }
+
+  .composer-chip {
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: oklch(1 0 0 / 45%);
+    border: 1px solid oklch(1 0 0 / 10%);
+    background: oklch(1 0 0 / 3%);
+    transition: all 0.2s ease;
+  }
+
+  .composer-chip:hover {
+    color: oklch(1 0 0 / 70%);
+    border-color: oklch(1 0 0 / 20%);
+  }
+
+  .composer-chip-active {
+    color: oklch(0.68 0.16 45);
+    border-color: oklch(0.68 0.16 45 / 40%);
+    background: oklch(0.68 0.16 45 / 10%);
+  }
+
+  .composer-dest-card {
+    border: 1px solid oklch(1 0 0 / 8%);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+  }
+
+  .composer-dest-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 40px oklch(0 0 0 / 35%);
+  }
+
+  .composer-dest-card-selected {
+    box-shadow: 0 0 0 1px oklch(0.68 0.16 45 / 50%), 0 16px 32px oklch(0.68 0.16 45 / 15%);
+  }
+
+  .composer-selected-hero {
+    background: oklch(1 0 0 / 5%);
+    border: 1px solid oklch(0.68 0.16 45 / 25%);
+    box-shadow: 0 8px 32px oklch(0 0 0 / 20%);
+  }
+
+  .composer-map-dots {
+    background-image: radial-gradient(oklch(1 0 0 / 25%) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
   .trip-map-marker {
     background: transparent !important;
     border: none !important;

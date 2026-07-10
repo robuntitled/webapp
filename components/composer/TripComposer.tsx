@@ -97,7 +97,7 @@ export function TripComposer() {
 
       <div className="relative z-10">
         {step !== 'plan' && (
-          <div className="container mx-auto px-4 pt-6">
+          <div className="container mx-auto px-4 pt-6 flex items-center justify-between gap-4">
             <Button
               asChild
               variant="ghost"
@@ -108,6 +108,20 @@ export function TripComposer() {
                 I miei viaggi
               </Link>
             </Button>
+            <div className="flex items-center gap-2">
+              {(['setup', 'plan', 'review'] as const).map((s, i) => (
+                <div
+                  key={s}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    s === step
+                      ? 'w-8 bg-accent'
+                      : i < ['setup', 'plan', 'review'].indexOf(step)
+                        ? 'w-4 bg-accent/50'
+                        : 'w-4 bg-white/15'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         )}
 

@@ -13,6 +13,7 @@ export const DESTINATION_COORDS: Record<string, LatLng> = {
   marocco: { lat: 31.6295, lng: -7.9811 },
   dubai: { lat: 25.2048, lng: 55.2708 },
   'new york': { lat: 40.7128, lng: -74.006 },
+  'new-york': { lat: 40.7128, lng: -74.006 },
   messico: { lat: 19.4326, lng: -99.1332 },
   maldive: { lat: 4.1755, lng: 73.5093 },
   sicilia: { lat: 37.5079, lng: 14.0934 },
@@ -22,7 +23,14 @@ export const DESTINATION_COORDS: Record<string, LatLng> = {
   australia: { lat: -33.8688, lng: 151.2093 },
 };
 
-export function resolveDestinationCoords(destination: string): LatLng | null {
+export function resolveDestinationCoords(
+  destination: string,
+  meta?: { lat?: number; lng?: number } | null
+): LatLng | null {
+  if (meta?.lat != null && meta?.lng != null) {
+    return { lat: meta.lat, lng: meta.lng };
+  }
+
   const key = destination.trim().toLowerCase();
   if (DESTINATION_COORDS[key]) return DESTINATION_COORDS[key];
 

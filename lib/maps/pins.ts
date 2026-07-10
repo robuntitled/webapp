@@ -34,7 +34,7 @@ export function buildPinsFromDraft(
   draft: ComposerDraft,
   options?: { activeDayIndex?: number; dayFilter?: number }
 ): MapPin[] {
-  const center = resolveDestinationCoords(draft.destination);
+  const center = resolveDestinationCoords(draft.destination, draft.destinationMeta);
   if (!center) return [];
 
   const pins: MapPin[] = [];

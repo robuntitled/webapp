@@ -34,9 +34,22 @@ export type ComposerDay = {
   blocks: ComposerBlock[];
 };
 
+export type DestinationMeta = {
+  label: string;
+  lat: number;
+  lng: number;
+  country?: string;
+  countryCode?: string;
+  placeType?: string;
+  placeTypeLabel?: string;
+  subtitle?: string;
+  osmId?: string;
+};
+
 export type ComposerDraft = {
   title: string;
   destination: string;
+  destinationMeta?: DestinationMeta;
   startDate: string;
   endDate: string;
   planningMode: 'solo' | 'group';
@@ -50,4 +63,7 @@ export type ComposerDestination = {
   emoji: string;
   region: string;
   vibe: string;
+  gradient: string;
+  lat: number;
+  lng: number;
 };
