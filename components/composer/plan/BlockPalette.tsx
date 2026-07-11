@@ -1,58 +1,66 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
-import { BLOCK_META } from '@/lib/composer/blocks';
+import { BLOCK_CATEGORIES, BLOCK_META } from '@/lib/composer/blocks';
 import type { ComposerBlockType } from '@/types/composer';
-
-const PALETTE_TYPES: ComposerBlockType[] = [
-  'flight',
-  'hotel',
-  'attraction',
-  'activity',
-  'meal',
-  'transport',
-  'free_time',
-  'note',
-];
+import type { TimeSlot } from '@/lib/composer/time-slots';
+import { TIME_SLOTS } from '@/lib/composer/time-slots';
 
 type BlockPaletteProps = {
-  onAdd: (type: ComposerBlockType) => void;
+  selectedSlot: TimeSlot;
+  onSlotChange: (slot: TimeSlot) => void;
+  onAdd: (type: ComposerBlockType, timeSlot: TimeSlot) => void;
 };
 
-export function BlockPalette({ onAdd }: BlockPaletteProps) {
+export function BlockPalette({ selectedSlot, onSlotChange, onAdd }: BlockPaletteProps) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35">
-          Aggiungi al giorno
-        </p>
-        <Plus className="h-3.5 w-3.5 text-white/25" />
+    <div className="space-y-4">
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+        {TIME_SLOTS.map((slot) => (
+          <button
+            key={slot.id}
+            type="button"
+            onClick={() => onSlotChange(slot.id)}
+            className={`composer-time-chip shrink-0 ${
+              selectedSlot === slot.id ? 'composer-time-chip-active' : ''
+            }`}
+          >
+            <span>{slot.emoji}</span>
+            <span>{slot.label}</span>
+            <span className="text-[9px] opacity-50">{slot.hours}</span>
+          </button>
+        ))}
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-        {PALETTE_TYPES.map((type, i) => {
-          const meta = BLOCK_META[type];
-          return (
-            <motion.button
-              key={type}
-              type="button"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              whileHover={{ y: -3 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => onAdd(type)}
-              className={`composer-palette-item shrink-0 flex flex-col items-center gap-2 p-3 rounded-2xl border bg-gradient-to-br ${meta.color} min-w-[76px]`}
-              title={meta.hint}
-            >
-              <span className="text-2xl leading-none drop-shadow-sm">{meta.emoji}</span>
-              <span className="text-[10px] font-medium text-white/75 leading-tight text-center">
-                {meta.label}
-              </span>
-            </motion.button>
-          );
-        })}
-      </div>
+
+      {BLOCK_CATEGORIES.map((cat) => (
+        <div key={cat.id}>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-2 px-0.5">
+            {cat.label}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {cat.types.map((type, i) => {
+              const meta = BLOCK_META[type];
+              return (
+                <motion.button
+                  key={type}
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => onAdd(type, selectedSlot)}
+                  className={`composer-palette-item flex items-center gap-2 px-3 py-2 rounded-xl border bg-gradient-to-br ${meta.color}`}
+                  title={meta.hint}
+                >
+                  <span className="text-lg">{meta.emoji}</span>
+                  <span className="text-xs font-medium text-white/85">{meta.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

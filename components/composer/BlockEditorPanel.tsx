@@ -14,8 +14,26 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, Plus, RefreshCw, Trash2, ExternalLink, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { BLOCK_META, createAlternativeId } from '@/lib/composer/blocks';
+import { BLOCK_META, createAlternativeId, DURATION_OPTIONS } from '@/lib/composer/blocks';
+import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
+import { TIME_SLOTS } from '@/lib/composer/time-slots';
 import type { ComposerBlock, ComposerDraft } from '@/types/composer';
+
+const TRANSPORT_MODES = [
+  { id: 'taxi', label: 'Taxi' },
+  { id: 'bus', label: 'Bus' },
+  { id: 'train', label: 'Treno' },
+  { id: 'metro', label: 'Metro' },
+  { id: 'walk', label: 'A piedi' },
+  { id: 'rental', label: 'Noleggio' },
+  { id: 'ferry', label: 'Traghetto' },
+];
+
+const TRAVEL_CLASSES = [
+  { id: 'economy', label: 'Economy' },
+  { id: 'comfort', label: 'Premium' },
+  { id: 'business', label: 'Business' },
+];
 
 type BlockEditorPanelProps = {
   block: ComposerBlock | null;
@@ -190,6 +208,36 @@ export function BlockEditorPanel({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Fascia oraria</Label>
+              <select
+                className={`${inputClass} w-full px-3`}
+                value={String(block.content.timeSlot ?? 'flex')}
+                onChange={(e) => patchContent({ timeSlot: e.target.value })}
+              >
+                {TIME_SLOTS.map((s) => (
+                  <option key={s.id} value={s.id} className="bg-slate-900">
+                    {s.emoji} {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Durata</Label>
+              <select
+                className={`${inputClass} w-full px-3`}
+                value={String(block.content.duration ?? '')}
+                onChange={(e) => patchContent({ duration: e.target.value })}
+              >
+                <option value="" className="bg-slate-900">—</option>
+                {DURATION_OPTIONS.map((d) => (
+                  <option key={d} value={d} className="bg-slate-900">{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {block.type === 'flight' && (
             <div className="space-y-3">
               <Button
@@ -205,6 +253,31 @@ export function BlockEditorPanel({
                 )}
                 Cerca volo (cache Travelpayouts)
               </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Passeggeri</Label>
+                  <Input
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    max={9}
+                    value={String(block.content.passengers ?? 1)}
+                    onChange={(e) => patchContent({ passengers: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Classe</Label>
+                  <select
+                    className={`${inputClass} w-full px-3`}
+                    value={String(block.content.travelClass ?? 'economy')}
+                    onChange={(e) => patchContent({ travelClass: e.target.value })}
+                  >
+                    {TRAVEL_CLASSES.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-slate-900">{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-white/50 text-xs uppercase tracking-wider">Prezzo (€)</Label>
@@ -252,7 +325,7 @@ export function BlockEditorPanel({
                   placeholder="Es. Centro storico, Seminyak..."
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label className="text-white/50 text-xs uppercase tracking-wider">Notti</Label>
                   <Input
@@ -264,7 +337,17 @@ export function BlockEditorPanel({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white/50 text-xs uppercase tracking-wider">Prezzo totale (€)</Label>
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Ospiti</Label>
+                  <Input
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    value={String(block.content.guests ?? 2)}
+                    onChange={(e) => patchContent({ guests: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Prezzo (€)</Label>
                   <Input
                     className={inputClass}
                     type="number"
@@ -290,19 +373,30 @@ export function BlockEditorPanel({
             </div>
           )}
 
-          {(block.type === 'attraction' || block.type === 'activity') && (
+          {block.type === 'attraction' && (
             <div className="space-y-2">
-              <Label className="text-white/50 text-xs uppercase tracking-wider">Luogo / descrizione</Label>
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Luogo</Label>
+              <PlaceSearchInput
+                className={`${inputClass} pl-10`}
+                value={String(block.content.place ?? '')}
+                onChange={(place, coords) =>
+                  patchContent({
+                    place,
+                    ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+                  })
+                }
+                placeholder="Cerca attrazione nel mondo..."
+              />
+            </div>
+          )}
+
+          {block.type === 'activity' && (
+            <div className="space-y-2">
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Descrizione attività</Label>
               <Textarea
                 className={`${inputClass} min-h-[88px] resize-none`}
-                value={String(block.content.place ?? block.content.description ?? '')}
-                onChange={(e) =>
-                  patchContent(
-                    block.type === 'attraction'
-                      ? { place: e.target.value }
-                      : { description: e.target.value }
-                  )
-                }
+                value={String(block.content.description ?? '')}
+                onChange={(e) => patchContent({ description: e.target.value })}
                 rows={3}
               />
             </div>
@@ -310,12 +404,57 @@ export function BlockEditorPanel({
 
           {block.type === 'meal' && (
             <div className="space-y-2">
-              <Label className="text-white/50 text-xs uppercase tracking-wider">Dove mangiare</Label>
-              <Input
-                className={inputClass}
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Ristorante / zona</Label>
+              <PlaceSearchInput
+                className={`${inputClass} pl-10`}
                 value={String(block.content.place ?? '')}
-                onChange={(e) => patchContent({ place: e.target.value })}
+                onChange={(place, coords) =>
+                  patchContent({
+                    place,
+                    ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+                  })
+                }
+                placeholder="Cerca ristorante o quartiere..."
               />
+            </div>
+          )}
+
+          {block.type === 'transport' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {TRANSPORT_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => patchContent({ mode: m.id })}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      block.content.mode === m.id
+                        ? 'border-accent/50 bg-accent/15 text-accent'
+                        : 'border-white/10 text-white/50 hover:border-white/20'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Da</Label>
+                  <Input
+                    className={inputClass}
+                    value={String(block.content.from ?? '')}
+                    onChange={(e) => patchContent({ from: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">A</Label>
+                  <Input
+                    className={inputClass}
+                    value={String(block.content.to ?? '')}
+                    onChange={(e) => patchContent({ to: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

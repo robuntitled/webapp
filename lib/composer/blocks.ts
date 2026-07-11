@@ -1,4 +1,5 @@
 import type { ComposerBlock, ComposerBlockType } from '@/types/composer';
+import { inferTimeSlotForType } from '@/lib/composer/time-slots';
 
 export const BLOCK_META: Record<
   ComposerBlockType,
@@ -62,33 +63,97 @@ export function createAlternativeId(): string {
   return `alt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function defaultBlockContent(type: ComposerBlockType): Record<string, unknown> {
+export const BLOCK_CATEGORIES = [
+  {
+    id: 'travel',
+    label: 'Viaggiare',
+    types: ['flight', 'hotel', 'transport'] as ComposerBlockType[],
+  },
+  {
+    id: 'experiences',
+    label: 'Esperienze',
+    types: ['attraction', 'activity', 'meal'] as ComposerBlockType[],
+  },
+  {
+    id: 'other',
+    label: 'Altro',
+    types: ['free_time', 'note'] as ComposerBlockType[],
+  },
+] as const;
+
+export const DURATION_OPTIONS = ['30m', '1h', '2h', '3h', '4h', 'Mezza giornata', 'Giornata intera'];
+
+export function defaultBlockContent(
+  type: ComposerBlockType,
+  extra?: Record<string, unknown>
+): Record<string, unknown> {
+  const timeSlot = inferTimeSlotForType(type);
+  const base: Record<string, unknown> = { timeSlot };
+
   switch (type) {
     case 'flight':
-      return { title: 'Volo', origin: 'ROM', price: null, currency: 'EUR', airline: null };
+      Object.assign(base, {
+        title: 'Volo',
+        origin: 'ROM',
+        price: null,
+        currency: 'EUR',
+        airline: null,
+        passengers: 1,
+        travelClass: 'economy',
+        duration: '2h',
+      });
+      break;
     case 'hotel':
-      return { title: 'Hotel', area: '', nights: 1, price: null, currency: 'EUR' };
+      Object.assign(base, {
+        title: 'Hotel',
+        area: '',
+        nights: 1,
+        price: null,
+        currency: 'EUR',
+        guests: 2,
+        stars: null,
+        duration: '1 notte',
+      });
+      break;
     case 'attraction':
-      return { title: 'Da visitare', place: '', duration: '2h' };
+      Object.assign(base, { title: 'Da visitare', place: '', duration: '2h' });
+      break;
     case 'activity':
-      return { title: 'Attività', description: '', duration: '3h' };
+      Object.assign(base, { title: 'Attività', description: '', duration: '3h' });
+      break;
     case 'meal':
-      return { title: 'Pasto', place: '', cuisine: '' };
+      Object.assign(base, { title: 'Pasto', place: '', cuisine: '', duration: '1h 30m' });
+      break;
     case 'transport':
-      return { title: 'Trasporto', mode: 'taxi', from: '', to: '' };
+      Object.assign(base, {
+        title: 'Trasporto',
+        mode: 'taxi',
+        from: '',
+        to: '',
+        duration: '30m',
+      });
+      break;
     case 'free_time':
-      return { title: 'Tempo libero', note: 'Esplora senza orari fissi' };
+      Object.assign(base, { title: 'Tempo libero', note: 'Esplora senza orari fissi', duration: '2h' });
+      break;
     case 'note':
-      return { title: 'Nota', body: '' };
+      Object.assign(base, { title: 'Nota', body: '', duration: '' });
+      break;
   }
+
+  return { ...base, ...extra };
 }
 
-export function createEmptyBlock(type: ComposerBlockType, sortOrder: number): ComposerBlock {
+export function createEmptyBlock(
+  type: ComposerBlockType,
+  sortOrder: number,
+  extra?: Record<string, unknown>
+): ComposerBlock {
   return {
     id: createBlockId(),
     type,
     sortOrder,
-    content: defaultBlockContent(type),
+    content: defaultBlockContent(type, extra),
     alternatives: [],
     selectedAlternativeId: null,
   };

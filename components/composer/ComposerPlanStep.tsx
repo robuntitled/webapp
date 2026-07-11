@@ -1,19 +1,28 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { TripMap } from '@/components/maps/TripMap';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { createEmptyBlock } from '@/lib/composer/blocks';
+import { DAY_TEMPLATES } from '@/lib/composer/day-templates';
+import { duplicateBlock } from '@/lib/composer/planning';
 import { formatComposerDayLabel } from '@/lib/composer/days';
+import type { TimeSlot } from '@/lib/composer/time-slots';
 import { BlockEditorPanel } from '@/components/composer/BlockEditorPanel';
-import { BlockCard } from '@/components/composer/plan/BlockCard';
 import { BlockPalette } from '@/components/composer/plan/BlockPalette';
+import { BudgetPanel } from '@/components/composer/plan/BudgetPanel';
 import { ComposerPlanToolbar, type PlanViewMode } from '@/components/composer/plan/ComposerPlanToolbar';
 import { DaySelector } from '@/components/composer/plan/DaySelector';
+import { DayTimeline } from '@/components/composer/plan/DayTimeline';
+import { DayToolsBar } from '@/components/composer/plan/DayToolsBar';
+import { PlanStatsBar } from '@/components/composer/plan/PlanStatsBar';
+import { TravelSearchPanel } from '@/components/composer/plan/TravelSearchPanel';
+import { WeatherStrip } from '@/components/composer/plan/WeatherStrip';
 import type { ComposerBlock, ComposerBlockType, ComposerDay, ComposerDraft } from '@/types/composer';
-import { MessageCircle, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 type ComposerPlanStepProps = {
   draft: ComposerDraft;
@@ -27,6 +36,7 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
   const [editingBlock, setEditingBlock] = useState<ComposerBlock | null>(null);
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<PlanViewMode>('split');
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot>('morning');
 
   const activeDay = draft.days.find((d) => d.dayIndex === activeDayIndex) ?? draft.days[0];
 
@@ -39,10 +49,16 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
   };
 
-  const addBlock = (type: ComposerBlockType, extra?: Record<string, unknown>) => {
+  const addBlock = (
+    type: ComposerBlockType,
+    extra?: Record<string, unknown>,
+    timeSlot?: TimeSlot
+  ) => {
     if (!activeDay) return;
-    const block = createEmptyBlock(type, activeDay.blocks.length);
-    if (extra) block.content = { ...block.content, ...extra };
+    const block = createEmptyBlock(type, activeDay.blocks.length, {
+      timeSlot: timeSlot ?? selectedSlot,
+      ...extra,
+    });
     updateDay(activeDay.dayIndex, (d) => ({
       ...d,
       blocks: [...d.blocks, block],
@@ -91,9 +107,72 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
     }));
   };
 
+  const dragReorder = (fromIndex: number, toIndex: number) => {
+    if (!activeDay || fromIndex === toIndex) return;
+    const blocks = [...activeDay.blocks];
+    const [moved] = blocks.splice(fromIndex, 1);
+    blocks.splice(toIndex, 0, moved);
+    updateDay(activeDay.dayIndex, (d) => ({
+      ...d,
+      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
+    }));
+  };
+
+  const duplicateBlockInDay = (block: ComposerBlock) => {
+    if (!activeDay) return;
+    const copy = duplicateBlock(block, activeDay.blocks.length);
+    updateDay(activeDay.dayIndex, (d) => ({
+      ...d,
+      blocks: [...d.blocks, copy],
+    }));
+    toast.success('Blocco duplicato');
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const template = DAY_TEMPLATES.find((t) => t.id === templateId);
+    if (!template || !activeDay) return;
+
+    const newBlocks = template.blocks.map((b, i) =>
+      createEmptyBlock(b.type, activeDay.blocks.length + i, {
+        title: b.title,
+        timeSlot: b.timeSlot ?? 'flex',
+      })
+    );
+
+    updateDay(activeDay.dayIndex, (d) => ({
+      ...d,
+      title: d.blocks.length === 0 ? template.label : d.title,
+      blocks: [...d.blocks, ...newBlocks],
+    }));
+    toast.success(`Template "${template.label}" applicato`);
+  };
+
+  const duplicateDayBlocks = () => {
+    const nextDay = draft.days.find((d) => d.dayIndex === activeDayIndex + 1);
+    if (!activeDay || !nextDay) {
+      toast.message('Nessun giorno successivo da riempire');
+      return;
+    }
+    const copies = activeDay.blocks.map((b, i) =>
+      duplicateBlock(b, nextDay.blocks.length + i)
+    );
+    updateDay(nextDay.dayIndex, (d) => ({
+      ...d,
+      blocks: [...d.blocks, ...copies],
+    }));
+    setActiveDayIndex(nextDay.dayIndex);
+    toast.success(`Blocchi copiati nel giorno ${nextDay.dayIndex}`);
+  };
+
+  const clearDay = () => {
+    if (!activeDay) return;
+    updateDay(activeDay.dayIndex, (d) => ({ ...d, blocks: [] }));
+    toast.message('Giornata svuotata');
+  };
+
   const totalBlocks = draft.days.reduce((n, d) => n + d.blocks.length, 0);
   const showPlan = viewMode === 'split' || viewMode === 'plan';
-  const showMap = viewMode === 'split' || viewMode === 'map';
+  const showSidebar = viewMode === 'split' || viewMode === 'map';
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
@@ -106,7 +185,8 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
         onViewChange={setViewMode}
       />
 
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-4 space-y-4">
+        <PlanStatsBar days={draft.days} />
         <DaySelector
           days={draft.days}
           activeDayIndex={activeDayIndex}
@@ -114,122 +194,124 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
         />
       </div>
 
-      <div className="flex-1 container mx-auto px-4 pb-6">
+      <div className="flex-1 container mx-auto px-4 pb-8">
         <div
-          className={`grid gap-5 h-full ${
-            viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1'
+          className={`grid gap-6 h-full ${
+            viewMode === 'split'
+              ? 'xl:grid-cols-12'
+              : viewMode === 'plan'
+                ? 'grid-cols-1 max-w-3xl mx-auto'
+                : 'grid-cols-1'
           }`}
         >
           {showPlan && activeDay && (
             <motion.div
               layout
-              className="flex flex-col gap-4 min-h-0"
+              className={`flex flex-col gap-4 min-h-0 ${viewMode === 'split' ? 'xl:col-span-7' : ''}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
             >
               <div className="composer-day-header rounded-2xl p-5 shrink-0">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/20 text-lg font-bold text-accent tabular-nums">
-                    {activeDay.dayIndex}
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-xl font-bold text-accent tabular-nums shadow-lg shadow-accent/10">
+                      {activeDay.dayIndex}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Input
+                        className="font-display text-xl md:text-2xl border-0 bg-transparent focus-visible:ring-0 px-0 h-auto text-white placeholder:text-white/30"
+                        value={activeDay.title}
+                        onChange={(e) =>
+                          updateDay(activeDay.dayIndex, (d) => ({ ...d, title: e.target.value }))
+                        }
+                        placeholder="Titolo della giornata..."
+                      />
+                      <p className="text-xs text-white/45 flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 text-accent/60" />
+                        {formatComposerDayLabel(activeDay.date, activeDay.dayIndex)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <Input
-                      className="font-display text-xl md:text-2xl border-0 bg-transparent focus-visible:ring-0 px-0 h-auto text-white placeholder:text-white/30"
-                      value={activeDay.title}
-                      onChange={(e) =>
-                        updateDay(activeDay.dayIndex, (d) => ({ ...d, title: e.target.value }))
-                      }
-                      placeholder="Titolo della giornata..."
-                    />
-                    <p className="text-xs text-white/45 flex items-center gap-1.5">
-                      <Sparkles className="h-3 w-3 text-accent/60" />
-                      {formatComposerDayLabel(activeDay.date, activeDay.dayIndex)}
-                    </p>
-                  </div>
+                  <DayToolsBar
+                    blockCount={activeDay.blocks.length}
+                    onApplyTemplate={applyTemplate}
+                    onDuplicateDay={duplicateDayBlocks}
+                    onClearDay={clearDay}
+                  />
                 </div>
               </div>
 
               <div className="composer-glass rounded-2xl p-4 shrink-0">
-                <BlockPalette onAdd={addBlock} />
+                <BlockPalette
+                  selectedSlot={selectedSlot}
+                  onSlotChange={setSelectedSlot}
+                  onAdd={(type, slot) => addBlock(type, undefined, slot)}
+                />
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-0 min-h-[220px] max-h-[52vh] lg:max-h-none pr-1 composer-scroll">
-                <AnimatePresence mode="popLayout">
-                  {activeDay.blocks.length === 0 ? (
+              <div className="flex-1 overflow-y-auto min-h-[240px] max-h-[58vh] xl:max-h-none pr-1 composer-scroll">
+                {activeDay.blocks.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="composer-empty-day rounded-2xl p-12 text-center"
+                  >
                     <motion.div
-                      key="empty"
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="composer-empty-day rounded-2xl p-12 text-center"
+                      animate={{ y: [0, -8, 0] }}
+                      transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                      className="text-6xl mb-5"
                     >
-                      <motion.div
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                        className="text-5xl mb-4"
-                      >
-                        🗺️
-                      </motion.div>
-                      <p className="font-display text-xl font-semibold text-white">
-                        La tua giornata è una tela bianca
-                      </p>
-                      <p className="text-sm text-white/45 mt-2 max-w-xs mx-auto leading-relaxed">
-                        Aggiungi blocchi dal menu sopra, oppure clicca direttamente sulla mappa
-                        per segnare una tappa.
-                      </p>
+                      ✨
                     </motion.div>
-                  ) : (
-                    activeDay.blocks.map((block, index) => (
-                      <BlockCard
-                        key={block.id}
-                        block={block}
-                        index={index}
-                        total={activeDay.blocks.length}
-                        isHighlighted={highlightedPinId === block.id}
-                        onEdit={() => {
-                          setEditingBlock(block);
-                          setHighlightedPinId(block.id);
-                        }}
-                        onMoveUp={() => moveBlock(index, -1)}
-                        onMoveDown={() => moveBlock(index, 1)}
-                        onHover={(hovering) =>
-                          setHighlightedPinId(hovering ? block.id : null)
-                        }
-                      />
-                    ))
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="composer-crew-hint rounded-2xl p-4 flex items-center gap-3 shrink-0">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15">
-                  <MessageCircle className="h-4 w-4 text-accent" />
-                </div>
-                <p className="text-xs text-white/55 leading-relaxed">
-                  Dopo il lancio si apre la{' '}
-                  <strong className="text-white/80">chat crew</strong> — niente più thread
-                  WhatsApp persi tra amici.
-                </p>
+                    <p className="font-display text-2xl font-semibold text-white">
+                      Pianifica come i pro
+                    </p>
+                    <p className="text-sm text-white/45 mt-3 max-w-sm mx-auto leading-relaxed">
+                      Scegli un <strong className="text-white/70">template</strong>, aggiungi
+                      voli e hotel dalla sidebar, oppure componi fascia per fascia — mattina,
+                      pomeriggio, sera.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <DayTimeline
+                    blocks={activeDay.blocks}
+                    highlightedPinId={highlightedPinId}
+                    onEdit={setEditingBlock}
+                    onMoveUp={(i) => moveBlock(i, -1)}
+                    onMoveDown={(i) => moveBlock(i, 1)}
+                    onDuplicate={duplicateBlockInDay}
+                    onHover={setHighlightedPinId}
+                    onDragReorder={dragReorder}
+                  />
+                )}
               </div>
             </motion.div>
           )}
 
-          {showMap && (
+          {showSidebar && (
             <motion.div
               layout
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="flex flex-col gap-3 min-h-[340px] lg:min-h-[calc(100vh-16rem)]"
+              transition={{ delay: 0.06 }}
+              className={`space-y-4 ${viewMode === 'split' ? 'xl:col-span-5' : ''} ${
+                viewMode === 'split' ? 'xl:sticky xl:top-36 xl:self-start' : ''
+              }`}
             >
-              <div className="composer-map-frame flex-1 flex flex-col min-h-[300px] lg:min-h-0">
+              <TravelSearchPanel
+                draft={draft}
+                onAddFlight={() => addBlock('flight', { title: 'Volo' }, 'morning')}
+                onAddHotel={() => addBlock('hotel', { title: 'Hotel' }, 'night')}
+              />
+
+              <div className="composer-map-frame">
                 <TripMap
                   destination={draft.destination}
                   destinationMeta={draft.destinationMeta}
                   pins={pins}
                   activeDayIndex={activeDayIndex}
                   highlightedPinId={highlightedPinId}
-                  className="flex-1 min-h-[300px] lg:min-h-0 border-0 rounded-2xl"
+                  className="h-[220px] md:h-[260px] border-0 rounded-2xl"
                   onPinClick={(pin) => {
                     if (pin.blockId) {
                       setActiveDayIndex(pin.dayIndex);
@@ -242,15 +324,9 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
                   onMapClick={addPinFromMap}
                 />
               </div>
-              <div className="flex items-center justify-center gap-4 text-[10px] text-white/35">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-sky-500" /> Giorno attivo
-                </span>
-                <span>·</span>
-                <span>Clicca un pin per modificarlo</span>
-                <span>·</span>
-                <span>Clicca la mappa per aggiungere</span>
-              </div>
+
+              <WeatherStrip draft={draft} activeDayIndex={activeDayIndex} />
+              <BudgetPanel days={draft.days} activeDayIndex={activeDayIndex} />
             </motion.div>
           )}
         </div>

@@ -336,6 +336,88 @@
     display: none;
   }
 
+  .composer-stats-bar {
+    animation: composer-fade-up 0.5s ease both;
+  }
+
+  .composer-stat-card {
+    background: oklch(1 0 0 / 4%);
+    border: 1px solid oklch(1 0 0 / 8%);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .composer-stat-card:hover {
+    border-color: oklch(1 0 0 / 14%);
+    transform: translateY(-1px);
+  }
+
+  .composer-stat-card-accent {
+    background: oklch(0.68 0.16 45 / 8%);
+    border-color: oklch(0.68 0.16 45 / 25%);
+  }
+
+  .composer-time-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: oklch(1 0 0 / 45%);
+    border: 1px solid oklch(1 0 0 / 8%);
+    background: oklch(1 0 0 / 3%);
+    transition: all 0.2s ease;
+  }
+
+  .composer-time-chip:hover {
+    color: oklch(1 0 0 / 70%);
+    border-color: oklch(1 0 0 / 15%);
+  }
+
+  .composer-time-chip-active {
+    color: oklch(0.68 0.16 45);
+    border-color: oklch(0.68 0.16 45 / 40%);
+    background: oklch(0.68 0.16 45 / 10%);
+  }
+
+  .composer-travel-card {
+    background: oklch(1 0 0 / 3%);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .composer-travel-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px oklch(0 0 0 / 30%);
+  }
+
+  .composer-budget-panel {
+    background: oklch(1 0 0 / 4%);
+    border: 1px solid oklch(1 0 0 / 10%);
+  }
+
+  .composer-weather-strip {
+    background: oklch(0.55 0.1 220 / 10%);
+    border: 1px solid oklch(0.55 0.1 220 / 20%);
+  }
+
+  .composer-block-card-pro:hover {
+    transform: translateX(3px);
+    box-shadow: 0 12px 40px oklch(0 0 0 / 30%);
+  }
+
+  @keyframes composer-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .trip-map-marker {
     background: transparent !important;
     border: none !important;
