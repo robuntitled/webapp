@@ -13,7 +13,7 @@
 
 import { spawnSync } from 'node:child_process';
 
-const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '748861';
+const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
 const ORIGIN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA || 'ROM';
 const API_TOKEN = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
 
@@ -42,7 +42,11 @@ console.log('NomadLink — setup Vercel + deploy production\n');
 
 run('npx', ['vercel', 'link', '--yes', '--project', 'webapp']);
 
-upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_MARKER', MARKER);
+if (MARKER) {
+  upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_MARKER', MARKER);
+} else {
+  console.log('\n⚠ NEXT_PUBLIC_TRAVELPAYOUTS_MARKER non impostato — link affiliate disabilitati');
+}
 upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA', ORIGIN);
 
 if (API_TOKEN) {

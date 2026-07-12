@@ -5,6 +5,7 @@ import {
   buildTripFlightSearchUrl,
   buildTripHotelSearchUrl,
 } from '@/lib/travelpayouts/flight-search';
+import { getTravelSetupStatus } from '@/lib/travelpayouts/setup-hints';
 
 const querySchema = z.object({
   destination: z.string().min(2).max(200),
@@ -20,6 +21,7 @@ const querySchema = z.object({
 
 export async function GET(request: Request) {
   const config = getTravelpayoutsConfig();
+  const setup = getTravelSetupStatus();
   const { searchParams } = new URL(request.url);
 
   const parsed = querySchema.safeParse({
@@ -52,6 +54,10 @@ export async function GET(request: Request) {
     endDate,
   });
 
+  const missing: string[] = [];
+  if (!flightUrl) missing.push('Link voli non generato — verifica marker, destinazione e date');
+  if (!hotelUrl) missing.push('Link hotel non generato — verifica marker');
+
   return NextResponse.json({
     configured: config.isConfigured,
     mode: config.mode,
@@ -59,11 +65,7 @@ export async function GET(request: Request) {
     hasAffiliate: config.hasAffiliate,
     flightUrl,
     hotelUrl,
-    missing: !config.isConfigured
-      ? [
-          'Aggiungi NEXT_PUBLIC_TRAVELPAYOUTS_MARKER (Partner ID) su Vercel',
-          'Opzionale: TRAVELPAYOUTS_API_TOKEN per stime prezzo in cache',
-        ]
-      : [],
+    setup,
+    missing: missing.length > 0 ? missing : undefined,
   });
 }

@@ -5,11 +5,13 @@ import { buildFlightSearchCode } from '@/lib/travelpayouts/flight-search';
 
 /** Program ID Travelpayouts — Aviasales (voli). */
 export const PROGRAM_AVIASALES = 4117;
-/** Program ID Travelpayouts — Hotellook (hotel). */
+/** Program ID Travelpayouts — Booking.com (hotel). Hotellook (607) chiuso ott 2025. */
+export const PROGRAM_BOOKING = 2076;
+/** @deprecated Hotellook chiuso — usare PROGRAM_BOOKING */
 export const PROGRAM_HOTELLOOK = 607;
 
 const AVIASALES_SEARCH_BASE = 'https://www.aviasales.com/search';
-const HOTELLOOK_SEARCH_BASE = 'https://search.hotellook.com/hotels';
+const BOOKING_SEARCH_BASE = 'https://www.booking.com/searchresults.html';
 
 export function getPublicMarker(): string | null {
   return process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim() || null;
@@ -58,24 +60,33 @@ export type HotelAffiliateParams = {
   subId?: string;
 };
 
+export function buildBookingDirectSearchUrl(params: HotelAffiliateParams): string {
+  const url = new URL(BOOKING_SEARCH_BASE);
+  const iata = resolveDestinationIata(params.destination);
+  const destLabel = params.destination.split(',')[0]?.trim() || params.destination;
+
+  url.searchParams.set('ss', iata ? destLabel : params.destination);
+  if (params.startDate) url.searchParams.set('checkin', params.startDate);
+  if (params.endDate) url.searchParams.set('checkout', params.endDate);
+  url.searchParams.set('group_adults', '2');
+  url.searchParams.set('no_rooms', '1');
+  url.searchParams.set('selected_currency', 'EUR');
+  return url.toString();
+}
+
+export function buildBookingAffiliateUrl(
+  params: HotelAffiliateParams,
+  marker: string
+): string {
+  const direct = buildBookingDirectSearchUrl(params);
+  const subId = params.subId ?? (params.tripId ? `trip_${params.tripId}_hotel` : 'hotel');
+  return wrapTpMediaAffiliateUrl(marker, PROGRAM_BOOKING, direct, subId);
+}
+
+/** @deprecated Usa buildBookingAffiliateUrl — Hotellook non è più attivo */
 export function buildHotellookAffiliateUrl(
   params: HotelAffiliateParams,
   marker: string
-): string | null {
-  const iata = resolveDestinationIata(params.destination);
-  const url = new URL(HOTELLOOK_SEARCH_BASE);
-  url.searchParams.set('languageCode', 'it');
-  url.searchParams.set('currency', 'EUR');
-
-  if (iata) {
-    url.searchParams.set('destination', iata);
-  } else {
-    url.searchParams.set('destination', params.destination);
-  }
-
-  if (params.startDate) url.searchParams.set('checkIn', params.startDate);
-  if (params.endDate) url.searchParams.set('checkOut', params.endDate);
-
-  const subId = params.subId ?? (params.tripId ? `trip_${params.tripId}_hotel` : 'hotel');
-  return wrapTpMediaAffiliateUrl(marker, PROGRAM_HOTELLOOK, url.toString(), subId);
+): string {
+  return buildBookingAffiliateUrl(params, marker);
 }

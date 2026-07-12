@@ -76,6 +76,9 @@ export function BlockEditorPanel({
       startDate: draft.startDate,
       endDate: draft.endDate,
     });
+    if (draft.organizerOrigin?.iata) {
+      params.set('origin', draft.organizerOrigin.iata);
+    }
 
     void fetch(`/api/travel/links?${params}`)
       .then((r) => r.json())
@@ -120,6 +123,10 @@ export function BlockEditorPanel({
         startDate: draft.startDate,
         endDate: draft.endDate,
       });
+      const originIata =
+        (block.content.origin as string | undefined) ?? draft.organizerOrigin?.iata;
+      if (originIata) params.set('origin', originIata);
+
       const response = await fetch(`/api/travel/estimate?${params}`);
       const data = await response.json();
 
@@ -148,7 +155,11 @@ export function BlockEditorPanel({
         return;
       }
 
-      toast.message(data.message ?? 'Configura NEXT_PUBLIC_TRAVELPAYOUTS_MARKER su Vercel');
+      const hint =
+        data.setup?.hints?.[0] ??
+        data.message ??
+        'Configura il tuo Partner ID Travelpayouts e iscriviti ad Aviasales + Booking.com';
+      toast.message(hint, { duration: 7000 });
     } catch {
       toast.error('Errore ricerca volo');
     } finally {
@@ -365,7 +376,7 @@ export function BlockEditorPanel({
                     target="_blank"
                     rel="noopener noreferrer sponsored"
                   >
-                    Cerca hotel su Hotellook
+                    Cerca hotel su Booking.com
                     <ExternalLink className="ml-2 h-3.5 w-3.5" />
                   </a>
                 </Button>

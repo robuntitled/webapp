@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { fetchCheapestFlightQuote, isDataApiConfigured } from '@/lib/travelpayouts/data-api';
 import { buildTripFlightSearchUrl } from '@/lib/travelpayouts/flight-search';
+import { getTravelSetupStatus } from '@/lib/travelpayouts/setup-hints';
 
 const querySchema = z.object({
   destination: z.string().min(2).max(200),
@@ -14,16 +15,7 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  if (!isDataApiConfigured()) {
-    return NextResponse.json(
-      {
-        configured: false,
-        error: 'TRAVELPAYOUTS_API_TOKEN non configurato',
-      },
-      { status: 503 }
-    );
-  }
-
+  const setup = getTravelSetupStatus();
   const { searchParams } = new URL(request.url);
   const parsed = querySchema.safeParse({
     destination: searchParams.get('destination'),
@@ -45,6 +37,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'La data di ritorno deve essere dopo la partenza' }, { status: 400 });
   }
 
+  const affiliateUrl = buildTripFlightSearchUrl({
+    destination,
+    startDate,
+    endDate,
+    originIata: origin?.toUpperCase(),
+  });
+
+  if (!isDataApiConfigured()) {
+    return NextResponse.json({
+      configured: false,
+      found: false,
+      affiliateUrl,
+      setup,
+      message: affiliateUrl
+        ? 'Stima prezzo non disponibile (manca TRAVELPAYOUTS_API_TOKEN) — puoi aprire la ricerca affiliate.'
+        : setup.hints[0] ?? 'Configura Travelpayouts su Vercel (marker + programmi Aviasales/Booking).',
+    });
+  }
+
   try {
     const quote = await fetchCheapestFlightQuote({
       destination,
@@ -54,39 +65,30 @@ export async function GET(request: Request) {
     });
 
     if (!quote) {
-      const affiliateUrl = buildTripFlightSearchUrl({
-        destination,
-        startDate,
-        endDate,
-        originIata: origin?.toUpperCase(),
-      });
-
       return NextResponse.json({
         configured: true,
         found: false,
         affiliateUrl,
+        setup,
         message:
           'Nessun prezzo in cache per questa rotta. Apri la ricerca affiliate per tariffe aggiornate.',
       });
     }
-
-    const affiliateUrl = buildTripFlightSearchUrl({
-      destination,
-      startDate,
-      endDate,
-      originIata: origin?.toUpperCase(),
-    });
 
     return NextResponse.json({
       configured: true,
       found: true,
       quote,
       affiliateUrl,
+      setup,
       disclaimer:
         'Prezzo da cache Travelpayouts (non in tempo reale). Può variare al momento della prenotazione.',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Errore imprevisto';
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json(
+      { error: message, affiliateUrl, setup },
+      { status: 502 }
+    );
   }
 }

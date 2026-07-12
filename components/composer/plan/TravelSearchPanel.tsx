@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { TravelAffiliateSetupBanner } from '@/components/travel/TravelAffiliateSetupBanner';
 import { collectOriginsFromDraft, uniqueOriginsByIata } from '@/lib/composer/origins';
 import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
+import type { TravelSetupStatus } from '@/lib/travelpayouts/setup-hints';
 import type { ComposerDraft, ComposerOrigin } from '@/types/composer';
 import { ExternalLink, Hotel, Loader2, Plane, Search, User, Users } from 'lucide-react';
 
@@ -23,6 +25,7 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
   const [loading, setLoading] = useState(true);
   const [hotelUrl, setHotelUrl] = useState<string | null>(null);
   const [originFlights, setOriginFlights] = useState<OriginFlightState[]>([]);
+  const [setup, setSetup] = useState<TravelSetupStatus | null>(null);
 
   const origins = useMemo(() => {
     const collected = collectOriginsFromDraft(draft);
@@ -77,6 +80,7 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
     Promise.all([hotelPromise, ...flightPromises])
       .then(([hotelLinks, ...flights]) => {
         setHotelUrl(hotelLinks.hotelUrl ?? null);
+        setSetup(hotelLinks.setup ?? null);
         setOriginFlights(flights);
       })
       .catch(() => undefined)
@@ -90,6 +94,8 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35 px-1">
         Cerca &amp; prenota
       </p>
+
+      <TravelAffiliateSetupBanner setup={setup} compact />
 
       {originFlights.map((item) => {
         const Icon = item.origin.role === 'organizer' ? User : Users;
@@ -154,7 +160,7 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
             <Hotel className="h-5 w-5 text-violet-200" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-white/50">Hotel · Booking style</p>
+            <p className="text-xs text-white/50">Hotel · Booking.com</p>
             <p className="font-semibold text-white text-sm truncate">{dest}</p>
             <p className="text-[10px] text-white/40">
               Check-in {draft.startDate} · Check-out {draft.endDate}

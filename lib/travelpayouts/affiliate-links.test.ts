@@ -35,7 +35,7 @@ describe('affiliate links', () => {
     expect(url).toContain('marker=999.trip_trip_1_voli');
   });
 
-  it('builds hotellook affiliate url', () => {
+  it('builds booking.com affiliate url for hotels', () => {
     const url = buildHotellookAffiliateUrl(
       {
         destination: 'Bali',
@@ -47,6 +47,7 @@ describe('affiliate links', () => {
     );
 
     expect(url).toContain('tp.media');
-    expect(url).toContain('p=607');
+    expect(url).toContain('p=2076');
+    expect(url).toContain(encodeURIComponent('booking.com'));
   });
 });

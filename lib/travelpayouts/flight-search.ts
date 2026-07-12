@@ -1,7 +1,7 @@
 import {
   buildAviasalesAffiliateUrl,
-  buildHotellookAffiliateUrl,
-  PROGRAM_HOTELLOOK,
+  buildBookingAffiliateUrl,
+  PROGRAM_BOOKING,
   wrapTpMediaAffiliateUrl,
 } from '@/lib/travelpayouts/affiliate-links';
 import { buildMarkerParam, getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
@@ -143,14 +143,11 @@ export function buildTripHotelSearchUrl(
   if (!hotelParams) {
     return wrapTpMediaAffiliateUrl(
       config.marker,
-      PROGRAM_HOTELLOOK,
-      'https://search.hotellook.com/',
+      PROGRAM_BOOKING,
+      'https://www.booking.com/',
       subId
     );
   }
 
-  return buildHotellookAffiliateUrl(
-    { ...hotelParams, tripId, subId },
-    config.marker
-  );
+  return buildBookingAffiliateUrl({ ...hotelParams, tripId, subId }, config.marker);
 }

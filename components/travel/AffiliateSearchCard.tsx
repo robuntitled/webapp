@@ -26,7 +26,7 @@ export function AffiliateSearchCard({
           <h3 className="font-display text-lg font-semibold">{title}</h3>
           <p className="text-sm text-muted-foreground mt-1">
             {destination
-              ? `Voli e hotel per ${destination} via partner Travelpayouts (Aviasales / Hotellook).`
+              ? `Voli e hotel per ${destination} via Travelpayouts (Aviasales / Booking.com).`
               : 'Motori affiliate Travelpayouts — ogni prenotazione supporta NomadLink.'}
           </p>
         </div>

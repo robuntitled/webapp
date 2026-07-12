@@ -28,7 +28,7 @@ export default function PrenotaHotelPage() {
         </Button>
         <h1 className="font-display text-3xl font-semibold">Cerca hotel</h1>
         <p className="text-muted-foreground mt-1">
-          Partner Travelpayouts / Hotellook — link affiliate con tracciamento NomadLink.
+          Partner Travelpayouts / Booking.com — link affiliate con tracciamento NomadLink.
         </p>
       </div>
 
