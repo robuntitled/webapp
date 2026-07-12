@@ -25,6 +25,16 @@ export function isGeminiModelUnavailableError(message: string): boolean {
   );
 }
 
+export function isRetryableGeminiError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    isGeminiModelUnavailableError(message) ||
+    lower.includes('json non valido') ||
+    lower.includes('risposta vuota') ||
+    lower.includes('invalid json')
+  );
+}
+
 export function resolveGeminiModelCandidates(requestedModel?: string): string[] {
   const raw = requestedModel?.trim() || DEFAULT_GEMINI_MODEL;
   const mapped = DEPRECATED_MODEL_REPLACEMENTS[raw] ?? raw;

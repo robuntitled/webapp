@@ -306,7 +306,7 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
                     </p>
                     <p className="text-sm text-white/45 mt-3 max-w-sm mx-auto leading-relaxed">
                       Tocca <strong className="text-white/70">Suggerisci giornata ✨</strong>{' '}
-                      per un itinerario completo (mock + prezzi travel), oppure usa template e
+                      per un itinerario AI (Gemini + prezzi travel), oppure usa template e
                       palette manuale.
                     </p>
                   </motion.div>

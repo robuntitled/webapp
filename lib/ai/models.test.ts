@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_GEMINI_MODEL,
   isGeminiModelUnavailableError,
+  isRetryableGeminiError,
   resolveGeminiModelCandidates,
 } from '@/lib/ai/models';
 
@@ -24,5 +25,11 @@ describe('isGeminiModelUnavailableError', () => {
         'This model models/gemini-2.5-flash is no longer available to new users.'
       )
     ).toBe(true);
+  });
+});
+
+describe('isRetryableGeminiError', () => {
+  it('retries on invalid JSON responses', () => {
+    expect(isRetryableGeminiError('Gemini ha restituito JSON non valido')).toBe(true);
   });
 });

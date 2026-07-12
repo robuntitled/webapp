@@ -20,7 +20,6 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
   const handleSuggest = async () => {
     setLoading(true);
     try {
-      const hasBlocks = activeDay.blocks.length > 0;
       const otherDaysSummary = draft.days
         .filter((d) => d.dayIndex !== activeDay.dayIndex && d.blocks.length > 0)
         .map((d) => `G${d.dayIndex}: ${d.blocks.map((b) => b.content.title).join(', ')}`)
@@ -36,12 +35,11 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
         endDate: draft.endDate,
         planningMode: draft.planningMode,
         maxParticipants: draft.maxParticipants,
-        intent: hasBlocks ? 'add_alternatives' : 'suggest_day',
-        currentDayBlocks: hasBlocks ? activeDay.blocks : undefined,
+        intent: 'suggest_day',
         otherDaysSummary: otherDaysSummary || undefined,
       });
 
-      onApplied(response, hasBlocks ? 'append' : 'replace');
+      onApplied(response, 'replace');
 
       const modelLabel = response.meta.model?.replace(/^gemini-/, '') ?? 'ai';
       const sourceLabel =

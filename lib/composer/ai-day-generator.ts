@@ -12,11 +12,11 @@ Regole:
 - Scrivi titoli e descrizioni in italiano, concreti e locali per la destinazione.
 - Usa luoghi plausibili (quartieri, mercati, esperienze tipiche) senza inventare nomi esatti di ristoranti.
 - Rispetta la fascia oraria timeSlot per ogni blocco.
-- Giorno 1: arrivo (volo, transfer, hotel, cena leggera).
+- Giorno 1: arrivo (volo verso aeroporto vicino, transfer, hotel, cena leggera).
 - Ultimo giorno: partenza (colazione, transfer, volo ritorno).
 - Giorni intermedi: mix attrazioni, pasti, attività, tempo libero.
+- Per paesi/comuni piccoli in Italia: volo verso aeroporto reale vicino (es. Ancona AOI per Marche), NON verso il nome del paese.
 - Evita di ripetere attività già presenti negli altri giorni indicati nel prompt.
-- Per intent "add_alternatives": proponi varianti diverse dai blocchi esistenti.
 - Massimo 8 blocchi, ordinati logicamente nella giornata.`;
 
 function specToExtra(spec: AiDayBlockSpec): Record<string, unknown> {

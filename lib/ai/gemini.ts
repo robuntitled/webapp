@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { getAiConfig } from '@/lib/ai/config';
-import { isGeminiModelUnavailableError, resolveGeminiModelCandidates } from '@/lib/ai/models';
+import { parseJsonFromGeminiText, pickGeminiAnswerText } from '@/lib/ai/json-extract';
+import { isRetryableGeminiError, resolveGeminiModelCandidates } from '@/lib/ai/models';
 
 export type GeminiUsage = {
   inputTokens: number;
@@ -16,7 +17,7 @@ export type GeminiStructuredResult<T> = {
 
 type GeminiGenerateResponse = {
   candidates?: Array<{
-    content?: { parts?: Array<{ text?: string }> };
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
   }>;
   usageMetadata?: {
     promptTokenCount?: number;
@@ -25,15 +26,28 @@ type GeminiGenerateResponse = {
   error?: { message?: string; code?: number };
 };
 
-async function callGeminiModel<T>(params: {
+type GeminiCallParams = {
   apiKey: string;
   model: string;
   systemPrompt: string;
   userPrompt: string;
-  responseSchema: Record<string, unknown>;
+  responseSchema?: Record<string, unknown>;
   maxOutputTokens: number;
-}): Promise<GeminiStructuredResult<T>> {
+};
+
+async function callGeminiModel<T>(params: GeminiCallParams): Promise<GeminiStructuredResult<T>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
+
+  const generationConfig: Record<string, unknown> = {
+    temperature: 0.4,
+    maxOutputTokens: params.maxOutputTokens,
+    responseMimeType: 'application/json',
+    thinkingConfig: { thinkingBudget: 0 },
+  };
+
+  if (params.responseSchema) {
+    generationConfig.responseSchema = params.responseSchema;
+  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -41,12 +55,7 @@ async function callGeminiModel<T>(params: {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: params.systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: params.userPrompt }] }],
-      generationConfig: {
-        temperature: 0.65,
-        maxOutputTokens: params.maxOutputTokens,
-        responseMimeType: 'application/json',
-        responseSchema: params.responseSchema,
-      },
+      generationConfig,
     }),
   });
 
@@ -57,14 +66,14 @@ async function callGeminiModel<T>(params: {
     throw new Error(message);
   }
 
-  const text = payload.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = pickGeminiAnswerText(payload.candidates?.[0]?.content?.parts);
   if (!text) {
     throw new Error('Gemini ha restituito una risposta vuota');
   }
 
   let data: T;
   try {
-    data = JSON.parse(text) as T;
+    data = parseJsonFromGeminiText<T>(text);
   } catch {
     throw new Error('Gemini ha restituito JSON non valido');
   }
@@ -97,21 +106,28 @@ export async function generateGeminiStructured<T>(params: {
   let lastError: Error | null = null;
 
   for (const model of models) {
-    try {
-      return await callGeminiModel<T>({
-        apiKey,
-        model,
-        systemPrompt: params.systemPrompt,
-        userPrompt: params.userPrompt,
-        responseSchema: params.responseSchema,
-        maxOutputTokens,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Errore Gemini';
-      lastError = error instanceof Error ? error : new Error(message);
+    const attempts: Array<{ responseSchema?: Record<string, unknown> }> = [
+      { responseSchema: params.responseSchema },
+      { responseSchema: undefined },
+    ];
 
-      if (!isGeminiModelUnavailableError(message)) {
-        throw lastError;
+    for (const attempt of attempts) {
+      try {
+        return await callGeminiModel<T>({
+          apiKey,
+          model,
+          systemPrompt: params.systemPrompt,
+          userPrompt: params.userPrompt,
+          responseSchema: attempt.responseSchema,
+          maxOutputTokens,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Errore Gemini';
+        lastError = error instanceof Error ? error : new Error(message);
+
+        if (!isRetryableGeminiError(message)) {
+          throw lastError;
+        }
       }
     }
   }
