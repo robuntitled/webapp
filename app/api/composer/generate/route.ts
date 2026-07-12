@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { composerGenerateRequestSchema } from '@/lib/composer/generate-schemas';
-import { orchestrateDayGeneration } from '@/lib/composer/orchestrator';
+import {
+  buildEmergencyMockResponse,
+  orchestrateDayGeneration,
+} from '@/lib/composer/orchestrator';
+import { shouldUseGemini } from '@/lib/ai/config';
 import { rateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 15;
@@ -10,18 +14,6 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-  }
-
-  const limited = rateLimit(`composer-gen:${session.user.id}`, {
-    limit: 20,
-    windowMs: 60 * 60 * 1000,
-  });
-
-  if (!limited.ok) {
-    return NextResponse.json(
-      { error: 'Limite generazioni raggiunto, riprova più tardi' },
-      { status: 429 }
-    );
   }
 
   const json = await request.json().catch(() => null);
@@ -34,11 +26,37 @@ export async function POST(request: Request) {
     );
   }
 
+  const limited = rateLimit(`composer-gen:${session.user.id}`, {
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Limite generazioni raggiunto, riprova più tardi' },
+      { status: 429 }
+    );
+  }
+
+  if (shouldUseGemini().use) {
+    const aiLimited = rateLimit(`composer-ai:${session.user.id}`, {
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!aiLimited.ok) {
+      return NextResponse.json(
+        buildEmergencyMockResponse(
+          parsed.data,
+          'Limite AI personale raggiunto (5/ora) — suggerimenti smart'
+        )
+      );
+    }
+  }
+
   try {
     const result = await orchestrateDayGeneration(parsed.data);
     return NextResponse.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Generazione fallita';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json(buildEmergencyMockResponse(parsed.data));
   }
 }

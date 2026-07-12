@@ -7,7 +7,7 @@ import {
 import { fetchCheapestFlightQuote } from '@/lib/travelpayouts/data-api';
 import type { ComposerTravelQuotes } from '@/types/composer';
 
-export async function fetchTravelQuotesForDay(params: {
+async function fetchTravelQuotesInternal(params: {
   destination: string;
   startDate: string;
   endDate: string;
@@ -70,6 +70,33 @@ export async function fetchTravelQuotesForDay(params: {
   }
 
   return { quotes, warnings };
+}
+
+export async function fetchTravelQuotesForDay(
+  params: {
+    destination: string;
+    startDate: string;
+    endDate: string;
+    tripId?: string;
+  },
+  timeoutMs = 3_500
+): Promise<{ quotes: ComposerTravelQuotes; warnings: string[] }> {
+  const fallback = { quotes: {} as ComposerTravelQuotes, warnings: [] as string[] };
+
+  return Promise.race([
+    fetchTravelQuotesInternal(params),
+    new Promise<{ quotes: ComposerTravelQuotes; warnings: string[] }>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          quotes: {},
+          warnings: ['Quote travel in timeout — itinerario comunque disponibile'],
+        });
+      }, timeoutMs);
+    }),
+  ]).catch(() => ({
+    ...fallback,
+    warnings: ['Quote travel non disponibili — itinerario comunque generato'],
+  }));
 }
 
 export function applyQuotesToBlocks(

@@ -48,7 +48,7 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
           : response.meta.source === 'cache'
             ? `Gemini ${modelLabel} (cache)`
             : response.meta.source === 'mock'
-              ? 'suggerimenti smart (preview)'
+              ? 'suggerimenti smart'
               : response.meta.source;
 
       toast.success(

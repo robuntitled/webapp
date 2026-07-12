@@ -3,7 +3,7 @@ import type { ComposerBlock, ComposerBlockType } from '@/types/composer';
 
 type MockDayContext = {
   destination: string;
-  destinationMeta?: { label?: string };
+  destinationMeta?: { label?: string; countryCode?: string };
   dayIndex: number;
   totalDays: number;
   planningMode: 'solo' | 'group';
@@ -27,6 +27,16 @@ const DESTINATION_THEMES: Record<string, { places: string[]; foods: string[]; ac
     foods: ['Granita e brioscia', 'Trattoria con pesce fresco'],
     activities: ['Giro in barca', 'Degustazione vini etnei'],
   },
+  marche: {
+    places: ['Centro storico', 'Colline del Maceratese', 'Mercato contadino'],
+    foods: ['Olive ascolane', 'Vincisgrassi in trattoria locale'],
+    activities: ['Passeggiata panoramica', 'Visita cantina'],
+  },
+  italia: {
+    places: ['Centro storico del borgo', 'Punto panoramico', 'Mercato locale'],
+    foods: ['Pranzo in osteria tipica', 'Aperitivo in piazza'],
+    activities: ['Tour a piedi del centro', 'Esperienza enogastronomica'],
+  },
   giappone: {
     places: ['Tempio locale', 'Quartiere tradizionale', 'Giardino zen'],
     foods: ['Ramen artigianale', 'Izakaya nel centro'],
@@ -39,26 +49,46 @@ const DESTINATION_THEMES: Record<string, { places: string[]; foods: string[]; ac
   },
 };
 
-function resolveTheme(destination: string) {
-  const key = destination.toLowerCase().split(/[,\s]/)[0] ?? '';
+function resolveTheme(destination: string, countryCode?: string) {
+  const lower = destination.toLowerCase();
+  const key = lower.split(/[,\s]/)[0] ?? '';
   for (const [name, theme] of Object.entries(DESTINATION_THEMES)) {
-    if (key.includes(name) || destination.toLowerCase().includes(name)) return theme;
+    if (name === 'default' || name === 'italia') continue;
+    if (key.includes(name) || lower.includes(name)) return theme;
+  }
+  if (countryCode === 'IT' || lower.includes('italia') || lower.includes('marche')) {
+    return DESTINATION_THEMES.marche;
   }
   return DESTINATION_THEMES.default;
 }
 
 function specsForDay(ctx: MockDayContext): { title: string; specs: MockBlockSpec[] } {
-  const theme = resolveTheme(ctx.destination);
+  const theme = resolveTheme(ctx.destination, ctx.destinationMeta?.countryCode);
   const dest = ctx.destinationMeta?.label ?? ctx.destination;
   const isFirst = ctx.dayIndex === 1;
   const isLast = ctx.dayIndex === ctx.totalDays;
+
+  const isItaly =
+    ctx.destinationMeta?.countryCode === 'IT' ||
+    /italia|marche|sicilia|lombardia|toscana|lazio|campania/i.test(ctx.destination);
+  const arrivalAirport = isItaly ? 'Ancona (AOI)' : 'Aeroporto più vicino';
 
   if (isFirst) {
     return {
       title: `Arrivo a ${dest}`,
       specs: [
-        { type: 'flight', title: `Volo per ${dest}`, timeSlot: 'morning' },
-        { type: 'transport', title: 'Transfer aeroporto → hotel', timeSlot: 'afternoon', extra: { from: 'Aeroporto', to: 'Hotel' } },
+        {
+          type: 'flight',
+          title: `Volo per ${arrivalAirport}`,
+          timeSlot: 'morning',
+          extra: { origin: 'ROM', destination: arrivalAirport },
+        },
+        {
+          type: 'transport',
+          title: `Transfer ${arrivalAirport} → ${dest}`,
+          timeSlot: 'afternoon',
+          extra: { from: arrivalAirport, to: dest },
+        },
         { type: 'hotel', title: 'Check-in e sistemazione', timeSlot: 'afternoon' },
         { type: 'meal', title: theme.foods[0], timeSlot: 'evening', extra: { place: theme.foods[0] } },
         { type: 'free_time', title: 'Passeggiata serale', timeSlot: 'evening' },

@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { ZodType } from 'zod';
 import { canAffordAiCall, recordAiSpend } from '@/lib/ai/budget';
-import { getAiConfig, isAiComposerAvailable } from '@/lib/ai/config';
+import { getAiConfig, isAiComposerConfigured } from '@/lib/ai/config';
 import { generateGeminiStructured } from '@/lib/ai/gemini';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
 import { normalizeAiDayPlan } from '@/lib/composer/ai-day-normalize';
@@ -23,15 +23,14 @@ export class AiBudgetExceededError extends Error {
 
 export async function generateStructured<T>(params: {
   schema: ZodType<T>;
-  responseSchema: Record<string, unknown>;
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens?: number;
 }): Promise<StructuredGenerationResult<T>> {
   const config = getAiConfig();
 
-  if (!isAiComposerAvailable()) {
-    throw new Error('Provider AI non disponibile');
+  if (!isAiComposerConfigured()) {
+    throw new Error('Provider AI non configurato');
   }
 
   const estimatedCost = estimateTypicalCallCostUsd();
@@ -42,7 +41,6 @@ export async function generateStructured<T>(params: {
   const result = await generateGeminiStructured<T>({
     systemPrompt: params.systemPrompt,
     userPrompt: params.userPrompt,
-    responseSchema: params.responseSchema,
     maxOutputTokens: params.maxOutputTokens,
   });
 

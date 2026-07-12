@@ -1,11 +1,12 @@
 import 'server-only';
 
 import { getCachedValue, setCachedValue } from '@/lib/ai/cache';
-import { getAiConfig, isAiComposerAvailable } from '@/lib/ai/config';
+import { getAiConfig, shouldUseGemini } from '@/lib/ai/config';
 import { GeminiQuotaError } from '@/lib/ai/quota';
 import { AiBudgetExceededError, generateStructured } from '@/lib/ai/provider';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
 import { canAffordAiCall } from '@/lib/ai/budget';
+import { withTimeout } from '@/lib/utils/with-timeout';
 import {
   aiPlanToBlocks,
   aiDayPlanSchema,
@@ -21,6 +22,7 @@ import type {
 } from '@/types/composer';
 
 const CONTRACT_VERSION = '1.0.0';
+const ORCHESTRATOR_BUDGET_MS = 9_000;
 
 function totalDaysFromRange(startDate: string, endDate: string): number {
   const start = new Date(startDate);
@@ -37,17 +39,9 @@ type DayPlanResult = {
   warnings: string[];
 };
 
-function buildCacheKey(req: ComposerGenerateRequest, totalDays: number): string {
-  const parts = [
-    req.destination.toLowerCase(),
-    String(req.dayIndex),
-    String(totalDays),
-    req.intent,
-    req.planningMode,
-    req.otherDaysSummary?.slice(0, 200) ?? '',
-    req.targetBlockTypes?.join(',') ?? '',
-  ];
-  return `day-plan:${parts.join('|')}`;
+/** Cache condivisa tra utenti — stessa destinazione/giorno = 1 chiamata Gemini. */
+function buildSharedCacheKey(req: ComposerGenerateRequest, totalDays: number): string {
+  return `shared-day:${req.destination.toLowerCase().slice(0, 120)}:${req.dayIndex}:${totalDays}:${req.planningMode}`;
 }
 
 async function generateDayPlan(
@@ -64,33 +58,39 @@ async function generateDayPlan(
   };
 
   const config = getAiConfig();
-  const cacheKey = buildCacheKey(req, totalDays);
+  const cacheKey = buildSharedCacheKey(req, totalDays);
 
-  if (isAiComposerAvailable()) {
-    const cached = getCachedValue<{ suggestedTitle: string; blocks: ComposerGenerateResponse['blocks'] }>(
-      cacheKey
-    );
-    if (cached) {
-      return {
-        suggestedTitle: cached.suggestedTitle,
-        blocks: cached.blocks,
-        source: 'cache',
-        model: config.model,
-        warnings: ['Itinerario da cache (risparmio token)'],
-      };
-    }
+  const cached = getCachedValue<{ suggestedTitle: string; blocks: ComposerGenerateResponse['blocks'] }>(
+    cacheKey
+  );
+  if (cached) {
+    return {
+      suggestedTitle: cached.suggestedTitle,
+      blocks: cached.blocks,
+      source: 'cache',
+      model: config.model,
+      warnings: ['Itinerario da cache condivisa (zero chiamate API)'],
+    };
+  }
 
+  const geminiDecision = shouldUseGemini();
+
+  if (geminiDecision.use) {
     if (!canAffordAiCall(estimateTypicalCallCostUsd(), config.monthlyBudgetUsd)) {
-      warnings.push('Budget AI mensile raggiunto — suggerimenti mock');
+      warnings.push('Budget AI mensile raggiunto — suggerimenti smart');
     } else {
       try {
         const prompts = buildDayGenerationPrompt(req, totalDays);
-        const ai = await generateStructured({
-          schema: aiDayPlanSchema,
-          responseSchema: prompts.responseSchema,
-          systemPrompt: prompts.systemPrompt,
-          userPrompt: prompts.userPrompt,
-        });
+        const ai = await Promise.race([
+          generateStructured({
+            schema: aiDayPlanSchema,
+            systemPrompt: prompts.systemPrompt,
+            userPrompt: prompts.userPrompt,
+          }),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Gemini timeout interno')), 7_000);
+          }),
+        ]);
 
         const mapped = aiPlanToBlocks(ai.data, req.targetBlockTypes);
 
@@ -109,15 +109,19 @@ async function generateDayPlan(
         };
       } catch (error) {
         if (error instanceof GeminiQuotaError) {
-          warnings.push(`${error.message} — suggerimenti mock`);
+          warnings.push(`${error.message} — suggerimenti smart`);
         } else if (error instanceof AiBudgetExceededError) {
-          warnings.push('Budget AI mensile raggiunto — suggerimenti mock');
+          warnings.push('Budget AI mensile raggiunto — suggerimenti smart');
         } else {
           const message = error instanceof Error ? error.message : 'Errore AI';
-          warnings.push(`AI non disponibile (${message}) — suggerimenti mock`);
+          const short =
+            message.length > 120 ? `${message.slice(0, 117)}...` : message;
+          warnings.push(`AI non disponibile (${short}) — suggerimenti smart`);
         }
       }
     }
+  } else if (geminiDecision.reason && config.mode !== 'mock') {
+    warnings.push(`${geminiDecision.reason} — suggerimenti smart`);
   }
 
   const mock = generateMockDayBlocks(mockCtx, req.targetBlockTypes);
@@ -125,33 +129,66 @@ async function generateDayPlan(
     suggestedTitle: mock.suggestedTitle,
     blocks: mock.blocks,
     source: 'mock',
-    model: 'nomadlink-mock-v1',
+    model: 'nomadlink-smart-v1',
     warnings,
   };
 }
 
-/**
- * Orchestrator — Gemini 2.5 Flash con fallback mock + quote travel verificate.
- */
-export async function orchestrateDayGeneration(
+export function buildEmergencyMockResponse(
+  req: ComposerGenerateRequest,
+  extraWarning?: string
+): ComposerGenerateResponse {
+  const totalDays = totalDaysFromRange(req.startDate, req.endDate);
+  const mock = generateMockDayBlocks(
+    {
+      destination: req.destination,
+      destinationMeta: req.destinationMeta,
+      dayIndex: req.dayIndex,
+      totalDays,
+      planningMode: req.planningMode,
+    },
+    req.targetBlockTypes
+  );
+
+  const warnings = [
+    extraWarning ?? 'Risposta rapida smart — server in timeout',
+    'Itinerario generato localmente senza attesa API esterne',
+  ];
+
+  return {
+    dayIndex: req.dayIndex,
+    date: req.date,
+    suggestedTitle: mock.suggestedTitle,
+    blocks: mock.blocks,
+    warnings,
+    meta: {
+      source: 'mock',
+      generatedAt: new Date().toISOString(),
+      latencyMs: 0,
+      model: 'nomadlink-smart-v1',
+      version: CONTRACT_VERSION,
+    },
+  };
+}
+
+async function orchestrateDayGenerationInternal(
   req: ComposerGenerateRequest
 ): Promise<ComposerGenerateResponse> {
   const started = Date.now();
   const totalDays = totalDaysFromRange(req.startDate, req.endDate);
 
-  const plan = await generateDayPlan(req, totalDays);
-  const warnings = [...plan.warnings];
+  const [plan, quotesResult] = await Promise.all([
+    generateDayPlan(req, totalDays),
+    fetchTravelQuotesForDay({
+      destination: req.destination,
+      startDate: req.startDate,
+      endDate: req.endDate,
+      tripId: req.tripId,
+    }),
+  ]);
 
-  const { quotes, warnings: travelWarnings } = await fetchTravelQuotesForDay({
-    destination: req.destination,
-    startDate: req.startDate,
-    endDate: req.endDate,
-    tripId: req.tripId,
-  });
-
-  warnings.push(...travelWarnings);
-
-  let blocks = applyQuotesToBlocks(plan.blocks, quotes);
+  const warnings = [...plan.warnings, ...quotesResult.warnings];
+  let blocks = applyQuotesToBlocks(plan.blocks, quotesResult.quotes);
 
   if (req.intent === 'add_alternatives' && req.currentDayBlocks?.length) {
     const offset = req.currentDayBlocks.length;
@@ -164,7 +201,10 @@ export async function orchestrateDayGeneration(
     date: req.date,
     suggestedTitle: plan.suggestedTitle,
     blocks,
-    quotes: quotes.flight || quotes.hotel ? quotes : undefined,
+    quotes:
+      quotesResult.quotes.flight || quotesResult.quotes.hotel
+        ? quotesResult.quotes
+        : undefined,
     warnings,
     meta: {
       source: plan.source,
@@ -180,35 +220,21 @@ export async function orchestrateDayGeneration(
     return validated.data;
   }
 
-  const mock = generateMockDayBlocks(
-    {
-      destination: req.destination,
-      destinationMeta: req.destinationMeta,
-      dayIndex: req.dayIndex,
-      totalDays,
-      planningMode: req.planningMode,
-    },
-    req.targetBlockTypes
+  return buildEmergencyMockResponse(
+    req,
+    `Validazione fallita (${validated.error.issues[0]?.message ?? 'schema'})`
   );
+}
 
-  const fallbackBlocks = applyQuotesToBlocks(mock.blocks, quotes);
-
-  return {
-    dayIndex: req.dayIndex,
-    date: req.date,
-    suggestedTitle: mock.suggestedTitle,
-    blocks: fallbackBlocks,
-    quotes: quotes.flight || quotes.hotel ? quotes : undefined,
-    warnings: [
-      ...warnings,
-      `Validazione risposta fallita (${validated.error.issues[0]?.message ?? 'schema'}) — suggerimenti mock`,
-    ],
-    meta: {
-      source: 'mock',
-      generatedAt: new Date().toISOString(),
-      latencyMs: Date.now() - started,
-      model: 'nomadlink-mock-v1',
-      version: CONTRACT_VERSION,
-    },
-  };
+/**
+ * Orchestrator — smart mock sempre disponibile, Gemini opzionale (1 call, cache condivisa).
+ */
+export async function orchestrateDayGeneration(
+  req: ComposerGenerateRequest
+): Promise<ComposerGenerateResponse> {
+  return withTimeout(
+    orchestrateDayGenerationInternal(req),
+    ORCHESTRATOR_BUDGET_MS,
+    () => buildEmergencyMockResponse(req, 'Timeout server — risposta smart immediata')
+  );
 }
