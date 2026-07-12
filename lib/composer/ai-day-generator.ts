@@ -5,7 +5,9 @@ import {
   type AiDayBlockSpec,
   type AiDayPlan,
 } from '@/lib/composer/ai-day-schema';
+import { originsSummaryForPrompt } from '@/lib/composer/origins';
 import { buildIntelPromptBlock, resolveDestinationIntel } from '@/lib/composer/destination-intel';
+import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
 import type { ComposerBlock, ComposerBlockType, ComposerGenerateRequest } from '@/types/composer';
 
 const SYSTEM_PROMPT = `Sei un travel planner senior per NomadLink — stile guida locale insider, non turista generico.
@@ -15,8 +17,9 @@ Qualità richiesta:
 - Titoli vividi e specifici (max 80 caratteri), in italiano.
 - Luoghi plausibili per la regione indicata; per borghi piccoli usa aeroporto/città vicina reale.
 - Orari coerenti: colazione mattina, pranzo pomeriggio, cena sera.
-- Giorno 1: arrivo (volo hub → transfer → hotel → cena leggera → passeggiata).
-- Ultimo giorno: colazione → ultimo highlight → transfer → volo ritorno.
+- Giorno 1: arrivo (volo dall'aeroporto di partenza indicato → transfer → hotel → cena leggera → passeggiata).
+- Ultimo giorno: colazione → ultimo highlight → transfer → volo ritorno verso aeroporto di partenza organizzatore.
+- Usa i codici IATA di partenza forniti nel prompt; per gruppi con amici da altre città, aggiungi nota sync arrivi.
 - Giorni intermedi: 5-7 blocchi vari (attrazioni, pasti, attività, tempo libero, nota crew).
 - Evita ripetizioni con altri giorni elencati nel prompt.
 - Non inventare nomi esatti di ristoranti commerciali; usa descrizioni ("osteria di paese", "friggitoria locale").
@@ -61,6 +64,9 @@ export function buildDayGenerationPrompt(
   const isLast = req.dayIndex === totalDays;
   const dayPhase = isFirst ? 'ARRIVO' : isLast ? 'PARTENZA' : 'ESPLORAZIONE';
 
+  const originIata = req.organizerOrigin?.iata ?? defaultOriginIata();
+  const originsLine = originsSummaryForPrompt(req);
+
   const lines = [
     `=== VIAGGIO ===`,
     `Destinazione: ${destLabel}${req.destinationMeta?.country ? `, ${req.destinationMeta.country}` : ''}`,
@@ -68,6 +74,8 @@ export function buildDayGenerationPrompt(
     `Periodo: ${req.startDate} → ${req.endDate} (${totalDays} giorni)`,
     `Giorno richiesto: ${req.dayIndex} (${req.date}) — fase ${dayPhase}`,
     `Modalità: ${req.planningMode === 'group' ? `gruppo di ${req.maxParticipants}` : 'viaggio solo'}`,
+    `Partenza organizzatore: ${req.organizerOrigin?.city ?? 'non specificata'} (IATA ${originIata})`,
+    originsLine ? `Partenze gruppo: ${originsLine}` : null,
     ``,
     `=== CONTESTO LOCALE ===`,
     intelBlock,

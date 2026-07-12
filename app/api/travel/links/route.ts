@@ -12,6 +12,10 @@ const querySchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   tripId: z.string().uuid().optional(),
   adults: z.coerce.number().int().min(1).max(9).optional(),
+  origin: z
+    .string()
+    .regex(/^[A-Za-z]{3}$/)
+    .optional(),
 });
 
 export async function GET(request: Request) {
@@ -24,13 +28,14 @@ export async function GET(request: Request) {
     endDate: searchParams.get('endDate'),
     tripId: searchParams.get('tripId') ?? undefined,
     adults: searchParams.get('adults') ?? undefined,
+    origin: searchParams.get('origin') ?? undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const { destination, startDate, endDate, tripId, adults } = parsed.data;
+  const { destination, startDate, endDate, tripId, adults, origin } = parsed.data;
 
   const flightUrl = buildTripFlightSearchUrl({
     tripId,
@@ -38,6 +43,7 @@ export async function GET(request: Request) {
     startDate,
     endDate,
     adults: adults ?? 1,
+    originIata: origin?.toUpperCase(),
   });
 
   const hotelUrl = buildTripHotelSearchUrl(tripId, {

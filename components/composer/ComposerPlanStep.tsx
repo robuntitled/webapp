@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { TripMap } from '@/components/maps/TripMap';
+import { googleMapsItineraryUrl } from '@/lib/maps/google-maps-links';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { createEmptyBlock } from '@/lib/composer/blocks';
 import { DAY_TEMPLATES } from '@/lib/composer/day-templates';
@@ -28,7 +29,8 @@ import type {
   ComposerDraft,
   ComposerGenerateResponse,
 } from '@/types/composer';
-import { Sparkles } from 'lucide-react';
+import { ExternalLink, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 type ComposerPlanStepProps = {
@@ -51,6 +53,8 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
     () => buildPinsFromDraft(draft, { activeDayIndex }),
     [draft, activeDayIndex]
   );
+
+  const googleMapsUrl = useMemo(() => googleMapsItineraryUrl(pins), [pins]);
 
   const updateDay = (dayIndex: number, updater: (day: ComposerDay) => ComposerDay) => {
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
@@ -338,7 +342,17 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
             >
               <TravelSearchPanel
                 draft={draft}
-                onAddFlight={() => addBlock('flight', { title: 'Volo' }, 'morning')}
+                onAddFlight={(origin) =>
+                  addBlock(
+                    'flight',
+                    {
+                      title: origin ? `Volo ${origin.iata}` : 'Volo',
+                      origin: origin?.iata,
+                      originLabel: origin?.city,
+                    },
+                    'morning'
+                  )
+                }
                 onAddHotel={() => addBlock('hotel', { title: 'Hotel' }, 'night')}
               />
 
@@ -362,6 +376,20 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
                   onMapClick={addPinFromMap}
                 />
               </div>
+
+              {googleMapsUrl && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="w-full rounded-xl border-white/10 text-white/70 hover:bg-white/[0.06] h-9 text-xs"
+                >
+                  <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                    Apri itinerario su Google Maps
+                  </a>
+                </Button>
+              )}
 
               <WeatherStrip draft={draft} activeDayIndex={activeDayIndex} />
               <BudgetPanel days={draft.days} activeDayIndex={activeDayIndex} />

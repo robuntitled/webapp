@@ -27,7 +27,12 @@ const EMPTY_DRAFT: ComposerDraft = {
 
 type Step = 'setup' | 'plan' | 'review';
 
-export function TripComposer() {
+type TripComposerProps = {
+  profileCity?: string | null;
+  profileCountry?: string | null;
+};
+
+export function TripComposer({ profileCity, profileCountry }: TripComposerProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('setup');
   const [draft, setDraft] = useState<ComposerDraft>(EMPTY_DRAFT);
@@ -134,7 +139,13 @@ export function TripComposer() {
               exit={{ opacity: 0 }}
               className="container mx-auto px-4 py-8"
             >
-              <ComposerSetupStep draft={draft} onChange={patchDraft} onContinue={goToPlan} />
+              <ComposerSetupStep
+                draft={draft}
+                profileCity={profileCity}
+                profileCountry={profileCountry}
+                onChange={patchDraft}
+                onContinue={goToPlan}
+              />
             </motion.div>
           )}
 

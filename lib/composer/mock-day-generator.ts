@@ -4,7 +4,8 @@ import {
   resolveDestinationIntel,
   type DestinationIntel,
 } from '@/lib/composer/destination-intel';
-import type { ComposerBlock, ComposerBlockType } from '@/types/composer';
+import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
+import type { ComposerBlock, ComposerBlockType, ComposerOrigin } from '@/types/composer';
 
 type MockDayContext = {
   destination: string;
@@ -18,6 +19,8 @@ type MockDayContext = {
   dayIndex: number;
   totalDays: number;
   planningMode: 'solo' | 'group';
+  organizerOrigin?: ComposerOrigin;
+  crewOrigins?: ComposerOrigin[];
 };
 
 type MockBlockSpec = {
@@ -27,21 +30,45 @@ type MockBlockSpec = {
   extra?: Record<string, unknown>;
 };
 
+function homeIata(ctx: MockDayContext): string {
+  return ctx.organizerOrigin?.iata ?? defaultOriginIata();
+}
+
+function crewArrivalNote(ctx: MockDayContext): MockBlockSpec | null {
+  if (ctx.planningMode !== 'group' || !ctx.crewOrigins?.length) return null;
+  const lines = ctx.crewOrigins.map((o) => `${o.city} (${o.iata})`).join(', ');
+  return {
+    type: 'note',
+    title: 'Arrivi crew da altre città',
+    timeSlot: 'flex',
+    extra: {
+      body: `Amici in arrivo da: ${lines}. Confermate orari volo in chat e punto meet-up in destinazione.`,
+    },
+  };
+}
+
 function specsForDay(ctx: MockDayContext, intel: DestinationIntel): { title: string; specs: MockBlockSpec[] } {
   const dest = ctx.destinationMeta?.label ?? ctx.destination.split(',')[0]?.trim() ?? ctx.destination;
   const isFirst = ctx.dayIndex === 1;
   const isLast = ctx.dayIndex === ctx.totalDays;
   const airport = intel.nearestAirport;
+  const origin = homeIata(ctx);
 
   if (isFirst) {
+    const crewNote = crewArrivalNote(ctx);
     return {
       title: `Arrivo a ${dest}`,
       specs: [
         {
           type: 'flight',
-          title: `Volo ROM → ${airport.label}`,
+          title: `Volo ${origin} → ${airport.label}`,
           timeSlot: 'morning',
-          extra: { origin: 'ROM', destination: airport.iata, duration: '1h 15m' },
+          extra: {
+            origin,
+            destination: airport.iata,
+            duration: '1h 15m',
+            originLabel: ctx.organizerOrigin?.city,
+          },
         },
         {
           type: 'transport',
@@ -74,6 +101,7 @@ function specsForDay(ctx: MockDayContext, intel: DestinationIntel): { title: str
             duration: '1h 30m',
           },
         },
+        ...(crewNote ? [crewNote] : []),
       ],
     };
   }
@@ -102,9 +130,14 @@ function specsForDay(ctx: MockDayContext, intel: DestinationIntel): { title: str
         },
         {
           type: 'flight',
-          title: `Volo ${airport.iata} → ROM`,
+          title: `Volo ${airport.iata} → ${origin}`,
           timeSlot: 'afternoon',
-          extra: { origin: airport.iata, destination: 'ROM', duration: '1h 15m' },
+          extra: {
+            origin: airport.iata,
+            destination: origin,
+            duration: '1h 15m',
+            originLabel: ctx.organizerOrigin?.city,
+          },
         },
       ],
     };

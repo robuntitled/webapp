@@ -11,16 +11,25 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, ArrowRight, Users, User } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
+import { OriginSetupPanel } from '@/components/composer/OriginSetupPanel';
 import { findDestination } from '@/lib/composer/destinations';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 
 type ComposerSetupStepProps = {
   draft: ComposerDraft;
+  profileCity?: string | null;
+  profileCountry?: string | null;
   onChange: (patch: Partial<ComposerDraft>) => void;
   onContinue: () => void;
 };
 
-export function ComposerSetupStep({ draft, onChange, onContinue }: ComposerSetupStepProps) {
+export function ComposerSetupStep({
+  draft,
+  profileCity,
+  profileCountry,
+  onChange,
+  onContinue,
+}: ComposerSetupStepProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(
     draft.startDate ? new Date(draft.startDate) : undefined
   );
@@ -47,7 +56,12 @@ export function ComposerSetupStep({ draft, onChange, onContinue }: ComposerSetup
     startDate && endDate ? differenceInDays(endDate, startDate) + 1 : null;
 
   const canContinue = Boolean(
-    draft.destination && draft.title && startDate && endDate && endDate >= startDate
+    draft.destination &&
+      draft.title &&
+      startDate &&
+      endDate &&
+      endDate >= startDate &&
+      draft.organizerOrigin
   );
 
   return (
@@ -262,6 +276,13 @@ export function ComposerSetupStep({ draft, onChange, onContinue }: ComposerSetup
                       })}
                     </div>
                   </div>
+
+                  <OriginSetupPanel
+                    draft={draft}
+                    profileCity={profileCity}
+                    profileCountry={profileCountry}
+                    onChange={onChange}
+                  />
 
                   <Button
                     type="button"

@@ -55,6 +55,8 @@ async function generateDayPlan(
     dayIndex: req.dayIndex,
     totalDays,
     planningMode: req.planningMode,
+    organizerOrigin: req.organizerOrigin,
+    crewOrigins: req.crewOrigins,
   };
 
   const config = getAiConfig();
@@ -146,6 +148,8 @@ export function buildEmergencyMockResponse(
       dayIndex: req.dayIndex,
       totalDays,
       planningMode: req.planningMode,
+      organizerOrigin: req.organizerOrigin,
+      crewOrigins: req.crewOrigins,
     },
     req.targetBlockTypes
   );
@@ -184,6 +188,8 @@ async function orchestrateDayGenerationInternal(
       startDate: req.startDate,
       endDate: req.endDate,
       tripId: req.tripId,
+      organizerOrigin: req.organizerOrigin,
+      crewOrigins: req.crewOrigins,
     }),
   ]);
 

@@ -11,6 +11,14 @@ const blockTypeEnum = z.enum([
   'activity',
 ]);
 
+const composerOriginSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).max(120),
+  city: z.string().min(1).max(120),
+  iata: z.string().regex(/^[A-Za-z]{3}$/),
+  role: z.enum(['organizer', 'crew']),
+});
+
 const alternativeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1).max(200),
@@ -52,6 +60,8 @@ export const composerGenerateRequestSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   planningMode: z.enum(['solo', 'group']),
   maxParticipants: z.number().int().min(1).max(99),
+  organizerOrigin: composerOriginSchema.optional(),
+  crewOrigins: z.array(composerOriginSchema).max(8).optional(),
   intent: z.enum(['suggest_day', 'regenerate_block', 'add_alternatives']),
   currentDayBlocks: z.array(composerBlockSchema).optional(),
   otherDaysSummary: z.string().max(4000).optional(),

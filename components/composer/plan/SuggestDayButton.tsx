@@ -63,6 +63,8 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
         endDate: draft.endDate,
         planningMode: draft.planningMode,
         maxParticipants: draft.maxParticipants,
+        organizerOrigin: draft.organizerOrigin,
+        crewOrigins: draft.crewOrigins,
         intent: 'suggest_day',
         otherDaysSummary: otherDaysSummary || undefined,
       });

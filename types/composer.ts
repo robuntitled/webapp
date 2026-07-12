@@ -46,6 +46,15 @@ export type DestinationMeta = {
   osmId?: string;
 };
 
+/** Aeroporto/città di partenza (organizzatore o amico) */
+export type ComposerOrigin = {
+  id: string;
+  label: string;
+  city: string;
+  iata: string;
+  role: 'organizer' | 'crew';
+};
+
 export type ComposerDraft = {
   title: string;
   destination: string;
@@ -54,6 +63,10 @@ export type ComposerDraft = {
   endDate: string;
   planningMode: 'solo' | 'group';
   maxParticipants: number;
+  /** Partenza di chi organizza il viaggio */
+  organizerOrigin?: ComposerOrigin;
+  /** Partenze amici (gruppo) — ognuno dal proprio aeroporto vicino */
+  crewOrigins?: ComposerOrigin[];
   days: ComposerDay[];
 };
 
@@ -82,6 +95,8 @@ export type ComposerGenerateRequest = {
   endDate: string;
   planningMode: 'solo' | 'group';
   maxParticipants: number;
+  organizerOrigin?: ComposerOrigin;
+  crewOrigins?: ComposerOrigin[];
   intent: ComposerGenerateIntent;
   /** Blocchi già presenti nel giorno attivo */
   currentDayBlocks?: ComposerBlock[];
@@ -101,10 +116,15 @@ export type ComposerTravelFlightQuote = {
   airline?: string | null;
   affiliateUrl?: string | null;
   fromCache: boolean;
+  originLabel?: string;
+  role?: ComposerOrigin['role'];
 };
 
 export type ComposerTravelQuotes = {
+  /** Volo organizzatore (retrocompat) */
   flight?: ComposerTravelFlightQuote;
+  /** Tutte le partenze (organizzatore + amici) */
+  flights?: ComposerTravelFlightQuote[];
   hotel?: { affiliateUrl?: string | null };
 };
 

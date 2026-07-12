@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { googleMapsPlaceUrl } from '@/lib/maps/google-maps-links';
 import type { MapPin } from '@/lib/maps/pins';
 import { resolveDestinationCoords } from '@/lib/maps/coordinates';
 import type { DestinationMeta } from '@/types/composer';
@@ -113,8 +114,16 @@ export function TripMap({
         });
 
         const marker = L.marker([pin.lat, pin.lng], { icon }).addTo(map);
+        const gmapsUrl = googleMapsPlaceUrl(pin.lat, pin.lng, pin.label);
+        const safeLabel = pin.label.replace(/[<>&"]/g, (c) =>
+          ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c] ?? c
+        );
         marker.bindPopup(
-          `<strong>Giorno ${pin.dayIndex}</strong><br/>${pin.label}`,
+          `<strong>Giorno ${pin.dayIndex}</strong><br/>${safeLabel}<br/>
+           <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer"
+              style="display:inline-block;margin-top:6px;font-size:11px;color:#38bdf8;text-decoration:none;">
+             📍 Apri in Google Maps
+           </a>`,
           { closeButton: false, className: 'trip-map-popup' }
         );
 
