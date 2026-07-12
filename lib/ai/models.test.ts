@@ -38,4 +38,12 @@ describe('isRetryableGeminiError', () => {
       isRetryableGeminiError('The string did not match the expected pattern.')
     ).toBe(true);
   });
+
+  it('retries on invalid response_format mime_type errors', () => {
+    expect(
+      isRetryableGeminiError(
+        "Invalid value at 'generation_config.response_format.text.mime_type'"
+      )
+    ).toBe(true);
+  });
 });

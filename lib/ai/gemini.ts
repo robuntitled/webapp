@@ -33,7 +33,7 @@ type GeminiCallParams = {
   userPrompt: string;
   responseSchema?: Record<string, unknown>;
   maxOutputTokens: number;
-  format: 'responseFormat' | 'legacyMime' | 'jsonOnly';
+  format: 'legacySchema' | 'jsonMime' | 'plain';
 };
 
 function buildGenerationConfig(params: GeminiCallParams): Record<string, unknown> {
@@ -42,19 +42,7 @@ function buildGenerationConfig(params: GeminiCallParams): Record<string, unknown
     maxOutputTokens: params.maxOutputTokens,
   };
 
-  if (params.format === 'responseFormat' && params.responseSchema) {
-    return {
-      ...base,
-      responseFormat: {
-        text: {
-          mimeType: 'application/json',
-          schema: params.responseSchema,
-        },
-      },
-    };
-  }
-
-  if (params.format === 'legacyMime' && params.responseSchema) {
+  if (params.format === 'legacySchema' && params.responseSchema) {
     return {
       ...base,
       responseMimeType: 'application/json',
@@ -62,10 +50,25 @@ function buildGenerationConfig(params: GeminiCallParams): Record<string, unknown
     };
   }
 
-  return {
-    ...base,
-    responseMimeType: 'application/json',
-  };
+  if (params.format === 'jsonMime') {
+    return {
+      ...base,
+      responseMimeType: 'application/json',
+    };
+  }
+
+  return base;
+}
+
+function buildUserPrompt(params: GeminiCallParams): string {
+  if (params.format === 'plain') {
+    return `${params.userPrompt}
+
+Rispondi SOLO con un oggetto JSON valido (nessun markdown, nessun testo extra) con campi:
+suggestedTitle (string), blocks (array di oggetti con type, title, timeSlot e campi opzionali place/description/duration/from/to/body/mode).`;
+  }
+
+  return params.userPrompt;
 }
 
 async function callGeminiModel<T>(params: GeminiCallParams): Promise<GeminiStructuredResult<T>> {
@@ -76,7 +79,7 @@ async function callGeminiModel<T>(params: GeminiCallParams): Promise<GeminiStruc
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: params.systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: params.userPrompt }] }],
+      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(params) }] }],
       generationConfig: buildGenerationConfig(params),
     }),
   });
@@ -128,9 +131,9 @@ export async function generateGeminiStructured<T>(params: {
   let lastError: Error | null = null;
 
   const attempts: Array<{ format: GeminiCallParams['format']; responseSchema?: Record<string, unknown> }> = [
-    { format: 'responseFormat', responseSchema: params.responseSchema },
-    { format: 'legacyMime', responseSchema: params.responseSchema },
-    { format: 'jsonOnly' },
+    { format: 'legacySchema', responseSchema: params.responseSchema },
+    { format: 'jsonMime' },
+    { format: 'plain' },
   ];
 
   for (const model of models) {

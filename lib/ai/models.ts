@@ -34,7 +34,11 @@ export function isRetryableGeminiError(message: string): boolean {
     lower.includes('invalid json') ||
     lower.includes('did not match') ||
     lower.includes('expected pattern') ||
-    lower.includes('risposta ai non valida')
+    lower.includes('risposta ai non valida') ||
+    lower.includes('invalid value') ||
+    lower.includes('mime_type') ||
+    lower.includes('generation_config') ||
+    lower.includes('response_format')
   );
 }
 
