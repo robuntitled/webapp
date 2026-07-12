@@ -2,7 +2,17 @@ import 'server-only';
 
 import { getAiConfig } from '@/lib/ai/config';
 import { parseJsonFromGeminiText, pickGeminiAnswerText } from '@/lib/ai/json-extract';
-import { isRetryableGeminiError, resolveGeminiModelCandidates } from '@/lib/ai/models';
+import {
+  GeminiQuotaError,
+  getQuotaCooldownRemainingMs,
+  handleGeminiQuotaFailure,
+  isGeminiQuotaError,
+} from '@/lib/ai/quota';
+import {
+  isGeminiModelUnavailableError,
+  isJsonOutputRetryableError,
+  resolveGeminiModelCandidates,
+} from '@/lib/ai/models';
 
 export type GeminiUsage = {
   inputTokens: number;
@@ -33,8 +43,10 @@ type GeminiCallParams = {
   userPrompt: string;
   responseSchema?: Record<string, unknown>;
   maxOutputTokens: number;
-  format: 'legacySchema' | 'jsonMime' | 'plain';
+  format: 'legacySchema' | 'plain';
 };
+
+const GEMINI_FETCH_TIMEOUT_MS = 12_000;
 
 function buildGenerationConfig(params: GeminiCallParams): Record<string, unknown> {
   const base: Record<string, unknown> = {
@@ -47,13 +59,6 @@ function buildGenerationConfig(params: GeminiCallParams): Record<string, unknown
       ...base,
       responseMimeType: 'application/json',
       responseSchema: params.responseSchema,
-    };
-  }
-
-  if (params.format === 'jsonMime') {
-    return {
-      ...base,
-      responseMimeType: 'application/json',
     };
   }
 
@@ -73,21 +78,37 @@ suggestedTitle (string), blocks (array di oggetti con type, title, timeSlot e ca
 
 async function callGeminiModel<T>(params: GeminiCallParams): Promise<GeminiStructuredResult<T>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: params.systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(params) }] }],
-      generationConfig: buildGenerationConfig(params),
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: params.systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: buildUserPrompt(params) }] }],
+        generationConfig: buildGenerationConfig(params),
+      }),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Gemini timeout — richiesta troppo lenta');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const payload = (await response.json().catch(() => ({}))) as GeminiGenerateResponse;
 
   if (!response.ok) {
     const message = payload.error?.message ?? `Gemini HTTP ${response.status}`;
+    if (isGeminiQuotaError(message) || response.status === 429) {
+      throw handleGeminiQuotaFailure(message);
+    }
     throw new Error(message);
   }
 
@@ -119,6 +140,14 @@ export async function generateGeminiStructured<T>(params: {
   responseSchema: Record<string, unknown>;
   maxOutputTokens?: number;
 }): Promise<GeminiStructuredResult<T>> {
+  const cooldownMs = getQuotaCooldownRemainingMs();
+  if (cooldownMs > 0) {
+    throw new GeminiQuotaError(
+      `Limite gratuito Gemini raggiunto (~10 richieste/min). Riprova tra ${Math.ceil(cooldownMs / 1000)}s`,
+      cooldownMs
+    );
+  }
+
   const config = getAiConfig();
   const apiKey = config.geminiApiKey;
 
@@ -130,32 +159,56 @@ export async function generateGeminiStructured<T>(params: {
   const maxOutputTokens = params.maxOutputTokens ?? config.maxOutputTokens;
   let lastError: Error | null = null;
 
-  const attempts: Array<{ format: GeminiCallParams['format']; responseSchema?: Record<string, unknown> }> = [
-    { format: 'legacySchema', responseSchema: params.responseSchema },
-    { format: 'jsonMime' },
-    { format: 'plain' },
-  ];
-
   for (const model of models) {
-    for (const attempt of attempts) {
-      try {
-        return await callGeminiModel<T>({
-          apiKey,
-          model,
-          systemPrompt: params.systemPrompt,
-          userPrompt: params.userPrompt,
-          responseSchema: attempt.responseSchema,
-          maxOutputTokens,
-          format: attempt.format,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Errore Gemini';
-        lastError = error instanceof Error ? error : new Error(message);
+    try {
+      return await callGeminiModel<T>({
+        apiKey,
+        model,
+        systemPrompt: params.systemPrompt,
+        userPrompt: params.userPrompt,
+        responseSchema: params.responseSchema,
+        maxOutputTokens,
+        format: 'legacySchema',
+      });
+    } catch (error) {
+      if (error instanceof GeminiQuotaError) {
+        throw error;
+      }
 
-        if (!isRetryableGeminiError(message)) {
-          throw lastError;
+      const message = error instanceof Error ? error.message : 'Errore Gemini';
+      lastError = error instanceof Error ? error : new Error(message);
+
+      if (isGeminiQuotaError(message)) {
+        throw handleGeminiQuotaFailure(message);
+      }
+
+      if (isGeminiModelUnavailableError(message)) {
+        continue;
+      }
+
+      if (isJsonOutputRetryableError(message)) {
+        try {
+          return await callGeminiModel<T>({
+            apiKey,
+            model,
+            systemPrompt: params.systemPrompt,
+            userPrompt: params.userPrompt,
+            maxOutputTokens,
+            format: 'plain',
+          });
+        } catch (plainError) {
+          if (plainError instanceof GeminiQuotaError) {
+            throw plainError;
+          }
+          const plainMessage = plainError instanceof Error ? plainError.message : 'Errore Gemini';
+          if (isGeminiQuotaError(plainMessage)) {
+            throw handleGeminiQuotaFailure(plainMessage);
+          }
+          lastError = plainError instanceof Error ? plainError : new Error(plainMessage);
         }
       }
+
+      break;
     }
   }
 

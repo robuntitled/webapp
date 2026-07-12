@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getCachedValue, setCachedValue } from '@/lib/ai/cache';
 import { getAiConfig, isAiComposerAvailable } from '@/lib/ai/config';
+import { GeminiQuotaError } from '@/lib/ai/quota';
 import { AiBudgetExceededError, generateStructured } from '@/lib/ai/provider';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
 import { canAffordAiCall } from '@/lib/ai/budget';
@@ -107,7 +108,9 @@ async function generateDayPlan(
           warnings,
         };
       } catch (error) {
-        if (error instanceof AiBudgetExceededError) {
+        if (error instanceof GeminiQuotaError) {
+          warnings.push(`${error.message} — suggerimenti mock`);
+        } else if (error instanceof AiBudgetExceededError) {
           warnings.push('Budget AI mensile raggiunto — suggerimenti mock');
         } else {
           const message = error instanceof Error ? error.message : 'Errore AI';

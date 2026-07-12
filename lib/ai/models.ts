@@ -25,13 +25,22 @@ export function isGeminiModelUnavailableError(message: string): boolean {
   );
 }
 
+/** Solo errori di output JSON — max 1 retry, stesso modello. */
+export function isJsonOutputRetryableError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('json non valido') ||
+    lower.includes('risposta vuota') ||
+    lower.includes('invalid json')
+  );
+}
+
+/** @deprecated Usa isGeminiModelUnavailableError o isJsonOutputRetryableError */
 export function isRetryableGeminiError(message: string): boolean {
   const lower = message.toLowerCase();
   return (
     isGeminiModelUnavailableError(message) ||
-    lower.includes('json non valido') ||
-    lower.includes('risposta vuota') ||
-    lower.includes('invalid json') ||
+    isJsonOutputRetryableError(message) ||
     lower.includes('did not match') ||
     lower.includes('expected pattern') ||
     lower.includes('risposta ai non valida') ||
