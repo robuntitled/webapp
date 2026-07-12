@@ -18,9 +18,16 @@ import { DaySelector } from '@/components/composer/plan/DaySelector';
 import { DayTimeline } from '@/components/composer/plan/DayTimeline';
 import { DayToolsBar } from '@/components/composer/plan/DayToolsBar';
 import { PlanStatsBar } from '@/components/composer/plan/PlanStatsBar';
+import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
 import { TravelSearchPanel } from '@/components/composer/plan/TravelSearchPanel';
 import { WeatherStrip } from '@/components/composer/plan/WeatherStrip';
-import type { ComposerBlock, ComposerBlockType, ComposerDay, ComposerDraft } from '@/types/composer';
+import type {
+  ComposerBlock,
+  ComposerBlockType,
+  ComposerDay,
+  ComposerDraft,
+  ComposerGenerateResponse,
+} from '@/types/composer';
 import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -170,6 +177,30 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
     toast.message('Giornata svuotata');
   };
 
+  const applyGeneratedDay = (
+    response: ComposerGenerateResponse,
+    mode: 'replace' | 'append'
+  ) => {
+    if (!activeDay) return;
+    updateDay(activeDay.dayIndex, (d) => {
+      const blocks =
+        mode === 'replace'
+          ? response.blocks.map((b, i) => ({ ...b, sortOrder: i }))
+          : [
+              ...d.blocks,
+              ...response.blocks.map((b, i) => ({
+                ...b,
+                sortOrder: d.blocks.length + i,
+              })),
+            ];
+      return {
+        ...d,
+        title: mode === 'replace' ? response.suggestedTitle : d.title,
+        blocks,
+      };
+    });
+  };
+
   const totalBlocks = draft.days.reduce((n, d) => n + d.blocks.length, 0);
   const showPlan = viewMode === 'split' || viewMode === 'plan';
   const showSidebar = viewMode === 'split' || viewMode === 'map';
@@ -232,12 +263,19 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
                       </p>
                     </div>
                   </div>
-                  <DayToolsBar
-                    blockCount={activeDay.blocks.length}
-                    onApplyTemplate={applyTemplate}
-                    onDuplicateDay={duplicateDayBlocks}
-                    onClearDay={clearDay}
-                  />
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <SuggestDayButton
+                      draft={draft}
+                      activeDay={activeDay}
+                      onApplied={applyGeneratedDay}
+                    />
+                    <DayToolsBar
+                      blockCount={activeDay.blocks.length}
+                      onApplyTemplate={applyTemplate}
+                      onDuplicateDay={duplicateDayBlocks}
+                      onClearDay={clearDay}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -267,9 +305,9 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
                       Pianifica come i pro
                     </p>
                     <p className="text-sm text-white/45 mt-3 max-w-sm mx-auto leading-relaxed">
-                      Scegli un <strong className="text-white/70">template</strong>, aggiungi
-                      voli e hotel dalla sidebar, oppure componi fascia per fascia — mattina,
-                      pomeriggio, sera.
+                      Tocca <strong className="text-white/70">Suggerisci giornata ✨</strong>{' '}
+                      per un itinerario completo (mock + prezzi travel), oppure usa template e
+                      palette manuale.
                     </p>
                   </motion.div>
                 ) : (

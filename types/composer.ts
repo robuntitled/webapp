@@ -67,3 +67,62 @@ export type ComposerDestination = {
   lat: number;
   lng: number;
 };
+
+/** Intenti supportati dall'orchestrator — contratto UI ↔ backend */
+export type ComposerGenerateIntent = 'suggest_day' | 'regenerate_block' | 'add_alternatives';
+
+/** Richiesta generazione giornata (draft pre-pubblicazione o trip esistente) */
+export type ComposerGenerateRequest = {
+  destination: string;
+  destinationMeta?: DestinationMeta;
+  dayIndex: number;
+  date: string;
+  dayTitle?: string;
+  startDate: string;
+  endDate: string;
+  planningMode: 'solo' | 'group';
+  maxParticipants: number;
+  intent: ComposerGenerateIntent;
+  /** Blocchi già presenti nel giorno attivo */
+  currentDayBlocks?: ComposerBlock[];
+  /** Riassunto blocchi altri giorni (anti-ripetizione) */
+  otherDaysSummary?: string;
+  targetBlockTypes?: ComposerBlockType[];
+  tripId?: string;
+};
+
+export type ComposerGenerateSource = 'mock' | 'ai' | 'cache';
+
+export type ComposerTravelFlightQuote = {
+  price: number;
+  currency: string;
+  origin: string;
+  destination: string;
+  airline?: string | null;
+  affiliateUrl?: string | null;
+  fromCache: boolean;
+};
+
+export type ComposerTravelQuotes = {
+  flight?: ComposerTravelFlightQuote;
+  hotel?: { affiliateUrl?: string | null };
+};
+
+export type ComposerGenerateMeta = {
+  source: ComposerGenerateSource;
+  generatedAt: string;
+  latencyMs: number;
+  model?: string;
+  version: string;
+};
+
+/** Risposta JSON sync — consumata direttamente dalla UI */
+export type ComposerGenerateResponse = {
+  dayIndex: number;
+  date: string;
+  suggestedTitle: string;
+  blocks: ComposerBlock[];
+  quotes?: ComposerTravelQuotes;
+  warnings: string[];
+  meta: ComposerGenerateMeta;
+};
