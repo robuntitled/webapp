@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAiConfig } from '@/lib/ai/config';
+import { isGeminiModelUnavailableError, resolveGeminiModelCandidates } from '@/lib/ai/models';
 
 export type GeminiUsage = {
   inputTokens: number;
@@ -24,20 +25,15 @@ type GeminiGenerateResponse = {
   error?: { message?: string; code?: number };
 };
 
-export async function generateGeminiStructured<T>(params: {
+async function callGeminiModel<T>(params: {
+  apiKey: string;
+  model: string;
   systemPrompt: string;
   userPrompt: string;
   responseSchema: Record<string, unknown>;
-  maxOutputTokens?: number;
+  maxOutputTokens: number;
 }): Promise<GeminiStructuredResult<T>> {
-  const config = getAiConfig();
-  const apiKey = config.geminiApiKey;
-
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY non configurata');
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -47,7 +43,7 @@ export async function generateGeminiStructured<T>(params: {
       contents: [{ role: 'user', parts: [{ text: params.userPrompt }] }],
       generationConfig: {
         temperature: 0.65,
-        maxOutputTokens: params.maxOutputTokens ?? config.maxOutputTokens,
+        maxOutputTokens: params.maxOutputTokens,
         responseMimeType: 'application/json',
         responseSchema: params.responseSchema,
       },
@@ -79,6 +75,46 @@ export async function generateGeminiStructured<T>(params: {
       inputTokens: payload.usageMetadata?.promptTokenCount ?? 0,
       outputTokens: payload.usageMetadata?.candidatesTokenCount ?? 0,
     },
-    model: config.model,
+    model: params.model,
   };
+}
+
+export async function generateGeminiStructured<T>(params: {
+  systemPrompt: string;
+  userPrompt: string;
+  responseSchema: Record<string, unknown>;
+  maxOutputTokens?: number;
+}): Promise<GeminiStructuredResult<T>> {
+  const config = getAiConfig();
+  const apiKey = config.geminiApiKey;
+
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY non configurata');
+  }
+
+  const models = resolveGeminiModelCandidates(config.model);
+  const maxOutputTokens = params.maxOutputTokens ?? config.maxOutputTokens;
+  let lastError: Error | null = null;
+
+  for (const model of models) {
+    try {
+      return await callGeminiModel<T>({
+        apiKey,
+        model,
+        systemPrompt: params.systemPrompt,
+        userPrompt: params.userPrompt,
+        responseSchema: params.responseSchema,
+        maxOutputTokens,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Errore Gemini';
+      lastError = error instanceof Error ? error : new Error(message);
+
+      if (!isGeminiModelUnavailableError(message)) {
+        throw lastError;
+      }
+    }
+  }
+
+  throw lastError ?? new Error('Nessun modello Gemini disponibile');
 }

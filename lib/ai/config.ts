@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { DEFAULT_GEMINI_MODEL } from '@/lib/ai/models';
+
 export type AiProviderName = 'gemini' | 'openai' | 'mock';
 
 export type AiConfig = {
@@ -32,7 +34,7 @@ export function getAiConfig(): AiConfig {
   return {
     provider,
     geminiApiKey,
-    model: process.env.AI_MODEL ?? 'gemini-2.5-flash',
+    model: process.env.AI_MODEL ?? DEFAULT_GEMINI_MODEL,
     enabled:
       explicitEnabled === 'true' ||
       (explicitEnabled !== 'false' && Boolean(geminiApiKey)),

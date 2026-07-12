@@ -43,11 +43,12 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
 
       onApplied(response, hasBlocks ? 'append' : 'replace');
 
+      const modelLabel = response.meta.model?.replace(/^gemini-/, '') ?? 'ai';
       const sourceLabel =
         response.meta.source === 'ai'
-          ? 'Gemini AI'
+          ? `Gemini ${modelLabel}`
           : response.meta.source === 'cache'
-            ? 'Gemini AI (cache)'
+            ? `Gemini ${modelLabel} (cache)`
             : response.meta.source === 'mock'
               ? 'suggerimenti smart (preview)'
               : response.meta.source;
