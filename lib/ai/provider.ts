@@ -5,6 +5,7 @@ import { canAffordAiCall, recordAiSpend } from '@/lib/ai/budget';
 import { getAiConfig, isAiComposerAvailable } from '@/lib/ai/config';
 import { generateGeminiStructured } from '@/lib/ai/gemini';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
+import { normalizeAiDayPlan } from '@/lib/composer/ai-day-normalize';
 
 export type StructuredGenerationResult<T> = {
   data: T;
@@ -45,9 +46,11 @@ export async function generateStructured<T>(params: {
     maxOutputTokens: params.maxOutputTokens,
   });
 
-  const parsed = params.schema.safeParse(result.data);
+  const normalized = normalizeAiDayPlan(result.data) ?? result.data;
+  const parsed = params.schema.safeParse(normalized);
   if (!parsed.success) {
-    throw new Error(`Risposta AI non valida: ${parsed.error.message}`);
+    const detail = parsed.error.issues[0]?.message ?? parsed.error.message;
+    throw new Error(`Risposta AI non valida: ${detail}`);
   }
 
   const costUsd = recordAiSpend(result.usage.inputTokens, result.usage.outputTokens);

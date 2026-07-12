@@ -33,21 +33,43 @@ type GeminiCallParams = {
   userPrompt: string;
   responseSchema?: Record<string, unknown>;
   maxOutputTokens: number;
+  format: 'responseFormat' | 'legacyMime' | 'jsonOnly';
 };
+
+function buildGenerationConfig(params: GeminiCallParams): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    temperature: 0.4,
+    maxOutputTokens: params.maxOutputTokens,
+  };
+
+  if (params.format === 'responseFormat' && params.responseSchema) {
+    return {
+      ...base,
+      responseFormat: {
+        text: {
+          mimeType: 'application/json',
+          schema: params.responseSchema,
+        },
+      },
+    };
+  }
+
+  if (params.format === 'legacyMime' && params.responseSchema) {
+    return {
+      ...base,
+      responseMimeType: 'application/json',
+      responseSchema: params.responseSchema,
+    };
+  }
+
+  return {
+    ...base,
+    responseMimeType: 'application/json',
+  };
+}
 
 async function callGeminiModel<T>(params: GeminiCallParams): Promise<GeminiStructuredResult<T>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
-
-  const generationConfig: Record<string, unknown> = {
-    temperature: 0.4,
-    maxOutputTokens: params.maxOutputTokens,
-    responseMimeType: 'application/json',
-    thinkingConfig: { thinkingBudget: 0 },
-  };
-
-  if (params.responseSchema) {
-    generationConfig.responseSchema = params.responseSchema;
-  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -55,7 +77,7 @@ async function callGeminiModel<T>(params: GeminiCallParams): Promise<GeminiStruc
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: params.systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: params.userPrompt }] }],
-      generationConfig,
+      generationConfig: buildGenerationConfig(params),
     }),
   });
 
@@ -105,12 +127,13 @@ export async function generateGeminiStructured<T>(params: {
   const maxOutputTokens = params.maxOutputTokens ?? config.maxOutputTokens;
   let lastError: Error | null = null;
 
-  for (const model of models) {
-    const attempts: Array<{ responseSchema?: Record<string, unknown> }> = [
-      { responseSchema: params.responseSchema },
-      { responseSchema: undefined },
-    ];
+  const attempts: Array<{ format: GeminiCallParams['format']; responseSchema?: Record<string, unknown> }> = [
+    { format: 'responseFormat', responseSchema: params.responseSchema },
+    { format: 'legacyMime', responseSchema: params.responseSchema },
+    { format: 'jsonOnly' },
+  ];
 
+  for (const model of models) {
     for (const attempt of attempts) {
       try {
         return await callGeminiModel<T>({
@@ -120,6 +143,7 @@ export async function generateGeminiStructured<T>(params: {
           userPrompt: params.userPrompt,
           responseSchema: attempt.responseSchema,
           maxOutputTokens,
+          format: attempt.format,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Errore Gemini';

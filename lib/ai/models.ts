@@ -1,10 +1,10 @@
-/** Modello default: economico, structured output, disponibile ai nuovi account. */
+/** Modello default: stable, disponibile ai nuovi account Google AI Studio. */
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 /** Fallback se il modello configurato non è più disponibile. */
 export const GEMINI_MODEL_FALLBACKS = [
-  'gemini-2.5-flash-lite',
   'gemini-3.5-flash',
+  'gemini-2.5-flash-lite',
   'gemini-3.1-flash-lite',
 ] as const;
 
@@ -31,7 +31,10 @@ export function isRetryableGeminiError(message: string): boolean {
     isGeminiModelUnavailableError(message) ||
     lower.includes('json non valido') ||
     lower.includes('risposta vuota') ||
-    lower.includes('invalid json')
+    lower.includes('invalid json') ||
+    lower.includes('did not match') ||
+    lower.includes('expected pattern') ||
+    lower.includes('risposta ai non valida')
   );
 }
 

@@ -32,4 +32,10 @@ describe('isRetryableGeminiError', () => {
   it('retries on invalid JSON responses', () => {
     expect(isRetryableGeminiError('Gemini ha restituito JSON non valido')).toBe(true);
   });
+
+  it('retries on pattern validation errors from Gemini', () => {
+    expect(
+      isRetryableGeminiError('The string did not match the expected pattern.')
+    ).toBe(true);
+  });
 });

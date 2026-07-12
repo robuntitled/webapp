@@ -173,9 +173,39 @@ export async function orchestrateDayGeneration(
   };
 
   const validated = composerGenerateResponseSchema.safeParse(response);
-  if (!validated.success) {
-    throw new Error(`Risposta orchestrator non valida: ${validated.error.message}`);
+  if (validated.success) {
+    return validated.data;
   }
 
-  return validated.data;
+  const mock = generateMockDayBlocks(
+    {
+      destination: req.destination,
+      destinationMeta: req.destinationMeta,
+      dayIndex: req.dayIndex,
+      totalDays,
+      planningMode: req.planningMode,
+    },
+    req.targetBlockTypes
+  );
+
+  const fallbackBlocks = applyQuotesToBlocks(mock.blocks, quotes);
+
+  return {
+    dayIndex: req.dayIndex,
+    date: req.date,
+    suggestedTitle: mock.suggestedTitle,
+    blocks: fallbackBlocks,
+    quotes: quotes.flight || quotes.hotel ? quotes : undefined,
+    warnings: [
+      ...warnings,
+      `Validazione risposta fallita (${validated.error.issues[0]?.message ?? 'schema'}) — suggerimenti mock`,
+    ],
+    meta: {
+      source: 'mock',
+      generatedAt: new Date().toISOString(),
+      latencyMs: Date.now() - started,
+      model: 'nomadlink-mock-v1',
+      version: CONTRACT_VERSION,
+    },
+  };
 }

@@ -17,7 +17,7 @@ const alternativeSchema = z.object({
   price: z.number().nullable().optional(),
   currency: z.string().max(8).optional(),
   notes: z.string().max(2000).optional(),
-  affiliateUrl: z.string().url().nullable().optional(),
+  affiliateUrl: z.string().min(1).nullable().optional(),
   meta: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -65,7 +65,7 @@ const travelFlightQuoteSchema = z.object({
   origin: z.string(),
   destination: z.string(),
   airline: z.string().nullable().optional(),
-  affiliateUrl: z.string().url().nullable().optional(),
+  affiliateUrl: z.string().min(1).nullable().optional(),
   fromCache: z.boolean(),
 });
 
