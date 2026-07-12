@@ -21,17 +21,24 @@ export function getPublicMarker(): string | null {
  * Redirect affiliate ufficiale Travelpayouts (tp.media).
  * @see https://support.travelpayouts.com/hc/en-us/articles/210615778-Tools-overview
  */
+function getTrsId(): string | null {
+  return process.env.TRAVELPAYOUTS_TRS_ID?.trim() || null;
+}
+
 export function wrapTpMediaAffiliateUrl(
   marker: string,
   programId: number,
   targetUrl: string,
-  subId?: string
+  subId?: string,
+  trs?: string | null
 ): string {
   const markerParam = subId ? buildMarkerParam(marker, subId) : marker;
   const url = new URL('https://tp.media/r');
   url.searchParams.set('marker', markerParam);
   url.searchParams.set('p', String(programId));
   url.searchParams.set('u', targetUrl);
+  const trsId = trs ?? getTrsId();
+  if (trsId) url.searchParams.set('trs', trsId);
   return url.toString();
 }
 

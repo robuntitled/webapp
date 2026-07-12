@@ -20,7 +20,9 @@ export const REQUIRED_TRAVEL_PROGRAMS = [
 
 export type TravelSetupStatus = {
   hasMarker: boolean;
+  hasTrsId: boolean;
   hasDataApi: boolean;
+  hasLinksApi: boolean;
   hasAffiliate: boolean;
   usingDemoMarker: boolean;
   hints: string[];
@@ -38,28 +40,33 @@ export function getTravelSetupStatus(): TravelSetupStatus {
     );
   } else if (usingDemoMarker) {
     hints.push(
-      'Il marker attuale è un ID demo del repository — sostituiscilo con il tuo Partner ID Travelpayouts su Vercel e redeploy.'
+      'Il marker attuale è un ID demo — sostituiscilo con il tuo Partner ID Travelpayouts su Vercel e redeploy.'
+    );
+  }
+
+  if (config.marker && !config.trsId) {
+    hints.push(
+      'Aggiungi TRAVELPAYOUTS_TRS_ID su Vercel: Tools → Projects → copia l\'ID del Project collegato al sito.'
     );
   }
 
   if (!config.hasDataApi) {
     hints.push(
-      'Opzionale: TRAVELPAYOUTS_API_TOKEN per le stime prezzo in cache (stesso pannello API token).'
+      'Aggiungi TRAVELPAYOUTS_API_TOKEN (Profile → API token) per link affiliate validati e stime prezzo.'
     );
   }
 
   if (config.marker && !usingDemoMarker) {
     hints.push(
-      'Se i link danno "marker is not subscribed to campaign": iscriviti ad Aviasales e Booking.com nella dashboard Travelpayouts (Programs → Join).'
-    );
-    hints.push(
-      'Hotellook è chiuso dal 2025 — NomadLink usa ora Booking.com per gli hotel.'
+      'Errore "marker is not subscribed to campaign": nel Project Travelpayouts connetti Aviasales + Booking.com (Programs → Join → collega al Project).'
     );
   }
 
   return {
     hasMarker: Boolean(config.marker),
+    hasTrsId: Boolean(config.trsId),
     hasDataApi: config.hasDataApi,
+    hasLinksApi: config.hasLinksApi,
     hasAffiliate: config.hasAffiliate,
     usingDemoMarker,
     hints,

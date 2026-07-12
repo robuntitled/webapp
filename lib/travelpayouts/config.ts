@@ -24,11 +24,14 @@ export const TRAVELPAYOUTS_BRAND_COLORS = {
 
 export type TravelpayoutsConfig = {
   marker: string | null;
+  /** Project ID Travelpayouts — richiesto per link affiliate moderni */
+  trsId: string | null;
   wlId: string | null;
   flightsDomain: string | null;
   hotelDomain: string | null;
   defaultOriginIata: string;
   hasDataApi: boolean;
+  hasLinksApi: boolean;
   isConfigured: boolean;
   mode: 'subdomain' | 'widget' | 'affiliate' | 'api' | 'none';
   hasAffiliate: boolean;
@@ -44,6 +47,7 @@ function normalizeDomain(value: string | undefined): string | null {
 
 export function getTravelpayoutsConfig(): TravelpayoutsConfig {
   const marker = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim() || null;
+  const trsId = process.env.TRAVELPAYOUTS_TRS_ID?.trim() || null;
   const wlId = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID?.trim() || null;
   const flightsDomain = normalizeDomain(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_FLIGHTS_DOMAIN);
   const hotelDomain =
@@ -52,6 +56,7 @@ export function getTravelpayoutsConfig(): TravelpayoutsConfig {
     process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA?.trim().toUpperCase() || 'ROM';
 
   const hasDataApi = Boolean(process.env.TRAVELPAYOUTS_API_TOKEN?.trim());
+  const hasLinksApi = Boolean(hasDataApi && trsId && marker);
   const hasSubdomain = Boolean(flightsDomain && marker);
   const hasWidget = Boolean(wlId);
   const hasAffiliate = Boolean(marker);
@@ -65,11 +70,13 @@ export function getTravelpayoutsConfig(): TravelpayoutsConfig {
 
   return {
     marker,
+    trsId,
     wlId,
     flightsDomain,
     hotelDomain,
     defaultOriginIata,
     hasDataApi,
+    hasLinksApi,
     hasAffiliate,
     isConfigured,
     mode,

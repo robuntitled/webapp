@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -151,15 +152,26 @@ export function BlockEditorPanel({
 
       if (data.affiliateUrl) {
         patchContent(updates);
-        toast.message(data.message ?? 'Nessun prezzo in cache — apri la ricerca affiliate');
+        const setupHint = data.warnings?.[0] ?? data.setup?.hints?.find((h: string) =>
+          h.includes('not subscribed') || h.includes('TRS') || h.includes('Project')
+        );
+        if (setupHint) {
+          toast.warning(setupHint, { duration: 8000 });
+        }
+        toast.info(
+          data.message ??
+            'Nessun prezzo in cache — normale. Usa il link affiliate per tariffe aggiornate.',
+          { duration: 5000 }
+        );
         return;
       }
 
       const hint =
+        data.warnings?.[0] ??
         data.setup?.hints?.[0] ??
         data.message ??
-        'Configura il tuo Partner ID Travelpayouts e iscriviti ad Aviasales + Booking.com';
-      toast.message(hint, { duration: 7000 });
+        'Configura marker + TRAVELPAYOUTS_TRS_ID e iscriviti ad Aviasales + Booking.com';
+      toast.warning(hint, { duration: 8000 });
     } catch {
       toast.error('Errore ricerca volo');
     } finally {
@@ -208,6 +220,9 @@ export function BlockEditorPanel({
                 <span className="block text-xs font-normal text-white/40 mt-0.5">{meta.hint}</span>
               </div>
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Modifica i dettagli del blocco {meta.label} nel piano di viaggio
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">

@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
 import {
-  buildTripFlightSearchUrl,
-  buildTripHotelSearchUrl,
-} from '@/lib/travelpayouts/flight-search';
+  resolveTripFlightAffiliateUrl,
+  resolveTripHotelAffiliateUrl,
+} from '@/lib/travelpayouts/resolve-affiliate-links';
 import { getTravelSetupStatus } from '@/lib/travelpayouts/setup-hints';
 
 const querySchema = z.object({
@@ -39,33 +39,33 @@ export async function GET(request: Request) {
 
   const { destination, startDate, endDate, tripId, adults, origin } = parsed.data;
 
-  const flightUrl = buildTripFlightSearchUrl({
-    tripId,
-    destination,
-    startDate,
-    endDate,
-    adults: adults ?? 1,
-    originIata: origin?.toUpperCase(),
-  });
+  const [flightResult, hotelResult] = await Promise.all([
+    resolveTripFlightAffiliateUrl({
+      tripId,
+      destination,
+      startDate,
+      endDate,
+      adults: adults ?? 1,
+      originIata: origin?.toUpperCase(),
+    }),
+    resolveTripHotelAffiliateUrl(tripId, { destination, startDate, endDate }),
+  ]);
 
-  const hotelUrl = buildTripHotelSearchUrl(tripId, {
-    destination,
-    startDate,
-    endDate,
-  });
-
+  const warnings = [...flightResult.warnings, ...hotelResult.warnings];
   const missing: string[] = [];
-  if (!flightUrl) missing.push('Link voli non generato — verifica marker, destinazione e date');
-  if (!hotelUrl) missing.push('Link hotel non generato — verifica marker');
+  if (!flightResult.url) missing.push('Link voli non generato — verifica marker, TRS, destinazione e date');
+  if (!hotelResult.url) missing.push('Link hotel non generato — verifica marker e TRS');
 
   return NextResponse.json({
     configured: config.isConfigured,
     mode: config.mode,
     hasDataApi: config.hasDataApi,
+    hasLinksApi: config.hasLinksApi,
     hasAffiliate: config.hasAffiliate,
-    flightUrl,
-    hotelUrl,
+    flightUrl: flightResult.url,
+    hotelUrl: hotelResult.url,
     setup,
+    warnings: warnings.length > 0 ? warnings : undefined,
     missing: missing.length > 0 ? missing : undefined,
   });
 }

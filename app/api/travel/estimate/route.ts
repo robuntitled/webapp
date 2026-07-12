@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { fetchCheapestFlightQuote, isDataApiConfigured } from '@/lib/travelpayouts/data-api';
-import { buildTripFlightSearchUrl } from '@/lib/travelpayouts/flight-search';
+import { resolveTripFlightAffiliateUrl } from '@/lib/travelpayouts/resolve-affiliate-links';
 import { getTravelSetupStatus } from '@/lib/travelpayouts/setup-hints';
 
 const querySchema = z.object({
@@ -37,12 +37,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'La data di ritorno deve essere dopo la partenza' }, { status: 400 });
   }
 
-  const affiliateUrl = buildTripFlightSearchUrl({
+  const affiliateResolved = await resolveTripFlightAffiliateUrl({
     destination,
     startDate,
     endDate,
     originIata: origin?.toUpperCase(),
   });
+  const affiliateUrl = affiliateResolved.url;
+  const affiliateWarnings = affiliateResolved.warnings;
 
   if (!isDataApiConfigured()) {
     return NextResponse.json({
@@ -50,9 +52,10 @@ export async function GET(request: Request) {
       found: false,
       affiliateUrl,
       setup,
+      warnings: affiliateWarnings.length > 0 ? affiliateWarnings : undefined,
       message: affiliateUrl
-        ? 'Stima prezzo non disponibile (manca TRAVELPAYOUTS_API_TOKEN) — puoi aprire la ricerca affiliate.'
-        : setup.hints[0] ?? 'Configura Travelpayouts su Vercel (marker + programmi Aviasales/Booking).',
+        ? 'Nessun prezzo in cache per questa rotta — normale. Apri la ricerca affiliate per tariffe aggiornate.'
+        : setup.hints[0] ?? 'Configura Travelpayouts su Vercel (marker + TRS + programmi Aviasales/Booking).',
     });
   }
 
@@ -70,8 +73,9 @@ export async function GET(request: Request) {
         found: false,
         affiliateUrl,
         setup,
+        warnings: affiliateWarnings.length > 0 ? affiliateWarnings : undefined,
         message:
-          'Nessun prezzo in cache per questa rotta. Apri la ricerca affiliate per tariffe aggiornate.',
+          'Nessun prezzo in cache per questa rotta — è normale. Apri la ricerca affiliate per tariffe aggiornate.',
       });
     }
 
@@ -81,6 +85,7 @@ export async function GET(request: Request) {
       quote,
       affiliateUrl,
       setup,
+      warnings: affiliateWarnings.length > 0 ? affiliateWarnings : undefined,
       disclaimer:
         'Prezzo da cache Travelpayouts (non in tempo reale). Può variare al momento della prenotazione.',
     });

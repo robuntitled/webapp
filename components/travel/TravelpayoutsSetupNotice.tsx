@@ -40,12 +40,18 @@ export function TravelpayoutsSetupNotice() {
                   (marker) e l&apos;API token
                 </li>
                 <li>
-                  Su Vercel aggiungi:{' '}
-                  <code className="text-xs">NEXT_PUBLIC_TRAVELPAYOUTS_MARKER=il_tuo_id</code>
+                  Tools → <strong>Projects</strong> → crea/collega un Project al sito → copia il{' '}
+                  <strong>Project ID (TRS)</strong>
                 </li>
                 <li>
-                  Aggiungi anche:{' '}
-                  <code className="text-xs">TRAVELPAYOUTS_API_TOKEN=il_token</code> (stime prezzo opzionali)
+                  Su Vercel aggiungi:{' '}
+                  <code className="text-xs">NEXT_PUBLIC_TRAVELPAYOUTS_MARKER=il_tuo_partner_id</code>
+                </li>
+                <li>
+                  <code className="text-xs">TRAVELPAYOUTS_TRS_ID=id_del_project</code>
+                </li>
+                <li>
+                  <code className="text-xs">TRAVELPAYOUTS_API_TOKEN=il_token</code>
                 </li>
                 <li>Redeploy del sito — non usare l&apos;ID demo del repository</li>
               </ol>

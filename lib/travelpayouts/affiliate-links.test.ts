@@ -11,10 +11,17 @@ describe('affiliate links', () => {
   });
 
   it('wraps target url with tp.media marker', () => {
-    const url = wrapTpMediaAffiliateUrl('123456', 4117, 'https://www.aviasales.com/search/ROM0108BKK15081', 'test');
+    const url = wrapTpMediaAffiliateUrl(
+      '123456',
+      4117,
+      'https://www.aviasales.com/search/ROM0108BKK15081',
+      'test',
+      '999888'
+    );
     expect(url).toContain('https://tp.media/r');
     expect(url).toContain('marker=123456.test');
     expect(url).toContain('p=4117');
+    expect(url).toContain('trs=999888');
     expect(url).toContain(encodeURIComponent('https://www.aviasales.com/search/ROM0108BKK15081'));
   });
 

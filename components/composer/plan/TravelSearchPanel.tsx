@@ -26,6 +26,7 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
   const [hotelUrl, setHotelUrl] = useState<string | null>(null);
   const [originFlights, setOriginFlights] = useState<OriginFlightState[]>([]);
   const [setup, setSetup] = useState<TravelSetupStatus | null>(null);
+  const [linkWarnings, setLinkWarnings] = useState<string[]>([]);
 
   const origins = useMemo(() => {
     const collected = collectOriginsFromDraft(draft);
@@ -81,6 +82,7 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
       .then(([hotelLinks, ...flights]) => {
         setHotelUrl(hotelLinks.hotelUrl ?? null);
         setSetup(hotelLinks.setup ?? null);
+        setLinkWarnings(hotelLinks.warnings ?? []);
         setOriginFlights(flights);
       })
       .catch(() => undefined)
@@ -96,6 +98,12 @@ export function TravelSearchPanel({ draft, onAddFlight, onAddHotel }: TravelSear
       </p>
 
       <TravelAffiliateSetupBanner setup={setup} compact />
+
+      {linkWarnings.map((warning) => (
+        <p key={warning} className="text-[10px] text-amber-200/80 px-1 leading-relaxed">
+          ⚠ {warning}
+        </p>
+      ))}
 
       {originFlights.map((item) => {
         const Icon = item.origin.role === 'organizer' ? User : Users;
