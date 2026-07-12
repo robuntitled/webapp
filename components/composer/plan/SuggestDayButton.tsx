@@ -44,9 +44,13 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
       onApplied(response, hasBlocks ? 'append' : 'replace');
 
       const sourceLabel =
-        response.meta.source === 'mock'
-          ? 'suggerimenti smart (preview)'
-          : response.meta.source;
+        response.meta.source === 'ai'
+          ? 'Gemini AI'
+          : response.meta.source === 'cache'
+            ? 'Gemini AI (cache)'
+            : response.meta.source === 'mock'
+              ? 'suggerimenti smart (preview)'
+              : response.meta.source;
 
       toast.success(
         `${response.blocks.length} blocchi generati · ${sourceLabel} · ${response.meta.latencyMs}ms`
