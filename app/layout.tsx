@@ -6,6 +6,7 @@ import { Providers } from '@/app/providers';
 import { auth } from '@/auth';
 import { CookieBanner } from '@/components/legal/CookieBanner';
 import { Footer } from '@/components/layout/Footer';
+import { Analytics } from '@vercel/analytics/next';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -44,6 +45,7 @@ export default async function RootLayout({
           <CookieBanner />
           <Toaster richColors position="top-right" />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
