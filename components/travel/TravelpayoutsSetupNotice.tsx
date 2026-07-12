@@ -74,8 +74,9 @@ export function TravelpayoutsSetupNotice() {
 
             <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
               <li>
-                <code className="text-xs">NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID</code> — widget ricerca live
-                nel composer (WL Web → Widget)
+                <code className="text-xs">NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID</code> +{' '}
+                <code className="text-xs">NEXT_PUBLIC_TRAVELPAYOUTS_MARKER</code> — widget search +
+                mappa nel composer
               </li>
               <li>
                 <code className="text-xs">NEXT_PUBLIC_TRAVELPAYOUTS_MARKER</code> — il tuo Partner ID

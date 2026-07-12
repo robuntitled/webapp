@@ -16,6 +16,7 @@ import {
 } from '@/lib/composer/blocks';
 import { getBlockSubtitle } from '@/lib/composer/planning';
 import { getTimeSlotEmoji, getTimeSlotLabel } from '@/lib/composer/time-slots';
+import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import type { ComposerBlock } from '@/types/composer';
 
 type BlockCardProps = {
@@ -49,7 +50,9 @@ export function BlockCard({
   const timeSlot = String(block.content.timeSlot ?? 'flex');
   const duration = typeof block.content.duration === 'string' ? block.content.duration : null;
   const affiliateUrl =
-    typeof block.content.affiliateUrl === 'string' ? block.content.affiliateUrl : null;
+    !hasTravelpayoutsEmbed() && typeof block.content.affiliateUrl === 'string'
+      ? block.content.affiliateUrl
+      : null;
   const altCount = block.alternatives.length;
 
   return (

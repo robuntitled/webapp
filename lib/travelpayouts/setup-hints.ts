@@ -1,3 +1,4 @@
+import { getTravelEmbedCredentials } from '@/lib/travelpayouts/embed-config';
 import { getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
 
 /** Marker demo nel repo — non iscritto ai programmi, genera errori tp.media */
@@ -57,9 +58,9 @@ export function getTravelSetupStatus(): TravelSetupStatus {
     );
   }
 
-  if (!config.wlId) {
+  if (!process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID?.trim()) {
     hints.push(
-      'Per il widget ricerca integrato nel composer: WL Web → Widget → copia wl_id in NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID.'
+      'Per widget search+mappa nel composer: Tools → Projects → copia ID in NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID.'
     );
   }
 
@@ -74,7 +75,7 @@ export function getTravelSetupStatus(): TravelSetupStatus {
     hasTrsId: Boolean(config.trsId),
     hasDataApi: config.hasDataApi,
     hasLinksApi: config.hasLinksApi,
-    hasWidget: Boolean(config.wlId),
+    hasWidget: Boolean(config.wlId || getTravelEmbedCredentials()),
     hasAffiliate: config.hasAffiliate,
     usingDemoMarker,
     hints,

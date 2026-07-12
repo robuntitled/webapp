@@ -16,7 +16,7 @@ import { spawnSync } from 'node:child_process';
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
 const ORIGIN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA || 'ROM';
 const API_TOKEN = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
-const TRS_ID = process.env.TRAVELPAYOUTS_TRS_ID?.trim();
+const TRS_ID = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID?.trim() || process.env.TRAVELPAYOUTS_TRS_ID?.trim();
 
 function run(cmd, args, input) {
   const result = spawnSync(cmd, args, {
@@ -51,9 +51,10 @@ if (MARKER) {
 upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA', ORIGIN);
 
 if (TRS_ID) {
+  upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID', TRS_ID);
   upsertEnv('TRAVELPAYOUTS_TRS_ID', TRS_ID, 'sensitive');
 } else {
-  console.log('\n⚠ TRAVELPAYOUTS_TRS_ID non impostato — link affiliate potrebbero fallire');
+  console.log('\n⚠ NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID non impostato — widget disabilitati');
 }
 
 if (API_TOKEN) {

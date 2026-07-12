@@ -16,6 +16,7 @@ import {
 import { Loader2, Plus, RefreshCw, Trash2, ExternalLink, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { BLOCK_META, createAlternativeId, DURATION_OPTIONS } from '@/lib/composer/blocks';
+import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
 import { TIME_SLOTS } from '@/lib/composer/time-slots';
 import type { ComposerBlock, ComposerDraft } from '@/types/composer';
@@ -55,12 +56,13 @@ export function BlockEditorPanel({
 }: BlockEditorPanelProps) {
   const [flightLoading, setFlightLoading] = useState(false);
   const [affiliateUrl, setAffiliateUrl] = useState<string | null>(null);
+  const embedOnly = hasTravelpayoutsEmbed();
   const [showAltForm, setShowAltForm] = useState(false);
   const [altLabel, setAltLabel] = useState('');
   const [altPrice, setAltPrice] = useState('');
 
   useEffect(() => {
-    if (!open || !block || (block.type !== 'flight' && block.type !== 'hotel')) {
+    if (embedOnly || !open || !block || (block.type !== 'flight' && block.type !== 'hotel')) {
       setAffiliateUrl(null);
       return;
     }
@@ -266,19 +268,26 @@ export function BlockEditorPanel({
 
           {block.type === 'flight' && (
             <div className="space-y-3">
-              <Button
-                type="button"
-                className="w-full rounded-xl h-11 shadow-lg shadow-sky-500/10"
-                onClick={() => void searchFlight()}
-                disabled={flightLoading}
-              >
-                {flightLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Cerca volo (cache Travelpayouts)
-              </Button>
+              {embedOnly ? (
+                <p className="text-xs text-white/45 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  Usa il widget nella sidebar per cercare voli live, poi inserisci qui prezzo e
+                  compagnia manualmente.
+                </p>
+              ) : (
+                <Button
+                  type="button"
+                  className="w-full rounded-xl h-11 shadow-lg shadow-sky-500/10"
+                  onClick={() => void searchFlight()}
+                  disabled={flightLoading}
+                >
+                  {flightLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Cerca volo (cache Travelpayouts)
+                </Button>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-white/50 text-xs uppercase tracking-wider">Passeggeri</Label>
@@ -325,7 +334,7 @@ export function BlockEditorPanel({
                   />
                 </div>
               </div>
-              {Boolean(affiliateUrl || block.content.affiliateUrl) && (
+              {!embedOnly && Boolean(affiliateUrl || block.content.affiliateUrl) && (
                 <Button asChild variant="secondary" className="w-full rounded-xl bg-white/10 hover:bg-white/15 text-white border-0">
                   <a
                     href={affiliateUrl ?? String(block.content.affiliateUrl)}
@@ -384,7 +393,11 @@ export function BlockEditorPanel({
                   />
                 </div>
               </div>
-              {Boolean(affiliateUrl || block.content.affiliateUrl) && (
+              {embedOnly ? (
+                <p className="text-xs text-white/45 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  Cerca hotel nel widget voli (tab hotel) o inserisci i dettagli manualmente.
+                </p>
+              ) : Boolean(affiliateUrl || block.content.affiliateUrl) ? (
                 <Button asChild variant="secondary" className="w-full rounded-xl bg-white/10 hover:bg-white/15 text-white border-0">
                   <a
                     href={affiliateUrl ?? String(block.content.affiliateUrl)}
@@ -395,7 +408,7 @@ export function BlockEditorPanel({
                     <ExternalLink className="ml-2 h-3.5 w-3.5" />
                   </a>
                 </Button>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -614,18 +627,20 @@ export function BlockEditorPanel({
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               Rimuovi
             </Button>
-            {typeof block.content.affiliateUrl === 'string' && block.content.affiliateUrl && (
-              <Button asChild size="sm" variant="outline" className="rounded-full border-white/15 text-white hover:bg-white/10">
-                <a
-                  href={block.content.affiliateUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Prenota
-                  <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                </a>
-              </Button>
-            )}
+            {!embedOnly &&
+              typeof block.content.affiliateUrl === 'string' &&
+              block.content.affiliateUrl && (
+                <Button asChild size="sm" variant="outline" className="rounded-full border-white/15 text-white hover:bg-white/10">
+                  <a
+                    href={block.content.affiliateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Prenota
+                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
           </div>
         </div>
       </DialogContent>
