@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { requestDayGeneration } from '@/lib/composer/client-generate';
-import type { ComposerDay, ComposerDraft, ComposerGenerateResponse } from '@/types/composer';
-import { Loader2, Sparkles, Wand2 } from 'lucide-react';
+import type { ComposerDay, ComposerDraft, ComposerGenerateResponse, ComposerGenerateSource } from '@/types/composer';
+import { Loader2, Sparkles, Wand2, Zap, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SuggestDayButtonProps = {
@@ -14,8 +14,36 @@ type SuggestDayButtonProps = {
   onApplied: (response: ComposerGenerateResponse, mode: 'replace' | 'append') => void;
 };
 
+function sourceBadge(source: ComposerGenerateSource | null): {
+  label: string;
+  className: string;
+  Icon: typeof Sparkles;
+} | null {
+  if (!source) return null;
+  if (source === 'ai') {
+    return {
+      label: 'Gemini AI',
+      className: 'bg-violet-500/20 text-violet-200 border-violet-400/30',
+      Icon: Brain,
+    };
+  }
+  if (source === 'cache') {
+    return {
+      label: 'AI cache',
+      className: 'bg-sky-500/20 text-sky-200 border-sky-400/30',
+      Icon: Zap,
+    };
+  }
+  return {
+    label: 'Smart',
+    className: 'bg-amber-500/15 text-amber-200 border-amber-400/25',
+    Icon: Sparkles,
+  };
+}
+
 export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [lastSource, setLastSource] = useState<ComposerGenerateSource | null>(null);
 
   const handleSuggest = async () => {
     setLoading(true);
@@ -40,23 +68,22 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
       });
 
       onApplied(response, 'replace');
+      setLastSource(response.meta.source);
 
-      const modelLabel = response.meta.model?.replace(/^gemini-/, '') ?? 'ai';
+      const modelLabel = response.meta.model?.replace(/^gemini-/, '') ?? '';
       const sourceLabel =
         response.meta.source === 'ai'
-          ? `Gemini ${modelLabel}`
+          ? `Gemini ${modelLabel || 'AI'}`
           : response.meta.source === 'cache'
-            ? `Gemini ${modelLabel} (cache)`
-            : response.meta.source === 'mock'
-              ? 'suggerimenti smart'
-              : response.meta.source;
+            ? `Gemini ${modelLabel || 'AI'} (cache)`
+            : 'Smart locale';
 
       toast.success(
-        `${response.blocks.length} blocchi generati · ${sourceLabel} · ${response.meta.latencyMs}ms`
+        `${response.blocks.length} blocchi · ${sourceLabel} · ${response.meta.latencyMs}ms`
       );
 
       if (response.warnings.length > 0) {
-        toast.message(response.warnings[0], { duration: 4000 });
+        toast.message(response.warnings[0], { duration: 5000 });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Errore generazione');
@@ -65,8 +92,10 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
     }
   };
 
+  const badge = sourceBadge(lastSource);
+
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-2">
       <Button
         type="button"
         size="sm"
@@ -82,6 +111,15 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
         Suggerisci giornata
       </Button>
 
+      {badge && !loading && (
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.className}`}
+        >
+          <badge.Icon className="h-3 w-3" />
+          {badge.label}
+        </span>
+      )}
+
       <AnimatePresence>
         {loading && (
           <motion.div
@@ -92,7 +130,7 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
           >
             <div className="flex items-center gap-2 text-xs text-white/60">
               <Wand2 className="h-3.5 w-3.5 text-accent animate-pulse" />
-              Orchestrator in corso...
+              Pianificazione in corso...
             </div>
             <div className="mt-2 space-y-1.5">
               {[1, 2, 3].map((i) => (

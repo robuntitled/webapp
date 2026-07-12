@@ -5,19 +5,22 @@ import {
   type AiDayBlockSpec,
   type AiDayPlan,
 } from '@/lib/composer/ai-day-schema';
+import { buildIntelPromptBlock, resolveDestinationIntel } from '@/lib/composer/destination-intel';
 import type { ComposerBlock, ComposerBlockType, ComposerGenerateRequest } from '@/types/composer';
 
-const SYSTEM_PROMPT = `Sei un travel planner per NomadLink. Rispondi SOLO con JSON valido secondo lo schema.
-Regole:
-- Scrivi titoli e descrizioni in italiano, concreti e locali per la destinazione.
-- Usa luoghi plausibili (quartieri, mercati, esperienze tipiche) senza inventare nomi esatti di ristoranti.
-- Rispetta la fascia oraria timeSlot per ogni blocco.
-- Giorno 1: arrivo (volo verso aeroporto vicino, transfer, hotel, cena leggera).
-- Ultimo giorno: partenza (colazione, transfer, volo ritorno).
-- Giorni intermedi: mix attrazioni, pasti, attività, tempo libero.
-- Per paesi/comuni piccoli in Italia: volo verso aeroporto reale vicino (es. Ancona AOI per Marche), NON verso il nome del paese.
-- Evita di ripetere attività già presenti negli altri giorni indicati nel prompt.
-- Massimo 8 blocchi, ordinati logicamente nella giornata.`;
+const SYSTEM_PROMPT = `Sei un travel planner senior per NomadLink — stile guida locale insider, non turista generico.
+Rispondi SOLO con JSON valido.
+
+Qualità richiesta:
+- Titoli vividi e specifici (max 80 caratteri), in italiano.
+- Luoghi plausibili per la regione indicata; per borghi piccoli usa aeroporto/città vicina reale.
+- Orari coerenti: colazione mattina, pranzo pomeriggio, cena sera.
+- Giorno 1: arrivo (volo hub → transfer → hotel → cena leggera → passeggiata).
+- Ultimo giorno: colazione → ultimo highlight → transfer → volo ritorno.
+- Giorni intermedi: 5-7 blocchi vari (attrazioni, pasti, attività, tempo libero, nota crew).
+- Evita ripetizioni con altri giorni elencati nel prompt.
+- Non inventare nomi esatti di ristoranti commerciali; usa descrizioni ("osteria di paese", "friggitoria locale").
+- Per gruppi: aggiungi nota con sync meet-up; per solo: promemoria pratico.`;
 
 function specToExtra(spec: AiDayBlockSpec): Record<string, unknown> {
   const extra: Record<string, unknown> = { title: spec.title, timeSlot: spec.timeSlot };
@@ -51,23 +54,27 @@ export function buildDayGenerationPrompt(
   totalDays: number
 ): { systemPrompt: string; userPrompt: string; responseSchema: Record<string, unknown> } {
   const destLabel = req.destinationMeta?.label ?? req.destination;
-  const country = req.destinationMeta?.country ? `, ${req.destinationMeta.country}` : '';
-  const placeType = req.destinationMeta?.placeTypeLabel ?? req.destinationMeta?.placeType;
+  const intel = resolveDestinationIntel(req.destination, req.destinationMeta);
+  const intelBlock = buildIntelPromptBlock(intel, destLabel);
+
+  const isFirst = req.dayIndex === 1;
+  const isLast = req.dayIndex === totalDays;
+  const dayPhase = isFirst ? 'ARRIVO' : isLast ? 'PARTENZA' : 'ESPLORAZIONE';
 
   const lines = [
-    `Destinazione: ${destLabel}${country}`,
-    placeType ? `Tipo luogo: ${placeType}` : null,
-    `Giorno: ${req.dayIndex} di ${totalDays} (${req.date})`,
-    `Modalità: ${req.planningMode === 'group' ? 'gruppo' : 'solo'} (${req.maxParticipants} partecipanti)`,
-    `Intent: ${req.intent}`,
+    `=== VIAGGIO ===`,
+    `Destinazione: ${destLabel}${req.destinationMeta?.country ? `, ${req.destinationMeta.country}` : ''}`,
+    req.destinationMeta?.placeTypeLabel ? `Tipo: ${req.destinationMeta.placeTypeLabel}` : null,
+    `Periodo: ${req.startDate} → ${req.endDate} (${totalDays} giorni)`,
+    `Giorno richiesto: ${req.dayIndex} (${req.date}) — fase ${dayPhase}`,
+    `Modalità: ${req.planningMode === 'group' ? `gruppo di ${req.maxParticipants}` : 'viaggio solo'}`,
+    ``,
+    `=== CONTESTO LOCALE ===`,
+    intelBlock,
+    ``,
     req.dayTitle ? `Titolo giorno attuale: ${req.dayTitle}` : null,
-    req.otherDaysSummary ? `Altri giorni già pianificati: ${req.otherDaysSummary}` : null,
-    req.currentDayBlocks?.length
-      ? `Blocchi già nel giorno: ${req.currentDayBlocks.map((b) => `${b.type}:${String(b.content.title ?? '')}`).join('; ')}`
-      : null,
-    req.targetBlockTypes?.length
-      ? `Tipi blocchi richiesti: ${req.targetBlockTypes.join(', ')}`
-      : null,
+    req.otherDaysSummary ? `Altri giorni (NON ripetere): ${req.otherDaysSummary}` : null,
+    req.targetBlockTypes?.length ? `Tipi richiesti: ${req.targetBlockTypes.join(', ')}` : null,
   ].filter(Boolean);
 
   return {

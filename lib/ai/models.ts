@@ -1,5 +1,6 @@
-/** Modello default: stable, disponibile ai nuovi account Google AI Studio. */
+/** Free tier economico; per qualità superiore con billing: gemini-3.5-flash */
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+export const PREMIUM_GEMINI_MODEL = 'gemini-3.5-flash';
 
 /** Fallback se il modello configurato non è più disponibile. */
 export const GEMINI_MODEL_FALLBACKS = [

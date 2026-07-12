@@ -26,8 +26,9 @@ describe('buildDayGenerationPrompt', () => {
     const { userPrompt } = buildDayGenerationPrompt(baseRequest, 7);
 
     expect(userPrompt).toContain('Bangkok');
-    expect(userPrompt).toContain('Giorno: 3 di 7');
-    expect(userPrompt).toContain('Altri giorni già pianificati');
+    expect(userPrompt).toContain('Giorno richiesto: 3');
+    expect(userPrompt).toContain('CONTESTO LOCALE');
+    expect(userPrompt).toContain('Altri giorni (NON ripetere)');
   });
 });
 
