@@ -23,6 +23,7 @@ export type TravelSetupStatus = {
   hasTrsId: boolean;
   hasDataApi: boolean;
   hasLinksApi: boolean;
+  hasWidget: boolean;
   hasAffiliate: boolean;
   usingDemoMarker: boolean;
   hints: string[];
@@ -56,6 +57,12 @@ export function getTravelSetupStatus(): TravelSetupStatus {
     );
   }
 
+  if (!config.wlId) {
+    hints.push(
+      'Per il widget ricerca integrato nel composer: WL Web → Widget → copia wl_id in NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID.'
+    );
+  }
+
   if (config.marker && !usingDemoMarker) {
     hints.push(
       'Errore "marker is not subscribed to campaign": nel Project Travelpayouts connetti Aviasales + Booking.com (Programs → Join → collega al Project).'
@@ -67,6 +74,7 @@ export function getTravelSetupStatus(): TravelSetupStatus {
     hasTrsId: Boolean(config.trsId),
     hasDataApi: config.hasDataApi,
     hasLinksApi: config.hasLinksApi,
+    hasWidget: Boolean(config.wlId),
     hasAffiliate: config.hasAffiliate,
     usingDemoMarker,
     hints,

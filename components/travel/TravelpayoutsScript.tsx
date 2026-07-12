@@ -6,16 +6,27 @@ import Script from 'next/script';
 type TravelpayoutsScriptProps = {
   wlId: string;
   resultsPath?: string;
+  /** Codice ricerca WL (es. ROM0108BCN15082) — precompila e avvia risultati */
+  flightSearch?: string | null;
 };
 
-export function TravelpayoutsScript({ wlId, resultsPath }: TravelpayoutsScriptProps) {
+export function TravelpayoutsScript({
+  wlId,
+  resultsPath,
+  flightSearch,
+}: TravelpayoutsScriptProps) {
   useEffect(() => {
-    if (!resultsPath) return;
-    window.TPWL_CONFIGURATION = {
+    const config: NonNullable<Window['TPWL_CONFIGURATION']> = {
       ...(window.TPWL_CONFIGURATION ?? {}),
-      resultsURL: `${window.location.origin}${resultsPath}`,
     };
-  }, [resultsPath]);
+    if (resultsPath) {
+      config.resultsURL = `${window.location.origin}${resultsPath}`;
+    }
+    if (flightSearch) {
+      config.flightSearch = flightSearch;
+    }
+    window.TPWL_CONFIGURATION = config;
+  }, [resultsPath, flightSearch]);
 
   return (
     <Script
@@ -40,6 +51,7 @@ declare global {
   interface Window {
     TPWL_CONFIGURATION?: {
       resultsURL?: string;
+      flightSearch?: string;
     };
   }
 }
