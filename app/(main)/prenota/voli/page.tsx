@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AffiliateDisclosure } from '@/components/travel/AffiliateDisclosure';
 import { AffiliateSearchCard } from '@/components/travel/AffiliateSearchCard';
-import { TravelpayoutsFlightWidget } from '@/components/travel/TravelpayoutsFlightWidget';
+
 import { TravelpayoutsSetupNotice } from '@/components/travel/TravelpayoutsSetupNotice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,13 +47,13 @@ export default function PrenotaVoliPage() {
 
       {config.mode === 'widget' && config.wlId && (
         <Card className="rounded-2xl border-0 shadow-lg">
-          <CardContent className="p-6">
-            <TravelpayoutsFlightWidget
-              wlId={config.wlId}
-              resultsPath="/prenota/voli"
-              showSearch
-              showResults
-            />
+          <CardContent className="p-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Apri la pagina dedicata per form + risultati voli senza redirect alla home.
+            </p>
+            <Button asChild className="rounded-xl">
+              <Link href="/prenota/voli/ricerca">Apri ricerca voli White Label</Link>
+            </Button>
           </CardContent>
         </Card>
       )}

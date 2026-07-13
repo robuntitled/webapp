@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { AffiliateDisclosure } from '@/components/travel/AffiliateDisclosure';
 import { AffiliateSearchCard } from '@/components/travel/AffiliateSearchCard';
-import { TravelpayoutsFlightWidget } from '@/components/travel/TravelpayoutsFlightWidget';
+
 import { TravelpayoutsSetupNotice } from '@/components/travel/TravelpayoutsSetupNotice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -95,12 +95,13 @@ export default async function TripPrenotaPage({ params, searchParams }: PageProp
                     Widget White Label integrato in NomadLink. I risultati compaiono qui sotto.
                   </p>
                 </div>
-                <TravelpayoutsFlightWidget
-                  wlId={config.wlId}
-                  resultsPath={`/viaggi/${trip.id}/prenota`}
-                  showSearch={focus !== 'hotel'}
-                  showResults
-                />
+                <Button asChild className="rounded-xl">
+                  <Link
+                    href={`/prenota/voli/ricerca?destination=${encodeURIComponent(trip.destination)}&startDate=${trip.startDate}&endDate=${trip.endDate}`}
+                  >
+                    Apri ricerca voli White Label
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           )}

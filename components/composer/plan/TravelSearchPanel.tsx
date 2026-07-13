@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ComposerFlightWidget } from '@/components/composer/plan/ComposerFlightWidget';
 import { ComposerTravelEmbeds } from '@/components/composer/plan/ComposerTravelEmbeds';
+
 import {
   collectOriginsFromDraft,
   uniqueOriginsByIata,
@@ -12,8 +13,9 @@ import {
   getPublicTravelWidgetId,
   hasTravelpayoutsEmbed,
 } from '@/lib/travelpayouts/public-config';
+import { buildWlFlightSearchPageUrl } from '@/lib/travelpayouts/wl-search-url';
 import type { ComposerDraft, ComposerOrigin } from '@/types/composer';
-import { Download, Hotel, Loader2, Search } from 'lucide-react';
+import { Download, ExternalLink, Hotel, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 export type ImportedFlightQuote = {
@@ -70,8 +72,11 @@ export function TravelSearchPanel({
   onAddHotel,
 }: TravelSearchPanelProps) {
   const [importing, setImporting] = useState(false);
-  const wlWidgetEnabled = Boolean(getPublicTravelWidgetId());
-  const embedEnabled = hasTravelpayoutsEmbed() && !wlWidgetEnabled;
+  const embedEnabled = hasTravelpayoutsEmbed();
+  const wlEnabled = Boolean(getPublicTravelWidgetId());
+  const wlSearchUrl = draft.destination && draft.startDate && draft.endDate
+    ? buildWlFlightSearchPageUrl(draft)
+    : null;
 
   const importFlightsFromCache = async () => {
     setImporting(true);
@@ -95,7 +100,7 @@ export function TravelSearchPanel({
         );
       } else {
         toast.info(
-          'Nessun prezzo in cache per questa rotta — blocchi volo creati con link di ricerca. Usa il widget per tariffe live.',
+          'Nessun prezzo in cache per questa rotta — blocchi volo creati con link di ricerca.',
           { duration: 7000 }
         );
       }
@@ -112,24 +117,40 @@ export function TravelSearchPanel({
         Cerca &amp; prenota
       </p>
 
-      {!wlWidgetEnabled && !embedEnabled && (
+      {!embedEnabled && !wlEnabled && (
         <p className="text-[10px] text-white/40 px-1 leading-relaxed">
-          Aggiungi su Vercel:{' '}
-          <code className="text-[9px] text-accent/80">NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID=548437</code>{' '}
-          e{' '}
-          <code className="text-[9px] text-accent/80">NEXT_PUBLIC_TRAVELPAYOUTS_MARKER</code> per
-          attivare il widget ricerca integrato.
+          Configura Travelpayouts su Vercel (TRS + marker o WL_ID) per attivare la ricerca voli.
         </p>
       )}
 
       {embedEnabled && <ComposerTravelEmbeds draft={draft} />}
-      {wlWidgetEnabled && <ComposerFlightWidget draft={draft} />}
 
-      {(embedEnabled || wlWidgetEnabled) && (
+      {wlEnabled && wlSearchUrl && (
+        <div className="space-y-2 px-1">
+          <p className="text-[10px] text-amber-200/80 rounded-xl border border-amber-400/20 bg-amber-500/10 px-2.5 py-2 leading-relaxed">
+            Se si apre Booking.com: in Travelpayouts → WL Web → Content disattiva &quot;Show hotels&quot;.
+          </p>
+          <Button
+            asChild
+            size="sm"
+            className="w-full h-9 rounded-xl text-xs bg-sky-600/90 hover:bg-sky-600 text-white border-0"
+          >
+            <Link href={wlSearchUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              Ricerca completa con risultati in pagina
+            </Link>
+          </Button>
+          <p className="text-[10px] text-white/35 leading-relaxed">
+            Il White Label funziona solo su pagina dedicata (non nel composer). Apri il link,
+            cerca i voli lì, poi torna qui e usa Importa volo.
+          </p>
+        </div>
+      )}
+
+      {embedEnabled && (
         <p className="text-[10px] text-white/35 px-1 leading-relaxed">
-          Il widget affiliate mostra la ricerca in-app; al click su un risultato si apre Aviasales per
-          prenotare. Usa <strong className="text-white/50 font-medium">Importa volo</strong> per
-          aggiungere automaticamente il miglior prezzo in cache al piano.
+          Il form rapido apre Aviasales per prenotare. Usa{' '}
+          <strong className="text-white/50 font-medium">Importa volo</strong> per salvare nel piano.
         </p>
       )}
 
@@ -137,7 +158,7 @@ export function TravelSearchPanel({
         <Button
           type="button"
           size="sm"
-          className="w-full h-9 rounded-xl text-xs bg-sky-600/90 hover:bg-sky-600 text-white border-0"
+          className="w-full h-9 rounded-xl text-xs bg-white/10 hover:bg-white/15 text-white border border-white/15"
           onClick={() => void importFlightsFromCache()}
           disabled={importing}
         >
