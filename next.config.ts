@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA:
       process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA || 'ROM',
+    /** White Label Aviasales — override con env su Vercel se cambi wl_id */
+    NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID: process.env.NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID || '19658',
   },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];

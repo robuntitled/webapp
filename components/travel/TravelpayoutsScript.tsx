@@ -38,7 +38,7 @@ export function TravelpayoutsScript({
   var script = document.createElement("script");
   script.async = 1;
   script.type = "module";
-  script.src = "https://tpwgts.com/wl_web/main.js?wl_id=${wlId}";
+  script.src = "https://tpemd.com/wl_web/main.js?wl_id=${wlId}";
   document.head.appendChild(script);
 })();
         `.trim(),

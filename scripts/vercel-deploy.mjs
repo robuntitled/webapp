@@ -17,6 +17,7 @@ const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
 const ORIGIN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA || 'ROM';
 const API_TOKEN = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
 const TRS_ID = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID?.trim() || process.env.TRAVELPAYOUTS_TRS_ID?.trim();
+const WL_ID = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID?.trim();
 
 function run(cmd, args, input) {
   const result = spawnSync(cmd, args, {
@@ -50,11 +51,17 @@ if (MARKER) {
 }
 upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA', ORIGIN);
 
+if (WL_ID) {
+  upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID', WL_ID);
+} else {
+  console.log('\n⚠ NEXT_PUBLIC_TRAVELPAYOUTS_WL_ID non impostato — White Label disabilitato');
+}
+
 if (TRS_ID) {
   upsertEnv('NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID', TRS_ID);
   upsertEnv('TRAVELPAYOUTS_TRS_ID', TRS_ID, 'sensitive');
 } else {
-  console.log('\n⚠ NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID non impostato — widget disabilitati');
+  console.log('\n⚠ NEXT_PUBLIC_TRAVELPAYOUTS_TRS_ID non impostato — widget tpemd disabilitati');
 }
 
 if (API_TOKEN) {

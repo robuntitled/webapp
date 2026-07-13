@@ -268,25 +268,24 @@ export function BlockEditorPanel({
 
           {block.type === 'flight' && (
             <div className="space-y-3">
-              {embedOnly ? (
+              <Button
+                type="button"
+                className="w-full rounded-xl h-11 shadow-lg shadow-sky-500/10"
+                onClick={() => void searchFlight()}
+                disabled={flightLoading}
+              >
+                {flightLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Aggiorna da cache Travelpayouts
+              </Button>
+              {embedOnly && (
                 <p className="text-xs text-white/45 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                  Usa il widget nella sidebar per cercare voli live, poi inserisci qui prezzo e
-                  compagnia manualmente.
+                  Il widget affiliate non può passare il volo scelto all&apos;app — per tariffe live
+                  cerca nel widget, poi aggiorna qui o usa &quot;Importa volo&quot; nella sidebar.
                 </p>
-              ) : (
-                <Button
-                  type="button"
-                  className="w-full rounded-xl h-11 shadow-lg shadow-sky-500/10"
-                  onClick={() => void searchFlight()}
-                  disabled={flightLoading}
-                >
-                  {flightLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                  )}
-                  Cerca volo (cache Travelpayouts)
-                </Button>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">

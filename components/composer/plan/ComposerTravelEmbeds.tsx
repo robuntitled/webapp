@@ -3,12 +3,9 @@
 import { useMemo } from 'react';
 import { TravelpayoutsEmbedWidget } from '@/components/travel/TravelpayoutsEmbedWidget';
 import { primaryOriginIata } from '@/lib/composer/origins';
-import {
-  buildFlightMapEmbedUrl,
-  buildFlightSearchEmbedUrl,
-} from '@/lib/travelpayouts/embed-config';
+import { buildFlightSearchEmbedUrl } from '@/lib/travelpayouts/embed-config';
 import type { ComposerDraft } from '@/types/composer';
-import { Map, Plane } from 'lucide-react';
+import { Plane } from 'lucide-react';
 
 type ComposerTravelEmbedsProps = {
   draft: ComposerDraft;
@@ -36,7 +33,6 @@ export function ComposerTravelEmbeds({ draft }: ComposerTravelEmbedsProps) {
   );
 
   const searchUrl = useMemo(() => buildFlightSearchEmbedUrl(ctx), [ctx]);
-  const mapUrl = useMemo(() => buildFlightMapEmbedUrl(ctx), [ctx]);
   const embedKey = `${originIata}-${draft.startDate}-${draft.endDate}-${destLabel}`;
 
   return (
@@ -57,21 +53,6 @@ export function ComposerTravelEmbeds({ draft }: ComposerTravelEmbedsProps) {
           minHeight={140}
         />
       </div>
-
-      {mapUrl && (
-        <div className="composer-tpwl-shell space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <Map className="h-4 w-4 text-sky-600 shrink-0" />
-            <p className="text-xs font-semibold text-slate-800">Mappa prezzi voli</p>
-          </div>
-          <TravelpayoutsEmbedWidget
-            key={`map-${embedKey}`}
-            embedUrl={mapUrl}
-            minHeight={200}
-            className="rounded-lg"
-          />
-        </div>
-      )}
     </div>
   );
 }

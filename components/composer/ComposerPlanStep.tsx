@@ -20,7 +20,10 @@ import { DayTimeline } from '@/components/composer/plan/DayTimeline';
 import { DayToolsBar } from '@/components/composer/plan/DayToolsBar';
 import { PlanStatsBar } from '@/components/composer/plan/PlanStatsBar';
 import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
-import { TravelSearchPanel } from '@/components/composer/plan/TravelSearchPanel';
+import {
+  TravelSearchPanel,
+  type ImportedFlightQuote,
+} from '@/components/composer/plan/TravelSearchPanel';
 import { WeatherStrip } from '@/components/composer/plan/WeatherStrip';
 import type {
   ComposerBlock,
@@ -58,6 +61,41 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
 
   const updateDay = (dayIndex: number, updater: (day: ComposerDay) => ComposerDay) => {
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
+  };
+
+  const importFlightsToPlan = (quotes: ImportedFlightQuote[]) => {
+    if (!activeDay || quotes.length === 0) return;
+
+    let sortBase = activeDay.blocks.length;
+    const newBlocks = quotes.map((quote) => {
+      const block = createEmptyBlock('flight', sortBase, {
+        title:
+          quote.price != null && quote.price > 0
+            ? `Volo ${quote.origin.iata} → ${quote.destinationIata || draft.destination}`
+            : `Volo ${quote.origin.iata}`,
+        origin: quote.origin.iata,
+        originLabel: quote.origin.city,
+        destination: quote.destinationIata || undefined,
+        price: quote.price,
+        currency: quote.currency,
+        airline: quote.airline,
+        affiliateUrl: quote.affiliateUrl,
+        fromCache: quote.fromCache,
+      });
+      sortBase += 1;
+      return block;
+    });
+
+    updateDay(activeDay.dayIndex, (d) => ({
+      ...d,
+      blocks: [...d.blocks, ...newBlocks],
+    }));
+
+    const last = newBlocks[newBlocks.length - 1];
+    if (last) {
+      setEditingBlock(last);
+      setHighlightedPinId(last.id);
+    }
   };
 
   const addBlock = (
@@ -342,6 +380,7 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
             >
               <TravelSearchPanel
                 draft={draft}
+                onImportFlights={importFlightsToPlan}
                 onAddFlight={(origin) =>
                   addBlock(
                     'flight',
