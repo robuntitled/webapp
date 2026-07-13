@@ -48,6 +48,7 @@ export function ComposerFlightWidget({ draft }: ComposerFlightWidgetProps) {
       <TravelpayoutsFlightWidget
         key={`${wlId}-${flightSearch ?? 'search'}`}
         wlId={wlId}
+        resultsPath="/dashboard/crea"
         flightSearch={flightSearch}
         showSearch
         showResults
