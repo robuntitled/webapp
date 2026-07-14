@@ -91,19 +91,46 @@ Se Google/Facebook non funzionano in dev, il maintainer deve aggiungere nelle co
 
 ---
 
-## 6. Comandi utili
+## 6. Migration database (planner profile)
+
+Le tabelle `planner_profiles` e `composer_drafts` richiedono la migration `006`.
+
+**Serve `SUPABASE_DB_URL` in `.env.local`** (non è su Vercel — solo per script locali):
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) → progetto → **Settings → Database**
+2. **Connection string → URI** (modalità *Session pooler* o *Direct*)
+3. Sostituisci `[YOUR-PASSWORD]` con la password del database Postgres
+4. Aggiungi in `.env.local`:
+   ```
+   SUPABASE_DB_URL=postgresql://postgres.[ref]:[PASSWORD]@...
+   ```
+
+Poi:
+
+```bash
+npm run db:planner
+npm run db:verify-planner
+```
+
+**Alternativa senza URI:** incolla il contenuto di `supabase/migrations/006_planner_profile.sql` nel **SQL Editor** di Supabase e clicca Run.
+
+---
+
+## 7. Comandi utili
 
 | Comando | Descrizione |
 |---------|-------------|
 | `npm run dev` | Server di sviluppo |
 | `npm run build` | Build produzione |
 | `npm test` | Test Vitest |
+| `npm run db:planner` | Applica migration profilo viaggiatore |
+| `npm run db:verify-planner` | Verifica tabelle planner su Supabase |
 | `npx vercel env ls production` | Elenco variabili su Vercel (nomi) |
 | `npx vercel env pull .env.local --environment=production` | Scarica env da Vercel |
 
 ---
 
-## 7. Regole di sicurezza
+## 8. Regole di sicurezza
 
 - **Non** committare `.env.local` o file con segreti
 - **Non** incollare API keys in issue, PR o chat
@@ -112,7 +139,7 @@ Se Google/Facebook non funzionano in dev, il maintainer deve aggiungere nelle co
 
 ---
 
-## 8. Invito Vercel (per il maintainer)
+## 9. Invito Vercel (per il maintainer)
 
 1. [vercel.com](https://vercel.com) → progetto **webapp**
 2. **Settings → Members** → Invite
