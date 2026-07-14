@@ -14,6 +14,7 @@
     "db:social": "node scripts/apply-social.mjs",
     "db:composer": "node scripts/apply-composer.mjs",
     "db:chat": "node scripts/apply-chat.mjs",
+    "db:planner": "node scripts/apply-planner.mjs",
     "deploy:vercel": "node scripts/vercel-deploy.mjs"
   },
   "dependencies": {

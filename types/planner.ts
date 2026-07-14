@@ -1,0 +1,27 @@
+/** Profilo viaggiatore — raccolto prima del composer, riusato dall'LLM. */
+export type PlannerTravelStyle = 'adventure' | 'relax' | 'culture' | 'food' | 'mix';
+export type PlannerPace = 'slow' | 'balanced' | 'intense';
+export type PlannerBudget = 'budget' | 'mid' | 'premium';
+export type PlannerAccommodation = 'hostel' | 'hotel' | 'apartment' | 'any';
+export type PlannerExperience = 'first_time' | 'been_before' | 'expert';
+
+export type PlannerProfile = {
+  travelStyle: PlannerTravelStyle;
+  pace: PlannerPace;
+  budgetLevel: PlannerBudget;
+  interests: string[];
+  accommodationPref: PlannerAccommodation;
+  experienceLevel: PlannerExperience;
+  dietaryNotes?: string;
+  mobilityNotes?: string;
+  freeNotes?: string;
+};
+
+export const EMPTY_PLANNER_PROFILE: PlannerProfile = {
+  travelStyle: 'mix',
+  pace: 'balanced',
+  budgetLevel: 'mid',
+  interests: [],
+  accommodationPref: 'any',
+  experienceLevel: 'first_time',
+};

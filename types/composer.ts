@@ -1,3 +1,5 @@
+import type { PlannerProfile } from '@/types/planner';
+
 export type ComposerBlockType =
   | 'flight'
   | 'hotel'
@@ -67,6 +69,8 @@ export type ComposerDraft = {
   organizerOrigin?: ComposerOrigin;
   /** Partenze amici (gruppo) — ognuno dal proprio aeroporto vicino */
   crewOrigins?: ComposerOrigin[];
+  /** Profilo intake — persistito su Supabase, usato dall'LLM */
+  plannerProfile?: PlannerProfile;
   days: ComposerDay[];
 };
 
@@ -97,6 +101,7 @@ export type ComposerGenerateRequest = {
   maxParticipants: number;
   organizerOrigin?: ComposerOrigin;
   crewOrigins?: ComposerOrigin[];
+  plannerProfile?: PlannerProfile;
   intent: ComposerGenerateIntent;
   /** Blocchi già presenti nel giorno attivo */
   currentDayBlocks?: ComposerBlock[];

@@ -1,17 +1,25 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { ComposerIntakeStep } from '@/components/composer/ComposerIntakeStep';
 import { ComposerSetupStep } from '@/components/composer/ComposerSetupStep';
 import { ComposerPlanStep } from '@/components/composer/ComposerPlanStep';
 import { ComposerReviewStep } from '@/components/composer/ComposerReviewStep';
 import { buildComposerDays } from '@/lib/composer/days';
+import {
+  clearComposerDraft,
+  saveComposerDraft,
+  savePlannerProfile,
+  type ComposerWizardStep,
+} from '@/lib/composer/client-planner';
 import type { ComposerDraft, ComposerDay } from '@/types/composer';
+import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
 
 const DRAFT_KEY = 'nomadlink-composer-draft';
 
@@ -25,44 +33,99 @@ const EMPTY_DRAFT: ComposerDraft = {
   days: [],
 };
 
-type Step = 'setup' | 'plan' | 'review';
-
 type TripComposerProps = {
   profileCity?: string | null;
   profileCountry?: string | null;
+  initialPlannerProfile?: PlannerProfile | null;
+  initialDraft?: Partial<ComposerDraft> | null;
+  initialStep?: ComposerWizardStep;
 };
 
-export function TripComposer({ profileCity, profileCountry }: TripComposerProps = {}) {
+export function TripComposer({
+  profileCity,
+  profileCountry,
+  initialPlannerProfile,
+  initialDraft,
+  initialStep = 'intake',
+}: TripComposerProps = {}) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('setup');
-  const [draft, setDraft] = useState<ComposerDraft>(EMPTY_DRAFT);
+  const [step, setStep] = useState<ComposerWizardStep>(initialStep);
+  const [plannerProfile, setPlannerProfile] = useState<PlannerProfile>(
+    initialPlannerProfile ?? EMPTY_PLANNER_PROFILE
+  );
+  const [draft, setDraft] = useState<ComposerDraft>({
+    ...EMPTY_DRAFT,
+    ...initialDraft,
+    plannerProfile: initialPlannerProfile ?? undefined,
+  });
   const [publishing, setPublishing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (initialDraft?.destination) return;
+
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as ComposerDraft;
-        if (parsed.destination) setDraft(parsed);
+        if (parsed.destination) {
+          setDraft((prev) => ({ ...prev, ...parsed }));
+        }
       }
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [initialDraft?.destination]);
+
+  const scheduleCloudSave = useCallback(
+    (nextDraft: ComposerDraft, nextStep: ComposerWizardStep, profile: PlannerProfile) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        void saveComposerDraft({
+          draft: { ...nextDraft, plannerProfile: profile },
+          currentStep: nextStep,
+          plannerProfile: profile,
+        }).catch(() => undefined);
+      }, 2000);
+    },
+    []
+  );
 
   useEffect(() => {
     try {
       if (draft.destination) {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        const withProfile = { ...draft, plannerProfile };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(withProfile));
+        scheduleCloudSave(withProfile, step, plannerProfile);
       }
     } catch {
       /* ignore */
     }
-  }, [draft]);
+  }, [draft, step, plannerProfile, scheduleCloudSave]);
 
   const patchDraft = useCallback((patch: Partial<ComposerDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  const finishIntake = async () => {
+    setSavingProfile(true);
+    try {
+      await savePlannerProfile(plannerProfile);
+      setDraft((prev) => ({ ...prev, plannerProfile }));
+      await saveComposerDraft({
+        draft: { ...draft, plannerProfile },
+        currentStep: 'setup',
+        plannerProfile,
+      });
+      setStep('setup');
+      toast.success('Profilo salvato — l\'AI userà queste preferenze');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Errore salvataggio profilo');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const goToPlan = () => {
     if (!draft.startDate || !draft.endDate) return;
@@ -74,10 +137,11 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
   const publish = async () => {
     setPublishing(true);
     try {
+      const payload = { ...draft, plannerProfile };
       const response = await fetch('/api/composer/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
 
@@ -87,6 +151,7 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
       }
 
       localStorage.removeItem(DRAFT_KEY);
+      await clearComposerDraft().catch(() => undefined);
       toast.success('Viaggio lanciato! 🚀 Ora invita la crew.');
       router.push(`/viaggi/${data.tripId}`);
     } catch {
@@ -95,6 +160,8 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
       setPublishing(false);
     }
   };
+
+  const mainSteps: ComposerWizardStep[] = ['intake', 'setup', 'plan', 'review'];
 
   return (
     <div className="composer-shell min-h-[calc(100vh-4rem)] relative overflow-hidden">
@@ -114,13 +181,13 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
               </Link>
             </Button>
             <div className="flex items-center gap-2">
-              {(['setup', 'plan', 'review'] as const).map((s, i) => (
+              {mainSteps.map((s, i) => (
                 <div
                   key={s}
                   className={`h-1.5 rounded-full transition-all duration-500 ${
                     s === step
                       ? 'w-8 bg-accent'
-                      : i < ['setup', 'plan', 'review'].indexOf(step)
+                      : i < mainSteps.indexOf(step)
                         ? 'w-4 bg-accent/50'
                         : 'w-4 bg-white/15'
                   }`}
@@ -131,6 +198,23 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
         )}
 
         <AnimatePresence mode="wait">
+          {step === 'intake' && (
+            <motion.div
+              key="intake"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="container mx-auto px-4 py-8"
+            >
+              <ComposerIntakeStep
+                profile={plannerProfile}
+                onChange={setPlannerProfile}
+                onContinue={() => void finishIntake()}
+                saving={savingProfile}
+              />
+            </motion.div>
+          )}
+
           {step === 'setup' && (
             <motion.div
               key="setup"
@@ -152,7 +236,7 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
           {step === 'plan' && (
             <motion.div key="plan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ComposerPlanStep
-                draft={draft}
+                draft={{ ...draft, plannerProfile }}
                 onChangeDays={(days: ComposerDay[]) => patchDraft({ days })}
                 onPatchDraft={patchDraft}
                 onBack={() => setStep('setup')}
@@ -164,7 +248,7 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
           {step === 'review' && (
             <motion.div key="review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ComposerReviewStep
-                draft={draft}
+                draft={{ ...draft, plannerProfile }}
                 publishing={publishing}
                 onBack={() => setStep('plan')}
                 onPublish={() => void publish()}

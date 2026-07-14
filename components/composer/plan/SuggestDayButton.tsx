@@ -96,6 +96,7 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
         maxParticipants: draft.maxParticipants,
         organizerOrigin: draft.organizerOrigin,
         crewOrigins: draft.crewOrigins,
+        plannerProfile: draft.plannerProfile,
         intent: mode === 'append' ? 'add_alternatives' : 'suggest_day',
         currentDayBlocks: mode === 'append' ? activeDay.blocks : undefined,
         targetBlockTypes:

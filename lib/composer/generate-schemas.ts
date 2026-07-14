@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { plannerProfileSchema } from '@/lib/validations/planner';
 
 const blockTypeEnum = z.enum([
   'flight',
@@ -62,6 +63,7 @@ export const composerGenerateRequestSchema = z.object({
   maxParticipants: z.number().int().min(1).max(99),
   organizerOrigin: composerOriginSchema.optional(),
   crewOrigins: z.array(composerOriginSchema).max(8).optional(),
+  plannerProfile: plannerProfileSchema.optional(),
   intent: z.enum(['suggest_day', 'regenerate_block', 'add_alternatives']),
   currentDayBlocks: z.array(composerBlockSchema).optional(),
   otherDaysSummary: z.string().max(4000).optional(),

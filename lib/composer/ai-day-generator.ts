@@ -8,6 +8,7 @@ import {
 import { DAY_PLAN_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import { originsSummaryForPrompt } from '@/lib/composer/origins';
 import { buildIntelPromptBlock, resolveDestinationIntel } from '@/lib/composer/destination-intel';
+import { buildPlannerPromptBlock } from '@/lib/composer/planner-prompt';
 import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
 import type { ComposerBlock, ComposerBlockType, ComposerGenerateRequest } from '@/types/composer';
 
@@ -52,6 +53,7 @@ export function buildDayGenerationPrompt(
 
   const originIata = req.organizerOrigin?.iata ?? defaultOriginIata();
   const originsLine = originsSummaryForPrompt(req);
+  const plannerLine = buildPlannerPromptBlock(req.plannerProfile);
 
   const lines = [
     `dest=${destLabel}${req.destinationMeta?.country ? ` (${req.destinationMeta.country})` : ''}`,
@@ -60,6 +62,7 @@ export function buildDayGenerationPrompt(
     `mode=${req.planningMode === 'group' ? `group:${req.maxParticipants}` : 'solo'}`,
     `origin=${req.organizerOrigin?.city ?? 'n/d'} IATA=${originIata}`,
     originsLine ? `crew=${originsLine}` : null,
+    plannerLine ? `traveler=${plannerLine}` : null,
     `intel=${intelBlock.replace(/\n/g, ' | ')}`,
     req.dayTitle ? `titolo=${req.dayTitle}` : null,
     req.otherDaysSummary ? `altri_giorni=${req.otherDaysSummary}` : null,
