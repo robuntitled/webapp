@@ -1,11 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { requestDayGeneration } from '@/lib/composer/client-generate';
 import type { ComposerDay, ComposerDraft, ComposerGenerateResponse, ComposerGenerateSource } from '@/types/composer';
-import { Loader2, Sparkles, Wand2, Zap, Brain } from 'lucide-react';
+import { Loader2, Sparkles, Zap, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SuggestDayButtonProps = {
@@ -13,6 +19,13 @@ type SuggestDayButtonProps = {
   activeDay: ComposerDay;
   onApplied: (response: ComposerGenerateResponse, mode: 'replace' | 'append') => void;
 };
+
+const THINKING_STEPS = [
+  'Analizzo la destinazione…',
+  'Studio il contesto del viaggio…',
+  'Costruisco attività e orari…',
+  'Quasi pronto…',
+];
 
 function sourceBadge(source: ComposerGenerateSource | null): {
   label: string;
@@ -43,7 +56,21 @@ function sourceBadge(source: ComposerGenerateSource | null): {
 
 export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [thinkingStep, setThinkingStep] = useState(0);
   const [lastSource, setLastSource] = useState<ComposerGenerateSource | null>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      setThinkingStep(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setThinkingStep((prev) => (prev + 1) % THINKING_STEPS.length);
+    }, 1800);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleSuggest = async () => {
     setLoading(true);
@@ -95,57 +122,99 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
   };
 
   const badge = sourceBadge(lastSource);
+  const destLabel = draft.destinationMeta?.label ?? draft.destination.split(',')[0]?.trim();
 
   return (
-    <div className="relative flex items-center gap-2">
-      <Button
-        type="button"
-        size="sm"
-        disabled={loading}
-        onClick={() => void handleSuggest()}
-        className="rounded-full h-9 px-4 bg-gradient-to-r from-accent to-orange-500 hover:from-accent/90 hover:to-orange-500/90 text-white font-semibold shadow-lg shadow-accent/25 border-0"
-      >
-        {loading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Sparkles className="mr-2 h-4 w-4" />
-        )}
-        Suggerisci giornata
-      </Button>
-
-      {badge && !loading && (
-        <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.className}`}
+    <>
+      <div className="relative flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={loading}
+          onClick={() => void handleSuggest()}
+          className="rounded-full h-9 px-4 bg-gradient-to-r from-accent to-orange-500 hover:from-accent/90 hover:to-orange-500/90 text-white font-semibold shadow-lg shadow-accent/25 border-0"
         >
-          <badge.Icon className="h-3 w-3" />
-          {badge.label}
-        </span>
-      )}
+          {loading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          Suggerisci giornata
+        </Button>
 
-      <AnimatePresence>
-        {loading && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="absolute top-full right-0 mt-2 z-20 w-56 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-3 shadow-xl"
+        {badge && !loading && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.className}`}
           >
-            <div className="flex items-center gap-2 text-xs text-white/60">
-              <Wand2 className="h-3.5 w-3.5 text-accent animate-pulse" />
-              Pianificazione in corso...
+            <badge.Icon className="h-3 w-3" />
+            {badge.label}
+          </span>
+        )}
+      </div>
+
+      <Dialog open={loading} onOpenChange={() => undefined}>
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-sm rounded-2xl border-white/10 bg-slate-950/95 backdrop-blur-xl text-white shadow-2xl shadow-accent/10"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogTitle className="sr-only">Generazione giornata in corso</DialogTitle>
+          <DialogDescription className="sr-only">
+            Stiamo preparando un suggerimento per la giornata {activeDay.dayIndex} a {destLabel}.
+          </DialogDescription>
+
+          <div className="flex flex-col items-center gap-5 py-2 text-center">
+            <div className="relative flex h-16 w-16 items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-accent/20 animate-ping" />
+              <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-accent/30 to-orange-500/20 border border-accent/30">
+                <Brain className="h-7 w-7 text-accent animate-pulse" />
+              </span>
             </div>
-            <div className="mt-2 space-y-1.5">
+
+            <div className="space-y-1.5 min-h-[3.5rem]">
+              <p className="text-sm font-semibold text-white/90">Sto pensando…</p>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={thinkingStep}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-xs text-white/55"
+                >
+                  {THINKING_STEPS[thinkingStep]}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+
+            <div className="w-full space-y-2 pt-1">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-2 rounded-full bg-white/10 animate-pulse"
-                  style={{ width: `${90 - i * 15}%`, animationDelay: `${i * 120}ms` }}
-                />
+                  className="h-1.5 rounded-full bg-white/10 overflow-hidden"
+                >
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-accent to-orange-400"
+                    initial={{ width: '0%' }}
+                    animate={{ width: ['20%', '85%', '40%'] }}
+                    transition={{
+                      duration: 1.8,
+                      repeat: Infinity,
+                      delay: i * 0.15,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                </div>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+
+            <p className="text-[11px] text-white/40">
+              Giorno {activeDay.dayIndex} · {destLabel}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
