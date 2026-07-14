@@ -9,7 +9,12 @@ import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { createEmptyBlock } from '@/lib/composer/blocks';
 import { DAY_TEMPLATES } from '@/lib/composer/day-templates';
 import { duplicateBlock } from '@/lib/composer/planning';
-import { formatComposerDayLabel } from '@/lib/composer/days';
+import {
+  appendComposerDay,
+  endDateFromDays,
+  formatComposerDayLabel,
+  removeComposerDay,
+} from '@/lib/composer/days';
 import type { TimeSlot } from '@/lib/composer/time-slots';
 import { BlockEditorPanel } from '@/components/composer/BlockEditorPanel';
 import { BlockPalette } from '@/components/composer/plan/BlockPalette';
@@ -20,10 +25,6 @@ import { DayTimeline } from '@/components/composer/plan/DayTimeline';
 import { DayToolsBar } from '@/components/composer/plan/DayToolsBar';
 import { PlanStatsBar } from '@/components/composer/plan/PlanStatsBar';
 import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
-import {
-  TravelSearchPanel,
-  type ImportedFlightQuote,
-} from '@/components/composer/plan/TravelSearchPanel';
 import { WeatherStrip } from '@/components/composer/plan/WeatherStrip';
 import type {
   ComposerBlock,
@@ -32,18 +33,25 @@ import type {
   ComposerDraft,
   ComposerGenerateResponse,
 } from '@/types/composer';
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { ExternalLink, Hotel, Map as MapIcon, Plane, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 type ComposerPlanStepProps = {
   draft: ComposerDraft;
   onChangeDays: (days: ComposerDay[]) => void;
+  onPatchDraft?: (patch: Partial<ComposerDraft>) => void;
   onBack: () => void;
   onReview: () => void;
 };
 
-export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: ComposerPlanStepProps) {
+export function ComposerPlanStep({
+  draft,
+  onChangeDays,
+  onPatchDraft,
+  onBack,
+  onReview,
+}: ComposerPlanStepProps) {
   const [activeDayIndex, setActiveDayIndex] = useState(1);
   const [editingBlock, setEditingBlock] = useState<ComposerBlock | null>(null);
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
@@ -63,39 +71,30 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
   };
 
-  const importFlightsToPlan = (quotes: ImportedFlightQuote[]) => {
-    if (!activeDay || quotes.length === 0) return;
-
-    let sortBase = activeDay.blocks.length;
-    const newBlocks = quotes.map((quote) => {
-      const block = createEmptyBlock('flight', sortBase, {
-        title:
-          quote.price != null && quote.price > 0
-            ? `Volo ${quote.origin.iata} → ${quote.destinationIata || draft.destination}`
-            : `Volo ${quote.origin.iata}`,
-        origin: quote.origin.iata,
-        originLabel: quote.origin.city,
-        destination: quote.destinationIata || undefined,
-        price: quote.price,
-        currency: quote.currency,
-        airline: quote.airline,
-        affiliateUrl: quote.affiliateUrl,
-        fromCache: quote.fromCache,
-      });
-      sortBase += 1;
-      return block;
-    });
-
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: [...d.blocks, ...newBlocks],
-    }));
-
-    const last = newBlocks[newBlocks.length - 1];
-    if (last) {
-      setEditingBlock(last);
-      setHighlightedPinId(last.id);
+  const commitDays = (days: ComposerDay[]) => {
+    if (onPatchDraft) {
+      onPatchDraft({ days, endDate: endDateFromDays(days) });
+    } else {
+      onChangeDays(days);
     }
+  };
+
+  const addDay = () => {
+    const days = appendComposerDay(draft.days);
+    commitDays(days);
+    setActiveDayIndex(days[days.length - 1].dayIndex);
+    toast.success(`Giorno ${days.length} aggiunto`);
+  };
+
+  const removeDay = (dayIndex: number) => {
+    if (draft.days.length <= 1) {
+      toast.message('Serve almeno un giorno');
+      return;
+    }
+    const days = removeComposerDay(draft.days, dayIndex);
+    commitDays(days);
+    setActiveDayIndex((prev) => Math.min(prev, days.length));
+    toast.message('Giorno rimosso');
   };
 
   const addBlock = (
@@ -264,6 +263,8 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
           days={draft.days}
           activeDayIndex={activeDayIndex}
           onSelect={setActiveDayIndex}
+          onAddDay={addDay}
+          onRemoveDay={removeDay}
         />
       </div>
 
@@ -378,57 +379,99 @@ export function ComposerPlanStep({ draft, onChangeDays, onBack, onReview }: Comp
                 viewMode === 'split' ? 'xl:sticky xl:top-36 xl:self-start' : ''
               }`}
             >
-              <TravelSearchPanel
-                draft={draft}
-                onImportFlights={importFlightsToPlan}
-                onAddFlight={(origin) =>
-                  addBlock(
-                    'flight',
-                    {
-                      title: origin ? `Volo ${origin.iata}` : 'Volo',
-                      origin: origin?.iata,
-                      originLabel: origin?.city,
-                    },
-                    'morning'
-                  )
-                }
-                onAddHotel={() => addBlock('hotel', { title: 'Hotel' }, 'night')}
-              />
+              <div className="composer-glass rounded-2xl p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapIcon className="h-4 w-4 text-accent shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white truncate">
+                        Mappa dell&apos;itinerario
+                      </p>
+                      <p className="text-[10px] text-white/40 truncate">
+                        OpenStreetMap · tappe del giorno {activeDayIndex}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-semibold text-white/40 shrink-0">
+                    {pins.length} {pins.length === 1 ? 'tappa' : 'tappe'}
+                  </span>
+                </div>
 
-              <div className="composer-map-frame">
-                <TripMap
-                  destination={draft.destination}
-                  destinationMeta={draft.destinationMeta}
-                  pins={pins}
-                  activeDayIndex={activeDayIndex}
-                  highlightedPinId={highlightedPinId}
-                  className="h-[220px] md:h-[260px] border-0 rounded-2xl"
-                  onPinClick={(pin) => {
-                    if (pin.blockId) {
-                      setActiveDayIndex(pin.dayIndex);
-                      setHighlightedPinId(pin.blockId);
-                      const day = draft.days.find((d) => d.dayIndex === pin.dayIndex);
-                      const block = day?.blocks.find((b) => b.id === pin.blockId);
-                      if (block) setEditingBlock(block);
-                    }
-                  }}
-                  onMapClick={addPinFromMap}
-                />
+                <div className="composer-map-frame">
+                  <TripMap
+                    destination={draft.destination}
+                    destinationMeta={draft.destinationMeta}
+                    pins={pins}
+                    activeDayIndex={activeDayIndex}
+                    highlightedPinId={highlightedPinId}
+                    className="h-[300px] md:h-[380px] border-0 rounded-2xl"
+                    onPinClick={(pin) => {
+                      if (pin.blockId) {
+                        setActiveDayIndex(pin.dayIndex);
+                        setHighlightedPinId(pin.blockId);
+                        const day = draft.days.find((d) => d.dayIndex === pin.dayIndex);
+                        const block = day?.blocks.find((b) => b.id === pin.blockId);
+                        if (block) setEditingBlock(block);
+                      }
+                    }}
+                    onMapClick={addPinFromMap}
+                  />
+                </div>
+
+                {googleMapsUrl && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-xl border-white/10 text-white/70 hover:bg-white/[0.06] h-9 text-xs"
+                  >
+                    <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                      Apri itinerario su Google Maps
+                    </a>
+                  </Button>
+                )}
               </div>
 
-              {googleMapsUrl && (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="w-full rounded-xl border-white/10 text-white/70 hover:bg-white/[0.06] h-9 text-xs"
-                >
-                  <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                    Apri itinerario su Google Maps
-                  </a>
-                </Button>
-              )}
+              <div className="composer-glass rounded-2xl p-3 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35 px-1">
+                  Aggiungi al piano
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 rounded-xl text-xs border-sky-400/30 text-sky-100 hover:bg-sky-500/10"
+                    onClick={() =>
+                      addBlock(
+                        'flight',
+                        {
+                          title: draft.organizerOrigin
+                            ? `Volo ${draft.organizerOrigin.iata}`
+                            : 'Volo',
+                          origin: draft.organizerOrigin?.iata,
+                          originLabel: draft.organizerOrigin?.city,
+                        },
+                        'morning'
+                      )
+                    }
+                  >
+                    <Plane className="mr-1.5 h-3.5 w-3.5" />
+                    Volo
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 rounded-xl text-xs border-violet-400/30 text-violet-100 hover:bg-violet-500/10"
+                    onClick={() => addBlock('hotel', { title: 'Hotel' }, 'night')}
+                  >
+                    <Hotel className="mr-1.5 h-3.5 w-3.5" />
+                    Hotel
+                  </Button>
+                </div>
+              </div>
 
               <WeatherStrip draft={draft} activeDayIndex={activeDayIndex} />
               <BudgetPanel days={draft.days} activeDayIndex={activeDayIndex} />

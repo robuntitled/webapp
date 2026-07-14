@@ -28,7 +28,7 @@ function orchestratorBudgetMs(): number {
   if (config.provider === 'openai') {
     return config.requestTimeoutMs > 0 ? config.requestTimeoutMs + 5_000 : 50_000;
   }
-  return 9_000;
+  return 32_000;
 }
 
 function totalDaysFromRange(startDate: string, endDate: string): number {
@@ -97,7 +97,7 @@ async function generateDayPlan(
             userPrompt: prompts.userPrompt,
           }),
           new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('AI timeout interno')), config.provider === 'openai' ? 40_000 : 7_000);
+            setTimeout(() => reject(new Error('AI timeout interno')), config.provider === 'openai' ? 40_000 : 28_000);
           }),
         ]);
 

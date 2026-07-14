@@ -154,6 +154,7 @@ export function TripComposer({ profileCity, profileCountry }: TripComposerProps 
               <ComposerPlanStep
                 draft={draft}
                 onChangeDays={(days: ComposerDay[]) => patchDraft({ days })}
+                onPatchDraft={patchDraft}
                 onBack={() => setStep('setup')}
                 onReview={() => setStep('review')}
               />

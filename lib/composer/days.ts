@@ -12,6 +12,10 @@ const DAY_TITLES = [
   'Ultimo giorno da ricordare',
 ];
 
+function dayTitleForIndex(index: number): string {
+  return DAY_TITLES[index % DAY_TITLES.length] ?? `Giorno ${index + 1}`;
+}
+
 export function buildComposerDays(startDate: string, endDate: string): ComposerDay[] {
   const start = parseISO(startDate);
   const end = parseISO(endDate);
@@ -23,10 +27,56 @@ export function buildComposerDays(startDate: string, endDate: string): ComposerD
     return {
       dayIndex,
       date: format(date, 'yyyy-MM-dd'),
-      title: DAY_TITLES[index % DAY_TITLES.length] ?? `Giorno ${dayIndex}`,
+      title: dayTitleForIndex(index),
       blocks: [],
     };
   });
+}
+
+/**
+ * Reindicizza i giorni (1..n) e ricalcola le date in modo contiguo a partire
+ * dalla data del primo giorno. Mantiene blocchi e titoli personalizzati.
+ */
+export function reindexComposerDays(days: ComposerDay[]): ComposerDay[] {
+  if (days.length === 0) return days;
+  const anchor = parseISO(days[0].date);
+  return days.map((day, index) => ({
+    ...day,
+    dayIndex: index + 1,
+    date: format(addDays(anchor, index), 'yyyy-MM-dd'),
+  }));
+}
+
+/** Aggiunge una giornata in coda (data = ultimo giorno + 1). */
+export function appendComposerDay(days: ComposerDay[]): ComposerDay[] {
+  if (days.length === 0) {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return [{ dayIndex: 1, date: today, title: dayTitleForIndex(0), blocks: [] }];
+  }
+  const last = days[days.length - 1];
+  const nextDate = addDays(parseISO(last.date), 1);
+  const nextIndex = days.length;
+  return [
+    ...days,
+    {
+      dayIndex: nextIndex + 1,
+      date: format(nextDate, 'yyyy-MM-dd'),
+      title: dayTitleForIndex(nextIndex),
+      blocks: [],
+    },
+  ];
+}
+
+/** Rimuove una giornata e ricompatta indici/date. Mantiene sempre almeno 1 giorno. */
+export function removeComposerDay(days: ComposerDay[], dayIndex: number): ComposerDay[] {
+  if (days.length <= 1) return days;
+  return reindexComposerDays(days.filter((d) => d.dayIndex !== dayIndex));
+}
+
+/** Data di fine coerente con l'ultimo giorno presente. */
+export function endDateFromDays(days: ComposerDay[]): string {
+  if (days.length === 0) return '';
+  return days[days.length - 1].date;
 }
 
 export function formatComposerDayLabel(dateIso: string, dayIndex: number): string {

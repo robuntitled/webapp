@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { requestDayGeneration } from '@/lib/composer/client-generate';
 import type { ComposerDay, ComposerDraft, ComposerGenerateResponse, ComposerGenerateSource } from '@/types/composer';
-import { Loader2, Sparkles, Zap, Brain } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Zap, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SuggestDayButtonProps = {
@@ -54,8 +54,11 @@ function sourceBadge(source: ComposerGenerateSource | null): {
   };
 }
 
+type SuggestMode = 'replace' | 'append';
+
 export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [activeMode, setActiveMode] = useState<SuggestMode>('replace');
   const [thinkingStep, setThinkingStep] = useState(0);
   const [lastSource, setLastSource] = useState<ComposerGenerateSource | null>(null);
 
@@ -72,7 +75,8 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
     return () => clearInterval(interval);
   }, [loading]);
 
-  const handleSuggest = async () => {
+  const handleSuggest = async (mode: SuggestMode) => {
+    setActiveMode(mode);
     setLoading(true);
     try {
       const otherDaysSummary = draft.days
@@ -92,11 +96,14 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
         maxParticipants: draft.maxParticipants,
         organizerOrigin: draft.organizerOrigin,
         crewOrigins: draft.crewOrigins,
-        intent: 'suggest_day',
+        intent: mode === 'append' ? 'add_alternatives' : 'suggest_day',
+        currentDayBlocks: mode === 'append' ? activeDay.blocks : undefined,
+        targetBlockTypes:
+          mode === 'append' ? ['attraction', 'activity', 'meal'] : undefined,
         otherDaysSummary: otherDaysSummary || undefined,
       });
 
-      onApplied(response, 'replace');
+      onApplied(response, mode);
       setLastSource(response.meta.source);
 
       const modelLabel = response.meta.model?.replace(/^(gemini-|llama)/, '') ?? '';
@@ -123,24 +130,43 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
 
   const badge = sourceBadge(lastSource);
   const destLabel = draft.destinationMeta?.label ?? draft.destination.split(',')[0]?.trim();
+  const hasBlocks = activeDay.blocks.length > 0;
 
   return (
     <>
-      <div className="relative flex items-center gap-2">
+      <div className="relative flex flex-wrap items-center gap-2">
         <Button
           type="button"
           size="sm"
           disabled={loading}
-          onClick={() => void handleSuggest()}
+          onClick={() => void handleSuggest('replace')}
           className="rounded-full h-9 px-4 bg-gradient-to-r from-accent to-orange-500 hover:from-accent/90 hover:to-orange-500/90 text-white font-semibold shadow-lg shadow-accent/25 border-0"
         >
-          {loading ? (
+          {loading && activeMode === 'replace' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Sparkles className="mr-2 h-4 w-4" />
           )}
           Suggerisci giornata
         </Button>
+
+        {hasBlocks && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => void handleSuggest('append')}
+            className="rounded-full h-9 px-3.5 border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:text-accent font-medium"
+          >
+            {loading && activeMode === 'append' ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-1.5 h-4 w-4" />
+            )}
+            Aggiungi attività AI
+          </Button>
+        )}
 
         {badge && !loading && (
           <span

@@ -33,7 +33,7 @@ type GeminiGenerateResponse = {
   error?: { message?: string; code?: number };
 };
 
-const GEMINI_FETCH_TIMEOUT_MS = 6_000;
+const GEMINI_FETCH_TIMEOUT_MS = 25_000;
 
 /**
  * Una sola chiamata Gemini — JSON via prompt, senza responseSchema
