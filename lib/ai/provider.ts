@@ -62,7 +62,10 @@ export async function generateStructured<T>(params: {
   const result = await callProvider<T>(params);
 
   const normalized = normalizeAiDayPlan(result.data) ?? result.data;
-  const parsed = params.schema.safeParse(normalized);
+  let parsed = params.schema.safeParse(normalized);
+  if (!parsed.success && normalized !== result.data) {
+    parsed = params.schema.safeParse(result.data);
+  }
   if (!parsed.success) {
     const detail = parsed.error.issues[0]?.message ?? parsed.error.message;
     throw new Error(`Risposta AI non valida: ${detail}`);

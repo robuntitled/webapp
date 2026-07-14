@@ -2,14 +2,22 @@ import 'server-only';
 
 import { getAiConfig } from '@/lib/ai/config';
 import { parseJsonFromGeminiText, pickGeminiAnswerText } from '@/lib/ai/json-extract';
-import { DAY_PLAN_JSON_SUFFIX } from '@/lib/ai/prompts';
+import {
+  DAY_PLAN_JSON_RETRY_SUFFIX,
+  DAY_PLAN_JSON_SUFFIX,
+} from '@/lib/ai/prompts';
+import { aiDayPlanGeminiSchema } from '@/lib/composer/ai-day-schema';
 import {
   GeminiQuotaError,
   getQuotaCooldownRemainingMs,
   handleGeminiQuotaFailure,
   isGeminiQuotaError,
 } from '@/lib/ai/quota';
-import { isGeminiModelUnavailableError, resolveGeminiModelCandidates } from '@/lib/ai/models';
+import {
+  isGeminiModelUnavailableError,
+  isRetryableGeminiError,
+  resolveGeminiModelCandidates,
+} from '@/lib/ai/models';
 
 export type GeminiUsage = {
   inputTokens: number;
@@ -25,6 +33,7 @@ export type GeminiStructuredResult<T> = {
 type GeminiGenerateResponse = {
   candidates?: Array<{
     content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    finishReason?: string;
   }>;
   usageMetadata?: {
     promptTokenCount?: number;
@@ -35,20 +44,20 @@ type GeminiGenerateResponse = {
 
 const GEMINI_FETCH_TIMEOUT_MS = 25_000;
 
-/**
- * Una sola chiamata Gemini — JSON via prompt, senza responseSchema
- * (evita errori "pattern" e riduce quota).
- */
 async function callGeminiOnce<T>(params: {
   apiKey: string;
   model: string;
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens: number;
+  retrySuffix?: string;
+  useResponseSchema?: boolean;
 }): Promise<GeminiStructuredResult<T>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
 
-  const userPrompt = `${params.userPrompt}\n\n${DAY_PLAN_JSON_SUFFIX}`;
+  const userPrompt = [params.userPrompt, DAY_PLAN_JSON_SUFFIX, params.retrySuffix]
+    .filter(Boolean)
+    .join('\n\n');
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
@@ -63,9 +72,12 @@ async function callGeminiOnce<T>(params: {
         systemInstruction: { parts: [{ text: params.systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         generationConfig: {
-          temperature: 0.35,
+          temperature: 0.25,
           maxOutputTokens: params.maxOutputTokens,
           responseMimeType: 'application/json',
+          ...(params.useResponseSchema !== false
+            ? { responseSchema: aiDayPlanGeminiSchema }
+            : {}),
         },
       }),
     });
@@ -88,7 +100,8 @@ async function callGeminiOnce<T>(params: {
     throw new Error(message);
   }
 
-  const text = pickGeminiAnswerText(payload.candidates?.[0]?.content?.parts);
+  const candidate = payload.candidates?.[0];
+  const text = pickGeminiAnswerText(candidate?.content?.parts);
   if (!text) {
     throw new Error('Gemini ha restituito una risposta vuota');
   }
@@ -97,7 +110,11 @@ async function callGeminiOnce<T>(params: {
   try {
     data = parseJsonFromGeminiText<T>(text);
   } catch {
-    throw new Error('Gemini ha restituito JSON non valido');
+    const hint =
+      candidate?.finishReason === 'MAX_TOKENS'
+        ? ' (risposta troncata — aumenta AI_MAX_OUTPUT_TOKENS)'
+        : '';
+    throw new Error(`Gemini ha restituito JSON non valido${hint}`);
   }
 
   return {
@@ -134,27 +151,45 @@ export async function generateGeminiStructured<T>(params: {
   let lastError: Error | null = null;
 
   for (const model of models) {
-    try {
-      return await callGeminiOnce<T>({
-        apiKey,
-        model,
-        systemPrompt: params.systemPrompt,
-        userPrompt: params.userPrompt,
-        maxOutputTokens,
-      });
-    } catch (error) {
-      if (error instanceof GeminiQuotaError) {
-        throw error;
-      }
+    const attempts: Array<{ retrySuffix?: string; useResponseSchema: boolean }> = [
+      { useResponseSchema: true },
+      { retrySuffix: DAY_PLAN_JSON_RETRY_SUFFIX, useResponseSchema: true },
+      { useResponseSchema: false },
+      { retrySuffix: DAY_PLAN_JSON_RETRY_SUFFIX, useResponseSchema: false },
+    ];
 
-      const message = error instanceof Error ? error.message : 'Errore Gemini';
-      lastError = error instanceof Error ? error : new Error(message);
+    for (let i = 0; i < attempts.length; i++) {
+      const attempt = attempts[i];
+      try {
+        return await callGeminiOnce<T>({
+          apiKey,
+          model,
+          systemPrompt: params.systemPrompt,
+          userPrompt: params.userPrompt,
+          maxOutputTokens,
+          retrySuffix: attempt.retrySuffix,
+          useResponseSchema: attempt.useResponseSchema,
+        });
+      } catch (error) {
+        if (error instanceof GeminiQuotaError) {
+          throw error;
+        }
 
-      if (isGeminiQuotaError(message)) {
-        throw handleGeminiQuotaFailure(message);
-      }
+        const message = error instanceof Error ? error.message : 'Errore Gemini';
+        lastError = error instanceof Error ? error : new Error(message);
 
-      if (!isGeminiModelUnavailableError(message)) {
+        if (isGeminiQuotaError(message)) {
+          throw handleGeminiQuotaFailure(message);
+        }
+
+        if (isGeminiModelUnavailableError(message)) {
+          break;
+        }
+
+        if (isRetryableGeminiError(message) && i < attempts.length - 1) {
+          continue;
+        }
+
         break;
       }
     }

@@ -80,7 +80,7 @@ export function getAiConfig(): AiConfig {
     enabled: process.env.AI_COMPOSER_ENABLED === 'true',
     mode: parseMode(process.env.AI_COMPOSER_MODE),
     monthlyBudgetUsd: parsePositiveFloat(process.env.AI_MONTHLY_BUDGET_USD, 0),
-    maxOutputTokens: parsePositiveInt(process.env.AI_MAX_OUTPUT_TOKENS, 800),
+    maxOutputTokens: parsePositiveInt(process.env.AI_MAX_OUTPUT_TOKENS, 1200),
     cacheTtlMs: parsePositiveInt(process.env.AI_CACHE_TTL_MS, 24 * 60 * 60 * 1000),
     jsonMode: parseBoolean(process.env.AI_JSON_MODE, provider === 'openai' && !isLocalAiBaseUrl(openaiBaseUrl)),
     singleMessagePrompt: parseBoolean(process.env.AI_SINGLE_MESSAGE, provider === 'openai'),
