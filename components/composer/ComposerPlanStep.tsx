@@ -24,6 +24,7 @@ import { DaySelector } from '@/components/composer/plan/DaySelector';
 import { DayTimeline } from '@/components/composer/plan/DayTimeline';
 import { DayToolsBar } from '@/components/composer/plan/DayToolsBar';
 import { PlanStatsBar } from '@/components/composer/plan/PlanStatsBar';
+import { SlotFocusView } from '@/components/composer/plan/SlotFocusView';
 import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
 import { WeatherStrip } from '@/components/composer/plan/WeatherStrip';
 import type {
@@ -55,7 +56,7 @@ export function ComposerPlanStep({
   const [activeDayIndex, setActiveDayIndex] = useState(1);
   const [editingBlock, setEditingBlock] = useState<ComposerBlock | null>(null);
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<PlanViewMode>('split');
+  const [viewMode, setViewMode] = useState<PlanViewMode>('focus');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot>('morning');
 
   const activeDay = draft.days.find((d) => d.dayIndex === activeDayIndex) ?? draft.days[0];
@@ -243,6 +244,7 @@ export function ComposerPlanStep({
   };
 
   const totalBlocks = draft.days.reduce((n, d) => n + d.blocks.length, 0);
+  const showFocus = viewMode === 'focus';
   const showPlan = viewMode === 'split' || viewMode === 'plan';
   const showSidebar = viewMode === 'split' || viewMode === 'map';
 
@@ -257,18 +259,41 @@ export function ComposerPlanStep({
         onViewChange={setViewMode}
       />
 
-      <div className="container mx-auto px-4 py-4 space-y-4">
-        <PlanStatsBar days={draft.days} />
-        <DaySelector
-          days={draft.days}
-          activeDayIndex={activeDayIndex}
-          onSelect={setActiveDayIndex}
-          onAddDay={addDay}
-          onRemoveDay={removeDay}
-        />
-      </div>
+      {!showFocus && (
+        <div className="container mx-auto px-4 py-4 space-y-4">
+          <PlanStatsBar days={draft.days} />
+          <DaySelector
+            days={draft.days}
+            activeDayIndex={activeDayIndex}
+            onSelect={setActiveDayIndex}
+            onAddDay={addDay}
+            onRemoveDay={removeDay}
+          />
+        </div>
+      )}
 
       <div className="flex-1 container mx-auto px-4 pb-8">
+        {showFocus && activeDay ? (
+          <SlotFocusView
+            draft={draft}
+            activeDay={activeDay}
+            activeDayIndex={activeDayIndex}
+            selectedSlot={selectedSlot}
+            highlightedPinId={highlightedPinId}
+            onSlotChange={setSelectedSlot}
+            onDayChange={setActiveDayIndex}
+            onUpdateDayTitle={(title) =>
+              updateDay(activeDay.dayIndex, (d) => ({ ...d, title }))
+            }
+            onAddBlock={(type, slot) => addBlock(type, undefined, slot)}
+            onEditBlock={setEditingBlock}
+            onMoveBlock={moveBlock}
+            onDuplicateBlock={duplicateBlockInDay}
+            onHoverBlock={setHighlightedPinId}
+            onDragReorder={dragReorder}
+            onApplyGeneratedDay={applyGeneratedDay}
+          />
+        ) : (
         <div
           className={`grid gap-6 h-full ${
             viewMode === 'split'
@@ -478,6 +503,7 @@ export function ComposerPlanStep({
             </motion.div>
           )}
         </div>
+        )}
       </div>
 
       <BlockEditorPanel

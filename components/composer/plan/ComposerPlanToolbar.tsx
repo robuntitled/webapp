@@ -6,13 +6,14 @@ import type { ComposerDraft } from '@/types/composer';
 import {
   ChevronLeft,
   ChevronRight,
+  Focus,
   LayoutGrid,
   ListOrdered,
   Map as MapIcon,
   MapPin,
 } from 'lucide-react';
 
-export type PlanViewMode = 'split' | 'plan' | 'map';
+export type PlanViewMode = 'split' | 'plan' | 'focus' | 'map';
 
 type ComposerPlanToolbarProps = {
   draft: ComposerDraft;
@@ -24,6 +25,7 @@ type ComposerPlanToolbarProps = {
 };
 
 const VIEW_MODES = [
+  { id: 'focus' as const, label: 'Focus', icon: Focus },
   { id: 'split' as const, label: 'Split', icon: LayoutGrid, hideMobile: true },
   { id: 'plan' as const, label: 'Piano', icon: ListOrdered },
   { id: 'map' as const, label: 'Mappa', icon: MapIcon },
