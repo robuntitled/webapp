@@ -6,6 +6,7 @@ import { GeminiQuotaError } from '@/lib/ai/quota';
 import { AiBudgetExceededError, generateStructured } from '@/lib/ai/provider';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
 import { canAffordAiCall } from '@/lib/ai/budget';
+import { resolveOrchestratorBudgetMs } from '@/lib/ai/timeouts';
 import { withTimeout } from '@/lib/utils/with-timeout';
 import {
   aiPlanToBlocks,
@@ -24,11 +25,7 @@ import type {
 const CONTRACT_VERSION = '1.0.0';
 
 function orchestratorBudgetMs(): number {
-  const config = getAiConfig();
-  if (config.provider === 'openai') {
-    return config.requestTimeoutMs > 0 ? config.requestTimeoutMs + 5_000 : 50_000;
-  }
-  return 32_000;
+  return resolveOrchestratorBudgetMs(getAiConfig());
 }
 
 function totalDaysFromRange(startDate: string, endDate: string): number {
@@ -90,16 +87,11 @@ async function generateDayPlan(
     } else {
       try {
         const prompts = buildDayGenerationPrompt(req, totalDays);
-        const ai = await Promise.race([
-          generateStructured({
-            schema: aiDayPlanSchema,
-            systemPrompt: prompts.systemPrompt,
-            userPrompt: prompts.userPrompt,
-          }),
-          new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('AI timeout interno')), config.provider === 'openai' ? 40_000 : 28_000);
-          }),
-        ]);
+        const ai = await generateStructured({
+          schema: aiDayPlanSchema,
+          systemPrompt: prompts.systemPrompt,
+          userPrompt: prompts.userPrompt,
+        });
 
         const mapped = aiPlanToBlocks(ai.data, req.targetBlockTypes);
 

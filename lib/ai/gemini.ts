@@ -18,6 +18,11 @@ import {
   isRetryableGeminiError,
   resolveGeminiModelCandidates,
 } from '@/lib/ai/models';
+import {
+  isAiTimeoutError,
+  resolveAiCallTimeoutMs,
+  resolveGeminiAttemptDeadlineMs,
+} from '@/lib/ai/timeouts';
 
 export type GeminiUsage = {
   inputTokens: number;
@@ -42,14 +47,13 @@ type GeminiGenerateResponse = {
   error?: { message?: string; code?: number };
 };
 
-const GEMINI_FETCH_TIMEOUT_MS = 25_000;
-
 async function callGeminiOnce<T>(params: {
   apiKey: string;
   model: string;
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens: number;
+  fetchTimeoutMs: number;
   retrySuffix?: string;
   useResponseSchema?: boolean;
 }): Promise<GeminiStructuredResult<T>> {
@@ -60,7 +64,7 @@ async function callGeminiOnce<T>(params: {
     .join('\n\n');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), params.fetchTimeoutMs);
 
   let response: Response;
   try {
@@ -148,17 +152,20 @@ export async function generateGeminiStructured<T>(params: {
 
   const models = resolveGeminiModelCandidates(config.model).slice(0, 2);
   const maxOutputTokens = params.maxOutputTokens ?? config.maxOutputTokens;
+  const callBudgetMs = resolveAiCallTimeoutMs(config);
+  const deadline = Date.now() + resolveGeminiAttemptDeadlineMs(config);
   let lastError: Error | null = null;
 
   for (const model of models) {
     const attempts: Array<{ retrySuffix?: string; useResponseSchema: boolean }> = [
       { useResponseSchema: true },
-      { retrySuffix: DAY_PLAN_JSON_RETRY_SUFFIX, useResponseSchema: true },
-      { useResponseSchema: false },
       { retrySuffix: DAY_PLAN_JSON_RETRY_SUFFIX, useResponseSchema: false },
     ];
 
     for (let i = 0; i < attempts.length; i++) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs < 8_000) break;
+
       const attempt = attempts[i];
       try {
         return await callGeminiOnce<T>({
@@ -167,6 +174,7 @@ export async function generateGeminiStructured<T>(params: {
           systemPrompt: params.systemPrompt,
           userPrompt: params.userPrompt,
           maxOutputTokens,
+          fetchTimeoutMs: Math.min(remainingMs, callBudgetMs),
           retrySuffix: attempt.retrySuffix,
           useResponseSchema: attempt.useResponseSchema,
         });
@@ -182,7 +190,7 @@ export async function generateGeminiStructured<T>(params: {
           throw handleGeminiQuotaFailure(message);
         }
 
-        if (isGeminiModelUnavailableError(message)) {
+        if (isGeminiModelUnavailableError(message) || isAiTimeoutError(message)) {
           break;
         }
 
