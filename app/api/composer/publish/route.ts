@@ -33,11 +33,17 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Pubblicazione fallita';
-    const isMigration = message.includes('trip_days') || message.includes('block_type');
+    const isMigration =
+      message.includes('trip_days') ||
+      message.includes('block_type') ||
+      message.includes('composer_version') ||
+      message.includes('planning_mode');
     return NextResponse.json(
       {
         error: message,
-        hint: isMigration ? 'Esegui npm run db:composer su Supabase' : undefined,
+        hint: isMigration
+          ? 'Applica le migration 003 e 004 su Supabase (SQL Editor o npm run db:social + db:composer)'
+          : undefined,
       },
       { status: 500 }
     );
