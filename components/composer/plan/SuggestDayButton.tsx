@@ -22,7 +22,7 @@ function sourceBadge(source: ComposerGenerateSource | null): {
   if (!source) return null;
   if (source === 'ai') {
     return {
-      label: 'Gemini AI',
+      label: 'AI',
       className: 'bg-violet-500/20 text-violet-200 border-violet-400/30',
       Icon: Brain,
     };
@@ -72,12 +72,12 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
       onApplied(response, 'replace');
       setLastSource(response.meta.source);
 
-      const modelLabel = response.meta.model?.replace(/^gemini-/, '') ?? '';
+      const modelLabel = response.meta.model?.replace(/^(gemini-|llama)/, '') ?? '';
       const sourceLabel =
         response.meta.source === 'ai'
-          ? `Gemini ${modelLabel || 'AI'}`
+          ? `AI ${modelLabel}`.trim()
           : response.meta.source === 'cache'
-            ? `Gemini ${modelLabel || 'AI'} (cache)`
+            ? `AI ${modelLabel} (cache)`.trim()
             : 'Smart locale';
 
       toast.success(

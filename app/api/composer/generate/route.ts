@@ -5,10 +5,10 @@ import {
   buildEmergencyMockResponse,
   orchestrateDayGeneration,
 } from '@/lib/composer/orchestrator';
-import { shouldUseGemini } from '@/lib/ai/config';
+import { shouldUseExternalAi } from '@/lib/ai/config';
 import { rateLimit } from '@/lib/rate-limit';
 
-export const maxDuration = 15;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (shouldUseGemini().use) {
+  if (shouldUseExternalAi().use) {
     const aiLimited = rateLimit(`composer-ai:${session.user.id}`, {
       limit: 5,
       windowMs: 60 * 60 * 1000,

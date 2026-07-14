@@ -5,25 +5,11 @@ import {
   type AiDayBlockSpec,
   type AiDayPlan,
 } from '@/lib/composer/ai-day-schema';
+import { DAY_PLAN_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import { originsSummaryForPrompt } from '@/lib/composer/origins';
 import { buildIntelPromptBlock, resolveDestinationIntel } from '@/lib/composer/destination-intel';
 import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
 import type { ComposerBlock, ComposerBlockType, ComposerGenerateRequest } from '@/types/composer';
-
-const SYSTEM_PROMPT = `Sei un travel planner senior per NomadLink — stile guida locale insider, non turista generico.
-Rispondi SOLO con JSON valido.
-
-Qualità richiesta:
-- Titoli vividi e specifici (max 80 caratteri), in italiano.
-- Luoghi plausibili per la regione indicata; per borghi piccoli usa aeroporto/città vicina reale.
-- Orari coerenti: colazione mattina, pranzo pomeriggio, cena sera.
-- Giorno 1: arrivo (volo dall'aeroporto di partenza indicato → transfer → hotel → cena leggera → passeggiata).
-- Ultimo giorno: colazione → ultimo highlight → transfer → volo ritorno verso aeroporto di partenza organizzatore.
-- Usa i codici IATA di partenza forniti nel prompt; per gruppi con amici da altre città, aggiungi nota sync arrivi.
-- Giorni intermedi: 5-7 blocchi vari (attrazioni, pasti, attività, tempo libero, nota crew).
-- Evita ripetizioni con altri giorni elencati nel prompt.
-- Non inventare nomi esatti di ristoranti commerciali; usa descrizioni ("osteria di paese", "friggitoria locale").
-- Per gruppi: aggiungi nota con sync meet-up; per solo: promemoria pratico.`;
 
 function specToExtra(spec: AiDayBlockSpec): Record<string, unknown> {
   const extra: Record<string, unknown> = { title: spec.title, timeSlot: spec.timeSlot };
@@ -68,25 +54,20 @@ export function buildDayGenerationPrompt(
   const originsLine = originsSummaryForPrompt(req);
 
   const lines = [
-    `=== VIAGGIO ===`,
-    `Destinazione: ${destLabel}${req.destinationMeta?.country ? `, ${req.destinationMeta.country}` : ''}`,
-    req.destinationMeta?.placeTypeLabel ? `Tipo: ${req.destinationMeta.placeTypeLabel}` : null,
-    `Periodo: ${req.startDate} → ${req.endDate} (${totalDays} giorni)`,
-    `Giorno richiesto: ${req.dayIndex} (${req.date}) — fase ${dayPhase}`,
-    `Modalità: ${req.planningMode === 'group' ? `gruppo di ${req.maxParticipants}` : 'viaggio solo'}`,
-    `Partenza organizzatore: ${req.organizerOrigin?.city ?? 'non specificata'} (IATA ${originIata})`,
-    originsLine ? `Partenze gruppo: ${originsLine}` : null,
-    ``,
-    `=== CONTESTO LOCALE ===`,
-    intelBlock,
-    ``,
-    req.dayTitle ? `Titolo giorno attuale: ${req.dayTitle}` : null,
-    req.otherDaysSummary ? `Altri giorni (NON ripetere): ${req.otherDaysSummary}` : null,
-    req.targetBlockTypes?.length ? `Tipi richiesti: ${req.targetBlockTypes.join(', ')}` : null,
+    `dest=${destLabel}${req.destinationMeta?.country ? ` (${req.destinationMeta.country})` : ''}`,
+    `day=${req.dayIndex}/${totalDays} (${req.date}) fase=${dayPhase}`,
+    `periodo=${req.startDate}→${req.endDate}`,
+    `mode=${req.planningMode === 'group' ? `group:${req.maxParticipants}` : 'solo'}`,
+    `origin=${req.organizerOrigin?.city ?? 'n/d'} IATA=${originIata}`,
+    originsLine ? `crew=${originsLine}` : null,
+    `intel=${intelBlock.replace(/\n/g, ' | ')}`,
+    req.dayTitle ? `titolo=${req.dayTitle}` : null,
+    req.otherDaysSummary ? `altri_giorni=${req.otherDaysSummary}` : null,
+    req.targetBlockTypes?.length ? `tipi=${req.targetBlockTypes.join(',')}` : null,
   ].filter(Boolean);
 
   return {
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt: DAY_PLAN_SYSTEM_PROMPT,
     userPrompt: lines.join('\n'),
     responseSchema: aiDayPlanGeminiSchema as unknown as Record<string, unknown>,
   };

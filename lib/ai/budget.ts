@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { estimateGeminiCostUsd } from '@/lib/ai/pricing';
+import type { AiProviderName } from '@/lib/ai/config';
+import { getAiConfig, isLocalAiBaseUrl } from '@/lib/ai/config';
+import { estimateGeminiCostUsd, estimateOpenAiCompatibleCostUsd } from '@/lib/ai/pricing';
 
 type MonthSpend = {
   monthKey: string;
@@ -32,8 +34,28 @@ export function canAffordAiCall(estimatedCostUsd: number, monthlyBudgetUsd: numb
   return monthSpend.spentUsd + estimatedCostUsd <= monthlyBudgetUsd;
 }
 
-export function recordAiSpend(inputTokens: number, outputTokens: number): number {
-  const cost = estimateGeminiCostUsd(inputTokens, outputTokens);
+function estimateCostForProvider(
+  inputTokens: number,
+  outputTokens: number,
+  provider: AiProviderName
+): number {
+  if (provider === 'openai') {
+    const config = getAiConfig();
+    return estimateOpenAiCompatibleCostUsd(
+      inputTokens,
+      outputTokens,
+      isLocalAiBaseUrl(config.openaiBaseUrl)
+    );
+  }
+  return estimateGeminiCostUsd(inputTokens, outputTokens);
+}
+
+export function recordAiSpend(
+  inputTokens: number,
+  outputTokens: number,
+  provider: AiProviderName = 'gemini'
+): number {
+  const cost = estimateCostForProvider(inputTokens, outputTokens, provider);
   resetIfNewMonth();
   monthSpend.spentUsd += cost;
   return cost;

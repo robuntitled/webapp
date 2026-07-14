@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { getCachedValue, setCachedValue } from '@/lib/ai/cache';
-import { getAiConfig, shouldUseGemini } from '@/lib/ai/config';
+import { getAiConfig, shouldUseExternalAi } from '@/lib/ai/config';
 import { GeminiQuotaError } from '@/lib/ai/quota';
 import { AiBudgetExceededError, generateStructured } from '@/lib/ai/provider';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
@@ -22,7 +22,14 @@ import type {
 } from '@/types/composer';
 
 const CONTRACT_VERSION = '1.0.0';
-const ORCHESTRATOR_BUDGET_MS = 9_000;
+
+function orchestratorBudgetMs(): number {
+  const config = getAiConfig();
+  if (config.provider === 'openai') {
+    return config.requestTimeoutMs > 0 ? config.requestTimeoutMs + 5_000 : 50_000;
+  }
+  return 9_000;
+}
 
 function totalDaysFromRange(startDate: string, endDate: string): number {
   const start = new Date(startDate);
@@ -75,10 +82,10 @@ async function generateDayPlan(
     };
   }
 
-  const geminiDecision = shouldUseGemini();
+  const geminiDecision = shouldUseExternalAi();
 
   if (geminiDecision.use) {
-    if (!canAffordAiCall(estimateTypicalCallCostUsd(), config.monthlyBudgetUsd)) {
+    if (!canAffordAiCall(estimateTypicalCallCostUsd(config.provider), config.monthlyBudgetUsd)) {
       warnings.push('Budget AI mensile raggiunto — suggerimenti smart');
     } else {
       try {
@@ -90,7 +97,7 @@ async function generateDayPlan(
             userPrompt: prompts.userPrompt,
           }),
           new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Gemini timeout interno')), 7_000);
+            setTimeout(() => reject(new Error('AI timeout interno')), config.provider === 'openai' ? 40_000 : 7_000);
           }),
         ]);
 
@@ -240,7 +247,7 @@ export async function orchestrateDayGeneration(
 ): Promise<ComposerGenerateResponse> {
   return withTimeout(
     orchestrateDayGenerationInternal(req),
-    ORCHESTRATOR_BUDGET_MS,
+    orchestratorBudgetMs(),
     () => buildEmergencyMockResponse(req, 'Timeout server — risposta smart immediata')
   );
 }

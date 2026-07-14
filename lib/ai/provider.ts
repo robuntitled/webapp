@@ -4,6 +4,7 @@ import type { ZodType } from 'zod';
 import { canAffordAiCall, recordAiSpend } from '@/lib/ai/budget';
 import { getAiConfig, isAiComposerConfigured } from '@/lib/ai/config';
 import { generateGeminiStructured } from '@/lib/ai/gemini';
+import { generateOpenAiCompatibleStructured } from '@/lib/ai/openai-compatible';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
 import { normalizeAiDayPlan } from '@/lib/composer/ai-day-normalize';
 
@@ -21,6 +22,26 @@ export class AiBudgetExceededError extends Error {
   }
 }
 
+async function callProvider<T>(params: {
+  systemPrompt: string;
+  userPrompt: string;
+  maxOutputTokens?: number;
+}): Promise<{
+  data: T;
+  model: string;
+  usage: { inputTokens: number; outputTokens: number };
+}> {
+  const config = getAiConfig();
+
+  if (config.provider === 'openai') {
+    const result = await generateOpenAiCompatibleStructured<T>(params);
+    return result;
+  }
+
+  const result = await generateGeminiStructured<T>(params);
+  return result;
+}
+
 export async function generateStructured<T>(params: {
   schema: ZodType<T>;
   systemPrompt: string;
@@ -33,16 +54,12 @@ export async function generateStructured<T>(params: {
     throw new Error('Provider AI non configurato');
   }
 
-  const estimatedCost = estimateTypicalCallCostUsd();
+  const estimatedCost = estimateTypicalCallCostUsd(config.provider);
   if (!canAffordAiCall(estimatedCost, config.monthlyBudgetUsd)) {
     throw new AiBudgetExceededError();
   }
 
-  const result = await generateGeminiStructured<T>({
-    systemPrompt: params.systemPrompt,
-    userPrompt: params.userPrompt,
-    maxOutputTokens: params.maxOutputTokens,
-  });
+  const result = await callProvider<T>(params);
 
   const normalized = normalizeAiDayPlan(result.data) ?? result.data;
   const parsed = params.schema.safeParse(normalized);
@@ -51,7 +68,11 @@ export async function generateStructured<T>(params: {
     throw new Error(`Risposta AI non valida: ${detail}`);
   }
 
-  const costUsd = recordAiSpend(result.usage.inputTokens, result.usage.outputTokens);
+  const costUsd = recordAiSpend(
+    result.usage.inputTokens,
+    result.usage.outputTokens,
+    config.provider
+  );
 
   return {
     data: parsed.data,

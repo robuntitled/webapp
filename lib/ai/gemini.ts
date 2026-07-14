@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getAiConfig } from '@/lib/ai/config';
 import { parseJsonFromGeminiText, pickGeminiAnswerText } from '@/lib/ai/json-extract';
+import { DAY_PLAN_JSON_SUFFIX } from '@/lib/ai/prompts';
 import {
   GeminiQuotaError,
   getQuotaCooldownRemainingMs,
@@ -47,12 +48,7 @@ async function callGeminiOnce<T>(params: {
 }): Promise<GeminiStructuredResult<T>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
 
-  const userPrompt = `${params.userPrompt}
-
-Rispondi SOLO con JSON valido (nessun markdown) con:
-suggestedTitle (string), blocks (array di 4-8 oggetti con type, title, timeSlot e opzionali place/description/duration/from/to/body/mode).
-type ammessi: flight, hotel, attraction, transport, meal, free_time, note, activity.
-timeSlot ammessi: morning, afternoon, evening, night, flex.`;
+  const userPrompt = `${params.userPrompt}\n\n${DAY_PLAN_JSON_SUFFIX}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);

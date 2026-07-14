@@ -4,7 +4,19 @@ import { canAffordAiCall, getMonthlySpendUsd, recordAiSpend, resetMonthlySpendFo
 
 describe('estimateGeminiCostUsd', () => {
   it('returns a small positive cost for typical token counts', () => {
-    const cost = estimateGeminiCostUsd(700, 900);
+    const cost = estimateGeminiCostUsd(350, 600);
+    expect(cost).toBeGreaterThan(0);
+    expect(cost).toBeLessThan(0.01);
+  });
+});
+
+describe('estimateTypicalCallCostUsd', () => {
+  it('returns zero estimated cost for local openai-compatible provider', () => {
+    expect(estimateTypicalCallCostUsd('openai')).toBe(0);
+  });
+
+  it('returns a small positive cost for gemini', () => {
+    const cost = estimateTypicalCallCostUsd('gemini');
     expect(cost).toBeGreaterThan(0);
     expect(cost).toBeLessThan(0.01);
   });

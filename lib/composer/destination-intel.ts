@@ -180,12 +180,11 @@ export function pickRotated<T>(items: T[], dayIndex: number, offset = 0): T {
 
 export function buildIntelPromptBlock(intel: DestinationIntel, destLabel: string): string {
   return [
-    `Contesto locale (${intel.region}): ${intel.vibe}`,
-    `Aeroporto di riferimento: ${intel.nearestAirport.label}`,
-    `Hub città: ${intel.hubCity}`,
-    `Luoghi tipici: ${intel.places.slice(0, 4).join('; ')}`,
-    `Cibo tipico: ${intel.foods.slice(0, 3).join('; ')}`,
-    `Esperienze: ${intel.activities.slice(0, 3).join('; ')}`,
-    `Nome destinazione utente: ${destLabel}`,
-  ].join('\n');
+    `${intel.region}: ${intel.vibe}`,
+    `airport=${intel.nearestAirport.iata}`,
+    `hub=${intel.hubCity}`,
+    `places=${intel.places.slice(0, 3).join(', ')}`,
+    `food=${intel.foods.slice(0, 2).join(', ')}`,
+    `dest=${destLabel}`,
+  ].join('; ');
 }
