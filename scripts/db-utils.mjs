@@ -43,6 +43,16 @@ export function getDbUrl() {
   return null;
 }
 
+export function printConnectionHelp(error) {
+  if (error?.code === 'ENOTFOUND' && String(error.message).includes('db.')) {
+    console.error('');
+    console.error('💡 Il host Direct (db.xxx.supabase.co) spesso non funziona su IPv4.');
+    console.error('   Usa Session pooler da Connect → Direct → copia host tipo:');
+    console.error('   aws-0-eu-central-2.pooler.supabase.com:5432');
+    console.error('   SUPABASE_DB_URL=postgresql://postgres.[ref]:[PASSWORD]@aws-0-REGION.pooler.supabase.com:5432/postgres');
+  }
+}
+
 export function printDbUrlHelp() {
   console.error('❌ SUPABASE_DB_URL mancante in .env.local');
   console.error('');
@@ -70,6 +80,9 @@ export async function withPgClient(fn) {
   try {
     await client.connect();
     return await fn(client);
+  } catch (error) {
+    printConnectionHelp(error);
+    throw error;
   } finally {
     await client.end();
   }

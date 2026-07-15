@@ -15,10 +15,23 @@ const MIGRATIONS = [
 ];
 
 await withPgClient(async (client) => {
+  let failed = 0;
   for (const file of MIGRATIONS) {
-    const name = await runSqlFile(client, file);
-    console.log(`✅ ${name}`);
+    try {
+      const name = await runSqlFile(client, file);
+      console.log(`✅ ${name}`);
+    } catch (error) {
+      failed++;
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️  ${file} — saltata (${message})`);
+    }
   }
   console.log('');
-  console.log('✅ Tutte le migration applicate. Verifica: npm run db:status');
+  if (failed > 0) {
+    console.log(`⚠️  ${failed} migration con errori (spesso già applicate o tabelle di sistema).`);
+    console.log('   Verifica: npm run db:status');
+    console.log('   Per una sola migration: npm run db:exec -- supabase/migrations/00X_....sql');
+  } else {
+    console.log('✅ Tutte le migration applicate. Verifica: npm run db:status');
+  }
 });
