@@ -22,7 +22,25 @@ export function loadEnv() {
 
 export function getDbUrl() {
   const env = loadEnv();
-  return process.env.SUPABASE_DB_URL || env.SUPABASE_DB_URL || null;
+  if (process.env.SUPABASE_DB_URL) return process.env.SUPABASE_DB_URL;
+  if (env.SUPABASE_DB_URL) return env.SUPABASE_DB_URL;
+
+  // Errore comune: incollare la URL senza "SUPABASE_DB_URL="
+  const envPath = path.join(ROOT, '.env.local');
+  if (fs.existsSync(envPath)) {
+    const orphan = fs
+      .readFileSync(envPath, 'utf8')
+      .split('\n')
+      .find((line) => /^postgres(ql)?:\/\//i.test(line.trim()));
+    if (orphan) {
+      console.error('⚠️  Trovata una connection string senza nome variabile.');
+      console.error('   Cambia la riga in:');
+      console.error('   SUPABASE_DB_URL=postgresql://postgres:...');
+      console.error('');
+    }
+  }
+
+  return null;
 }
 
 export function printDbUrlHelp() {
