@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { BlockEditorPanel } from '@/components/composer/BlockEditorPanel';
-import { ComposerWorkspace } from '@/components/composer/plan-v3/ComposerWorkspace';
+import { ComposerWorkspace } from '@/components/composer/plan-v2/ComposerWorkspace';
 import {
   AddActivityModal,
   type AddActivityPayload,
-} from '@/components/composer/plan-v3/AddActivityModal';
-import type { DayTrackerSelection } from '@/components/composer/plan-v3/DayTracker';
+} from '@/components/composer/plan-v2/AddActivityModal';
+import type { DayTrackerSelection } from '@/components/composer/plan-v2/DayTracker';
 import { createEmptyBlock } from '@/lib/composer/blocks';
 import {
   appendComposerDay,
@@ -171,79 +171,6 @@ export function ComposerPlanStep({
     if (highlightedPinId === blockId) setHighlightedPinId(null);
   };
 
-  const reorderBlocks = (fromIndex: number, toIndex: number) => {
-    if (!activeDay || fromIndex === toIndex) return;
-    const blocks = [...activeDay.blocks];
-    const [moved] = blocks.splice(fromIndex, 1);
-    blocks.splice(toIndex, 0, moved);
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
-    }));
-  };
-
-  const toggleFavorite = (blockId: string) => {
-    if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: d.blocks.map((b) =>
-        b.id === blockId ? { ...b, content: { ...b.content, favorite: !b.content.favorite } } : b
-      ),
-    }));
-  };
-
-  const updateBlockNotes = (blockId: string, notes: string) => {
-    if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: d.blocks.map((b) =>
-        b.id === blockId ? { ...b, content: { ...b.content, notes: notes || undefined } } : b
-      ),
-    }));
-  };
-
-  const addAttachment = (blockId: string, label: string, url: string) => {
-    if (!activeDay) return;
-    const id = `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: d.blocks.map((b) =>
-        b.id === blockId
-          ? {
-              ...b,
-              content: {
-                ...b.content,
-                attachments: [
-                  ...(Array.isArray(b.content.attachments) ? b.content.attachments : []),
-                  { id, label, url },
-                ],
-              },
-            }
-          : b
-      ),
-    }));
-  };
-
-  const removeAttachment = (blockId: string, id: string) => {
-    if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: d.blocks.map((b) =>
-        b.id === blockId
-          ? {
-              ...b,
-              content: {
-                ...b.content,
-                attachments: (Array.isArray(b.content.attachments) ? b.content.attachments : []).filter(
-                  (a: { id: string }) => a.id !== id
-                ),
-              },
-            }
-          : b
-      ),
-    }));
-  };
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <ComposerWorkspace
@@ -265,7 +192,9 @@ export function ComposerPlanStep({
         onAddDay={addDay}
         onRemoveDay={removeDay}
         onNextDay={goToNextDay}
-        onToggleFullTrip={() => setMapMode((m) => (m === 'fullTrip' ? 'day' : 'fullTrip'))}
+        onToggleFullTrip={() =>
+          setMapMode((m) => (m === 'fullTrip' ? 'day' : 'fullTrip'))
+        }
         onUpdateDayTitle={(title) => {
           if (!activeDay) return;
           updateDay(activeDay.dayIndex, (d) => ({ ...d, title }));
@@ -286,11 +215,6 @@ export function ComposerPlanStep({
         onEditBlock={setEditingBlock}
         onRemoveBlock={removeBlock}
         onHoverBlock={setHighlightedPinId}
-        onReorderBlocks={reorderBlocks}
-        onToggleFavorite={toggleFavorite}
-        onUpdateBlockNotes={updateBlockNotes}
-        onAddAttachment={addAttachment}
-        onRemoveAttachment={removeAttachment}
         onPinClick={(pin) => {
           if (pin.blockId) {
             setSelection(pin.dayIndex);

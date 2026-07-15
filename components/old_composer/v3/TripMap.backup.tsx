@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 import type { MapPin } from '@/lib/maps/pins';
-import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type { DestinationMeta } from '@/types/composer';
 
 type TripMapProps = {
@@ -17,41 +16,39 @@ type TripMapProps = {
   interactive?: boolean;
   showRoute?: boolean;
   animateFit?: boolean;
-  mapMode?: MapViewMode;
 };
 
-const ReactMapboxTripMap = dynamic(
-  () => import('@/components/maps/ReactMapboxTripMap').then((m) => m.ReactMapboxTripMap),
+const ReactLeafletTripMap = dynamic(
+  () =>
+    import('@/components/maps/ReactLeafletTripMap').then((m) => m.ReactLeafletTripMap),
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[240px] w-full items-center justify-center bg-[#0f172a] text-xs text-white/40">
+      <div className="flex h-full min-h-[240px] w-full items-center justify-center bg-slate-100 text-xs text-slate-400">
         Caricamento mappa…
       </div>
     ),
   }
 );
 
-/** Mapbox GL wrapper. Legacy Leaflet impl backed up in old_composer/v3. */
+/** Thin wrapper — React-Leaflet + Carto Voyager. Legacy Leaflet impl in old_composer/v2. */
 export function TripMap({
   destination,
   destinationMeta,
   pins,
-  activeDayIndex,
   highlightedPinId,
   onPinClick,
   onMapClick,
   className = '',
   interactive = true,
-  mapMode = 'day',
+  showRoute = true,
 }: TripMapProps) {
   return (
-    <ReactMapboxTripMap
+    <ReactLeafletTripMap
       destination={destination}
       destinationMeta={destinationMeta}
       pins={pins}
-      mapMode={mapMode}
-      activeDayIndex={activeDayIndex ?? 1}
+      showRoute={showRoute}
       highlightedPinId={highlightedPinId}
       onPinClick={onPinClick}
       onMapClick={interactive ? onMapClick : undefined}

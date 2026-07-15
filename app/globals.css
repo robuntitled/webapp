@@ -697,6 +697,110 @@
     display: none;
   }
 
+  .composer-v3-workspace {
+    background:
+      radial-gradient(ellipse 70% 45% at 10% 15%, oklch(0.45 0.1 220 / 22%), transparent),
+      radial-gradient(ellipse 50% 40% at 90% 80%, oklch(0.5 0.12 45 / 14%), transparent),
+      oklch(0.14 0.04 250);
+  }
+
+  .composer-v3-itinerary {
+    background: oklch(0.14 0.04 250 / 92%);
+    backdrop-filter: blur(12px);
+  }
+
+  .composer-v3-map {
+    background: oklch(0.12 0.03 250);
+  }
+
+  .composer-v3-day-pill {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 5.25rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 9999px;
+    background: oklch(1 0 0 / 5%);
+    border: 1px solid oklch(1 0 0 / 10%);
+    color: oklch(1 0 0 / 55%);
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+  }
+
+  .composer-v3-day-pill:hover {
+    background: oklch(1 0 0 / 8%);
+    border-color: oklch(1 0 0 / 18%);
+    color: oklch(1 0 0 / 80%);
+  }
+
+  .composer-v3-day-pill-active {
+    background: linear-gradient(135deg, oklch(0.55 0.14 300), oklch(0.65 0.16 45));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 18px oklch(0.65 0.16 45 / 35%);
+  }
+
+  .composer-v3-day-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    border: 1px dashed oklch(1 0 0 / 20%);
+    color: oklch(1 0 0 / 45%);
+    background: oklch(1 0 0 / 4%);
+    transition: all 0.2s ease;
+  }
+
+  .composer-v3-day-add:hover {
+    border-color: oklch(0.65 0.16 45 / 50%);
+    color: oklch(0.75 0.14 45);
+    background: oklch(0.65 0.16 45 / 10%);
+  }
+
+  .composer-v3-stop-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 1.25rem;
+    background: oklch(1 0 0 / 4%);
+    border: 1px solid oklch(1 0 0 / 10%);
+    box-shadow: 0 2px 8px oklch(0 0 0 / 12%);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .composer-v3-stop-card:hover {
+    border-color: oklch(0.65 0.16 45 / 30%);
+    box-shadow: 0 8px 26px oklch(0 0 0 / 25%);
+  }
+
+  .composer-v3-stop-card-active {
+    border-color: oklch(0.65 0.16 45 / 40%);
+    box-shadow: 0 0 0 3px oklch(0.65 0.16 45 / 15%), 0 8px 26px oklch(0 0 0 / 25%);
+  }
+
+  .composer-v3-overview-card {
+    border-radius: 1.25rem;
+    border: 1px solid oklch(1 0 0 / 10%);
+    background: oklch(1 0 0 / 4%);
+    padding: 1rem;
+    text-align: left;
+    transition: all 0.25s ease;
+  }
+
+  .composer-v3-overview-card:hover {
+    border-color: oklch(0.65 0.16 45 / 30%);
+    background: oklch(1 0 0 / 7%);
+    box-shadow: 0 8px 26px oklch(0 0 0 / 20%);
+  }
+
+  .composer-v3-modal [data-slot='dialog-close'] {
+    display: none;
+  }
+
   .composer-control-panel,
   .composer-map-panel {
     min-height: 0;
