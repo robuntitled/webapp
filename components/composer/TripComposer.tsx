@@ -7,17 +7,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { ComposerIntakeStep } from '@/components/composer/ComposerIntakeStep';
-import { ComposerSetupStep } from '@/components/composer/ComposerSetupStep';
+import { ComposerLandingStep } from '@/components/composer/ComposerLandingStep';
 import { ComposerPlanStep } from '@/components/composer/ComposerPlanStep';
 import { ComposerReviewStep } from '@/components/composer/ComposerReviewStep';
 import { buildComposerDays } from '@/lib/composer/days';
 import {
   clearComposerDraft,
   saveComposerDraft,
-  savePlannerProfile,
   type ComposerWizardStep,
 } from '@/lib/composer/client-planner';
+import { WIZARD_STEPS } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft, ComposerDay } from '@/types/composer';
 import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
 
@@ -42,25 +41,21 @@ type TripComposerProps = {
 };
 
 export function TripComposer({
-  profileCity,
-  profileCountry,
   initialPlannerProfile,
   initialDraft,
-  initialStep = 'intake',
+  initialStep = 'landing',
 }: TripComposerProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState<ComposerWizardStep>(initialStep);
-  const [plannerProfile, setPlannerProfile] = useState<PlannerProfile>(
-    initialPlannerProfile ?? EMPTY_PLANNER_PROFILE
-  );
   const [draft, setDraft] = useState<ComposerDraft>({
     ...EMPTY_DRAFT,
     ...initialDraft,
     plannerProfile: initialPlannerProfile ?? undefined,
   });
   const [publishing, setPublishing] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const plannerProfile =
+    draft.plannerProfile ?? initialPlannerProfile ?? EMPTY_PLANNER_PROFILE;
 
   useEffect(() => {
     if (initialDraft?.destination) return;
@@ -108,28 +103,10 @@ export function TripComposer({
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const finishIntake = async () => {
-    setSavingProfile(true);
-    try {
-      await savePlannerProfile(plannerProfile);
-      setDraft((prev) => ({ ...prev, plannerProfile }));
-      await saveComposerDraft({
-        draft: { ...draft, plannerProfile },
-        currentStep: 'setup',
-        plannerProfile,
-      });
-      setStep('setup');
-      toast.success('Profilo salvato — l\'AI userà queste preferenze');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Errore salvataggio profilo');
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  const goToPlan = () => {
+  const goToCompose = () => {
     if (!draft.startDate || !draft.endDate) return;
-    const days = buildComposerDays(draft.startDate, draft.endDate);
+    const days =
+      draft.days.length > 0 ? draft.days : buildComposerDays(draft.startDate, draft.endDate);
     setDraft((prev) => ({ ...prev, days }));
     setStep('plan');
   };
@@ -161,7 +138,7 @@ export function TripComposer({
     }
   };
 
-  const mainSteps: ComposerWizardStep[] = ['intake', 'setup', 'plan', 'review'];
+  const stepIndex = WIZARD_STEPS.indexOf(step);
 
   return (
     <div className="composer-shell min-h-[calc(100vh-4rem)] relative overflow-hidden">
@@ -181,13 +158,13 @@ export function TripComposer({
               </Link>
             </Button>
             <div className="flex items-center gap-2">
-              {mainSteps.map((s, i) => (
+              {WIZARD_STEPS.map((s, i) => (
                 <div
                   key={s}
                   className={`h-1.5 rounded-full transition-all duration-500 ${
                     s === step
                       ? 'w-8 bg-accent'
-                      : i < mainSteps.indexOf(step)
+                      : i < stepIndex
                         ? 'w-4 bg-accent/50'
                         : 'w-4 bg-white/15'
                   }`}
@@ -198,37 +175,18 @@ export function TripComposer({
         )}
 
         <AnimatePresence mode="wait">
-          {step === 'intake' && (
+          {step === 'landing' && (
             <motion.div
-              key="intake"
+              key="landing"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="container mx-auto px-4 py-8"
             >
-              <ComposerIntakeStep
-                profile={plannerProfile}
-                onChange={setPlannerProfile}
-                onContinue={() => void finishIntake()}
-                saving={savingProfile}
-              />
-            </motion.div>
-          )}
-
-          {step === 'setup' && (
-            <motion.div
-              key="setup"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="container mx-auto px-4 py-8"
-            >
-              <ComposerSetupStep
+              <ComposerLandingStep
                 draft={draft}
-                profileCity={profileCity}
-                profileCountry={profileCountry}
                 onChange={patchDraft}
-                onContinue={goToPlan}
+                onStart={goToCompose}
               />
             </motion.div>
           )}
@@ -239,7 +197,7 @@ export function TripComposer({
                 draft={{ ...draft, plannerProfile }}
                 onChangeDays={(days: ComposerDay[]) => patchDraft({ days })}
                 onPatchDraft={patchDraft}
-                onBack={() => setStep('setup')}
+                onBack={() => setStep('landing')}
                 onReview={() => setStep('review')}
               />
             </motion.div>

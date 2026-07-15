@@ -1,16 +1,18 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import {
+  WIZARD_STEPS,
+  wizardStepLabel,
+  normalizeWizardStep,
+  type ComposerWizardStep,
+  type LegacyComposerWizardStep,
+} from '@/lib/composer/wizard-steps';
 
-const STEP_LABELS: Record<string, string> = {
-  intake: 'Profilo viaggiatore',
-  setup: 'Destinazione',
-  plan: 'Piano giorni',
-  review: 'Pubblica',
-};
+type WizardHeaderStep = ComposerWizardStep | LegacyComposerWizardStep;
 
 type ComposerWizardHeaderProps = {
-  step: 'intake' | 'setup' | 'plan' | 'review';
+  step: WizardHeaderStep;
   microStep?: number;
   microTotal?: number;
   microLabel?: string;
@@ -26,13 +28,14 @@ export function ComposerWizardHeader({
   title,
   subtitle,
 }: ComposerWizardHeaderProps) {
-  const mainSteps = ['intake', 'setup', 'plan', 'review'] as const;
-  const mainIndex = mainSteps.indexOf(step);
+  const normalized = normalizeWizardStep(step);
+  const mainIndex = WIZARD_STEPS.indexOf(normalized);
+  const stepLabel = wizardStepLabel(normalized);
 
   const progressLabel =
     microStep != null && microTotal != null && microLabel
-      ? `Step ${mainIndex + 1} di 4 · ${microLabel} (${microStep}/${microTotal})`
-      : `Step ${mainIndex + 1} di 4 · ${STEP_LABELS[step]}`;
+      ? `Step ${mainIndex + 1} di ${WIZARD_STEPS.length} · ${microLabel} (${microStep}/${microTotal})`
+      : `Step ${mainIndex + 1} di ${WIZARD_STEPS.length} · ${stepLabel}`;
 
   return (
     <div className="text-center space-y-4 mb-8">
@@ -46,11 +49,11 @@ export function ComposerWizardHeader({
       </motion.div>
 
       <div className="flex items-center justify-center gap-2 px-4">
-        {mainSteps.map((s, i) => (
+        {WIZARD_STEPS.map((s, i) => (
           <div
             key={s}
             className={`h-1.5 rounded-full transition-all duration-500 ${
-              s === step
+              s === normalized
                 ? 'w-10 bg-accent'
                 : i < mainIndex
                   ? 'w-5 bg-accent/50'

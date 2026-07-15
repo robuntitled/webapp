@@ -1,7 +1,8 @@
 import type { PlannerProfile } from '@/types/planner';
 import type { ComposerDraft } from '@/types/composer';
+import type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 
-export type ComposerWizardStep = 'intake' | 'setup' | 'plan' | 'review';
+export type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 
 export async function savePlannerProfile(profile: PlannerProfile): Promise<void> {
   const response = await fetch('/api/planner/profile', {

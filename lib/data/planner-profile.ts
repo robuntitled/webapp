@@ -4,8 +4,12 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { plannerProfileSchema } from '@/lib/validations/planner';
 import type { PlannerProfile } from '@/types/planner';
 import type { ComposerDraft } from '@/types/composer';
+import {
+  normalizeWizardStep,
+  type ComposerWizardStep,
+} from '@/lib/composer/wizard-steps';
 
-export type ComposerWizardStep = 'intake' | 'setup' | 'plan' | 'review';
+export type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 
 export async function getPlannerProfile(userId: string): Promise<PlannerProfile | null> {
   const { data, error } = await supabaseAdmin
@@ -58,7 +62,7 @@ export async function getComposerDraft(userId: string): Promise<{
 
   return {
     draft: (data.draft as Partial<ComposerDraft>) ?? {},
-    currentStep: (data.current_step as ComposerWizardStep) ?? 'intake',
+    currentStep: normalizeWizardStep(data.current_step),
     plannerProfile: plannerParsed?.success ? plannerParsed.data : null,
   };
 }

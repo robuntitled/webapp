@@ -22,6 +22,7 @@ import { BudgetPanel } from '@/components/composer/plan/BudgetPanel';
 import { ComposerPlanToolbar, type PlanViewMode } from '@/components/composer/plan/ComposerPlanToolbar';
 import { DaySelector } from '@/components/composer/plan/DaySelector';
 import { DayTimeline } from '@/components/composer/plan/DayTimeline';
+import { DayNotesField } from '@/components/composer/plan/DayNotesField';
 import { DayToolsBar } from '@/components/composer/plan/DayToolsBar';
 import { PlanStatsBar } from '@/components/composer/plan/PlanStatsBar';
 import { SlotFocusView } from '@/components/composer/plan/SlotFocusView';
@@ -34,7 +35,7 @@ import type {
   ComposerDraft,
   ComposerGenerateResponse,
 } from '@/types/composer';
-import { ExternalLink, Hotel, Map as MapIcon, Plane, Sparkles } from 'lucide-react';
+import { BookOpen, ExternalLink, Map as MapIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -56,7 +57,7 @@ export function ComposerPlanStep({
   const [activeDayIndex, setActiveDayIndex] = useState(1);
   const [editingBlock, setEditingBlock] = useState<ComposerBlock | null>(null);
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<PlanViewMode>('focus');
+  const [viewMode, setViewMode] = useState<PlanViewMode>('split');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot>('morning');
 
   const activeDay = draft.days.find((d) => d.dayIndex === activeDayIndex) ?? draft.days[0];
@@ -326,8 +327,8 @@ export function ComposerPlanStep({
                         placeholder="Titolo della giornata..."
                       />
                       <p className="text-xs text-white/45 flex items-center gap-1.5">
-                        <Sparkles className="h-3 w-3 text-accent/60" />
-                        {formatComposerDayLabel(activeDay.date, activeDay.dayIndex)}
+                        <BookOpen className="h-3 w-3 text-accent/60" />
+                        Pagina {activeDay.dayIndex} · {formatComposerDayLabel(activeDay.date, activeDay.dayIndex)}
                       </p>
                     </div>
                   </div>
@@ -346,6 +347,16 @@ export function ComposerPlanStep({
                   </div>
                 </div>
               </div>
+
+              <DayNotesField
+                value={activeDay.notes ?? ''}
+                onChange={(notes) =>
+                  updateDay(activeDay.dayIndex, (d) => ({
+                    ...d,
+                    notes: notes || undefined,
+                  }))
+                }
+              />
 
               <div className="composer-glass rounded-2xl p-4 shrink-0">
                 <BlockPalette
@@ -370,12 +381,12 @@ export function ComposerPlanStep({
                       ✨
                     </motion.div>
                     <p className="font-display text-2xl font-semibold text-white">
-                      Pianifica come i pro
+                      Scrivi questa pagina
                     </p>
                     <p className="text-sm text-white/45 mt-3 max-w-sm mx-auto leading-relaxed">
                       Tocca <strong className="text-white/70">Suggerisci giornata ✨</strong>{' '}
-                      per itinerario Smart o Gemini AI, oppure usa template e
-                      palette manuale.
+                      per un itinerario AI, oppure aggiungi tappe a mano. Voli e hotel
+                      li scegli dopo, alla fine del libro.
                     </p>
                   </motion.div>
                 ) : (
@@ -458,45 +469,9 @@ export function ComposerPlanStep({
                 )}
               </div>
 
-              <div className="composer-glass rounded-2xl p-3 space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35 px-1">
-                  Aggiungi al piano
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-9 rounded-xl text-xs border-sky-400/30 text-sky-100 hover:bg-sky-500/10"
-                    onClick={() =>
-                      addBlock(
-                        'flight',
-                        {
-                          title: draft.organizerOrigin
-                            ? `Volo ${draft.organizerOrigin.iata}`
-                            : 'Volo',
-                          origin: draft.organizerOrigin?.iata,
-                          originLabel: draft.organizerOrigin?.city,
-                        },
-                        'morning'
-                      )
-                    }
-                  >
-                    <Plane className="mr-1.5 h-3.5 w-3.5" />
-                    Volo
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-9 rounded-xl text-xs border-violet-400/30 text-violet-100 hover:bg-violet-500/10"
-                    onClick={() => addBlock('hotel', { title: 'Hotel' }, 'night')}
-                  >
-                    <Hotel className="mr-1.5 h-3.5 w-3.5" />
-                    Hotel
-                  </Button>
-                </div>
-              </div>
+              <p className="text-[11px] text-white/35 px-1 leading-relaxed">
+                Voli e hotel li aggiungi in fase di prenotazione, dopo aver pubblicato il viaggio.
+              </p>
 
               <WeatherStrip draft={draft} activeDayIndex={activeDayIndex} />
               <BudgetPanel days={draft.days} activeDayIndex={activeDayIndex} />

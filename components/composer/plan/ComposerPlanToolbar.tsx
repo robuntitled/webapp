@@ -54,17 +54,17 @@ export function ComposerPlanToolbar({
             className="rounded-full text-white/70 hover:text-white hover:bg-white/10 shrink-0 h-9"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Meta</span>
+            <span className="hidden sm:inline ml-1">Inizio</span>
           </Button>
 
           <div className="flex-1 min-w-0 flex items-center gap-2 justify-center">
             <div className="hidden sm:flex items-center gap-2">
-              <span className="h-1.5 w-6 rounded-full bg-accent/60" />
+              <span className="h-1.5 w-4 rounded-full bg-accent/60" />
               <span className="h-1.5 w-8 rounded-full bg-accent" />
               <span className="h-1.5 w-4 rounded-full bg-white/15" />
             </div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40 sm:ml-2">
-              Step 2 · Componi
+              Step 2 di 3 · Componi
             </p>
           </div>
 

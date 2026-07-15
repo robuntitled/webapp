@@ -5,11 +5,11 @@ import {
   deleteComposerDraft,
   getComposerDraft,
   upsertComposerDraft,
-  type ComposerWizardStep,
 } from '@/lib/data/planner-profile';
+import { normalizeWizardStep } from '@/lib/composer/wizard-steps';
 import { plannerProfileSchema } from '@/lib/validations/planner';
 
-const stepEnum = z.enum(['intake', 'setup', 'plan', 'review']);
+const stepEnum = z.enum(['landing', 'plan', 'review', 'intake', 'setup']);
 
 const saveSchema = z.object({
   draft: z.record(z.string(), z.unknown()).optional(),
@@ -24,7 +24,9 @@ export async function GET() {
   }
 
   const saved = await getComposerDraft(session.user.id);
-  return NextResponse.json(saved ?? { draft: {}, currentStep: 'intake', plannerProfile: null });
+  return NextResponse.json(
+    saved ?? { draft: {}, currentStep: 'landing', plannerProfile: null }
+  );
 }
 
 export async function PUT(request: Request) {
@@ -40,7 +42,7 @@ export async function PUT(request: Request) {
 
   await upsertComposerDraft(session.user.id, {
     draft: parsed.data.draft ?? {},
-    currentStep: parsed.data.currentStep as ComposerWizardStep,
+    currentStep: normalizeWizardStep(parsed.data.currentStep),
     plannerProfile: parsed.data.plannerProfile ?? undefined,
   });
 
