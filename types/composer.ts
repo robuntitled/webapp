@@ -33,6 +33,8 @@ export type ComposerDay = {
   dayIndex: number;
   date: string;
   title: string;
+  /** Promemoria liberi per la giornata (metafora "pagina del libro") */
+  notes?: string;
   blocks: ComposerBlock[];
 };
 
@@ -71,6 +73,8 @@ export type ComposerDraft = {
   crewOrigins?: ComposerOrigin[];
   /** Profilo intake — persistito su Supabase, usato dall'LLM */
   plannerProfile?: PlannerProfile;
+  /** Budget indicativo opzionale (landing) */
+  budgetHint?: number;
   days: ComposerDay[];
 };
 

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DayTracker } from '@/components/composer/plan/DayTracker';
 import { DayTimeline } from '@/components/composer/plan/DayTimeline';
+import { DayNotesField } from '@/components/composer/plan/DayNotesField';
 import { CustomStopForm, type CustomStopPayload } from '@/components/composer/plan/CustomStopForm';
 import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
 import { BLOCK_META } from '@/lib/composer/blocks';
@@ -35,6 +36,7 @@ type DayControlPanelProps = {
   onNextDay: () => void;
   hasNextDay: boolean;
   onUpdateDayTitle: (title: string) => void;
+  onUpdateDayNotes: (notes: string) => void;
   onAddQuickType: (type: ComposerBlockType) => void;
   onAddCustomStop: (payload: CustomStopPayload) => void;
   onEditBlock: (block: ComposerBlock) => void;
@@ -59,6 +61,7 @@ export function DayControlPanel({
   onNextDay,
   hasNextDay,
   onUpdateDayTitle,
+  onUpdateDayNotes,
   onAddQuickType,
   onAddCustomStop,
   onEditBlock,
@@ -155,6 +158,13 @@ export function DayControlPanel({
             open={customOpen}
             onOpenChange={setCustomOpen}
             onSubmit={onAddCustomStop}
+          />
+        </div>
+
+        <div className="composer-glass rounded-2xl p-3">
+          <DayNotesField
+            value={activeDay.notes ?? ''}
+            onChange={onUpdateDayNotes}
           />
         </div>
       </div>

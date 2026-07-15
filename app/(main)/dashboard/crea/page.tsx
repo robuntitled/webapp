@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { TripComposer } from '@/components/composer/TripComposer';
 import { getComposerDraft, getPlannerProfile } from '@/lib/data/planner-profile';
 import { getUserProfile } from '@/lib/data/users';
+import { normalizeWizardStep } from '@/lib/composer/wizard-steps';
 
 export default async function CreateTripPage() {
   const session = await auth();
@@ -16,10 +17,9 @@ export default async function CreateTripPage() {
     getComposerDraft(session.user.id),
   ]);
 
-  const hasCompletePlanner =
-    plannerProfile &&
-    plannerProfile.interests.length > 0 &&
-    savedDraft?.currentStep !== 'intake';
+  const initialStep = savedDraft?.currentStep
+    ? normalizeWizardStep(savedDraft.currentStep)
+    : 'landing';
 
   return (
     <TripComposer
@@ -27,13 +27,7 @@ export default async function CreateTripPage() {
       profileCountry={profile?.country}
       initialPlannerProfile={plannerProfile ?? savedDraft?.plannerProfile ?? null}
       initialDraft={savedDraft?.draft ?? null}
-      initialStep={
-        hasCompletePlanner
-          ? savedDraft?.currentStep ?? 'setup'
-          : plannerProfile
-            ? 'setup'
-            : 'intake'
-      }
+      initialStep={initialStep}
     />
   );
 }

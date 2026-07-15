@@ -34,7 +34,7 @@ export function ComposerReviewStep({
       className="container mx-auto px-4 py-8 max-w-3xl space-y-8"
     >
       <div className="text-center space-y-3">
-        <p className="text-accent text-sm uppercase tracking-widest font-medium">Step 3 · Decollo</p>
+        <p className="text-accent text-sm uppercase tracking-widest font-medium">Step 3 di 3 · Pubblica</p>
         <h2 className="font-display text-3xl md:text-4xl font-semibold text-white">
           Pronto a lanciare &quot;{draft.title}&quot;?
         </h2>

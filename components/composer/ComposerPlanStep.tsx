@@ -272,6 +272,12 @@ export function ComposerPlanStep({
               onUpdateDayTitle={(title) =>
                 updateDay(activeDay.dayIndex, (d) => ({ ...d, title }))
               }
+              onUpdateDayNotes={(notes) =>
+                updateDay(activeDay.dayIndex, (d) => ({
+                  ...d,
+                  notes: notes || undefined,
+                }))
+              }
               onAddQuickType={(type) => addBlock(type)}
               onAddCustomStop={addCustomStop}
               onEditBlock={setEditingBlock}
