@@ -17,6 +17,9 @@
     "db:chat": "node scripts/apply-chat.mjs",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",
+    "db:apply-all": "node scripts/db-apply-all.mjs",
+    "db:exec": "node scripts/db-exec.mjs",
+    "db:status": "node scripts/db-status.mjs",
     "deploy:vercel": "node scripts/vercel-deploy.mjs"
   },
   "dependencies": {
