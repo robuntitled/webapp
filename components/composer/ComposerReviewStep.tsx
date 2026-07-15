@@ -31,7 +31,7 @@ export function ComposerReviewStep({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="container mx-auto px-4 py-8 max-w-3xl space-y-8"
+      className="container mx-auto px-4 py-8 pb-28 max-w-3xl space-y-8"
     >
       <div className="text-center space-y-3">
         <p className="text-accent text-sm uppercase tracking-widest font-medium">Step 3 di 3 · Pubblica</p>

@@ -220,7 +220,7 @@ export function ComposerPlanStep({
   if (!activeDay) return null;
 
   return (
-    <div className="composer-workspace flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="composer-workspace flex flex-col min-h-[calc(100vh-4rem)] pb-20">
       <header className="sticky top-16 z-30 composer-plan-toolbar border-b border-white/8 shrink-0">
         <div className="px-4 md:px-6 py-3 flex items-center gap-3">
           <Button
@@ -231,7 +231,7 @@ export function ComposerPlanStep({
             className="rounded-full text-white/70 hover:text-white hover:bg-white/10 shrink-0 h-9"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Meta</span>
+            <span className="hidden sm:inline ml-1">Inizio</span>
           </Button>
 
           <div className="flex-1 min-w-0 text-center">
