@@ -141,20 +141,16 @@ export function TripComposer({
   const stepIndex = WIZARD_STEPS.indexOf(step);
 
   return (
-    <div
-      className={`relative flex h-full min-h-0 flex-col overflow-hidden ${
-        step === 'plan' ? 'bg-[#f4f7fa]' : 'composer-shell'
-      }`}
-    >
-      {step !== 'plan' && <div className="composer-aurora" aria-hidden />}
+    <div className="composer-shell min-h-[calc(100vh-4rem)] relative overflow-hidden">
+      <div className="composer-aurora" aria-hidden />
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+      <div className="relative z-10">
         {step !== 'plan' && (
-          <div className="container mx-auto flex items-center justify-between gap-4 px-4 pt-6">
+          <div className="container mx-auto px-4 pt-6 flex items-center justify-between gap-4">
             <Button
               asChild
               variant="ghost"
-              className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+              className="text-white/70 hover:text-white hover:bg-white/10 rounded-full"
             >
               <Link href="/dashboard/miei-viaggi">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -185,7 +181,7 @@ export function TripComposer({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="container mx-auto flex-1 overflow-y-auto px-4 py-8"
+              className="container mx-auto px-4 py-8"
             >
               <ComposerLandingStep
                 draft={draft}
@@ -196,13 +192,7 @@ export function TripComposer({
           )}
 
           {step === 'plan' && (
-            <motion.div
-              key="plan"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex min-h-0 flex-1 flex-col overflow-hidden"
-            >
+            <motion.div key="plan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ComposerPlanStep
                 draft={{ ...draft, plannerProfile }}
                 onChangeDays={(days: ComposerDay[]) => patchDraft({ days })}
@@ -214,13 +204,7 @@ export function TripComposer({
           )}
 
           {step === 'review' && (
-            <motion.div
-              key="review"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex-1 overflow-y-auto"
-            >
+            <motion.div key="review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ComposerReviewStep
                 draft={{ ...draft, plannerProfile }}
                 publishing={publishing}

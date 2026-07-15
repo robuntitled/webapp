@@ -428,6 +428,103 @@
       oklch(0.14 0.04 250);
   }
 
+  .composer-page-shell {
+    background: #f4f7fa;
+  }
+
+  .plan-v2-itinerary {
+    background: #f4f7fa;
+  }
+
+  .plan-v2-day-pill {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-width: 5.25rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 9999px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+  }
+
+  .plan-v2-day-pill:hover {
+    border-color: #cbd5e1;
+    color: #334155;
+  }
+
+  .plan-v2-day-pill-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .plan-v2-day-pill-active {
+    background: #0ea5e9;
+    border-color: #0ea5e9;
+    color: #fff;
+    box-shadow: 0 4px 14px rgb(14 165 233 / 25%);
+  }
+
+  .plan-v2-day-pill-active span {
+    color: inherit;
+    opacity: 0.9;
+  }
+
+  .plan-v2-day-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    border: 1px dashed #cbd5e1;
+    color: #94a3b8;
+    background: #fff;
+    transition: all 0.2s ease;
+  }
+
+  .plan-v2-day-add:hover {
+    border-color: #0ea5e9;
+    color: #0284c7;
+    background: #f0f9ff;
+  }
+
+  .plan-v2-stop-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 1rem;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .plan-v2-stop-card:hover {
+    border-color: #bae6fd;
+    box-shadow: 0 6px 18px rgb(15 23 42 / 6%);
+  }
+
+  .plan-v2-stop-card-active {
+    border-color: #7dd3fc;
+    box-shadow: 0 0 0 3px rgb(14 165 233 / 12%);
+  }
+
+  .rl-trip-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .plan-v2-modal [data-slot='dialog-close'] {
+    display: none;
+  }
+
   .composer-control-panel,
   .composer-map-panel {
     min-height: 0;

@@ -1,28 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { BlockEditorPanel } from '@/components/composer/BlockEditorPanel';
-import { DayControlPanel } from '@/components/composer/plan/DayControlPanel';
-import { ComposerMapPanel } from '@/components/composer/plan/ComposerMapPanel';
-import type { CustomStopPayload } from '@/components/composer/plan/CustomStopForm';
+import { ComposerWorkspace } from '@/components/composer/plan-v2/ComposerWorkspace';
+import {
+  AddActivityModal,
+  type AddActivityPayload,
+} from '@/components/composer/plan-v2/AddActivityModal';
+import type { DayTrackerSelection } from '@/components/composer/plan-v2/DayTracker';
 import { createEmptyBlock } from '@/lib/composer/blocks';
-import { duplicateBlock } from '@/lib/composer/planning';
 import {
   appendComposerDay,
   endDateFromDays,
   removeComposerDay,
 } from '@/lib/composer/days';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
-import type { TimeSlot } from '@/lib/composer/time-slots';
+import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type {
   ComposerBlock,
-  ComposerBlockType,
   ComposerDay,
   ComposerDraft,
-  ComposerGenerateResponse,
 } from '@/types/composer';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ComposerPlanStepProps = {
@@ -40,22 +38,31 @@ export function ComposerPlanStep({
   onBack,
   onReview,
 }: ComposerPlanStepProps) {
-  const [activeDayIndex, setActiveDayIndex] = useState(1);
+  const [selection, setSelection] = useState<DayTrackerSelection>(1);
   const [editingBlock, setEditingBlock] = useState<ComposerBlock | null>(null);
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
+  const [mapMode, setMapMode] = useState<MapViewMode>('day');
+  const [addOpen, setAddOpen] = useState(false);
 
-  const activeDay = draft.days.find((d) => d.dayIndex === activeDayIndex) ?? draft.days[0];
-  const hasNextDay = draft.days.some((d) => d.dayIndex === activeDayIndex + 1);
+  const activeDayIndex = selection === 'overview' ? draft.days[0]?.dayIndex ?? 1 : selection;
+  const activeDay =
+    selection === 'overview'
+      ? null
+      : (draft.days.find((d) => d.dayIndex === selection) ?? draft.days[0] ?? null);
+
+  const hasNextDay =
+    selection !== 'overview' && draft.days.some((d) => d.dayIndex === selection + 1);
   const totalBlocks = draft.days.reduce((n, d) => n + d.blocks.length, 0);
 
-  const pins = useMemo(
-    () =>
-      buildPinsFromDraft(draft, {
-        activeDayIndex,
-        dayFilter: activeDayIndex,
-      }),
-    [draft, activeDayIndex]
-  );
+  const pins = useMemo(() => {
+    if (mapMode === 'fullTrip' || selection === 'overview') {
+      return buildPinsFromDraft(draft, { activeDayIndex });
+    }
+    return buildPinsFromDraft(draft, {
+      activeDayIndex,
+      dayFilter: activeDayIndex,
+    });
+  }, [draft, mapMode, selection, activeDayIndex]);
 
   const updateDay = (dayIndex: number, updater: (day: ComposerDay) => ComposerDay) => {
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
@@ -72,7 +79,8 @@ export function ComposerPlanStep({
   const addDay = () => {
     const days = appendComposerDay(draft.days);
     commitDays(days);
-    setActiveDayIndex(days[days.length - 1].dayIndex);
+    setSelection(days[days.length - 1].dayIndex);
+    setMapMode('day');
     toast.success(`Giorno ${days.length} aggiunto`);
   };
 
@@ -83,60 +91,62 @@ export function ComposerPlanStep({
     }
     const days = removeComposerDay(draft.days, dayIndex);
     commitDays(days);
-    setActiveDayIndex((prev) => Math.min(prev, days.length));
+    setSelection((prev) => {
+      if (prev === 'overview') return 'overview';
+      return Math.min(prev, days.length);
+    });
     toast.message('Giorno rimosso');
   };
 
   const goToNextDay = () => {
+    if (selection === 'overview') return;
     if (!hasNextDay) return;
-    setActiveDayIndex(activeDayIndex + 1);
+    setSelection(selection + 1);
     setHighlightedPinId(null);
+    setMapMode('day');
   };
 
-  const addBlock = (
-    type: ComposerBlockType,
-    extra?: Record<string, unknown>,
-    timeSlot?: TimeSlot
-  ) => {
-    if (!activeDay) return;
-    const block = createEmptyBlock(type, activeDay.blocks.length, {
-      timeSlot: timeSlot ?? 'flex',
-      ...extra,
-    });
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: [...d.blocks, block],
-    }));
-    setEditingBlock(block);
-    setHighlightedPinId(block.id);
+  const ensureActiveDay = (): ComposerDay | null => {
+    if (activeDay) return activeDay;
+    const first = draft.days[0];
+    if (first) {
+      setSelection(first.dayIndex);
+      return first;
+    }
+    return null;
   };
 
-  const addCustomStop = (payload: CustomStopPayload) => {
-    if (!activeDay) return;
-    const block = createEmptyBlock(payload.type, activeDay.blocks.length, {
+  const addActivity = (payload: AddActivityPayload) => {
+    const day = ensureActiveDay();
+    if (!day) return;
+    const block = createEmptyBlock(payload.type, day.blocks.length, {
       title: payload.title,
       place: payload.place,
-      notes: payload.note,
+      notes: payload.notes,
       time: payload.time,
+      duration: payload.duration,
       lat: payload.lat,
       lng: payload.lng,
       timeSlot: 'flex',
     });
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: [...d.blocks, block],
-    }));
+    updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
     setHighlightedPinId(block.id);
-    toast.success('Tappa aggiunta');
+    setMapMode('day');
+    toast.success('Attività aggiunta');
   };
 
   const addPinFromMap = (lat: number, lng: number) => {
-    addBlock('attraction', {
+    const day = ensureActiveDay();
+    if (!day) return;
+    const block = createEmptyBlock('attraction', day.blocks.length, {
       title: 'Nuova tappa',
       place: 'Segnata sulla mappa',
       lat,
       lng,
     });
+    updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
+    setEditingBlock(block);
+    setHighlightedPinId(block.id);
   };
 
   const updateBlock = (blockId: string, updater: (block: ComposerBlock) => ComposerBlock) => {
@@ -151,8 +161,9 @@ export function ComposerPlanStep({
   };
 
   const removeBlock = (blockId: string) => {
-    if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => ({
+    const day = activeDay ?? draft.days.find((d) => d.blocks.some((b) => b.id === blockId));
+    if (!day) return;
+    updateDay(day.dayIndex, (d) => ({
       ...d,
       blocks: d.blocks.filter((b) => b.id !== blockId),
     }));
@@ -160,157 +171,71 @@ export function ComposerPlanStep({
     if (highlightedPinId === blockId) setHighlightedPinId(null);
   };
 
-  const moveBlock = (index: number, direction: -1 | 1) => {
-    if (!activeDay) return;
-    const target = index + direction;
-    if (target < 0 || target >= activeDay.blocks.length) return;
-    const blocks = [...activeDay.blocks];
-    [blocks[index], blocks[target]] = [blocks[target], blocks[index]];
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
-    }));
-  };
-
-  const dragReorder = (fromIndex: number, toIndex: number) => {
-    if (!activeDay || fromIndex === toIndex) return;
-    const blocks = [...activeDay.blocks];
-    const [moved] = blocks.splice(fromIndex, 1);
-    blocks.splice(toIndex, 0, moved);
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
-    }));
-  };
-
-  const duplicateBlockInDay = (block: ComposerBlock) => {
-    if (!activeDay) return;
-    const copy = duplicateBlock(block, activeDay.blocks.length);
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: [...d.blocks, copy],
-    }));
-    toast.success('Blocco duplicato');
-  };
-
-  const applyGeneratedDay = (
-    response: ComposerGenerateResponse,
-    mode: 'replace' | 'append'
-  ) => {
-    if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => {
-      const blocks =
-        mode === 'replace'
-          ? response.blocks.map((b, i) => ({ ...b, sortOrder: i }))
-          : [
-              ...d.blocks,
-              ...response.blocks.map((b, i) => ({
-                ...b,
-                sortOrder: d.blocks.length + i,
-              })),
-            ];
-      return {
-        ...d,
-        title: mode === 'replace' ? response.suggestedTitle : d.title,
-        blocks,
-      };
-    });
-  };
-
-  if (!activeDay) return null;
-
   return (
-    <div className="composer-workspace flex flex-col min-h-[calc(100vh-4rem)]">
-      <header className="sticky top-16 z-30 composer-plan-toolbar border-b border-white/8 shrink-0">
-        <div className="px-4 md:px-6 py-3 flex items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="rounded-full text-white/70 hover:text-white hover:bg-white/10 shrink-0 h-9"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Meta</span>
-          </Button>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <ComposerWorkspace
+        draft={draft}
+        selection={selection}
+        activeDay={activeDay}
+        activeDayIndex={activeDayIndex}
+        pins={pins}
+        mapMode={mapMode}
+        highlightedPinId={highlightedPinId}
+        hasNextDay={hasNextDay}
+        canReview={totalBlocks > 0}
+        onSelect={(s) => {
+          setSelection(s);
+          setHighlightedPinId(null);
+          if (s === 'overview') setMapMode('fullTrip');
+          else setMapMode('day');
+        }}
+        onAddDay={addDay}
+        onRemoveDay={removeDay}
+        onNextDay={goToNextDay}
+        onToggleFullTrip={() =>
+          setMapMode((m) => (m === 'fullTrip' ? 'day' : 'fullTrip'))
+        }
+        onUpdateDayTitle={(title) => {
+          if (!activeDay) return;
+          updateDay(activeDay.dayIndex, (d) => ({ ...d, title }));
+        }}
+        onUpdateDayNotes={(notes) => {
+          if (!activeDay) return;
+          updateDay(activeDay.dayIndex, (d) => ({
+            ...d,
+            notes: notes || undefined,
+          }));
+        }}
+        onAddActivity={() => {
+          if (selection === 'overview' && draft.days[0]) {
+            setSelection(draft.days[0].dayIndex);
+          }
+          setAddOpen(true);
+        }}
+        onEditBlock={setEditingBlock}
+        onRemoveBlock={removeBlock}
+        onHoverBlock={setHighlightedPinId}
+        onPinClick={(pin) => {
+          if (pin.blockId) {
+            setSelection(pin.dayIndex);
+            setMapMode('day');
+            setHighlightedPinId(pin.blockId);
+            const day = draft.days.find((d) => d.dayIndex === pin.dayIndex);
+            const block = day?.blocks.find((b) => b.id === pin.blockId);
+            if (block) setEditingBlock(block);
+          }
+        }}
+        onMapClick={addPinFromMap}
+        onBack={onBack}
+        onReview={onReview}
+      />
 
-          <div className="flex-1 min-w-0 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
-              Composer · {draft.destinationMeta?.label ?? draft.destination}
-            </p>
-          </div>
-
-          <Button
-            type="button"
-            size="sm"
-            className="rounded-full shrink-0 shadow-lg shadow-accent/20 font-semibold"
-            onClick={onReview}
-            disabled={totalBlocks === 0}
-          >
-            <span className="hidden sm:inline">Rivedi</span>
-            <ChevronRight className="h-4 w-4 sm:ml-1" />
-          </Button>
-        </div>
-      </header>
-
-      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-0 xl:gap-0">
-        <div className="xl:col-span-5 2xl:col-span-4 border-b xl:border-b-0 xl:border-r border-white/8 min-h-0">
-          <div className="h-full max-h-[70vh] xl:max-h-none xl:h-[calc(100vh-8.5rem)] p-4 md:p-5">
-            <DayControlPanel
-              draft={draft}
-              activeDay={activeDay}
-              activeDayIndex={activeDayIndex}
-              highlightedPinId={highlightedPinId}
-              onSelectDay={(idx) => {
-                setActiveDayIndex(idx);
-                setHighlightedPinId(null);
-              }}
-              onAddDay={addDay}
-              onRemoveDay={removeDay}
-              onNextDay={goToNextDay}
-              hasNextDay={hasNextDay}
-              onUpdateDayTitle={(title) =>
-                updateDay(activeDay.dayIndex, (d) => ({ ...d, title }))
-              }
-              onUpdateDayNotes={(notes) =>
-                updateDay(activeDay.dayIndex, (d) => ({
-                  ...d,
-                  notes: notes || undefined,
-                }))
-              }
-              onAddQuickType={(type) => addBlock(type)}
-              onAddCustomStop={addCustomStop}
-              onEditBlock={setEditingBlock}
-              onMoveBlock={moveBlock}
-              onDuplicateBlock={duplicateBlockInDay}
-              onHoverBlock={setHighlightedPinId}
-              onDragReorder={dragReorder}
-              onApplyGeneratedDay={applyGeneratedDay}
-            />
-          </div>
-        </div>
-
-        <div className="xl:col-span-7 2xl:col-span-8 min-h-0 p-4 md:p-5">
-          <div className="h-[420px] xl:h-[calc(100vh-8.5rem)]">
-            <ComposerMapPanel
-              draft={draft}
-              pins={pins}
-              activeDayIndex={activeDayIndex}
-              highlightedPinId={highlightedPinId}
-              onPinClick={(pin) => {
-                if (pin.blockId) {
-                  setActiveDayIndex(pin.dayIndex);
-                  setHighlightedPinId(pin.blockId);
-                  const day = draft.days.find((d) => d.dayIndex === pin.dayIndex);
-                  const block = day?.blocks.find((b) => b.id === pin.blockId);
-                  if (block) setEditingBlock(block);
-                }
-              }}
-              onMapClick={addPinFromMap}
-            />
-          </div>
-        </div>
-      </div>
+      <AddActivityModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        draft={draft}
+        onConfirm={addActivity}
+      />
 
       <BlockEditorPanel
         block={editingBlock}
