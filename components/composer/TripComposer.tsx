@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { ComposerAssistantDock } from '@/components/composer/ComposerAssistantDock';
 import { ComposerLandingStep } from '@/components/composer/ComposerLandingStep';
 import { ComposerPlanStep } from '@/components/composer/ComposerPlanStep';
 import { ComposerReviewStep } from '@/components/composer/ComposerReviewStep';
@@ -231,6 +232,12 @@ export function TripComposer({
           )}
         </AnimatePresence>
       </div>
+
+      <ComposerAssistantDock
+        draft={{ ...draft, plannerProfile }}
+        step={step}
+        plannerProfile={plannerProfile}
+      />
     </div>
   );
 }

@@ -138,6 +138,76 @@
     border: 1px solid oklch(1 0 0 / 12%);
   }
 
+  /** Pannello solido ad alto contrasto — preferito per form e chat */
+  .composer-panel {
+    background: oklch(0.2 0.03 250 / 95%);
+    border: 1px solid oklch(1 0 0 / 18%);
+    box-shadow: 0 24px 48px oklch(0 0 0 / 35%);
+  }
+
+  .composer-field {
+    background: oklch(0.16 0.03 250);
+    border-color: oklch(1 0 0 / 20%);
+  }
+
+  .composer-field:focus-visible {
+    border-color: oklch(0.68 0.16 45 / 55%);
+    box-shadow: 0 0 0 2px oklch(0.68 0.16 45 / 20%);
+  }
+
+  .composer-segment {
+    background: oklch(0.16 0.03 250);
+    border: 1px solid oklch(1 0 0 / 12%);
+  }
+
+  .composer-segment-active {
+    background: white;
+    color: oklch(0.2 0.03 250);
+  }
+
+  .composer-destination-pill {
+    background: oklch(0.2 0.03 250 / 90%);
+    border: 1px solid oklch(1 0 0 / 15%);
+    border-radius: 1rem;
+  }
+
+  .composer-assistant-panel {
+    background: oklch(0.18 0.035 250 / 98%);
+    border: 1px solid oklch(1 0 0 / 20%);
+  }
+
+  .composer-assistant-header {
+    background: oklch(0.22 0.04 250);
+    border-bottom: 1px solid oklch(1 0 0 / 12%);
+  }
+
+  .composer-assistant-bubble-user {
+    background: oklch(0.55 0.14 45);
+  }
+
+  .composer-assistant-bubble-bot {
+    background: oklch(0.26 0.03 250);
+    border: 1px solid oklch(1 0 0 / 10%);
+  }
+
+  .composer-assistant-chip {
+    background: oklch(1 0 0 / 8%);
+    border: 1px solid oklch(1 0 0 / 12%);
+  }
+
+  .composer-assistant-chip:hover {
+    background: oklch(1 0 0 / 14%);
+  }
+
+  .composer-assistant-fab {
+    background: oklch(0.55 0.14 45);
+    color: white;
+  }
+
+  .composer-assistant-fab:hover {
+    background: oklch(0.6 0.15 45);
+  }
+
   .composer-block {
     backdrop-filter: blur(8px);
   }
