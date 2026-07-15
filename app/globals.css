@@ -208,6 +208,102 @@
     background: oklch(0.6 0.15 45);
   }
 
+  /* Hub viaggi — container cliccabili + pannello lista */
+  .hub-category-card {
+    border: 1px solid oklch(1 0 0 / 12%);
+    background: oklch(1 0 0 / 5%);
+    backdrop-filter: blur(12px);
+  }
+
+  .hub-category-card:hover {
+    background: oklch(1 0 0 / 9%);
+    border-color: oklch(1 0 0 / 18%);
+  }
+
+  .hub-category-idle {
+    cursor: pointer;
+  }
+
+  .hub-category-active {
+    border-color: oklch(1 0 0 / 28%);
+    background: oklch(1 0 0 / 12%);
+    box-shadow: 0 12px 40px oklch(0 0 0 / 25%);
+    transform: translateY(-1px);
+  }
+
+  .hub-accent-amber.hub-category-active {
+    border-color: oklch(0.75 0.14 75 / 45%);
+    background: linear-gradient(145deg, oklch(0.55 0.12 75 / 22%), oklch(1 0 0 / 8%));
+  }
+
+  .hub-accent-sky.hub-category-active {
+    border-color: oklch(0.65 0.12 230 / 45%);
+    background: linear-gradient(145deg, oklch(0.5 0.1 230 / 22%), oklch(1 0 0 / 8%));
+  }
+
+  .hub-accent-teal.hub-category-active {
+    border-color: oklch(0.7 0.1 180 / 45%);
+    background: linear-gradient(145deg, oklch(0.55 0.09 180 / 22%), oklch(1 0 0 / 8%));
+  }
+
+  .hub-category-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 0.75rem;
+    background: oklch(1 0 0 / 8%);
+    color: oklch(1 0 0 / 65%);
+  }
+
+  .hub-category-icon-active {
+    background: oklch(1 0 0 / 18%);
+    color: white;
+  }
+
+  .hub-panel {
+    background: oklch(0.99 0.005 250);
+    border: 1px solid oklch(0.9 0.01 250);
+    box-shadow: 0 24px 64px oklch(0 0 0 / 18%);
+  }
+
+  .hub-panel-header {
+    background: oklch(0.98 0.005 250);
+  }
+
+  .hub-panel-header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.75rem;
+    width: 2.75rem;
+    border-radius: 0.875rem;
+    background: oklch(0.94 0.02 250);
+  }
+
+  .hub-list-item {
+    transition: background-color 0.15s ease;
+  }
+
+  .hub-list-item:hover {
+    background: oklch(0.96 0.01 250);
+  }
+
+  .hub-list-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 3rem;
+    width: 3rem;
+    border-radius: 0.875rem;
+  }
+
+  .hub-icon-amber {
+    background: oklch(0.92 0.06 85);
+    color: oklch(0.55 0.14 75);
+  }
+
   .composer-block {
     backdrop-filter: blur(8px);
   }
