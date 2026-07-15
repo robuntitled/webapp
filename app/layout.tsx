@@ -6,6 +6,7 @@ import { Providers } from '@/app/providers';
 import { auth } from '@/auth';
 import { CookieBanner } from '@/components/legal/CookieBanner';
 import { Footer } from '@/components/layout/Footer';
+import { getCompanyProfile } from '@/lib/privacy/company';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -32,6 +33,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
+  const company = getCompanyProfile();
 
   return (
     <html lang="it">
@@ -39,7 +41,7 @@ export default async function RootLayout({
         <Providers session={session}>
           <div className="flex min-h-dvh flex-col">
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-            <Footer />
+            <Footer company={company} />
           </div>
           <CookieBanner />
           <Toaster richColors position="top-right" />

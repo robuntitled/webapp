@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getCompanyProfile } from '@/lib/privacy/company';
+import type { CompanyProfile } from '@/lib/privacy/company';
 
-export function Footer() {
-  const company = getCompanyProfile();
+type FooterProps = {
+  company: CompanyProfile;
+};
+
+export function Footer({ company }: FooterProps) {
 
   return (
     <footer className="border-t bg-primary text-primary-foreground mt-auto">
