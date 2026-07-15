@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Providers } from '@/app/providers';
 import { auth } from '@/auth';
 import { CookieBanner } from '@/components/legal/CookieBanner';
-import { ConditionalFooter } from '@/components/layout/ConditionalFooter';
+import { Footer } from '@/components/layout/Footer';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -39,7 +39,7 @@ export default async function RootLayout({
         <Providers session={session}>
           <div className="flex min-h-dvh flex-col">
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-            <ConditionalFooter />
+            <Footer />
           </div>
           <CookieBanner />
           <Toaster richColors position="top-right" />

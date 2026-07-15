@@ -502,6 +502,12 @@
     background: #f4f7fa;
   }
 
+  /* Full-viewport composer: hide site footer without client-importing server Footer */
+  body:has(.composer-page-shell) > div > footer,
+  body:has(.composer-page-shell) footer {
+    display: none;
+  }
+
   .plan-v2-itinerary {
     background: #f4f7fa;
   }
