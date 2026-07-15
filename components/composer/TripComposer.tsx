@@ -39,12 +39,15 @@ type TripComposerProps = {
   initialPlannerProfile?: PlannerProfile | null;
   initialDraft?: Partial<ComposerDraft> | null;
   initialStep?: ComposerWizardStep;
+  /** true solo quando si riprende da I miei viaggi → Bozze */
+  resumeDraft?: boolean;
 };
 
 export function TripComposer({
   initialPlannerProfile,
   initialDraft,
   initialStep = 'landing',
+  resumeDraft = false,
 }: TripComposerProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState<ComposerWizardStep>(initialStep);
@@ -59,7 +62,26 @@ export function TripComposer({
     draft.plannerProfile ?? initialPlannerProfile ?? EMPTY_PLANNER_PROFILE;
 
   useEffect(() => {
-    if (initialDraft?.destination) return;
+    if (!resumeDraft) {
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+
+    if (initialDraft?.destination) {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ ...EMPTY_DRAFT, ...initialDraft, plannerProfile: initialPlannerProfile })
+        );
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
 
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -72,7 +94,7 @@ export function TripComposer({
     } catch {
       /* ignore */
     }
-  }, [initialDraft?.destination]);
+  }, [resumeDraft, initialDraft, initialPlannerProfile]);
 
   const scheduleCloudSave = useCallback(
     (nextDraft: ComposerDraft, nextStep: ComposerWizardStep, profile: PlannerProfile) => {
@@ -150,6 +172,14 @@ export function TripComposer({
       {step !== 'plan' && <div className="composer-aurora" aria-hidden />}
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        {resumeDraft && draft.destination && step !== 'plan' && (
+          <div className="container mx-auto px-4 pt-4">
+            <p className="rounded-full border border-amber-400/20 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-200/80">
+              Stai riprendendo una bozza salvata — da &quot;I miei viaggi → Bozze&quot;
+            </p>
+          </div>
+        )}
+
         {step !== 'plan' && (
           <div className="container mx-auto flex items-center justify-between gap-4 px-4 pt-6">
             <Button

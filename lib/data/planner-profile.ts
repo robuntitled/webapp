@@ -47,10 +47,11 @@ export async function getComposerDraft(userId: string): Promise<{
   draft: Partial<ComposerDraft>;
   currentStep: ComposerWizardStep;
   plannerProfile: PlannerProfile | null;
+  updatedAt: string | null;
 } | null> {
   const { data, error } = await supabaseAdmin
     .from('composer_drafts')
-    .select('draft, current_step, planner_profile')
+    .select('draft, current_step, planner_profile, updated_at')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -64,6 +65,7 @@ export async function getComposerDraft(userId: string): Promise<{
     draft: (data.draft as Partial<ComposerDraft>) ?? {},
     currentStep: normalizeWizardStep(data.current_step),
     plannerProfile: plannerParsed?.success ? plannerParsed.data : null,
+    updatedAt: data.updated_at ?? null,
   };
 }
 
