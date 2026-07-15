@@ -1,7 +1,10 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { fetchCreatedTrips, fetchJoinedTrips } from '@/lib/data/trips';
+import { getComposerDraft } from '@/lib/data/planner-profile';
+import { isMeaningfulComposerDraft } from '@/lib/composer/draft-utils';
 import { TripManagementCard } from '@/components/trips/TripManagementCard';
+import { ComposerDraftCard } from '@/components/composer/ComposerDraftCard';
 import Link from 'next/link';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
@@ -18,10 +21,14 @@ export default async function MyTripsPage() {
 
   const userId = session.user.id;
 
-  const [createdTrips, joinedTrips] = await Promise.all([
+  const [createdTrips, joinedTrips, composerDraft] = await Promise.all([
     fetchCreatedTrips(userId),
     fetchJoinedTrips(userId),
+    getComposerDraft(userId),
   ]);
+
+  const hasDraft =
+    composerDraft && isMeaningfulComposerDraft(composerDraft.draft);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)]">
@@ -51,6 +58,25 @@ export default async function MyTripsPage() {
             </Link>
           </Button>
         </div>
+
+        {hasDraft && (
+          <section className="mb-14">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-2xl">📝</span>
+              <div>
+                <h2 className="font-display text-2xl font-semibold text-white">Bozze</h2>
+                <p className="text-sm text-white/60">
+                  Viaggi non ancora pubblicati — riprendi da dove avevi lasciato.
+                </p>
+              </div>
+            </div>
+            <ComposerDraftCard
+              draft={composerDraft!.draft}
+              currentStep={composerDraft!.currentStep}
+              updatedAt={composerDraft!.updatedAt}
+            />
+          </section>
+        )}
 
         <section className="mb-14">
           <div className="flex items-center gap-3 mb-6">

@@ -3,13 +3,20 @@ import { redirect } from 'next/navigation';
 import { TripComposer } from '@/components/composer/TripComposer';
 import { getComposerDraft, getPlannerProfile } from '@/lib/data/planner-profile';
 import { getUserProfile } from '@/lib/data/users';
-import { normalizeWizardStep } from '@/lib/composer/wizard-steps';
+import { isMeaningfulComposerDraft } from '@/lib/composer/draft-utils';
 
-export default async function CreateTripPage() {
+type CreateTripPageProps = {
+  searchParams: Promise<{ resume?: string }>;
+};
+
+export default async function CreateTripPage({ searchParams }: CreateTripPageProps) {
   const session = await auth();
   if (!session?.user) {
     redirect('/');
   }
+
+  const params = await searchParams;
+  const resume = params.resume === '1' || params.resume === 'true';
 
   const [profile, plannerProfile, savedDraft] = await Promise.all([
     getUserProfile(session.user.id),
@@ -17,17 +24,22 @@ export default async function CreateTripPage() {
     getComposerDraft(session.user.id),
   ]);
 
-  const initialStep = savedDraft?.currentStep
-    ? normalizeWizardStep(savedDraft.currentStep)
-    : 'landing';
+  const canResume = Boolean(
+    resume && savedDraft && isMeaningfulComposerDraft(savedDraft.draft)
+  );
 
   return (
     <TripComposer
       profileCity={profile?.address_city}
       profileCountry={profile?.country}
-      initialPlannerProfile={plannerProfile ?? savedDraft?.plannerProfile ?? null}
-      initialDraft={savedDraft?.draft ?? null}
-      initialStep={initialStep}
+      initialPlannerProfile={
+        canResume
+          ? (plannerProfile ?? savedDraft?.plannerProfile ?? null)
+          : (plannerProfile ?? null)
+      }
+      initialDraft={canResume ? (savedDraft?.draft ?? null) : null}
+      initialStep={canResume ? savedDraft!.currentStep : 'landing'}
+      resumeDraft={canResume}
     />
   );
 }
