@@ -421,6 +421,89 @@
     box-shadow: 0 12px 40px oklch(0 0 0 / 30%);
   }
 
+  .composer-workspace {
+    background:
+      radial-gradient(ellipse 70% 45% at 10% 15%, oklch(0.45 0.1 220 / 22%), transparent),
+      radial-gradient(ellipse 50% 40% at 90% 80%, oklch(0.5 0.12 45 / 14%), transparent),
+      oklch(0.14 0.04 250);
+  }
+
+  .composer-control-panel,
+  .composer-map-panel {
+    min-height: 0;
+  }
+
+  .composer-day-track-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    min-width: 5.5rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 1rem;
+    background: oklch(1 0 0 / 4%);
+    border: 1px solid oklch(1 0 0 / 8%);
+    color: oklch(1 0 0 / 55%);
+    transition: all 0.25s ease;
+  }
+
+  .composer-day-track-pill:hover {
+    background: oklch(1 0 0 / 7%);
+    border-color: oklch(1 0 0 / 14%);
+    color: oklch(1 0 0 / 80%);
+  }
+
+  .composer-day-track-pill-active {
+    background: oklch(1 0 0 / 8%);
+    border-color: oklch(0.68 0.16 45 / 40%);
+    color: oklch(1 0 0 / 95%);
+    box-shadow: 0 4px 20px oklch(0.68 0.16 45 / 12%);
+  }
+
+  .composer-day-track-count {
+    margin-top: 0.15rem;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    background: oklch(0.68 0.16 45 / 18%);
+    color: oklch(0.78 0.14 45);
+  }
+
+  .composer-day-track-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 4.25rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 1rem;
+    border: 1px dashed oklch(1 0 0 / 15%);
+    color: oklch(1 0 0 / 45%);
+    transition: all 0.25s ease;
+  }
+
+  .composer-day-track-add:hover {
+    color: oklch(0.78 0.14 45);
+    border-color: oklch(0.68 0.16 45 / 40%);
+    background: oklch(0.68 0.16 45 / 6%);
+  }
+
+  .composer-custom-stop {
+    border-radius: 1rem;
+    background: oklch(1 0 0 / 4%);
+    border: 1px solid oklch(1 0 0 / 10%);
+  }
+
+  .composer-map-panel .composer-map-frame {
+    height: 100%;
+  }
+
+  .composer-map-panel .composer-map-frame > div {
+    height: 100%;
+  }
+
   @keyframes composer-fade-up {
     from {
       opacity: 0;
