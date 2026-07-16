@@ -10,7 +10,7 @@ export async function authorizeCredentials(
     .from('users')
     .select('id, email, first_name, last_name, image, hashedPassword')
     .eq('email', email)
-    .single();
+    .maybeSingle();
 
   if (!user?.hashedPassword) return null;
 

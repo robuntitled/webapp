@@ -7,9 +7,11 @@ import {
 } from '@/lib/auth-session';
 
 export const authConfig = {
+  trustHost: true,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/',
+    error: '/',
   },
   providers: [],
   callbacks: {

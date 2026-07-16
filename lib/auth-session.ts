@@ -20,33 +20,63 @@ export const GDPR_PUBLIC_PATHS = [
   '/completa-registrazione',
 ];
 
+function splitDisplayName(name?: string | null, email?: string | null) {
+  const trimmed = name?.trim();
+  if (trimmed) {
+    const parts = trimmed.split(/\s+/);
+    return {
+      firstName: parts[0] || 'Utente',
+      lastName: parts.slice(1).join(' '),
+    };
+  }
+  const local = email?.split('@')[0]?.trim();
+  return {
+    firstName: local || 'Utente',
+    lastName: '',
+  };
+}
+
 export async function handleOAuthSignIn(
   user: User,
   account?: Account | null
 ): Promise<boolean> {
   if (account?.provider === 'credentials') return true;
 
+  const email = user.email?.trim().toLowerCase();
+  if (!email) {
+    console.error('OAuth sign-in: email mancante dal provider', account?.provider);
+    return false;
+  }
+
   try {
-    const { data: existingUser } = await supabaseAdmin
+    const { data: existingUser, error: lookupError } = await supabaseAdmin
       .from('users')
       .select('id')
-      .eq('email', user.email!)
-      .single();
+      .eq('email', email)
+      .maybeSingle();
 
-    if (!existingUser && user.name) {
-      const nameParts = user.name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ');
+    if (lookupError) {
+      console.error('OAuth user lookup error:', lookupError);
+      return false;
+    }
 
-      await supabaseAdmin.from('users').insert({
-        email: user.email,
+    if (!existingUser) {
+      const { firstName, lastName } = splitDisplayName(user.name, email);
+      const { error: insertError } = await supabaseAdmin.from('users').insert({
+        email,
         image: user.image,
         first_name: firstName,
         last_name: lastName,
         privacy_consent: false,
         marketing_consent: false,
       });
+
+      if (insertError) {
+        console.error('OAuth user insert error:', insertError);
+        return false;
+      }
     }
+
     return true;
   } catch (error) {
     console.error('SignIn Callback Error:', error);
@@ -57,11 +87,16 @@ export async function handleOAuthSignIn(
 export async function populateJwtToken(token: JWT): Promise<JWT> {
   if (!token.email) return token;
 
-  const { data: dbUser } = await supabaseAdmin
+  const { data: dbUser, error } = await supabaseAdmin
     .from('users')
     .select('id, first_name, last_name, image, privacy_consent')
     .eq('email', token.email)
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    console.error('JWT populate user lookup error:', error);
+    return token;
+  }
 
   if (dbUser) {
     token.id = dbUser.id;

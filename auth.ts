@@ -5,16 +5,35 @@ import Facebook from 'next-auth/providers/facebook';
 import { authConfig } from '@/auth.config';
 import { authorizeCredentials } from '@/lib/auth-credentials';
 
+const googleId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID;
+const googleSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
+const facebookId = process.env.AUTH_FACEBOOK_ID ?? process.env.FACEBOOK_CLIENT_ID;
+const facebookSecret =
+  process.env.AUTH_FACEBOOK_SECRET ?? process.env.FACEBOOK_CLIENT_SECRET;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: googleId,
+      clientSecret: googleSecret,
+      authorization: {
+        params: {
+          prompt: 'select_account',
+          access_type: 'online',
+          response_type: 'code',
+        },
+      },
     }),
     Facebook({
-      clientId: process.env.FACEBOOK_CLIENT_ID,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      clientId: facebookId,
+      clientSecret: facebookSecret,
+      checks: ['state'],
+      authorization: {
+        params: {
+          scope: 'email public_profile',
+        },
+      },
     }),
     Credentials({
       name: 'Credentials',

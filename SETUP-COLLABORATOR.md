@@ -80,14 +80,44 @@ Apri [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 5. Login OAuth in locale
+## 5. Login OAuth (locale + produzione)
 
-Se Google/Facebook non funzionano in dev, il maintainer deve aggiungere nelle console OAuth:
+### Variabili Vercel (obbligatorie)
 
-| Provider | URI callback |
-|----------|----------------|
-| Google | `http://localhost:3000/api/auth/callback/google` |
-| Facebook | `http://localhost:3000/api/auth/callback/facebook` |
+```
+AUTH_SECRET=...
+AUTH_URL=https://webapp-bice-six-42.vercel.app
+AUTH_TRUST_HOST=true
+NEXT_PUBLIC_APP_URL=https://webapp-bice-six-42.vercel.app
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+FACEBOOK_CLIENT_ID=...
+FACEBOOK_CLIENT_SECRET=...
+```
+
+### URI callback da registrare
+
+| Provider | Locale | Produzione (Vercel) |
+|----------|--------|---------------------|
+| Google | `http://localhost:3000/api/auth/callback/google` | `https://webapp-bice-six-42.vercel.app/api/auth/callback/google` |
+| Facebook | `http://localhost:3000/api/auth/callback/facebook` | `https://webapp-bice-six-42.vercel.app/api/auth/callback/facebook` |
+
+### Facebook — errore «dominio non incluso»
+
+In [Meta for Developers](https://developers.facebook.com/) → la tua app:
+
+1. **Settings → Basic → App Domains:** `webapp-bice-six-42.vercel.app` (solo hostname, no `https://`)
+2. **Settings → Basic → Site URL:** `https://webapp-bice-six-42.vercel.app`
+3. **Facebook Login → Settings → Valid OAuth Redirect URIs:** URI callback produzione sopra
+4. App in modalità **Live** (non solo Development) per utenti reali
+
+### Google — login che si blocca
+
+In [Google Cloud Console](https://console.cloud.google.com/) → Credentials → OAuth client:
+
+1. **Authorized JavaScript origins:** `https://webapp-bice-six-42.vercel.app`
+2. **Authorized redirect URIs:** URI callback produzione sopra
+3. Verifica che `AUTH_URL` su Vercel corrisponda al dominio reale
 
 ---
 

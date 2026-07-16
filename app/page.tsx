@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { mapAuthError } from '@/lib/auth/oauth-errors';
 import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
 import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
 import { HeroBackground } from '@/components/brand/HeroBackground';
@@ -24,7 +25,28 @@ export default function LoginPage() {
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const authError = new URLSearchParams(window.location.search).get('error');
+    if (authError) {
+      setError(mapAuthError(authError));
+    }
+  }, []);
+
+  const handleOAuthSignIn = async (provider: 'google' | 'facebook') => {
+    setError('');
+    setOauthLoading(provider);
+    try {
+      await signIn(provider, {
+        callbackUrl: `${window.location.origin}/dashboard`,
+      });
+    } catch {
+      setError('Accesso non riuscito. Riprova tra poco.');
+      setOauthLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,17 +158,19 @@ export default function LoginPage() {
               <Button
                 variant="outline"
                 className="w-full h-11 rounded-xl bg-background/80"
-                onClick={() => signIn('google', { redirectTo: '/dashboard' })}
+                disabled={oauthLoading !== null}
+                onClick={() => void handleOAuthSignIn('google')}
               >
                 <GoogleIcon className="w-4 h-4 mr-2" />
-                Continua con Google
+                {oauthLoading === 'google' ? 'Reindirizzamento…' : 'Continua con Google'}
               </Button>
               <Button
                 className="w-full h-11 rounded-xl bg-[#1877F2] hover:bg-[#166eab] text-white"
-                onClick={() => signIn('facebook', { redirectTo: '/dashboard' })}
+                disabled={oauthLoading !== null}
+                onClick={() => void handleOAuthSignIn('facebook')}
               >
                 <FacebookIcon className="w-4 h-4 mr-2" />
-                Continua con Facebook
+                {oauthLoading === 'facebook' ? 'Reindirizzamento…' : 'Continua con Facebook'}
               </Button>
             </div>
 
