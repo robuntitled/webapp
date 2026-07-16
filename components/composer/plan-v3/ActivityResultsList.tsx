@@ -10,6 +10,7 @@ type ActivityResultsListProps = {
   items: ActivityResultItem[];
   loading: boolean;
   query: string;
+  hint?: string | null;
   onAdd: (item: ActivityResultItem) => void;
 };
 
@@ -17,6 +18,7 @@ export function ActivityResultsList({
   items,
   loading,
   query,
+  hint,
   onAdd,
 }: ActivityResultsListProps) {
   if (loading) {
@@ -32,9 +34,10 @@ export function ActivityResultsList({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <p className="text-sm text-white/50">
-          {query.length < 2
-            ? 'Digita almeno 2 caratteri per cercare nelle tue destinazioni.'
-            : 'Nessun risultato nelle destinazioni del viaggio. Prova un termine diverso.'}
+          {hint ??
+            (query.length < 2
+              ? 'Digita almeno 2 caratteri per cercare nelle tue destinazioni.'
+              : 'Nessun risultato nelle destinazioni del viaggio. Prova un termine diverso.')}
         </p>
       </div>
     );

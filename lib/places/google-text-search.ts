@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { haversineKm } from '@/lib/maps/distance';
+
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
 export type GooglePlaceResult = {
@@ -13,27 +15,24 @@ export type GooglePlaceResult = {
 
 type Bounds = { lat: number; lng: number; radiusKm?: number };
 
-function haversineKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
-): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-}
+export type GooglePlacesSearchResult = {
+  ok: boolean;
+  results: GooglePlaceResult[];
+  status: string;
+  errorMessage?: string;
+};
 
 export async function searchGooglePlacesInBounds(
   query: string,
   bounds: Bounds[],
   maxRadiusKm = 120
-): Promise<GooglePlaceResult[]> {
-  if (!API_KEY || query.trim().length < 2 || bounds.length === 0) return [];
+): Promise<GooglePlacesSearchResult> {
+  if (!API_KEY) {
+    return { ok: false, results: [], status: 'MISSING_API_KEY' };
+  }
+  if (query.trim().length < 2 || bounds.length === 0) {
+    return { ok: false, results: [], status: 'INVALID_REQUEST' };
+  }
 
   const primary = bounds[0];
   const location = `${primary.lat},${primary.lng}`;
@@ -51,7 +50,9 @@ export async function searchGooglePlacesInBounds(
     `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,
     { next: { revalidate: 300 } }
   );
-  if (!res.ok) return [];
+  if (!res.ok) {
+    return { ok: false, results: [], status: 'HTTP_ERROR' };
+  }
 
   const data = (await res.json()) as {
     results?: {
@@ -62,13 +63,22 @@ export async function searchGooglePlacesInBounds(
       types?: string[];
     }[];
     status?: string;
+    error_message?: string;
   };
 
-  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') return [];
+  const status = data.status ?? 'UNKNOWN_ERROR';
+  if (status !== 'OK' && status !== 'ZERO_RESULTS') {
+    return {
+      ok: false,
+      results: [],
+      status,
+      errorMessage: data.error_message,
+    };
+  }
 
   const allowedCenters = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
 
-  return (data.results ?? [])
+  const results = (data.results ?? [])
     .map((place) => {
       const lat = place.geometry?.location?.lat;
       const lng = place.geometry?.location?.lng;
@@ -88,4 +98,6 @@ export async function searchGooglePlacesInBounds(
     })
     .filter((p): p is GooglePlaceResult => p !== null)
     .slice(0, 12);
+
+  return { ok: true, results, status };
 }

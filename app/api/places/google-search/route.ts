@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { searchGooglePlacesInBounds } from '@/lib/places/google-text-search';
+import { searchActivitiesInBounds } from '@/lib/places/activity-search';
 
 const schema = z.object({
   q: z.string().min(2).max(120),
@@ -10,6 +10,7 @@ const schema = z.object({
         lat: z.number(),
         lng: z.number(),
         radiusKm: z.number().optional(),
+        label: z.string().optional(),
       })
     )
     .min(1)
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const results = await searchGooglePlacesInBounds(parsed.data.q, parsed.data.bounds);
-  return NextResponse.json({ results });
+  const { results, source, warning } = await searchActivitiesInBounds(
+    parsed.data.q,
+    parsed.data.bounds
+  );
+  return NextResponse.json({ results, source, warning });
 }

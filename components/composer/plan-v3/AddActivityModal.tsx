@@ -60,12 +60,20 @@ export function AddActivityModal({
   const [startTime, setStartTime] = useState('');
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchHint, setSearchHint] = useState<string | null>(null);
   const debounced = useDebounced(query, 320);
 
   const destinationBounds = useMemo(() => {
     const dests = getDraftDestinations(draft);
-    return dests.map((d) => ({ lat: d.lat, lng: d.lng, radiusKm: 80 }));
+    return dests.map((d) => ({
+      lat: d.lat,
+      lng: d.lng,
+      radiusKm: 80,
+      label: d.label,
+    }));
   }, [draft]);
+
+  const hasDestinations = destinationBounds.length > 0;
 
   const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
   const blockType =
@@ -77,15 +85,25 @@ export function AddActivityModal({
     setDuration('1h');
     setStartTime('');
     setResults([]);
+    setSearchHint(null);
   };
 
   const search = useCallback(
     async (q: string) => {
-      if (q.length < 2 || destinationBounds.length === 0) {
+      if (!hasDestinations) {
         setResults([]);
+        setSearchHint(
+          'Nessuna destinazione nel viaggio. Torna allo step precedente e seleziona almeno una meta.'
+        );
+        return;
+      }
+      if (q.length < 2) {
+        setResults([]);
+        setSearchHint(null);
         return;
       }
       setLoading(true);
+      setSearchHint(null);
       try {
         const res = await fetch('/api/places/google-search', {
           method: 'POST',
@@ -101,7 +119,14 @@ export function AddActivityModal({
             lng: number;
             placeTypeLabel: string;
           }[];
+          warning?: string;
+          error?: string;
         };
+        if (!res.ok) {
+          setResults([]);
+          setSearchHint(data.error ?? 'Ricerca non disponibile al momento.');
+          return;
+        }
         const center = destinationBounds[0];
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
           id: p.id,
@@ -113,13 +138,20 @@ export function AddActivityModal({
           distanceKm: haversineKm(center, { lat: p.lat, lng: p.lng }),
         }));
         setResults(mapped);
+        if (mapped.length === 0) {
+          setSearchHint(
+            data.warning ??
+              'Nessun risultato nelle destinazioni del viaggio. Prova un termine diverso.'
+          );
+        }
       } catch {
         setResults([]);
+        setSearchHint('Ricerca non disponibile al momento. Riprova tra poco.');
       } finally {
         setLoading(false);
       }
     },
-    [destinationBounds]
+    [destinationBounds, hasDestinations]
   );
 
   useEffect(() => {
@@ -199,7 +231,8 @@ export function AddActivityModal({
           <ActivityResultsList
             items={results}
             loading={loading}
-            query={query}
+            query={debounced}
+            hint={searchHint}
             onAdd={addFromResult}
           />
         </div>
