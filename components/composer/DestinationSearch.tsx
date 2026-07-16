@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, X } from 'lucide-react';
+import { Search, Sparkles, X } from 'lucide-react';
 import { DESTINATION_REGIONS, featuredToMeta } from '@/lib/composer/destinations';
-import { rankDestinationsForProfile } from '@/lib/composer/destination-suggestions';
+import {
+  FEATURED_DESTINATION_COUNT,
+  rankDestinationsForProfile,
+} from '@/lib/composer/destination-suggestions';
 import type { ComposerDestination, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
 
@@ -26,16 +29,23 @@ export function DestinationSearch({
   onPersonalize,
 }: DestinationSearchProps) {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const ranked = useMemo(
-    () => rankDestinationsForProfile(plannerProfile),
-    [plannerProfile]
+    () => rankDestinationsForProfile(plannerProfile, query),
+    [plannerProfile, query]
   );
 
   const featured = useMemo(() => {
-    if (!regionFilter) return ranked;
-    return ranked.filter((d) => d.region === regionFilter);
-  }, [ranked, regionFilter]);
+    let list = ranked;
+    if (regionFilter) {
+      list = list.filter((d) => d.region === regionFilter);
+    }
+    if (!query.trim()) {
+      return list.slice(0, FEATURED_DESTINATION_COUNT);
+    }
+    return list;
+  }, [ranked, regionFilter, query]);
 
   const toggleDestination = (dest: ComposerDestination) => {
     const meta = featuredToMeta(dest);
@@ -83,6 +93,16 @@ export function DestinationSearch({
         </div>
       )}
 
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cerca una destinazione…"
+          className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none transition focus:border-amber-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-amber-400/15"
+        />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -103,41 +123,53 @@ export function DestinationSearch({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {featured.map((dest, i) => {
-          const selected = isSelected(dest);
-          return (
-            <motion.button
-              key={dest.id}
-              type="button"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03, duration: 0.3 }}
-              onClick={() => toggleDestination(dest)}
-              className={`composer-dest-card group relative overflow-hidden rounded-2xl text-left aspect-[4/5] ${
-                selected ? 'composer-dest-card-selected' : ''
-              }`}
-            >
-              <div
-                className={`absolute inset-0 bg-gradient-to-br ${dest.gradient} opacity-80 group-hover:opacity-100 transition-opacity duration-500`}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="relative z-10 flex h-full flex-col justify-end p-4">
-                <span className="text-3xl mb-2 drop-shadow-lg">{dest.emoji}</span>
-                <p className="font-display text-lg font-semibold text-white leading-tight">
-                  {dest.label}
-                </p>
-                <p className="text-[11px] text-white/65 mt-1">{dest.vibe}</p>
-                {selected && (
-                  <span className="mt-2 text-[10px] font-bold uppercase tracking-wider text-accent">
-                    Selezionata
-                  </span>
-                )}
-              </div>
-            </motion.button>
-          );
-        })}
-      </div>
+      {!query.trim() && (
+        <p className="text-xs text-white/45">
+          {FEATURED_DESTINATION_COUNT} mete suggerite in base al tuo profilo
+        </p>
+      )}
+
+      {featured.length === 0 ? (
+        <p className="py-8 text-center text-sm text-white/50">
+          Nessuna meta trovata. Prova un altro termine o regione.
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {featured.map((dest, i) => {
+            const selected = isSelected(dest);
+            return (
+              <motion.button
+                key={dest.id}
+                type="button"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03, duration: 0.3 }}
+                onClick={() => toggleDestination(dest)}
+                className={`composer-dest-card group relative overflow-hidden rounded-2xl text-left aspect-[4/5] ${
+                  selected ? 'composer-dest-card-selected' : ''
+                }`}
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${dest.gradient} opacity-80 group-hover:opacity-100 transition-opacity duration-500`}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="relative z-10 flex h-full flex-col justify-end p-4">
+                  <span className="text-3xl mb-2 drop-shadow-lg">{dest.emoji}</span>
+                  <p className="font-display text-lg font-semibold text-white leading-tight">
+                    {dest.label}
+                  </p>
+                  <p className="text-[11px] text-white/65 mt-1">{dest.vibe}</p>
+                  {selected && (
+                    <span className="mt-2 text-[10px] font-bold uppercase tracking-wider text-accent">
+                      Selezionata
+                    </span>
+                  )}
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      )}
 
       <button
         type="button"

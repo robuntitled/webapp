@@ -21,10 +21,11 @@ export function syncDestinationFields(
   }
   const destination = destinations.map((d) => d.label).join(' · ');
   const primary = destinations[0];
+  const labels = destinations.map((d) => d.label);
   const title =
     currentTitle && currentTitle.length > 0
       ? currentTitle
-      : generateTripTitle(primary.label, `${primary.label}-${Date.now()}`);
+      : generateTripTitle(labels, labels.join('-'));
   return {
     destinations,
     destination,

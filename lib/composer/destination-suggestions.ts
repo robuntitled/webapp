@@ -99,3 +99,5 @@ export function rankDestinationsForProfile(
   }
   return [...list].sort((a, b) => vibeScore(b, profile) - vibeScore(a, profile));
 }
+
+export const FEATURED_DESTINATION_COUNT = 12;

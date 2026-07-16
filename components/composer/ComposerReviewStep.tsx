@@ -7,6 +7,7 @@ import { estimateTripBudget, formatComposerDayLabel } from '@/lib/composer/days'
 import type { ComposerDraft } from '@/types/composer';
 import { TripMap } from '@/components/maps/TripMap';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
+import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { ChevronLeft, Loader2, Rocket } from 'lucide-react';
 
 type ComposerReviewStepProps = {
@@ -25,6 +26,8 @@ export function ComposerReviewStep({
   const budget = estimateTripBudget(draft.days);
   const blockCount = draft.days.reduce((n, d) => n + d.blocks.length, 0);
   const pins = buildPinsFromDraft(draft);
+  const publishIssues = validatePublishDraft(draft);
+  const canPublish = publishIssues.length === 0;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -58,7 +61,7 @@ export function ComposerReviewStep({
               size="sm"
               className="rounded-full gap-1.5 min-w-[140px] bg-gradient-to-r from-violet-600 to-orange-500 text-white"
               onClick={onPublish}
-              disabled={publishing}
+              disabled={publishing || !canPublish}
             >
               {publishing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -76,6 +79,16 @@ export function ComposerReviewStep({
         animate={{ opacity: 1, y: 0 }}
         className="container mx-auto px-4 py-8 pb-16 max-w-3xl space-y-6 flex-1"
       >
+        {publishIssues.length > 0 && (
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 space-y-1">
+            {publishIssues.map((issue) => (
+              <p key={issue.code} className="text-sm text-amber-100/90">
+                {issue.message}
+              </p>
+            ))}
+          </div>
+        )}
+
         {pins.length > 0 && (
           <TripMap
             destination={draft.destination}

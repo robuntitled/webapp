@@ -11,17 +11,34 @@ const TITLE_TEMPLATES = [
 
 const MAX_TITLE_LENGTH = 30;
 
-export function generateTripTitle(destinationLabel: string, seed?: string): string {
-  const place = destinationLabel.trim() || 'nuova meta';
+function formatDestinationLabels(labels: string[]): string {
+  const clean = labels.map((l) => l.trim()).filter(Boolean);
+  if (clean.length === 0) return 'nuova meta';
+  if (clean.length === 1) return clean[0];
+  if (clean.length === 2) return `${clean[0]} & ${clean[1]}`;
+  return `${clean[0]} +${clean.length - 1}`;
+}
+
+export function generateTripTitle(
+  destinationLabels: string | string[],
+  seed?: string
+): string {
+  const labels = Array.isArray(destinationLabels)
+    ? destinationLabels
+    : [destinationLabels];
+  const place = formatDestinationLabels(labels);
   let index = Math.floor(Math.random() * TITLE_TEMPLATES.length);
   if (seed) {
     let hash = 0;
-    for (let i = 0; i < seed.length; i++) hash = (hash + seed.charCodeAt(i) * (i + 1)) % TITLE_TEMPLATES.length;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash + seed.charCodeAt(i) * (i + 1)) % TITLE_TEMPLATES.length;
+    }
     index = hash;
   }
   const raw = TITLE_TEMPLATES[index](place);
   if (raw.length <= MAX_TITLE_LENGTH) return raw;
-  const shortPlace = place.length > 12 ? `${place.slice(0, 10)}…` : place;
+  const shortPlace =
+    place.length > 14 ? `${place.slice(0, 12)}…` : place;
   const fallback = `Viaggio a ${shortPlace}`;
   return fallback.slice(0, MAX_TITLE_LENGTH);
 }

@@ -132,6 +132,7 @@ export function ComposerPlanStep({
       duration: payload.duration,
       lat: payload.lat,
       lng: payload.lng,
+      price: payload.price ?? null,
       timeSlot: 'flex',
     });
     updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
@@ -190,10 +191,25 @@ export function ComposerPlanStep({
   const addTravelBlock = (payload: TravelBlockPayload) => {
     const day = ensureActiveDay();
     if (!day) return;
+    const isFlight = payload.type === 'flight';
     const block = createEmptyBlock(payload.type, day.blocks.length, {
       title: payload.title,
       place: payload.place,
+      area: payload.type === 'hotel' ? payload.place : undefined,
+      from: isFlight ? payload.pickupAddress : undefined,
       pickupAddress: payload.pickupAddress,
+      to: payload.place,
+      mode: payload.transportMode ?? (isFlight ? 'flight' : 'taxi'),
+      departureTime: payload.departureTime,
+      arrivalTime: payload.arrivalTime,
+      time: payload.departureTime,
+      checkInTime: payload.checkInTime,
+      checkOutTime: payload.checkOutTime,
+      travelerArrivalTime: payload.travelerArrivalTime,
+      bookingReference: payload.bookingReference,
+      price: payload.price ?? null,
+      lat: payload.lat,
+      lng: payload.lng,
       timeSlot: 'flex',
     });
     updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));

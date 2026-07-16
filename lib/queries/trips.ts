@@ -71,7 +71,7 @@ export async function getAllTrips(supabase: SupabaseClient, userId?: string) {
   const { data, error } = await supabase
     .from('trips')
     .select(TRIP_LIST_SELECT)
-    .order('createdAt', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Errore nel recuperare i viaggi:', error);
@@ -102,7 +102,7 @@ export async function getCreatedTrips(supabase: SupabaseClient, userId: string) 
     .from('trips')
     .select(TRIP_LIST_SELECT)
     .eq('creator_id', userId)
-    .order('createdAt', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Errore recupero viaggi creati:', error.message);
@@ -133,7 +133,7 @@ export async function getJoinedTrips(supabase: SupabaseClient, userId: string) {
     .select(TRIP_LIST_SELECT)
     .in('id', tripIds)
     .neq('creator_id', userId)
-    .order('createdAt', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Errore recupero viaggi a cui si partecipa:', error.message);
@@ -165,7 +165,7 @@ export async function getFavoriteTrips(supabase: SupabaseClient, userId: string)
     .from('trips')
     .select(`${TRIP_LIST_SELECT}, trip_participants(user_id)`)
     .in('id', tripIds)
-    .order('createdAt', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (tripsError) {
     console.error('Errore nel recuperare i dettagli dei viaggi preferiti:', tripsError);

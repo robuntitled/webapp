@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -45,6 +45,7 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
   const [micro, setMicro] = useState(1);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const titleTouched = useRef(false);
 
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
@@ -58,9 +59,13 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
   const heroGradient = featured?.gradient ?? 'from-primary/60 via-accent/40 to-teal-400/30';
 
   const handleDestinationsChange = (destinations: DestinationMeta[]) => {
-    const synced = syncDestinationFields(destinations, draft.title);
-    if (destinations.length > 0 && !draft.title) {
-      synced.title = generateTripTitle(destinations[0].label);
+    const labels = destinations.map((d) => d.label);
+    const synced = syncDestinationFields(
+      destinations,
+      titleTouched.current ? draft.title : ''
+    );
+    if (destinations.length > 0 && !titleTouched.current) {
+      synced.title = generateTripTitle(labels, labels.join('-'));
     }
     onChange(synced);
   };
@@ -245,8 +250,10 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
                     </PopoverTrigger>
                     <PopoverContent className="p-0 rounded-xl" align="center">
                       <Calendar
+                        key={startDate?.toISOString() ?? 'no-start'}
                         mode="single"
                         selected={endDate}
+                        defaultMonth={startDate}
                         onSelect={(d) => {
                           setEndDate(d);
                           if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
@@ -330,7 +337,10 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
                   className="h-14 rounded-2xl composer-field text-white text-lg"
                   value={draft.title}
                   maxLength={TRIP_TITLE_MAX_LENGTH}
-                  onChange={(e) => onChange({ title: e.target.value })}
+                  onChange={(e) => {
+                    titleTouched.current = true;
+                    onChange({ title: e.target.value });
+                  }}
                   placeholder="Es. Viaggio a Sicilia"
                 />
               </div>

@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { haversineKm } from '@/lib/maps/distance';
-import { searchGooglePlacesInBounds, type GooglePlaceResult } from '@/lib/places/google-text-search';
 import { searchPlaces } from '@/lib/places/nominatim';
+import { searchGooglePlacesInBounds, type GooglePlaceResult } from '@/lib/places/google-text-search';
 
 export type ActivityPlaceResult = GooglePlaceResult;
 
@@ -15,8 +15,7 @@ export type ActivitySearchBounds = {
 
 export type ActivitySearchResponse = {
   results: ActivityPlaceResult[];
-  source: 'google' | 'nominatim' | 'none';
-  warning?: string;
+  source: 'nominatim' | 'google' | 'none';
 };
 
 function filterByBounds(
@@ -39,8 +38,7 @@ function buildContextQuery(query: string, bounds: ActivitySearchBounds[]): strin
     .map((b) => b.label?.trim())
     .filter((label): label is string => Boolean(label));
   if (labels.length === 0) return query.trim();
-  const context = labels.slice(0, 2).join(' ');
-  return `${query.trim()} ${context}`.trim();
+  return `${query.trim()} ${labels.slice(0, 2).join(' ')}`.trim();
 }
 
 async function searchWithNominatim(
@@ -58,7 +56,8 @@ async function searchWithNominatim(
     lng: place.lng,
     placeTypeLabel: place.placeTypeLabel,
   }));
-  return filterByBounds(mapped, bounds, maxRadiusKm).slice(0, 12);
+  const filtered = filterByBounds(mapped, bounds, maxRadiusKm);
+  return (filtered.length > 0 ? filtered : mapped).slice(0, 12);
 }
 
 export async function searchActivitiesInBounds(
@@ -70,42 +69,27 @@ export async function searchActivitiesInBounds(
   if (q.length < 2) {
     return { results: [], source: 'none' };
   }
+
+  try {
+    const nominatimResults = await searchWithNominatim(
+      q,
+      bounds.length > 0 ? bounds : [{ lat: 0, lng: 0, label: '' }],
+      bounds.length > 0 ? maxRadiusKm : 50000
+    );
+    if (nominatimResults.length > 0) {
+      return { results: nominatimResults, source: 'nominatim' };
+    }
+  } catch {
+    // try Google below
+  }
+
   if (bounds.length === 0) {
-    return {
-      results: [],
-      source: 'none',
-      warning: 'Nessuna destinazione nel viaggio. Torna allo step precedente e seleziona almeno una meta.',
-    };
+    return { results: [], source: 'none' };
   }
 
   const google = await searchGooglePlacesInBounds(q, bounds, maxRadiusKm);
   if (google.ok && google.results.length > 0) {
     return { results: google.results, source: 'google' };
-  }
-
-  try {
-    const nominatimResults = await searchWithNominatim(q, bounds, maxRadiusKm);
-    if (nominatimResults.length > 0) {
-      return {
-        results: nominatimResults,
-        source: 'nominatim',
-        warning:
-          google.status === 'REQUEST_DENIED'
-            ? 'Ricerca tramite OpenStreetMap (Places API non abilitata sulla chiave Google).'
-            : undefined,
-      };
-    }
-  } catch {
-    // fall through to empty response
-  }
-
-  if (google.status === 'REQUEST_DENIED') {
-    return {
-      results: [],
-      source: 'none',
-      warning:
-        'Google Places non è abilitato sul progetto. Abilita "Places API" in Google Cloud Console oppure prova un altro termine di ricerca.',
-    };
   }
 
   return { results: [], source: 'none' };

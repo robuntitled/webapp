@@ -43,13 +43,13 @@ export function tripMatchesDiscoverFilters(
   return textMatch && dateMatch && priceMatch;
 }
 
-/** Viaggi prenotabili: solo/aperti, non iniziati, non pieni. */
+/** Viaggi prenotabili: solo/aperti, non ancora iniziati, non pieni. */
 export function isBookableDiscoverTrip(trip: TripWithRelations, userId?: string | null): boolean {
   if (!isDiscoverableSoloTrip(trip, userId)) return false;
   if (!trip.startDate) return true;
   const today = startOfDay(new Date());
   const tripStart = startOfDay(new Date(trip.startDate));
-  return tripStart > today;
+  return tripStart >= today;
 }
 
 export function filterDiscoverResults(
@@ -80,7 +80,7 @@ export function parseDiscoverSearchParams(searchParams: URLSearchParams): Discov
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   const priceMin = Number(searchParams.get('priceMin') ?? 0);
-  const priceMax = Number(searchParams.get('priceMax') ?? 500);
+  const priceMax = Number(searchParams.get('priceMax') ?? 5000);
 
   return {
     searchTerm: searchParams.get('q') ?? '',

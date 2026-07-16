@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const { results, source, warning } = await searchActivitiesInBounds(
+  const { results, source } = await searchActivitiesInBounds(
     parsed.data.q,
     parsed.data.bounds
   );
-  return NextResponse.json({ results, source, warning });
+  return NextResponse.json({ results, source });
 }

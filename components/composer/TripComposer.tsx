@@ -17,6 +17,7 @@ import {
   saveComposerDraft,
   type ComposerWizardStep,
 } from '@/lib/composer/client-planner';
+import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { WIZARD_STEPS } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft, ComposerDay } from '@/types/composer';
 import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
@@ -28,8 +29,8 @@ const EMPTY_DRAFT: ComposerDraft = {
   destination: '',
   startDate: '',
   endDate: '',
-  planningMode: 'group',
-  maxParticipants: 8,
+  planningMode: 'solo',
+  maxParticipants: 4,
   days: [],
 };
 
@@ -135,6 +136,11 @@ export function TripComposer({
   };
 
   const publish = async () => {
+    const issues = validatePublishDraft(draft);
+    if (issues.length > 0) {
+      toast.error(issues[0].message);
+      return;
+    }
     setPublishing(true);
     try {
       const payload = { ...draft, plannerProfile };
