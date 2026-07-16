@@ -1,5 +1,13 @@
 export type TripStatusVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
+export function isTripStarted(startDate: string): boolean {
+  const now = new Date();
+  const start = new Date(startDate);
+  now.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  return now >= start;
+}
+
 export function getTripStatus(
   startDate: string,
   endDate: string

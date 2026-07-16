@@ -11,7 +11,7 @@ import { DayNotesField } from '@/components/composer/plan/DayNotesField';
 import { formatComposerDayLabel } from '@/lib/composer/days';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type { ComposerBlock, ComposerDay, ComposerDraft } from '@/types/composer';
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
+import { Bus, ChevronLeft, ChevronRight, Hotel, Plus, Sparkles } from 'lucide-react';
 
 type ItineraryColumnProps = {
   draft: ComposerDraft;
@@ -32,7 +32,8 @@ type ItineraryColumnProps = {
   onRemoveBlock: (blockId: string) => void;
   onHoverBlock: (blockId: string | null) => void;
   onReorderBlocks: (fromIndex: number, toIndex: number) => void;
-  onToggleFavorite: (blockId: string) => void;
+  onAddTransport: () => void;
+  onAddHotel: () => void;
   onUpdateBlockNotes: (blockId: string, notes: string) => void;
   onAddAttachment: (blockId: string, label: string, url: string) => void;
   onRemoveAttachment: (blockId: string, id: string) => void;
@@ -60,7 +61,8 @@ export function ItineraryColumn({
   onRemoveBlock,
   onHoverBlock,
   onReorderBlocks,
-  onToggleFavorite,
+  onAddTransport,
+  onAddHotel,
   onUpdateBlockNotes,
   onAddAttachment,
   onRemoveAttachment,
@@ -174,7 +176,25 @@ export function ItineraryColumn({
                   className="h-11 rounded-xl bg-gradient-to-r from-violet-600 to-orange-500 font-bold text-white shadow-lg shadow-orange-500/20 hover:brightness-110"
                 >
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Aggiungi attività
+                  Aggiungi
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onAddTransport}
+                  className="h-11 rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/10"
+                >
+                  <Bus className="mr-1.5 h-4 w-4" />
+                  Trasporto
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onAddHotel}
+                  className="h-11 rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/10"
+                >
+                  <Hotel className="mr-1.5 h-4 w-4" />
+                  Hotel
                 </Button>
               </div>
 
@@ -185,7 +205,6 @@ export function ItineraryColumn({
                 onRemove={onRemoveBlock}
                 onHover={onHoverBlock}
                 onReorder={onReorderBlocks}
-                onToggleFavorite={onToggleFavorite}
                 onUpdateNotes={onUpdateBlockNotes}
                 onAddAttachment={onAddAttachment}
                 onRemoveAttachment={onRemoveAttachment}

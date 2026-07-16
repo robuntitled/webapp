@@ -63,6 +63,8 @@ export type ComposerDraft = {
   title: string;
   destination: string;
   destinationMeta?: DestinationMeta;
+  /** Mete multiple selezionate nello step destinazione */
+  destinations?: DestinationMeta[];
   startDate: string;
   endDate: string;
   planningMode: 'solo' | 'group';

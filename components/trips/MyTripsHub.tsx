@@ -11,20 +11,21 @@ import { summarizeComposerDraftWithStep } from '@/lib/composer/draft-utils';
 import type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft } from '@/types/composer';
 import type { TripWithRelations } from '@/types/trip';
-import { getTripStatus } from '@/lib/utils/trip';
+import { getTripStatus, isTripStarted } from '@/lib/utils/trip';
 import {
   BookOpen,
   ChevronRight,
   Compass,
   FileEdit,
   Loader2,
+  History,
   Palmtree,
   Plus,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type HubSection = 'drafts' | 'organizing' | 'relax';
+type HubSection = 'drafts' | 'organizing' | 'relax' | 'past';
 
 type ComposerDraftPayload = {
   draft: Partial<ComposerDraft>;
@@ -65,6 +66,13 @@ const SECTIONS: {
     description: 'Ti sei unito alla crew',
     icon: Palmtree,
     accent: 'hub-accent-teal',
+  },
+  {
+    id: 'past',
+    label: 'Viaggi passati',
+    description: 'Conclusi o già partiti',
+    icon: History,
+    accent: 'hub-accent-amber',
   },
 ];
 
@@ -161,7 +169,7 @@ function TripListItem({
   variant,
 }: {
   trip: TripWithRelations;
-  variant: 'organizing' | 'relax';
+  variant: 'organizing' | 'relax' | 'past';
 }) {
   const status = getTripStatus(trip.startDate, trip.endDate);
   const imageUrl = trip.imageUrl || '/images/trips/placeholder.jpg';
@@ -240,6 +248,18 @@ function EmptyPanel({
     );
   }
 
+  if (section === 'past') {
+    return (
+      <div className="hub-empty py-16 px-6 text-center">
+        <History className="h-10 w-10 text-muted-foreground/40 mx-auto mb-4" />
+        <p className="font-medium text-foreground">Nessun viaggio passato</p>
+        <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
+          I viaggi conclusi o già partiti compariranno qui.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="hub-empty py-16 px-6 text-center">
       <Palmtree className="h-10 w-10 text-muted-foreground/40 mx-auto mb-4" />
@@ -261,17 +281,32 @@ export function MyTripsHub({
 }: MyTripsHubProps) {
   const hasDraft = Boolean(composerDraft?.draft?.destination?.trim());
   const [draftVisible, setDraftVisible] = useState(hasDraft);
+  const upcomingCreated = useMemo(
+    () => createdTrips.filter((t) => !isTripStarted(t.startDate)),
+    [createdTrips]
+  );
+  const upcomingJoined = useMemo(
+    () => joinedTrips.filter((t) => !isTripStarted(t.startDate)),
+    [joinedTrips]
+  );
+  const pastTrips = useMemo(
+    () =>
+      [...createdTrips, ...joinedTrips].filter((t) => isTripStarted(t.startDate)),
+    [createdTrips, joinedTrips]
+  );
+
   const [active, setActive] = useState<HubSection>(() =>
-    defaultSection(hasDraft, createdTrips.length, joinedTrips.length)
+    defaultSection(hasDraft, upcomingCreated.length, upcomingJoined.length)
   );
 
   const counts = useMemo(
     () => ({
       drafts: draftVisible && hasDraft ? 1 : 0,
-      organizing: createdTrips.length,
-      relax: joinedTrips.length,
+      organizing: upcomingCreated.length,
+      relax: upcomingJoined.length,
+      past: pastTrips.length,
     }),
-    [draftVisible, hasDraft, createdTrips.length, joinedTrips.length]
+    [draftVisible, hasDraft, upcomingCreated.length, upcomingJoined.length, pastTrips.length]
   );
 
   const activeMeta = SECTIONS.find((s) => s.id === active)!;
@@ -298,7 +333,7 @@ export function MyTripsHub({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           const isActive = active === section.id;
@@ -372,8 +407,8 @@ export function MyTripsHub({
 
           {active === 'organizing' && (
             <>
-              {createdTrips.length > 0 ? (
-                createdTrips.map((trip) => (
+              {upcomingCreated.length > 0 ? (
+                upcomingCreated.map((trip) => (
                   <TripListItem key={trip.id} trip={trip} variant="organizing" />
                 ))
               ) : (
@@ -384,12 +419,24 @@ export function MyTripsHub({
 
           {active === 'relax' && (
             <>
-              {joinedTrips.length > 0 ? (
-                joinedTrips.map((trip) => (
+              {upcomingJoined.length > 0 ? (
+                upcomingJoined.map((trip) => (
                   <TripListItem key={trip.id} trip={trip} variant="relax" />
                 ))
               ) : (
                 <EmptyPanel section="relax" />
+              )}
+            </>
+          )}
+
+          {active === 'past' && (
+            <>
+              {pastTrips.length > 0 ? (
+                pastTrips.map((trip) => (
+                  <TripListItem key={trip.id} trip={trip} variant="past" />
+                ))
+              ) : (
+                <EmptyPanel section="past" />
               )}
             </>
           )}

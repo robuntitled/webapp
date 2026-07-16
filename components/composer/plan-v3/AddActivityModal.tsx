@@ -17,9 +17,8 @@ import {
 } from '@/components/composer/plan-v3/ActivityFilters';
 import { ActivityResultsList } from '@/components/composer/plan-v3/ActivityResultsList';
 import type { ActivityResultItem } from '@/components/composer/plan-v3/ActivityResultCard';
+import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { haversineKm } from '@/lib/maps/distance';
-import { resolveDestinationCoords } from '@/lib/maps/coordinates';
-import type { PlaceResult } from '@/lib/places/types';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import { Search, X } from 'lucide-react';
 
@@ -30,7 +29,6 @@ export type AddActivityPayload = {
   lat?: number;
   lng?: number;
   time?: string;
-  notes?: string;
   duration?: string;
 };
 
@@ -58,50 +56,61 @@ export function AddActivityModal({
 }: AddActivityModalProps) {
   const [query, setQuery] = useState('');
   const [type, setType] = useState<ActivityTypeFilter>('attraction');
-  const [duration, setDuration] = useState<DurationFilter>('any');
+  const [duration, setDuration] = useState<DurationFilter>('1h');
   const [startTime, setStartTime] = useState('');
-  const [notes, setNotes] = useState('');
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const debounced = useDebounced(query, 320);
 
-  const center = useMemo(
-    () => resolveDestinationCoords(draft.destination, draft.destinationMeta),
-    [draft.destination, draft.destinationMeta]
-  );
+  const destinationBounds = useMemo(() => {
+    const dests = getDraftDestinations(draft);
+    return dests.map((d) => ({ lat: d.lat, lng: d.lng, radiusKm: 80 }));
+  }, [draft]);
 
-  const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value;
+  const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
   const blockType =
     TYPE_FILTERS.find((t) => t.id === type)?.blockType ?? 'attraction';
 
   const reset = () => {
     setQuery('');
     setType('attraction');
-    setDuration('any');
+    setDuration('1h');
     setStartTime('');
-    setNotes('');
     setResults([]);
   };
 
   const search = useCallback(
     async (q: string) => {
-      if (q.length < 2) {
+      if (q.length < 2 || destinationBounds.length === 0) {
         setResults([]);
         return;
       }
       setLoading(true);
       try {
-        const near = draft.destination ? ` ${draft.destination}` : '';
-        const res = await fetch(`/api/places/search?q=${encodeURIComponent(q + near)}`);
-        const data = (await res.json()) as { results?: PlaceResult[] };
+        const res = await fetch('/api/places/google-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q, bounds: destinationBounds }),
+        });
+        const data = (await res.json()) as {
+          results?: {
+            id: string;
+            label: string;
+            subtitle: string;
+            lat: number;
+            lng: number;
+            placeTypeLabel: string;
+          }[];
+        };
+        const center = destinationBounds[0];
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
           id: p.id,
           title: p.label,
           subtitle: p.subtitle || p.placeTypeLabel,
-          category: p.placeTypeLabel || TYPE_FILTERS.find((t) => t.id === type)?.label || 'Luogo',
+          category: p.placeTypeLabel,
           lat: p.lat,
           lng: p.lng,
-          distanceKm: center ? haversineKm(center, { lat: p.lat, lng: p.lng }) : undefined,
+          distanceKm: haversineKm(center, { lat: p.lat, lng: p.lng }),
         }));
         setResults(mapped);
       } catch {
@@ -110,7 +119,7 @@ export function AddActivityModal({
         setLoading(false);
       }
     },
-    [center, draft.destination, type]
+    [destinationBounds]
   );
 
   useEffect(() => {
@@ -135,18 +144,6 @@ export function AddActivityModal({
       lat: item.lat,
       lng: item.lng,
       time: startTime || undefined,
-      notes: notes || undefined,
-      duration: durationValue,
-    });
-  };
-
-  const addCustom = () => {
-    const title = query.trim() || 'Nuova tappa';
-    confirm({
-      type: blockType,
-      title,
-      time: startTime || undefined,
-      notes: notes || undefined,
       duration: durationValue,
     });
   };
@@ -160,9 +157,9 @@ export function AddActivityModal({
         <DialogHeader className="shrink-0 space-y-3 border-b border-white/10 bg-[#0f172a] px-5 py-4 text-left md:px-7">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="font-display text-xl text-white">Aggiungi attività</DialogTitle>
+              <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Cerca un luogo o crea una tappa custom con filtri e orario.
+                Cerca luoghi nelle tue destinazioni tramite Google Maps.
               </DialogDescription>
             </div>
             <button
@@ -181,7 +178,7 @@ export function AddActivityModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca luoghi, musei, ristoranti…"
+              placeholder="Cerca musei, ristoranti, attrazioni…"
               className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none transition focus:border-amber-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-amber-400/15"
             />
           </div>
@@ -192,11 +189,9 @@ export function AddActivityModal({
             type={type}
             duration={duration}
             startTime={startTime}
-            notes={notes}
             onTypeChange={setType}
             onDurationChange={setDuration}
             onStartTimeChange={setStartTime}
-            onNotesChange={setNotes}
           />
         </div>
 
@@ -206,7 +201,6 @@ export function AddActivityModal({
             loading={loading}
             query={query}
             onAdd={addFromResult}
-            onAddCustom={addCustom}
           />
         </div>
       </DialogContent>

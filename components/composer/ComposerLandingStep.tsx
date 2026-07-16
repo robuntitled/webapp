@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -14,14 +13,21 @@ import {
   ArrowRight,
   BookOpen,
   CalendarIcon,
-  Sparkles,
+  Loader2,
+  MapPin,
+  Navigation,
   Users,
   User,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
+import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { findDestination } from '@/lib/composer/destinations';
+import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
+import { generateTripTitle, TRIP_TITLE_MAX_LENGTH } from '@/lib/composer/title-generator';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
+import type { PlannerProfile } from '@/types/planner';
+import { toast } from 'sonner';
 
 const MICRO_STEPS = [
   { id: 1, label: 'Destinazione' },
@@ -37,34 +43,34 @@ type ComposerLandingStepProps = {
 
 export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandingStepProps) {
   const [micro, setMicro] = useState(1);
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
   const [endDate, setEndDate] = useState<Date | undefined>(() => {
     if (draft.endDate) return new Date(draft.endDate);
-    return addDays(defaultStart, 4);
+    return addDays(defaultStart, 7);
   });
 
+  const selectedDestinations = getDraftDestinations(draft);
   const featured = findDestination(draft.destination);
   const heroGradient = featured?.gradient ?? 'from-primary/60 via-accent/40 to-teal-400/30';
 
-  const selectDestination = (label: string, meta: DestinationMeta) => {
-    if (!label) {
-      onChange({ destination: '', destinationMeta: undefined, title: '' });
-      return;
+  const handleDestinationsChange = (destinations: DestinationMeta[]) => {
+    const synced = syncDestinationFields(destinations, draft.title);
+    if (destinations.length > 0 && !draft.title) {
+      synced.title = generateTripTitle(destinations[0].label);
     }
-    onChange({
-      destination: label,
-      destinationMeta: meta,
-      title: draft.title || `Viaggio a ${meta.label}`,
-    });
+    onChange(synced);
   };
 
   const canNext =
     micro === 1
-      ? Boolean(draft.destination)
+      ? selectedDestinations.length > 0
       : micro === 2
         ? Boolean(startDate && endDate && endDate >= startDate)
-        : true;
+        : Boolean(draft.title.trim());
 
   const goNext = () => {
     if (micro === 2 && startDate && endDate) {
@@ -75,6 +81,49 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
     }
     if (micro < 3) setMicro((m) => m + 1);
     else onStart();
+  };
+
+  const detectOrigin = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocalizzazione non supportata');
+      return;
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=it`
+          );
+          const data = (await res.json()) as {
+            address?: { city?: string; town?: string; village?: string; country?: string };
+            display_name?: string;
+          };
+          const city =
+            data.address?.city ?? data.address?.town ?? data.address?.village ?? 'La tua città';
+          const label = data.display_name?.split(',')[0] ?? city;
+          onChange({
+            organizerOrigin: {
+              id: `geo-${Date.now()}`,
+              label,
+              city,
+              iata: '',
+              role: 'organizer',
+            },
+          });
+          toast.success(`Partenza da ${label}`);
+        } catch {
+          toast.error('Impossibile risolvere la posizione');
+        }
+        setGeoLoading(false);
+      },
+      () => {
+        toast.error('Permesso posizione negato');
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
   };
 
   const microMeta = MICRO_STEPS[micro - 1];
@@ -99,14 +148,14 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
         }
         subtitle={
           micro === 1
-            ? 'Un passo alla volta — la chat AI è sempre in basso a destra se hai dubbi.'
+            ? 'Scegli una o più mete — i suggerimenti seguono le tue preferenze.'
             : micro === 2
-              ? 'Scegli data di partenza e ritorno.'
-              : 'Titolo e compagnia di viaggio. Voli e hotel li aggiungi dopo.'
+              ? 'Date e punto di partenza del viaggio.'
+              : 'Titolo e modalità. Voli e hotel li aggiungi dopo.'
         }
       />
 
-      {draft.destination && micro > 1 && (
+      {selectedDestinations.length > 0 && micro > 1 && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -114,10 +163,8 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
         >
           <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${heroGradient} shrink-0`} />
           <div className="min-w-0">
-            <p className="text-xs text-white/50 uppercase tracking-wider">Destinazione</p>
-            <p className="font-semibold text-white truncate">
-              {draft.destinationMeta?.label ?? draft.destination}
-            </p>
+            <p className="text-xs text-white/50 uppercase tracking-wider">Mete</p>
+            <p className="font-semibold text-white truncate">{draft.destination}</p>
           </div>
         </motion.div>
       )}
@@ -133,18 +180,11 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
               className="space-y-6"
             >
               <DestinationSearch
-                selectedLabel={draft.destination}
-                selectedMeta={draft.destinationMeta}
-                onSelect={selectDestination}
+                selectedDestinations={selectedDestinations}
+                plannerProfile={draft.plannerProfile}
+                onDestinationsChange={handleDestinationsChange}
+                onPersonalize={() => setPlannerOpen(true)}
               />
-              {draft.destination && (
-                <div className={`rounded-2xl bg-gradient-to-br ${heroGradient} p-6 text-center`}>
-                  <p className="text-white/80 text-sm">Perfetto — iniziamo da</p>
-                  <p className="font-display text-2xl font-semibold text-white mt-1">
-                    {draft.destinationMeta?.label ?? draft.destination}
-                  </p>
-                </div>
-              )}
             </motion.div>
           )}
 
@@ -176,11 +216,16 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
                         onSelect={(d) => {
                           setStartDate(d);
                           if (d) {
-                            onChange({ startDate: format(d, 'yyyy-MM-dd') });
-                            if (!endDate || endDate < d) setEndDate(undefined);
+                            const ret = addDays(d, 7);
+                            setEndDate(ret);
+                            onChange({
+                              startDate: format(d, 'yyyy-MM-dd'),
+                              endDate: format(ret, 'yyyy-MM-dd'),
+                            });
                           }
                         }}
                         disabled={{ before: new Date() }}
+                        classNames={{ today: 'rounded-md text-foreground' }}
                       />
                     </PopoverContent>
                   </Popover>
@@ -207,9 +252,60 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
                           if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
                         }}
                         disabled={{ before: startDate || new Date() }}
+                        classNames={{ today: 'rounded-md text-foreground' }}
                       />
                     </PopoverContent>
                   </Popover>
+                </div>
+              </div>
+
+              <div className="space-y-3 max-w-md mx-auto">
+                <p className="text-sm font-medium text-white/80 text-center">Da dove parti?</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-3">
+                  {draft.organizerOrigin ? (
+                    <div className="flex items-center gap-2 text-sm text-white">
+                      <MapPin className="h-4 w-4 text-accent shrink-0" />
+                      <span className="truncate">{draft.organizerOrigin.label}</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white/45 text-center">
+                      Attiva GPS o inserisci manualmente la città di partenza
+                    </p>
+                  )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 rounded-xl composer-field text-white"
+                      onClick={detectOrigin}
+                      disabled={geoLoading}
+                    >
+                      {geoLoading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Navigation className="mr-2 h-4 w-4 text-accent" />
+                      )}
+                      Usa la mia posizione
+                    </Button>
+                    <Input
+                      placeholder="Es. Roma"
+                      className="flex-1 h-11 rounded-xl composer-field text-white"
+                      defaultValue={draft.organizerOrigin?.city ?? ''}
+                      onBlur={(e) => {
+                        const city = e.target.value.trim();
+                        if (!city) return;
+                        onChange({
+                          organizerOrigin: {
+                            id: `manual-${city}`,
+                            label: city,
+                            city,
+                            iata: '',
+                            role: 'organizer',
+                          },
+                        });
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -224,12 +320,18 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
               className="space-y-8"
             >
               <div className="space-y-3">
-                <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
+                  <span className="text-xs text-white/40 tabular-nums">
+                    {draft.title.length}/{TRIP_TITLE_MAX_LENGTH}
+                  </span>
+                </div>
                 <Input
                   className="h-14 rounded-2xl composer-field text-white text-lg"
                   value={draft.title}
+                  maxLength={TRIP_TITLE_MAX_LENGTH}
                   onChange={(e) => onChange({ title: e.target.value })}
-                  placeholder="Es. Road trip in Sicilia"
+                  placeholder="Es. Viaggio a Sicilia"
                 />
               </div>
 
@@ -258,32 +360,13 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
                         <Icon className={`h-6 w-6 mb-2 ${active ? 'text-accent' : ''}`} />
                         <p className="font-semibold">{mode === 'solo' ? 'Solo' : 'Con amici'}</p>
                         <p className="text-xs text-white/50 mt-1">
-                          {mode === 'solo' ? 'Organizzi per te' : 'Fino a 8 partecipanti'}
+                          {mode === 'solo'
+                            ? 'Organizzi per te, aperto ad altri viaggiatori'
+                            : 'Viaggio privato tra amici — invito via link'}
                         </p>
                       </button>
                     );
                   })}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-white/80">Budget indicativo (opzionale)</p>
-                <div className="relative max-w-xs">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-lg">
-                    €
-                  </span>
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="Es. 800"
-                    className="h-14 pl-10 rounded-2xl composer-field text-white text-lg"
-                    value={draft.budgetHint ?? ''}
-                    onChange={(e) =>
-                      onChange({
-                        budgetHint: e.target.value ? Number(e.target.value) : undefined,
-                      })
-                    }
-                  />
                 </div>
               </div>
             </motion.div>
@@ -324,17 +407,12 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
         </div>
       </div>
 
-      {micro === 1 && (
-        <p className="text-center text-sm text-white/45 mt-6">
-          <Link
-            href="/dashboard/profilo"
-            className="inline-flex items-center gap-1.5 text-accent hover:underline"
-          >
-            <Sparkles className="h-4 w-4" />
-            Personalizza suggerimenti AI
-          </Link>
-        </p>
-      )}
+      <PlannerQuickSetupSheet
+        open={plannerOpen}
+        onOpenChange={setPlannerOpen}
+        initialProfile={draft.plannerProfile}
+        onSaved={(profile: PlannerProfile) => onChange({ plannerProfile: profile })}
+      />
     </motion.div>
   );
 }

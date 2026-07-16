@@ -6,13 +6,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { BLOCK_META, getBlockDisplayTitle } from '@/lib/composer/blocks';
 import type { ComposerBlock, ComposerBlockType } from '@/types/composer';
 import {
   GripVertical,
-  Heart,
   MoreHorizontal,
   Pencil,
   StickyNote,
@@ -21,6 +21,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import { useRef, useState } from 'react';
 
 type TimelineStopCardProps = {
@@ -33,11 +34,10 @@ type TimelineStopCardProps = {
   onEdit: () => void;
   onRemove: () => void;
   onHover: (hovering: boolean) => void;
-  onToggleFavorite: () => void;
   onUpdateNotes: (notes: string) => void;
   onAddAttachment: (label: string, url: string) => void;
   onRemoveAttachment: (id: string) => void;
-  dragHandleProps?: Record<string, unknown>;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
 };
 
 const typeGradients: Record<ComposerBlockType, string> = {
@@ -63,11 +63,9 @@ export function TimelineStopCard({
   timeRange,
   transit,
   isFirst,
-  isLast,
   onEdit,
   onRemove,
   onHover,
-  onToggleFavorite,
   onUpdateNotes,
   onAddAttachment,
   onRemoveAttachment,
@@ -79,29 +77,49 @@ export function TimelineStopCard({
     typeof block.content.duration === 'string' ? block.content.duration : null;
   const place =
     typeof block.content.place === 'string' && block.content.place ? block.content.place : null;
-  const isFavorite = Boolean(block.content.favorite);
+  const pickup =
+    typeof block.content.pickupAddress === 'string' ? block.content.pickupAddress : null;
   const notes = typeof block.content.notes === 'string' ? block.content.notes : '';
   const attachments = attachmentsList(block);
   const [showNotes, setShowNotes] = useState(false);
+  const [draftNotes, setDraftNotes] = useState(notes);
   const [attachLabel, setAttachLabel] = useState('');
-  const [attachUrl, setAttachUrl] = useState('');
+  const [showAttach, setShowAttach] = useState(false);
+  const [pendingFile, setPendingFile] = useState<{ label: string; url: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const gradient = typeGradients[block.type];
 
+  const saveNotes = () => {
+    onUpdateNotes(draftNotes);
+    setShowNotes(false);
+  };
+
+  const saveAttachment = () => {
+    if (pendingFile) {
+      onAddAttachment(pendingFile.label, pendingFile.url);
+      setPendingFile(null);
+      setAttachLabel('');
+      setShowAttach(false);
+      return;
+    }
+    if (attachLabel.trim()) {
+      onAddAttachment(attachLabel.trim(), '#');
+      setAttachLabel('');
+      setShowAttach(false);
+    }
+  };
+
   return (
     <div className="relative">
-      {!isFirst && (
+      {!isFirst && transit && (
         <div className="absolute -top-5 left-4 z-10 flex items-center gap-1 text-[10px] font-medium text-white/40">
-          <span className="h-4 w-px bg-gradient-to-b from-transparent via-white/20 to-white/20" />
-          {transit && (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 backdrop-blur-sm">
-              {transit.distanceKm < 1
-                ? `${Math.round(transit.distanceKm * 1000)} m`
-                : `${transit.distanceKm.toFixed(2)} km`}{' '}
-              · {Math.round(transit.minutes)} min
-            </span>
-          )}
+          <span className="rounded-full bg-white/5 px-2 py-0.5 backdrop-blur-sm">
+            {transit.distanceKm < 1
+              ? `${Math.round(transit.distanceKm * 1000)} m`
+              : `${transit.distanceKm.toFixed(1)} km`}{' '}
+            · {Math.round(transit.minutes)} min
+          </span>
         </div>
       )}
 
@@ -120,11 +138,7 @@ export function TimelineStopCard({
             <GripVertical className="h-4 w-4" />
           </button>
 
-          <button
-            type="button"
-            onClick={onEdit}
-            className="flex min-w-0 flex-1 items-start gap-3 text-left"
-          >
+          <div className="flex min-w-0 flex-1 items-start gap-3">
             <span
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br text-lg ${gradient}`}
             >
@@ -136,65 +150,55 @@ export function TimelineStopCard({
                 <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
                   {meta.label}
                 </span>
-                {duration && (
-                  <span className="inline-flex items-center gap-1">
-                    {duration}
-                  </span>
+                {duration && <span>{duration}</span>}
+                {(pickup || place) && (
+                  <span className="truncate text-white/40">{pickup ?? place}</span>
                 )}
-                {place && <span className="truncate text-white/40">{place}</span>}
               </span>
             </span>
-          </button>
+          </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <span className="hidden text-xs font-semibold tabular-nums text-white/70 sm:inline">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <span className="hidden text-xs font-semibold tabular-nums text-white/70 sm:inline mr-1">
             {timeRange}
           </span>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onToggleFavorite();
+              onEdit();
             }}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
-              isFavorite ? 'text-rose-400' : 'text-white/30 hover:text-rose-300'
-            }`}
-            aria-label="Preferito"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/10 hover:text-white"
+            aria-label="Modifica"
           >
-            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+            <Pencil className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setShowNotes((v) => !v);
+              onRemove();
             }}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
-              notes ? 'text-amber-300' : 'text-white/30 hover:text-white/60'
-            }`}
-            aria-label="Note"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition hover:bg-rose-500/15 hover:text-rose-300"
+            aria-label="Elimina"
           >
-            <StickyNote className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/10 hover:text-white"
-                aria-label="Opzioni tappa"
+                aria-label="Altre azioni"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-56 border-white/10 bg-[#0f172a] text-white"
+              className="w-52 border-white/10 bg-[#0f172a] text-white"
             >
-              <DropdownMenuItem onClick={onEdit} className="focus:bg-white/10 focus:text-white">
-                <Pencil className="mr-2 h-3.5 w-3.5" />
-                Modifica dettagli
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => fileInputRef.current?.click()}
                 className="focus:bg-white/10 focus:text-white"
@@ -203,18 +207,14 @@ export function TimelineStopCard({
                 Carica documento
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setShowNotes((v) => !v)}
+                onClick={() => {
+                  setDraftNotes(notes);
+                  setShowNotes(true);
+                }}
                 className="focus:bg-white/10 focus:text-white"
               >
                 <StickyNote className="mr-2 h-3.5 w-3.5" />
-                {notes ? 'Modifica nota' : 'Aggiungi nota'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={onRemove}
-                className="text-rose-400 focus:bg-rose-500/10 focus:text-rose-300"
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Elimina
+                Aggiungi nota
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -222,22 +222,55 @@ export function TimelineStopCard({
       </div>
 
       {showNotes && (
-        <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 space-y-2">
           <Textarea
-            value={notes}
-            onChange={(e) => onUpdateNotes(e.target.value)}
+            value={draftNotes}
+            onChange={(e) => setDraftNotes(e.target.value)}
             placeholder="Note su questa tappa…"
             rows={2}
             className="resize-none rounded-xl border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus-visible:ring-amber-400/40"
           />
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <button
+          <div className="flex justify-end gap-2">
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
+              className="text-white/50"
               onClick={() => setShowNotes(false)}
-              className="text-xs text-white/40 hover:text-white"
             >
-              Chiudi
-            </button>
+              Annulla
+            </Button>
+            <Button type="button" size="sm" className="rounded-full" onClick={saveNotes}>
+              Salva nota
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {showAttach && (
+        <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 space-y-2">
+          <Input
+            value={attachLabel}
+            onChange={(e) => setAttachLabel(e.target.value)}
+            placeholder="Nome documento"
+            className="h-9 rounded-xl border-white/10 bg-white/5 text-sm text-white"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-white/50"
+              onClick={() => {
+                setShowAttach(false);
+                setPendingFile(null);
+              }}
+            >
+              Annulla
+            </Button>
+            <Button type="button" size="sm" className="rounded-full" onClick={saveAttachment}>
+              Salva documento
+            </Button>
           </div>
         </div>
       )}
@@ -278,8 +311,10 @@ export function TimelineStopCard({
           const file = e.target.files?.[0];
           if (!file) return;
           const url = URL.createObjectURL(file);
-          const label = file.name.length > 18 ? `${file.name.slice(0, 15)}…` : file.name;
-          onAddAttachment(label, url);
+          const label = file.name.length > 24 ? `${file.name.slice(0, 20)}…` : file.name;
+          setPendingFile({ label, url });
+          setAttachLabel(label);
+          setShowAttach(true);
           e.target.value = '';
         }}
       />

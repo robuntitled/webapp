@@ -44,6 +44,7 @@ export function TripMap({
   className = '',
   interactive = true,
   mapMode = 'day',
+  showRoute = false,
 }: TripMapProps) {
   return (
     <ReactGoogleTripMap
@@ -56,6 +57,7 @@ export function TripMap({
       onPinClick={onPinClick}
       onMapClick={interactive ? onMapClick : undefined}
       className={className}
+      showRoute={showRoute}
     />
   );
 }

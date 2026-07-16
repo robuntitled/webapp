@@ -33,6 +33,7 @@ type ReactGoogleTripMapProps = {
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
   className?: string;
+  showRoute?: boolean;
 };
 
 function isStopPin(pin: MapPin): boolean {
@@ -170,6 +171,7 @@ function TripMapInner({
   onPinClick,
   onMapClick,
   className = '',
+  showRoute = false,
 }: ReactGoogleTripMapProps) {
   const center = useMemo(
     () => resolveDestinationCoords(destination, destinationMeta) ?? { lat: 41.9, lng: 12.5 },
@@ -198,7 +200,7 @@ function TripMapInner({
         style={{ width: '100%', height: '100%' }}
       >
         <MapFitBounds pins={pins} stopPins={stopPins} mapMode={mapMode} />
-        {routePath.length >= 2 && <RoutePolyline path={routePath} />}
+        {showRoute && routePath.length >= 2 && <RoutePolyline path={routePath} />}
         <TripPins
           pins={pins}
           stopPins={stopPins}

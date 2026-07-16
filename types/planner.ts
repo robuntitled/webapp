@@ -4,6 +4,7 @@ export type PlannerPace = 'slow' | 'balanced' | 'intense';
 export type PlannerBudget = 'budget' | 'mid' | 'premium';
 export type PlannerAccommodation = 'hostel' | 'hotel' | 'apartment' | 'any';
 export type PlannerExperience = 'first_time' | 'been_before' | 'expert';
+export type PlannerTravelDistance = 'near' | 'medium' | 'far';
 
 export type PlannerProfile = {
   travelStyle: PlannerTravelStyle;
@@ -12,6 +13,8 @@ export type PlannerProfile = {
   interests: string[];
   accommodationPref: PlannerAccommodation;
   experienceLevel: PlannerExperience;
+  /** Preferenza distanza viaggio (intake rapido composer) */
+  travelDistance?: PlannerTravelDistance;
   dietaryNotes?: string;
   mobilityNotes?: string;
   freeNotes?: string;

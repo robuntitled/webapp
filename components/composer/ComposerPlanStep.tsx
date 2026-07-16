@@ -7,6 +7,10 @@ import {
   AddActivityModal,
   type AddActivityPayload,
 } from '@/components/composer/plan-v3/AddActivityModal';
+import {
+  AddTravelBlockModal,
+  type TravelBlockPayload,
+} from '@/components/composer/plan-v3/AddTravelBlockModal';
 import type { DayTrackerSelection } from '@/components/composer/plan-v3/DayTracker';
 import { createEmptyBlock } from '@/lib/composer/blocks';
 import {
@@ -43,6 +47,8 @@ export function ComposerPlanStep({
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<MapViewMode>('day');
   const [addOpen, setAddOpen] = useState(false);
+  const [travelOpen, setTravelOpen] = useState(false);
+  const [travelMode, setTravelMode] = useState<'transport' | 'hotel'>('transport');
 
   const activeDayIndex = selection === 'overview' ? draft.days[0]?.dayIndex ?? 1 : selection;
   const activeDay =
@@ -122,7 +128,6 @@ export function ComposerPlanStep({
     const block = createEmptyBlock(payload.type, day.blocks.length, {
       title: payload.title,
       place: payload.place,
-      notes: payload.notes,
       time: payload.time,
       duration: payload.duration,
       lat: payload.lat,
@@ -182,14 +187,17 @@ export function ComposerPlanStep({
     }));
   };
 
-  const toggleFavorite = (blockId: string) => {
-    if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => ({
-      ...d,
-      blocks: d.blocks.map((b) =>
-        b.id === blockId ? { ...b, content: { ...b.content, favorite: !b.content.favorite } } : b
-      ),
-    }));
+  const addTravelBlock = (payload: TravelBlockPayload) => {
+    const day = ensureActiveDay();
+    if (!day) return;
+    const block = createEmptyBlock(payload.type, day.blocks.length, {
+      title: payload.title,
+      place: payload.place,
+      pickupAddress: payload.pickupAddress,
+      timeSlot: 'flex',
+    });
+    updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
+    toast.success(payload.type === 'hotel' ? 'Hotel aggiunto' : 'Trasporto aggiunto');
   };
 
   const updateBlockNotes = (blockId: string, notes: string) => {
@@ -283,11 +291,24 @@ export function ComposerPlanStep({
           }
           setAddOpen(true);
         }}
+        onAddTransport={() => {
+          if (selection === 'overview' && draft.days[0]) {
+            setSelection(draft.days[0].dayIndex);
+          }
+          setTravelMode('transport');
+          setTravelOpen(true);
+        }}
+        onAddHotel={() => {
+          if (selection === 'overview' && draft.days[0]) {
+            setSelection(draft.days[0].dayIndex);
+          }
+          setTravelMode('hotel');
+          setTravelOpen(true);
+        }}
         onEditBlock={setEditingBlock}
         onRemoveBlock={removeBlock}
         onHoverBlock={setHighlightedPinId}
         onReorderBlocks={reorderBlocks}
-        onToggleFavorite={toggleFavorite}
         onUpdateBlockNotes={updateBlockNotes}
         onAddAttachment={addAttachment}
         onRemoveAttachment={removeAttachment}
@@ -311,6 +332,14 @@ export function ComposerPlanStep({
         onOpenChange={setAddOpen}
         draft={draft}
         onConfirm={addActivity}
+      />
+
+      <AddTravelBlockModal
+        open={travelOpen}
+        mode={travelMode}
+        onOpenChange={setTravelOpen}
+        draft={draft}
+        onConfirm={addTravelBlock}
       />
 
       <BlockEditorPanel

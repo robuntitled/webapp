@@ -145,9 +145,15 @@ export function ComposerSetupStep({
               className="space-y-5"
             >
               <DestinationSearch
-                selectedLabel={draft.destination}
-                selectedMeta={draft.destinationMeta}
-                onSelect={selectDestination}
+                selectedDestinations={
+                  draft.destinationMeta ? [draft.destinationMeta] : []
+                }
+                plannerProfile={draft.plannerProfile}
+                onDestinationsChange={(dests) => {
+                  if (dests.length === 0) selectDestination('', { label: '', lat: 0, lng: 0 });
+                  else selectDestination(dests.map((d) => d.label).join(' · '), dests[0]);
+                }}
+                onPersonalize={() => undefined}
               />
 
               {draft.destination && (
