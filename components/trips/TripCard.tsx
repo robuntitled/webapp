@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, Users, MapPin, LogIn } from 'lucide-react';
+import { Heart, Users, MapPin, LogIn, Palmtree, ArrowRight } from 'lucide-react';
 import { useTransition, useState, useEffect } from 'react';
 import { toggleFavorite } from '@/actions/favorites';
 import { joinTrip } from '@/actions/trip-management';
@@ -17,25 +17,40 @@ import type { TripWithRelations } from '@/types/trip';
 import { formatTripDate } from '@/lib/utils/trip';
 import { getInitialsFromNames } from '@/lib/utils/user';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
-import { PLANNING_MODE_META, formatSpotsLabel, isTripFull } from '@/lib/trips/display';
+import {
+  PLANNING_MODE_META,
+  formatSpotsLabel,
+  isTripFull,
+  isTripCreator,
+  isTripParticipant,
+  canJoinTrip,
+} from '@/lib/trips/display';
 
 export type { TripWithRelations } from '@/types/trip';
 
-export function TripCard({
-  trip,
-  session,
-}: {
+type TripCardProps = {
   trip: TripWithRelations;
   session: Session | null;
-}) {
+  /** Evidenzia il CTA partecipazione (Scopri viaggi) */
+  discover?: boolean;
+};
+
+export function TripCard({ trip, session, discover = false }: TripCardProps) {
   const router = useRouter();
   const [favPending, startFavTransition] = useTransition();
   const [joinPending, startJoinTransition] = useTransition();
   const [optimisticFavorited, setOptimisticFavorited] = useState(trip.isFavorited);
+  const [optimisticJoined, setOptimisticJoined] = useState(false);
+
+  const userId = session?.user?.id;
 
   useEffect(() => {
     setOptimisticFavorited(trip.isFavorited);
   }, [trip.isFavorited]);
+
+  useEffect(() => {
+    setOptimisticJoined(false);
+  }, [trip.id, trip.trip_participants]);
 
   const planningMode = trip.planningMode ?? 'group';
   const modeMeta = PLANNING_MODE_META[planningMode];
@@ -43,9 +58,9 @@ export function TripCard({
   const spotsLabel = formatSpotsLabel(trip.maxParticipants, participantCount);
   const full = isTripFull(trip.maxParticipants, participantCount);
 
-  const isCreator = session?.user?.id === trip.creator?.id;
-  const isParticipant = trip.trip_participants?.some((p) => p.user_id === session?.user?.id) ?? false;
-  const canJoin = session?.user && !isCreator && !isParticipant && !full;
+  const creator = isTripCreator(trip, userId);
+  const participant = isTripParticipant(trip, userId) || optimisticJoined;
+  const joinable = canJoinTrip(trip, userId) && !optimisticJoined;
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,9 +82,7 @@ export function TripCard({
     });
   };
 
-  const handleJoinClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleJoinClick = () => {
     if (!session) {
       router.push('/');
       return;
@@ -77,6 +90,7 @@ export function TripCard({
     startJoinTransition(async () => {
       try {
         await joinTrip(trip.id);
+        setOptimisticJoined(true);
         toast.success('Sei dentro! Modalità relax attiva 🏖️');
         router.refresh();
       } catch (error) {
@@ -86,19 +100,49 @@ export function TripCard({
   };
 
   const imageUrl = trip.imageUrl || DEFAULT_TRIP_IMAGE;
+  const tripHref = `/viaggi/${trip.id}`;
 
   return (
     <div className="h-full">
-      <Card className="card-travel h-full group flex flex-col bg-card relative border-0 shadow-xl">
-        <div className="relative h-60 w-full overflow-hidden">
-          <Image
-            src={imageUrl}
-            alt={`Viaggio: ${trip.title}`}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+      <Card className="card-travel h-full group flex flex-col bg-card border-0 shadow-xl">
+        <div className="relative h-60 w-full shrink-0">
+          <Link href={tripHref} className="block h-full w-full overflow-hidden">
+            <Image
+              src={imageUrl}
+              alt={`Viaggio: ${trip.title}`}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+            <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
+            <Badge className="bg-black/50 text-white border-white/20 backdrop-blur-sm text-[10px]">
+              {modeMeta.emoji} {modeMeta.shortLabel}
+            </Badge>
+            <Badge
+              variant={full ? 'destructive' : 'secondary'}
+              className="bg-black/50 text-white border-white/20 backdrop-blur-sm text-[10px]"
+            >
+              {spotsLabel}
+            </Badge>
+            {participant && !creator && (
+              <Badge className="bg-emerald-600/90 text-white border-0 backdrop-blur-sm text-[10px]">
+                🏖️ Relax
+              </Badge>
+            )}
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+            <Badge className="mb-2 bg-accent/90 hover:bg-accent text-accent-foreground border-0 text-xs font-medium">
+              <MapPin className="mr-1 h-3 w-3" />
+              {trip.destination}
+            </Badge>
+            <h3 className="font-display text-xl font-semibold text-white line-clamp-2 leading-snug">
+              {trip.title}
+            </h3>
+          </div>
+          </Link>
 
           {session?.user && (
             <Button
@@ -115,28 +159,6 @@ export function TripCard({
               />
             </Button>
           )}
-
-          <div className="absolute top-3 left-3 z-20 flex flex-wrap gap-1.5">
-            <Badge className="bg-black/50 text-white border-white/20 backdrop-blur-sm text-[10px]">
-              {modeMeta.emoji} {modeMeta.shortLabel}
-            </Badge>
-            <Badge
-              variant={full ? 'destructive' : 'secondary'}
-              className="bg-black/50 text-white border-white/20 backdrop-blur-sm text-[10px]"
-            >
-              {spotsLabel}
-            </Badge>
-          </div>
-
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <Badge className="mb-2 bg-accent/90 hover:bg-accent text-accent-foreground border-0 text-xs font-medium">
-              <MapPin className="mr-1 h-3 w-3" />
-              {trip.destination}
-            </Badge>
-            <h3 className="font-display text-xl font-semibold text-white line-clamp-2 leading-snug">
-              {trip.title}
-            </h3>
-          </div>
         </div>
 
         <CardContent className="p-4 flex flex-col flex-grow gap-3">
@@ -161,7 +183,7 @@ export function TripCard({
           </div>
         </CardContent>
 
-        <CardFooter className="relative z-20 px-4 py-3 bg-muted/40 border-t border-border/50">
+        <CardFooter className="px-4 py-3 bg-muted/40 border-t border-border/50 flex-col gap-3">
           <div className="flex items-center justify-between w-full gap-2">
             {trip.creator ? (
               <div className="flex items-center gap-2 min-w-0">
@@ -178,34 +200,72 @@ export function TripCard({
             ) : (
               <div />
             )}
-            {canJoin && (
-              <Button
-                size="sm"
-                className="relative z-20 rounded-full shrink-0"
-                onClick={handleJoinClick}
-                disabled={joinPending}
-              >
-                {joinPending ? (
-                  'Entro...'
-                ) : (
-                  <>
-                    <LogIn className="mr-1.5 h-3.5 w-3.5" />
-                    Ci sto! 🏖️
-                  </>
+            {!discover && (
+              <>
+                {joinable && (
+                  <Button
+                    size="sm"
+                    className="rounded-full shrink-0"
+                    onClick={handleJoinClick}
+                    disabled={joinPending}
+                  >
+                    {joinPending ? 'Entro...' : (
+                      <>
+                        <LogIn className="mr-1.5 h-3.5 w-3.5" />
+                        Ci sto! 🏖️
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
-            )}
-            {isParticipant && !isCreator && (
-              <Badge variant="secondary" className="rounded-full text-[10px] shrink-0">
-                🏖️ Sei dentro
-              </Badge>
+                {participant && !creator && (
+                  <Badge variant="secondary" className="rounded-full text-[10px] shrink-0">
+                    🏖️ Sei dentro
+                  </Badge>
+                )}
+              </>
             )}
           </div>
-        </CardFooter>
 
-        <Link href={`/viaggi/${trip.id}`} className="absolute inset-0 z-[5]" aria-label={`Vedi ${trip.title}`}>
-          <span className="sr-only">Vedi dettagli</span>
-        </Link>
+          {discover && (
+            <div className="w-full">
+              {participant && !creator ? (
+                <Button asChild className="w-full rounded-full gap-2" variant="secondary">
+                  <Link href={tripHref}>
+                    <Palmtree className="h-4 w-4" />
+                    Vai al viaggio — modalità relax
+                    <ArrowRight className="h-4 w-4 ml-auto" />
+                  </Link>
+                </Button>
+              ) : joinable ? (
+                <Button
+                  className="w-full rounded-full gap-2"
+                  onClick={handleJoinClick}
+                  disabled={joinPending}
+                >
+                  {joinPending ? (
+                    'Ti stiamo aggiungendo...'
+                  ) : (
+                    <>
+                      <LogIn className="h-4 w-4" />
+                      Unisciti — modalità relax 🏖️
+                    </>
+                  )}
+                </Button>
+              ) : !session?.user ? (
+                <Button asChild className="w-full rounded-full gap-2" variant="outline">
+                  <Link href="/">
+                    <LogIn className="h-4 w-4" />
+                    Accedi per partecipare
+                  </Link>
+                </Button>
+              ) : full ? (
+                <Button className="w-full rounded-full" variant="outline" disabled>
+                  Viaggio al completo
+                </Button>
+              ) : creator ? null : null}
+            </div>
+          )}
+        </CardFooter>
       </Card>
     </div>
   );

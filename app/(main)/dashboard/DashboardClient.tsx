@@ -9,19 +9,31 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Calendar as CalendarIcon, RotateCcw, X, Search, Compass, Plus } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  RotateCcw,
+  X,
+  Search,
+  Compass,
+  Plus,
+  Palmtree,
+} from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { it as itDayPicker } from 'react-day-picker/locale';
 import { type DateRange } from 'react-day-picker';
 import { type Session } from 'next-auth';
 import Link from 'next/link';
+import {
+  canJoinTrip,
+  isTripCreator,
+  isTripParticipant,
+} from '@/lib/trips/display';
 
 type AppliedFilters = {
   searchTerm: string;
   dateRange: DateRange | undefined;
   priceRange: [number, number];
-  friendsOnly: boolean;
 };
 
 function formatDateRangeLabel(range: DateRange | undefined): string {
@@ -31,7 +43,7 @@ function formatDateRangeLabel(range: DateRange | undefined): string {
 }
 
 function tripMatchesFilters(trip: TripWithRelations, filters: AppliedFilters): boolean {
-  const { searchTerm, dateRange, priceRange, friendsOnly } = filters;
+  const { searchTerm, dateRange, priceRange } = filters;
   const q = searchTerm.trim().toLowerCase();
 
   const textMatch =
@@ -51,10 +63,29 @@ function tripMatchesFilters(trip: TripWithRelations, filters: AppliedFilters): b
   const price = Number(trip.price) || 0;
   const priceMatch = price >= priceRange[0] && price <= priceRange[1];
 
-  const mode = trip.planningMode ?? 'group';
-  const modeMatch = !friendsOnly || mode === 'group';
+  return textMatch && dateMatch && priceMatch;
+}
 
-  return textMatch && dateMatch && priceMatch && modeMatch;
+function isOpenSoloTrip(trip: TripWithRelations): boolean {
+  return (trip.planningMode ?? 'group') === 'solo';
+}
+
+function TripGrid({
+  trips,
+  session,
+  discover = false,
+}: {
+  trips: TripWithRelations[];
+  session: Session | null;
+  discover?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {trips.map((trip) => (
+        <TripCard key={trip.id} trip={trip} session={session} discover={discover} />
+      ))}
+    </div>
+  );
 }
 
 export default function DashboardClient({
@@ -64,6 +95,8 @@ export default function DashboardClient({
   initialTrips: TripWithRelations[];
   session: Session | null;
 }) {
+  const userId = session?.user?.id;
+
   const priceBounds = useMemo(() => {
     const prices = initialTrips.map((t) => Number(t.price) || 0).filter((p) => p >= 0);
     const dataMax = prices.length ? Math.max(...prices) : 500;
@@ -74,21 +107,31 @@ export default function DashboardClient({
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [priceRange, setPriceRange] = useState<[number, number]>([priceBounds.min, priceBounds.max]);
-  const [friendsOnly, setFriendsOnly] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters | null>(null);
 
-  const filteredTrips = useMemo(() => {
-    if (!hasSearched || !appliedFilters) return [];
-    return initialTrips.filter((trip) => tripMatchesFilters(trip, appliedFilters));
-  }, [initialTrips, hasSearched, appliedFilters]);
+  const myRelaxTrips = useMemo(
+    () =>
+      initialTrips.filter(
+        (trip) => userId && isTripParticipant(trip, userId) && !isTripCreator(trip, userId)
+      ),
+    [initialTrips, userId]
+  );
+
+  const openResults = useMemo(() => {
+    if (!hasSearched || !appliedFilters) return [] as TripWithRelations[];
+
+    return initialTrips
+      .filter((trip) => isOpenSoloTrip(trip))
+      .filter((trip) => tripMatchesFilters(trip, appliedFilters))
+      .filter((trip) => canJoinTrip(trip, userId));
+  }, [initialTrips, hasSearched, appliedFilters, userId]);
 
   const handleSearch = () => {
     setAppliedFilters({
       searchTerm,
       dateRange,
       priceRange,
-      friendsOnly,
     });
     setHasSearched(true);
   };
@@ -97,10 +140,11 @@ export default function DashboardClient({
     setSearchTerm('');
     setDateRange(undefined);
     setPriceRange([priceBounds.min, priceBounds.max]);
-    setFriendsOnly(false);
     setHasSearched(false);
     setAppliedFilters(null);
   };
+
+  const showRelaxSection = Boolean(userId && myRelaxTrips.length > 0);
 
   return (
     <div className="relative z-0 container mx-auto px-4 pt-10 pb-24">
@@ -112,8 +156,8 @@ export default function DashboardClient({
           Trova un viaggio e unisciti in modalità relax
         </h1>
         <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-          Qui gli amici organizzano al posto tuo. Tu guardi il piano, i prezzi e dici solo
-          &quot;ci sto&quot; — zero Excel, zero caos di gruppo.
+          Cerca viaggi aperti a cui unirti. Se un amico ti invita su WhatsApp, lo trovi sopra in
+          modalità relax — qui compaiono solo i viaggi organizzati da una persona.
         </p>
         {session?.user && (
           <Button asChild className="mt-6 rounded-full gap-2">
@@ -124,6 +168,26 @@ export default function DashboardClient({
           </Button>
         )}
       </div>
+
+      {showRelaxSection && (
+        <section className="mb-12 max-w-6xl mx-auto">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
+              <Palmtree className="h-5 w-5 text-emerald-300" />
+            </div>
+            <div>
+              <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+                I tuoi viaggi in modalità relax
+              </h2>
+              <p className="text-sm text-white/55">
+                {myRelaxTrips.length}{' '}
+                {myRelaxTrips.length === 1 ? 'viaggio' : 'viaggi'} — sei in modalità relax
+              </p>
+            </div>
+          </div>
+          <TripGrid trips={myRelaxTrips} session={session} discover />
+        </section>
+      )}
 
       <div className="glass-panel rounded-3xl p-6 md:p-8 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
@@ -166,48 +230,32 @@ export default function DashboardClient({
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-                Partenza dal / al
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full justify-start rounded-xl font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary shrink-0" />
-                    <span className="truncate">{formatDateRangeLabel(dateRange)}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-xl" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    initialFocus
-                    disabled={{ before: new Date() }}
-                    locale={itDayPicker}
-                    numberOfMonths={1}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-                Tipo di viaggio
-              </Label>
-              <Button
-                type="button"
-                variant={friendsOnly ? 'default' : 'outline'}
-                className="h-11 w-full justify-start rounded-xl font-normal"
-                onClick={() => setFriendsOnly((v) => !v)}
-              >
-                🎉 Con gli amici
-              </Button>
-            </div>
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs uppercase tracking-wide">
+              Partenza dal / al
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-start rounded-xl font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-primary shrink-0" />
+                  <span className="truncate">{formatDateRangeLabel(dateRange)}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 rounded-xl" align="start">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  initialFocus
+                  disabled={{ before: new Date() }}
+                  locale={itDayPicker}
+                  numberOfMonths={1}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-3">
@@ -244,7 +292,7 @@ export default function DashboardClient({
         </div>
       </div>
 
-      <div className="mt-14">
+      <div className="mt-14 max-w-6xl mx-auto">
         {!hasSearched ? (
           <div className="text-center py-16 px-4">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 mb-6">
@@ -254,21 +302,30 @@ export default function DashboardClient({
               Imposta i filtri e cerca
             </h3>
             <p className="mt-2 text-white/60 max-w-md mx-auto">
-              Scegli destinazione, date, prezzo e tipo di viaggio — i risultati compariranno qui
-              sotto.
+              Scegli destinazione, date e prezzo — qui compaiono solo i viaggi aperti (organizzati
+              da una persona). Gli inviti tra amici arrivano via WhatsApp.
             </p>
           </div>
-        ) : filteredTrips.length > 0 ? (
-          <>
-            <p className="text-white/60 text-sm mb-6">
-              {filteredTrips.length} {filteredTrips.length === 1 ? 'viaggio' : 'viaggi'} trovati
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredTrips.map((trip) => (
-                <TripCard key={trip.id} trip={trip} session={session} />
-              ))}
+        ) : openResults.length > 0 ? (
+          <section>
+            <div className="mb-5">
+              <h3 className="font-display text-xl font-semibold text-white">
+                Disponibili da unirti
+              </h3>
+              <p className="text-sm text-white/55 mt-1">
+                {openResults.length}{' '}
+                {openResults.length === 1 ? 'viaggio aperto' : 'viaggi aperti'} — clicca
+                &quot;Unisciti — modalità relax&quot;
+              </p>
             </div>
-          </>
+            <TripGrid trips={openResults} session={session} discover />
+          </section>
+        ) : myRelaxTrips.length > 0 && hasSearched ? (
+          <div className="text-center py-12 px-4 rounded-2xl bg-white/5 border border-white/10">
+            <p className="text-white/70 max-w-md mx-auto">
+              Nessun nuovo viaggio con questi filtri — i tuoi viaggi in modalità relax sono sopra.
+            </p>
+          </div>
         ) : (
           <div className="text-center py-20 px-4">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 mb-6">
@@ -282,12 +339,12 @@ export default function DashboardClient({
                 <>
                   Prova ad allargare date o prezzo, oppure{' '}
                   <Link href="/dashboard/crea" className="text-accent hover:underline font-medium">
-                    crea un viaggio
+                    organizza un viaggio aperto
                   </Link>{' '}
-                  e invita gli amici svogliati.
+                  e invita gli amici su WhatsApp quando sei pronto.
                 </>
               ) : (
-                'Accedi per scoprire i viaggi organizzati dagli amici.'
+                'Accedi per cercare viaggi aperti a cui unirti.'
               )}
             </p>
           </div>

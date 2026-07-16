@@ -1,4 +1,4 @@
-import type { TripPlanningMode } from '@/types/trip';
+import type { TripPlanningMode, TripWithRelations } from '@/types/trip';
 
 export const PLANNING_MODE_META: Record<
   TripPlanningMode,
@@ -35,4 +35,21 @@ export function formatSpotsLabel(maxParticipants: number, participantCount: numb
 
 export function isTripFull(maxParticipants: number, participantCount: number): boolean {
   return getSpotsLeft(maxParticipants, participantCount) === 0;
+}
+
+export function isTripCreator(trip: TripWithRelations, userId?: string | null): boolean {
+  return Boolean(userId && trip.creator?.id === userId);
+}
+
+export function isTripParticipant(trip: TripWithRelations, userId?: string | null): boolean {
+  if (!userId) return false;
+  return trip.trip_participants?.some((p) => p.user_id === userId) ?? false;
+}
+
+export function canJoinTrip(trip: TripWithRelations, userId?: string | null): boolean {
+  if (!userId) return false;
+  if (isTripCreator(trip, userId)) return false;
+  if (isTripParticipant(trip, userId)) return false;
+  const count = trip.participantCount ?? getParticipantCount(trip.trip_participants);
+  return !isTripFull(trip.maxParticipants, count);
 }

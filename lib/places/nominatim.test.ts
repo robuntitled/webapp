@@ -21,6 +21,23 @@ describe('parseNominatimResult', () => {
     expect(result.lat).toBeCloseTo(48.8566);
   });
 
+  it('prefers Latin name from namedetails over local script', () => {
+    const result = parseNominatimResult({
+      place_id: 789,
+      lat: '35.6762',
+      lon: '139.6503',
+      display_name: '東京, 日本',
+      type: 'city',
+      class: 'place',
+      name: '東京',
+      namedetails: { name: '東京', 'name:en': 'Tokyo', 'name:it': 'Tokyo' },
+      address: { country: 'Giappone', country_code: 'jp' },
+    });
+
+    expect(result.label).toBe('Tokyo');
+    expect(result.country).toBe('Giappone');
+  });
+
   it('parses a village', () => {
     const result = parseNominatimResult({
       place_id: 456,

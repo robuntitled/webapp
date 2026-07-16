@@ -1,7 +1,8 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import ProfileForm from '@/app/(main)/dashboard/profilo/ProfileForm';
-import { PlannerProfileSection } from '@/components/profile/PlannerProfileSection';
+import { ProfilePageClient } from '@/components/profile/ProfilePageClient';
+import { HeroBackground } from '@/components/brand/HeroBackground';
+import { BRAND_IMAGES } from '@/lib/brand/images';
 import { getPlannerProfile } from '@/lib/data/planner-profile';
 import { getUserProfile } from '@/lib/data/users';
 
@@ -19,10 +20,18 @@ export default async function ProfilePage() {
   ]);
 
   return (
-    <div className="container mx-auto py-12 px-4">
-      <h1 className="text-4xl font-bold mb-8">Il Tuo Profilo</h1>
-      <ProfileForm userProfile={userProfile} />
-      <PlannerProfileSection initialProfile={plannerProfile} />
+    <div className="relative min-h-[calc(100vh-4rem)]">
+      <HeroBackground
+        images={[BRAND_IMAGES.heroes.slideshow[2], BRAND_IMAGES.heroes.slideshow[4]]}
+        overlay="gradient"
+      />
+      <div className="relative z-0 container mx-auto px-4 py-10 pb-24 max-w-4xl">
+        <ProfilePageClient
+          userProfile={userProfile}
+          plannerProfile={plannerProfile}
+          displayEmail={session.user.email}
+        />
+      </div>
     </div>
   );
 }

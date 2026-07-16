@@ -22,6 +22,8 @@ export type NominatimAddress = {
   country_code?: string;
 };
 
+export type NominatimNameDetails = Record<string, string>;
+
 export type NominatimResult = {
   place_id: number;
   lat: string;
@@ -30,5 +32,6 @@ export type NominatimResult = {
   type: string;
   class: string;
   name?: string;
+  namedetails?: NominatimNameDetails;
   address?: NominatimAddress;
 };
