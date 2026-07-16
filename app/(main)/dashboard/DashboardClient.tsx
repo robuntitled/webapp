@@ -2,24 +2,58 @@
 
 import { useState, useMemo } from 'react';
 import { TripCard } from '@/components/trips/TripCard';
-import type { TripPlanningMode, TripWithRelations } from '@/types/trip';
+import type { TripWithRelations } from '@/types/trip';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, RotateCcw, X, Search, Compass, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { type DateRange } from 'react-day-picker';
 import { type Session } from 'next-auth';
 import Link from 'next/link';
+
+type AppliedFilters = {
+  searchTerm: string;
+  dateRange: DateRange | undefined;
+  priceRange: [number, number];
+  friendsOnly: boolean;
+};
+
+function formatDateRangeLabel(range: DateRange | undefined): string {
+  if (!range?.from) return 'Qualsiasi periodo';
+  if (!range.to) return format(range.from, 'd MMM yyyy', { locale: it });
+  return `${format(range.from, 'd MMM yyyy', { locale: it })} – ${format(range.to, 'd MMM yyyy', { locale: it })}`;
+}
+
+function tripMatchesFilters(trip: TripWithRelations, filters: AppliedFilters): boolean {
+  const { searchTerm, dateRange, priceRange, friendsOnly } = filters;
+  const q = searchTerm.trim().toLowerCase();
+
+  const textMatch =
+    !q ||
+    trip.title.toLowerCase().includes(q) ||
+    trip.destination.toLowerCase().includes(q) ||
+    (trip.creator?.first_name?.toLowerCase().includes(q) ?? false);
+
+  let dateMatch = true;
+  if (dateRange?.from && trip.startDate) {
+    const tripStart = startOfDay(new Date(trip.startDate));
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? startOfDay(dateRange.to) : from;
+    dateMatch = tripStart >= from && tripStart <= to;
+  }
+
+  const priceMatch = trip.price >= priceRange[0] && trip.price <= priceRange[1];
+
+  const mode = trip.planningMode ?? 'group';
+  const modeMatch = !friendsOnly || mode === 'group';
+
+  return textMatch && dateMatch && priceMatch && modeMatch;
+}
 
 export default function DashboardClient({
   initialTrips,
@@ -28,28 +62,42 @@ export default function DashboardClient({
   initialTrips: TripWithRelations[];
   session: Session | null;
 }) {
+  const priceBounds = useMemo(() => {
+    const prices = initialTrips.map((t) => t.price).filter((p) => p >= 0);
+    const dataMax = prices.length ? Math.max(...prices) : 500;
+    const max = Math.max(500, Math.ceil(dataMax / 50) * 50);
+    return { min: 0, max };
+  }, [initialTrips]);
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [date, setDate] = useState<Date | undefined>();
-  const [planningFilter, setPlanningFilter] = useState<'all' | TripPlanningMode>('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [priceRange, setPriceRange] = useState<[number, number]>([priceBounds.min, priceBounds.max]);
+  const [friendsOnly, setFriendsOnly] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters | null>(null);
 
   const filteredTrips = useMemo(() => {
-    return initialTrips.filter((trip) => {
-      const textMatch =
-        !searchTerm ||
-        trip.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.creator?.first_name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const dateMatch = !date || (trip.startDate && new Date(trip.startDate) >= date);
-      const mode = trip.planningMode ?? 'group';
-      const modeMatch = planningFilter === 'all' || mode === planningFilter;
-      return textMatch && dateMatch && modeMatch;
+    if (!hasSearched || !appliedFilters) return [];
+    return initialTrips.filter((trip) => tripMatchesFilters(trip, appliedFilters));
+  }, [initialTrips, hasSearched, appliedFilters]);
+
+  const handleSearch = () => {
+    setAppliedFilters({
+      searchTerm,
+      dateRange,
+      priceRange,
+      friendsOnly,
     });
-  }, [initialTrips, searchTerm, date, planningFilter]);
+    setHasSearched(true);
+  };
 
   const handleResetFilters = () => {
     setSearchTerm('');
-    setDate(undefined);
-    setPlanningFilter('all');
+    setDateRange(undefined);
+    setPriceRange([priceBounds.min, priceBounds.max]);
+    setFriendsOnly(false);
+    setHasSearched(false);
+    setAppliedFilters(null);
   };
 
   return (
@@ -79,7 +127,7 @@ export default function DashboardClient({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 text-foreground">
             <Search className="h-5 w-5 text-primary" />
-            <span className="font-medium">Cerca viaggi di amici</span>
+            <span className="font-medium">Scopri viaggi</span>
           </div>
           <Button
             variant="ghost"
@@ -101,6 +149,7 @@ export default function DashboardClient({
               className="h-12 pl-10 pr-10 rounded-xl text-base"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             {searchTerm && (
               <Button
@@ -118,7 +167,7 @@ export default function DashboardClient({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-                Partenza dal
+                Partenza dal / al
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -126,49 +175,91 @@ export default function DashboardClient({
                     variant="outline"
                     className="h-11 w-full justify-start rounded-xl font-normal"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                    {date ? format(date, 'PPP', { locale: it }) : 'Qualsiasi data'}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">{formatDateRangeLabel(dateRange)}</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-xl">
+                <PopoverContent className="w-auto p-0 rounded-xl" align="start">
                   <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
                     initialFocus
                     disabled={{ before: new Date() }}
+                    locale={it}
+                    numberOfMonths={1}
                   />
                 </PopoverContent>
               </Popover>
             </div>
+
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs uppercase tracking-wide">
                 Tipo di viaggio
               </Label>
-              <Select
-                value={planningFilter}
-                onValueChange={(v) => setPlanningFilter(v as 'all' | TripPlanningMode)}
+              <Button
+                type="button"
+                variant={friendsOnly ? 'default' : 'outline'}
+                className="h-11 w-full justify-start rounded-xl font-normal"
+                onClick={() => setFriendsOnly((v) => !v)}
               >
-                <SelectTrigger className="h-11 rounded-xl">
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti i viaggi</SelectItem>
-                  <SelectItem value="group">🎉 Con gli amici</SelectItem>
-                  <SelectItem value="solo">🧳 Solo (aperto al gruppo)</SelectItem>
-                </SelectContent>
-              </Select>
+                🎉 Con gli amici
+              </Button>
             </div>
           </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wide">
+                Prezzo a persona
+              </Label>
+              <span className="text-sm font-medium tabular-nums">
+                {priceRange[0]}€ – {priceRange[1]}€
+              </span>
+            </div>
+            <Slider
+              min={priceBounds.min}
+              max={priceBounds.max}
+              step={10}
+              value={priceRange}
+              onValueChange={(v) => setPriceRange([v[0], v[1]] as [number, number])}
+              className="py-2"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+              <span>{priceBounds.min}€</span>
+              <span>{priceBounds.max}€+</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            className="w-full h-12 rounded-xl text-base gap-2"
+            onClick={handleSearch}
+          >
+            <Search className="h-4 w-4" />
+            Cerca viaggi
+          </Button>
         </div>
       </div>
 
       <div className="mt-14">
-        {filteredTrips.length > 0 ? (
+        {!hasSearched ? (
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 mb-6">
+              <Search className="h-8 w-8 text-accent" />
+            </div>
+            <h3 className="font-display text-2xl text-white font-semibold">
+              Imposta i filtri e cerca
+            </h3>
+            <p className="mt-2 text-white/60 max-w-md mx-auto">
+              Scegli destinazione, date, prezzo e tipo di viaggio — i risultati compariranno qui
+              sotto.
+            </p>
+          </div>
+        ) : filteredTrips.length > 0 ? (
           <>
             <p className="text-white/60 text-sm mb-6">
-              {filteredTrips.length} {filteredTrips.length === 1 ? 'viaggio' : 'viaggi'}{' '}
-              {searchTerm || date || planningFilter !== 'all' ? 'trovati' : 'da unirti'}
+              {filteredTrips.length} {filteredTrips.length === 1 ? 'viaggio' : 'viaggi'} trovati
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredTrips.map((trip) => (
@@ -187,7 +278,7 @@ export default function DashboardClient({
             <p className="mt-2 text-white/60 max-w-md mx-auto">
               {session?.user ? (
                 <>
-                  Sii il primo a organizzare qualcosa —{' '}
+                  Prova ad allargare date o prezzo, oppure{' '}
                   <Link href="/dashboard/crea" className="text-accent hover:underline font-medium">
                     crea un viaggio
                   </Link>{' '}
