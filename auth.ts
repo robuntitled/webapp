@@ -1,4 +1,5 @@
 import NextAuth from 'next-auth';
+import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import Facebook from 'next-auth/providers/facebook';
@@ -11,9 +12,10 @@ const facebookId = process.env.AUTH_FACEBOOK_ID ?? process.env.FACEBOOK_CLIENT_I
 const facebookSecret =
   process.env.AUTH_FACEBOOK_SECRET ?? process.env.FACEBOOK_CLIENT_SECRET;
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  providers: [
+const oauthProviders: Provider[] = [];
+
+if (googleId?.trim() && googleSecret?.trim()) {
+  oauthProviders.push(
     Google({
       clientId: googleId,
       clientSecret: googleSecret,
@@ -24,7 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           response_type: 'code',
         },
       },
-    }),
+    })
+  );
+}
+
+if (facebookId?.trim() && facebookSecret?.trim()) {
+  oauthProviders.push(
     Facebook({
       clientId: facebookId,
       clientSecret: facebookSecret,
@@ -34,7 +41,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           scope: 'email public_profile',
         },
       },
-    }),
+    })
+  );
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  secret: process.env.AUTH_SECRET,
+  providers: [
+    ...oauthProviders,
     Credentials({
       name: 'Credentials',
       credentials: {

@@ -29,9 +29,22 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const authError = new URLSearchParams(window.location.search).get('error');
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('error');
     if (authError) {
       setError(mapAuthError(authError));
+      if (authError === 'Configuration') {
+        void fetch('/api/auth/status')
+          .then((r) => r.json())
+          .then((data: { missing?: string[] }) => {
+            if (data.missing?.length) {
+              setError(
+                `Configurazione OAuth incompleta su Vercel. Mancano: ${data.missing.join(', ')}`
+              );
+            }
+          })
+          .catch(() => undefined);
+      }
     }
   }, []);
 
