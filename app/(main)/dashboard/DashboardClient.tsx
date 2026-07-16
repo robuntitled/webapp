@@ -25,7 +25,8 @@ import { type DateRange } from 'react-day-picker';
 import { type Session } from 'next-auth';
 import Link from 'next/link';
 import {
-  canJoinTrip,
+  isDiscoverableSoloTrip,
+  isOpenSoloTrip,
   isTripCreator,
   isTripParticipant,
 } from '@/lib/trips/display';
@@ -64,10 +65,6 @@ function tripMatchesFilters(trip: TripWithRelations, filters: AppliedFilters): b
   const priceMatch = price >= priceRange[0] && price <= priceRange[1];
 
   return textMatch && dateMatch && priceMatch;
-}
-
-function isOpenSoloTrip(trip: TripWithRelations): boolean {
-  return (trip.planningMode ?? 'group') === 'solo';
 }
 
 function TripGrid({
@@ -118,14 +115,34 @@ export default function DashboardClient({
     [initialTrips, userId]
   );
 
+  const discoverableTrips = useMemo(
+    () => initialTrips.filter((trip) => isDiscoverableSoloTrip(trip, userId)),
+    [initialTrips, userId]
+  );
+
   const openResults = useMemo(() => {
     if (!hasSearched || !appliedFilters) return [] as TripWithRelations[];
 
-    return initialTrips
-      .filter((trip) => isOpenSoloTrip(trip))
-      .filter((trip) => tripMatchesFilters(trip, appliedFilters))
-      .filter((trip) => canJoinTrip(trip, userId));
-  }, [initialTrips, hasSearched, appliedFilters, userId]);
+    return discoverableTrips.filter((trip) => tripMatchesFilters(trip, appliedFilters));
+  }, [discoverableTrips, hasSearched, appliedFilters]);
+
+  const emptySearchReason = useMemo(() => {
+    if (!hasSearched || openResults.length > 0) return null;
+
+    const soloTrips = initialTrips.filter(isOpenSoloTrip);
+    const ownSoloTrips = userId ? soloTrips.filter((trip) => isTripCreator(trip, userId)) : [];
+
+    if (discoverableTrips.length === 0 && ownSoloTrips.length > 0) {
+      return 'own-solo-only';
+    }
+    if (discoverableTrips.length === 0 && soloTrips.length === 0) {
+      return 'no-solo-trips';
+    }
+    if (discoverableTrips.length > 0) {
+      return 'filters-too-strict';
+    }
+    return 'none';
+  }, [hasSearched, openResults.length, initialTrips, userId, discoverableTrips.length]);
 
   const handleSearch = () => {
     setAppliedFilters({
@@ -335,16 +352,43 @@ export default function DashboardClient({
               Nessun viaggio trovato
             </h3>
             <p className="mt-2 text-white/60 max-w-md mx-auto">
-              {session?.user ? (
+              {emptySearchReason === 'own-solo-only' ? (
+                <>
+                  Il database risponde, ma qui non compaiono i viaggi che hai organizzato tu. I
+                  tuoi sono in{' '}
+                  <Link
+                    href="/dashboard/miei-viaggi"
+                    className="text-accent hover:underline font-medium"
+                  >
+                    I miei viaggi
+                  </Link>
+                  ; quelli tra amici si condividono via WhatsApp. Per provare la ricerca, accedi con
+                  un altro account o chiedi a un amico di creare un viaggio in modalità Solo.
+                </>
+              ) : emptySearchReason === 'no-solo-trips' ? (
+                <>
+                  Ci sono viaggi nel database, ma nessuno è in modalità Solo (aperto al gruppo). I
+                  viaggi tra amici non compaiono qui — si invitano via WhatsApp.{' '}
+                  <Link href="/dashboard/crea" className="text-accent hover:underline font-medium">
+                    Crea un viaggio aperto
+                  </Link>{' '}
+                  scegliendo &quot;Solo&quot; nel composer.
+                </>
+              ) : emptySearchReason === 'filters-too-strict' ? (
+                <>
+                  Ci sono viaggi aperti, ma non rientrano nei filtri (controlla date e prezzo). Prova
+                  con &quot;Qualsiasi periodo&quot; o allarga il range prezzo.
+                </>
+              ) : session?.user ? (
                 <>
                   Prova ad allargare date o prezzo, oppure{' '}
                   <Link href="/dashboard/crea" className="text-accent hover:underline font-medium">
                     organizza un viaggio aperto
                   </Link>{' '}
-                  e invita gli amici su WhatsApp quando sei pronto.
+                  in modalità Solo.
                 </>
               ) : (
-                'Accedi per cercare viaggi aperti a cui unirti.'
+                'Accedi per unirti ai viaggi aperti — puoi comunque sfogliarli qui sotto dopo la ricerca.'
               )}
             </p>
           </div>

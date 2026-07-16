@@ -46,10 +46,25 @@ export function isTripParticipant(trip: TripWithRelations, userId?: string | nul
   return trip.trip_participants?.some((p) => p.user_id === userId) ?? false;
 }
 
-export function canJoinTrip(trip: TripWithRelations, userId?: string | null): boolean {
-  if (!userId) return false;
+export function isOpenSoloTrip(trip: TripWithRelations): boolean {
+  return (trip.planningMode ?? 'group') === 'solo';
+}
+
+/** Viaggi visibili in Scopri viaggi (solo/aperti, non pieni, non i tuoi). */
+export function isDiscoverableSoloTrip(
+  trip: TripWithRelations,
+  userId?: string | null
+): boolean {
+  if (!isOpenSoloTrip(trip)) return false;
+  const count = trip.participantCount ?? getParticipantCount(trip.trip_participants);
+  if (isTripFull(trip.maxParticipants, count)) return false;
+  if (!userId) return true;
   if (isTripCreator(trip, userId)) return false;
   if (isTripParticipant(trip, userId)) return false;
-  const count = trip.participantCount ?? getParticipantCount(trip.trip_participants);
-  return !isTripFull(trip.maxParticipants, count);
+  return true;
+}
+
+export function canJoinTrip(trip: TripWithRelations, userId?: string | null): boolean {
+  if (!userId) return false;
+  return isDiscoverableSoloTrip(trip, userId);
 }
