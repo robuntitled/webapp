@@ -20,8 +20,8 @@ type TripMapProps = {
   mapMode?: MapViewMode;
 };
 
-const ReactMapboxTripMap = dynamic(
-  () => import('@/components/maps/ReactMapboxTripMap').then((m) => m.ReactMapboxTripMap),
+const ReactGoogleTripMap = dynamic(
+  () => import('@/components/maps/ReactGoogleTripMap').then((m) => m.ReactGoogleTripMap),
   {
     ssr: false,
     loading: () => (
@@ -32,7 +32,7 @@ const ReactMapboxTripMap = dynamic(
   }
 );
 
-/** Mapbox GL wrapper. Legacy Leaflet impl backed up in old_composer/v3. */
+/** Google Maps wrapper — UI aligned with the former Mapbox composer map. */
 export function TripMap({
   destination,
   destinationMeta,
@@ -46,7 +46,7 @@ export function TripMap({
   mapMode = 'day',
 }: TripMapProps) {
   return (
-    <ReactMapboxTripMap
+    <ReactGoogleTripMap
       destination={destination}
       destinationMeta={destinationMeta}
       pins={pins}

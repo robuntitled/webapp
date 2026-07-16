@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, addDays, differenceInDays } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,11 +23,9 @@ import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader
 import { findDestination } from '@/lib/composer/destinations';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 
-type DateMode = 'calendar' | 'days';
-
 const MICRO_STEPS = [
   { id: 1, label: 'Destinazione' },
-  { id: 2, label: 'Durata' },
+  { id: 2, label: 'Date' },
   { id: 3, label: 'Viaggio' },
 ] as const;
 
@@ -39,21 +37,12 @@ type ComposerLandingStepProps = {
 
 export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandingStepProps) {
   const [micro, setMicro] = useState(1);
-  const [dateMode, setDateMode] = useState<DateMode>(
-    draft.startDate && draft.endDate ? 'calendar' : 'days'
-  );
-  const [dayCount, setDayCount] = useState(() => {
-    if (draft.startDate && draft.endDate) {
-      return differenceInDays(new Date(draft.endDate), new Date(draft.startDate)) + 1;
-    }
-    return 5;
+  const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
+  const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
+  const [endDate, setEndDate] = useState<Date | undefined>(() => {
+    if (draft.endDate) return new Date(draft.endDate);
+    return addDays(defaultStart, 4);
   });
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14)
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    draft.endDate ? new Date(draft.endDate) : undefined
-  );
 
   const featured = findDestination(draft.destination);
   const heroGradient = featured?.gradient ?? 'from-primary/60 via-accent/40 to-teal-400/30';
@@ -70,20 +59,6 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
     });
   };
 
-  const syncDayCountToDates = (count: number, anchor?: Date) => {
-    const start = anchor ?? startDate ?? addDays(new Date(), 14);
-    const end = addDays(start, Math.max(1, count) - 1);
-    setStartDate(start);
-    setEndDate(end);
-    onChange({
-      startDate: format(start, 'yyyy-MM-dd'),
-      endDate: format(end, 'yyyy-MM-dd'),
-    });
-  };
-
-  const tripDays =
-    startDate && endDate ? differenceInDays(endDate, startDate) + 1 : dayCount;
-
   const canNext =
     micro === 1
       ? Boolean(draft.destination)
@@ -92,8 +67,11 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
         : true;
 
   const goNext = () => {
-    if (micro === 2 && dateMode === 'days') {
-      syncDayCountToDates(dayCount);
+    if (micro === 2 && startDate && endDate) {
+      onChange({
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
+      });
     }
     if (micro < 3) setMicro((m) => m + 1);
     else onStart();
@@ -116,14 +94,14 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
           micro === 1
             ? 'Dove andiamo?'
             : micro === 2
-              ? 'Quanti giorni?'
+              ? 'Quando partite?'
               : 'Come lo chiamiamo?'
         }
         subtitle={
           micro === 1
             ? 'Un passo alla volta — la chat AI è sempre in basso a destra se hai dubbi.'
             : micro === 2
-              ? 'Scegli il numero di giorni oppure le date esatte.'
+              ? 'Scegli data di partenza e ritorno.'
               : 'Titolo e compagnia di viaggio. Voli e hotel li aggiungi dopo.'
         }
       />
@@ -178,144 +156,62 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
               exit={{ opacity: 0, x: -16 }}
               className="space-y-8"
             >
-              <div className="flex justify-center">
-                <div className="composer-segment flex rounded-full p-1 text-sm">
-                  <button
-                    type="button"
-                    onClick={() => setDateMode('days')}
-                    className={`px-5 py-2 rounded-full font-medium transition-colors ${
-                      dateMode === 'days' ? 'composer-segment-active' : 'text-white/60'
-                    }`}
-                  >
-                    N° giorni
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateMode('calendar')}
-                    className={`px-5 py-2 rounded-full font-medium transition-colors ${
-                      dateMode === 'calendar' ? 'composer-segment-active' : 'text-white/60'
-                    }`}
-                  >
-                    Date precise
-                  </button>
+              <div className="grid sm:grid-cols-2 gap-4 max-w-md mx-auto">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-white/80 text-center">Partenza</p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full h-14 justify-center rounded-2xl composer-field text-white text-base"
+                      >
+                        <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
+                        {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 rounded-xl" align="center">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={(d) => {
+                          setStartDate(d);
+                          if (d) {
+                            onChange({ startDate: format(d, 'yyyy-MM-dd') });
+                            if (!endDate || endDate < d) setEndDate(undefined);
+                          }
+                        }}
+                        disabled={{ before: new Date() }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-white/80 text-center">Ritorno</p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full h-14 justify-center rounded-2xl composer-field text-white text-base"
+                        disabled={!startDate}
+                      >
+                        <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
+                        {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 rounded-xl" align="center">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={(d) => {
+                          setEndDate(d);
+                          if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
+                        }}
+                        disabled={{ before: startDate || new Date() }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-
-              {dateMode === 'days' ? (
-                <div className="flex flex-col items-center gap-6">
-                  <div className="flex items-center gap-6">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-14 w-14 rounded-2xl composer-field border-white/20 text-2xl"
-                      disabled={dayCount <= 1}
-                      onClick={() => {
-                        const next = Math.max(1, dayCount - 1);
-                        setDayCount(next);
-                        syncDayCountToDates(next);
-                      }}
-                    >
-                      −
-                    </Button>
-                    <div className="text-center min-w-[100px]">
-                      <span className="font-display text-6xl font-semibold text-white tabular-nums">
-                        {dayCount}
-                      </span>
-                      <p className="text-white/60 mt-1">{dayCount === 1 ? 'giorno' : 'giorni'}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-14 w-14 rounded-2xl composer-field border-white/20 text-2xl"
-                      disabled={dayCount >= 30}
-                      onClick={() => {
-                        const next = Math.min(30, dayCount + 1);
-                        setDayCount(next);
-                        syncDayCountToDates(next);
-                      }}
-                    >
-                      +
-                    </Button>
-                  </div>
-                  {startDate && (
-                    <p className="text-white/50 text-sm">
-                      Partenza indicativa: {format(startDate, 'd MMMM yyyy', { locale: it })}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="grid sm:grid-cols-2 gap-4 max-w-md mx-auto">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-white/80 text-center">Partenza</p>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full h-14 justify-center rounded-2xl composer-field text-white text-base"
-                        >
-                          <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
-                          {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 rounded-xl" align="center">
-                        <Calendar
-                          mode="single"
-                          selected={startDate}
-                          onSelect={(d) => {
-                            setStartDate(d);
-                            if (d) {
-                              onChange({ startDate: format(d, 'yyyy-MM-dd') });
-                              if (!endDate || endDate < d) {
-                                const end = addDays(d, dayCount - 1);
-                                setEndDate(end);
-                                onChange({ endDate: format(end, 'yyyy-MM-dd') });
-                              }
-                            }
-                          }}
-                          disabled={{ before: new Date() }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-white/80 text-center">Ritorno</p>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full h-14 justify-center rounded-2xl composer-field text-white text-base"
-                          disabled={!startDate}
-                        >
-                          <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
-                          {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 rounded-xl" align="center">
-                        <Calendar
-                          mode="single"
-                          selected={endDate}
-                          onSelect={(d) => {
-                            setEndDate(d);
-                            if (d) {
-                              onChange({ endDate: format(d, 'yyyy-MM-dd') });
-                              if (startDate) setDayCount(differenceInDays(d, startDate) + 1);
-                            }
-                          }}
-                          disabled={{ before: startDate || new Date() }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              )}
-
-              {tripDays > 0 && (
-                <p className="text-center text-accent font-medium text-lg">
-                  {tripDays} {tripDays === 1 ? 'pagina' : 'pagine'} nel tuo libro
-                </p>
-              )}
             </motion.div>
           )}
 

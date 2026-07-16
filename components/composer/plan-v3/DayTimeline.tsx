@@ -49,8 +49,8 @@ export function DayTimeline({
       <div className="flex flex-1 flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.03] px-6 py-16 text-center">
         <p className="font-display text-xl font-semibold text-white">Nessuna tappa ancora</p>
         <p className="mt-2 max-w-sm text-sm text-white/45">
-          Aggiungi attrazioni, attività o luoghi. La timeline scura e la mappa Mapbox si
-          aggiornano insieme.
+          Aggiungi attrazioni, attività o luoghi. La timeline scura e la mappa si aggiornano
+          insieme.
         </p>
       </div>
     );
