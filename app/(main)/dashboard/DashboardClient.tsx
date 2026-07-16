@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, RotateCcw, X, Search, Compass, Plus } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { it as itDayPicker } from 'react-day-picker/locale';
 import { type DateRange } from 'react-day-picker';
 import { type Session } from 'next-auth';
 import Link from 'next/link';
@@ -47,7 +48,8 @@ function tripMatchesFilters(trip: TripWithRelations, filters: AppliedFilters): b
     dateMatch = tripStart >= from && tripStart <= to;
   }
 
-  const priceMatch = trip.price >= priceRange[0] && trip.price <= priceRange[1];
+  const price = Number(trip.price) || 0;
+  const priceMatch = price >= priceRange[0] && price <= priceRange[1];
 
   const mode = trip.planningMode ?? 'group';
   const modeMatch = !friendsOnly || mode === 'group';
@@ -63,7 +65,7 @@ export default function DashboardClient({
   session: Session | null;
 }) {
   const priceBounds = useMemo(() => {
-    const prices = initialTrips.map((t) => t.price).filter((p) => p >= 0);
+    const prices = initialTrips.map((t) => Number(t.price) || 0).filter((p) => p >= 0);
     const dataMax = prices.length ? Math.max(...prices) : 500;
     const max = Math.max(500, Math.ceil(dataMax / 50) * 50);
     return { min: 0, max };
@@ -186,7 +188,7 @@ export default function DashboardClient({
                     onSelect={setDateRange}
                     initialFocus
                     disabled={{ before: new Date() }}
-                    locale={it}
+                    locale={itDayPicker}
                     numberOfMonths={1}
                   />
                 </PopoverContent>

@@ -1,5 +1,5 @@
 /** Dark theme approximating the composer Mapbox dark-v11 look. */
-export const GOOGLE_MAP_DARK_STYLES: google.maps.MapTypeStyle[] = [
+export const GOOGLE_MAP_DARK_STYLES = [
   { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
@@ -49,3 +49,6 @@ export const GOOGLE_MAP_DARK_STYLES: google.maps.MapTypeStyle[] = [
     stylers: [{ color: '#475569' }],
   },
 ];
+
+/** google.maps.SymbolPath.CIRCLE */
+export const GOOGLE_MAP_CIRCLE_PATH = 0;
