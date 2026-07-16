@@ -3,15 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { Download, FileDown, ShieldAlert, Trash2 } from 'lucide-react';
 import { exportUserData, deleteUserAccount } from '@/actions/privacy';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,10 +19,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { SettingsSection, settingsFieldClass } from '@/components/settings/SettingsSection';
 import { toast } from 'sonner';
-import { Download, Trash2 } from 'lucide-react';
 
-export function GdprRightsCard({ privacyEmail }: { privacyEmail: string }) {
+export function SettingsPrivacySection({ privacyEmail }: { privacyEmail: string }) {
   const router = useRouter();
   const [exportPending, startExport] = useTransition();
   const [deletePending, startDelete] = useTransition();
@@ -68,46 +61,53 @@ export function GdprRightsCard({ privacyEmail }: { privacyEmail: string }) {
   };
 
   return (
-    <Card className="border-red-200 dark:border-red-900">
-      <CardHeader>
-        <CardTitle>I tuoi diritti GDPR</CardTitle>
-        <CardDescription>
-          Accesso, portabilità e cancellazione dei dati personali (artt. 15–20 GDPR).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-900">
+    <div className="space-y-10">
+      <SettingsSection
+        icon={FileDown}
+        title="Portabilità dei dati"
+        description="Scarica una copia dei tuoi dati personali in formato JSON (art. 20 GDPR)."
+      >
+        <div className="rounded-2xl border border-border/70 bg-muted/20 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="font-medium">Scarica i tuoi dati</p>
-            <p className="text-sm text-slate-500">
-              Ricevi un file JSON con profilo, viaggi, preferiti e partecipazioni.
+            <p className="font-medium text-foreground">Esporta i tuoi dati</p>
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+              Profilo, viaggi, preferiti e partecipazioni in un unico file.
             </p>
           </div>
-          <Button variant="outline" onClick={handleExport} disabled={exportPending}>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exportPending}
+            className="rounded-full shrink-0"
+          >
             <Download className="mr-2 h-4 w-4" />
             {exportPending ? 'Preparo...' : 'Esporta dati'}
           </Button>
         </div>
+      </SettingsSection>
 
-        <div className="p-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
-          <p className="font-medium text-red-800 dark:text-red-200">Elimina account</p>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Cancella definitivamente il tuo account e tutti i dati associati. Questa azione è
+      <SettingsSection
+        icon={ShieldAlert}
+        title="Eliminazione account"
+        description="Cancella definitivamente il tuo account e tutti i dati associati (art. 17 GDPR)."
+      >
+        <div className="rounded-2xl border border-red-200/80 dark:border-red-900/60 bg-red-50/60 dark:bg-red-950/20 p-5 space-y-4">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Verranno eliminati profilo, viaggi creati, preferiti e partecipazioni. Questa azione è
             irreversibile.
           </p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="mt-4">
+              <Button variant="destructive" className="rounded-full">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Elimina account
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
                 <AlertDialogTitle>Confermi l&apos;eliminazione?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Verranno eliminati profilo, viaggi creati, preferiti e partecipazioni. Digita{' '}
-                  <strong>ELIMINA</strong> per confermare.
+                  Digita <strong>ELIMINA</strong> per confermare la cancellazione definitiva.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="py-2">
@@ -117,15 +117,17 @@ export function GdprRightsCard({ privacyEmail }: { privacyEmail: string }) {
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder="ELIMINA"
-                  className="mt-2"
+                  className={`mt-2 ${settingsFieldClass}`}
                 />
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setConfirmText('')}>Annulla</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => setConfirmText('')} className="rounded-full">
+                  Annulla
+                </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   disabled={confirmText !== 'ELIMINA' || deletePending}
-                  className="bg-red-600 hover:bg-red-700"
+                  className="rounded-full bg-red-600 hover:bg-red-700"
                 >
                   {deletePending ? 'Elimino...' : 'Elimina definitivamente'}
                 </AlertDialogAction>
@@ -133,13 +135,14 @@ export function GdprRightsCard({ privacyEmail }: { privacyEmail: string }) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </CardContent>
-      <CardFooter className="text-xs text-slate-500 border-t">
-        Per altre richieste (opposizione, limitazione) scrivi a{' '}
-        <a href={`mailto:${privacyEmail}`} className="text-blue-600 hover:underline">
+      </SettingsSection>
+
+      <p className="text-xs text-muted-foreground leading-relaxed pt-2 border-t border-border/50">
+        Per altre richieste (accesso, rettifica, opposizione, limitazione) scrivi a{' '}
+        <a href={`mailto:${privacyEmail}`} className="text-primary hover:underline font-medium">
           {privacyEmail}
         </a>
-      </CardFooter>
-    </Card>
+      </p>
+    </div>
   );
 }

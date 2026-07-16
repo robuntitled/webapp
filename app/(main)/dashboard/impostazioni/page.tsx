@@ -1,6 +1,8 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import SettingsForm from '@/app/(main)/dashboard/impostazioni/SettingsForm';
+import { SettingsPageClient } from '@/components/settings/SettingsPageClient';
+import { HeroBackground } from '@/components/brand/HeroBackground';
+import { BRAND_IMAGES } from '@/lib/brand/images';
 import { getUserSettings } from '@/lib/data/users';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
@@ -18,12 +20,17 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="container mx-auto py-12 px-4">
-      <h1 className="text-4xl font-bold mb-2">Impostazioni</h1>
-      <p className="text-slate-500 mb-8">
-        Gestisci le impostazioni del tuo account e le preferenze.
-      </p>
-      <SettingsForm userSettings={userSettings} privacyEmail={company.privacyEmail} />
+    <div className="relative min-h-[calc(100vh-4rem)]">
+      <HeroBackground
+        images={[BRAND_IMAGES.heroes.slideshow[5], BRAND_IMAGES.heroes.slideshow[1]]}
+        overlay="gradient"
+      />
+      <div className="relative z-0 container mx-auto px-4 py-10 pb-24 max-w-4xl">
+        <SettingsPageClient
+          userSettings={userSettings}
+          privacyEmail={company.privacyEmail}
+        />
+      </div>
     </div>
   );
 }
