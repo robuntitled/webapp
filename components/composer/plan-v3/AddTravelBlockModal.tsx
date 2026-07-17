@@ -11,15 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
-import { TravelpayoutsFlightWidget } from '@/components/travel/TravelpayoutsFlightWidget';
 import { primaryOriginIata } from '@/lib/composer/origins';
-import { buildFlightSearchCode } from '@/lib/travelpayouts/flight-search';
-import { buildTripHotelSearchUrl } from '@/lib/travelpayouts/flight-search';
-import { getPublicTravelWidgetId } from '@/lib/travelpayouts/public-config';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import {
   Bus,
   Car,
+  ExternalLink,
   Hotel,
   Plane,
   Ship,
@@ -71,6 +68,33 @@ type AddTravelBlockModalProps = {
   onConfirm: (payload: TravelBlockPayload) => void;
 };
 
+/** Link esterni semplici — niente widget embed (rompeva il modal). */
+function buildSafeFlightLink(draft: ComposerDraft): string | null {
+  const dest = draft.destinationMeta?.label ?? draft.destination;
+  if (!dest?.trim()) return null;
+  const origin = primaryOriginIata(draft) || 'ROM';
+  const marker = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
+  const params = new URLSearchParams({
+    origin_iata: origin,
+    destination_name: dest.trim(),
+  });
+  if (draft.startDate) params.set('depart_date', draft.startDate);
+  if (draft.endDate) params.set('return_date', draft.endDate);
+  if (marker) params.set('marker', marker);
+  return `https://www.aviasales.com/search?${params.toString()}`;
+}
+
+function buildSafeHotelLink(draft: ComposerDraft): string | null {
+  const dest = draft.destinationMeta?.label ?? draft.destination;
+  if (!dest?.trim()) return null;
+  const marker = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
+  const params = new URLSearchParams({ ss: dest.trim() });
+  if (draft.startDate) params.set('checkin', draft.startDate);
+  if (draft.endDate) params.set('checkout', draft.endDate);
+  if (marker) params.set('aid', marker);
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
+}
+
 export function AddTravelBlockModal({
   open,
   mode,
@@ -92,28 +116,14 @@ export function AddTravelBlockModal({
   const [price, setPrice] = useState('');
   const [transportMode, setTransportMode] = useState<TransportMode>('flight');
 
-  const originIata = primaryOriginIata(draft);
   const destLabel = draft.destinationMeta?.label ?? draft.destination;
-  const wlId = getPublicTravelWidgetId();
 
-  const flightSearch = useMemo(() => {
-    if (mode !== 'transport' || transportMode !== 'flight') return null;
-    return buildFlightSearchCode({
-      destination: draft.destination,
-      startDate: draft.startDate,
-      endDate: draft.endDate,
-      originIata,
-      adults: draft.planningMode === 'group' ? Math.min(draft.maxParticipants, 9) : 1,
-    });
-  }, [mode, transportMode, draft, originIata]);
-
-  const hotelSearchUrl = useMemo(() => {
-    if (mode !== 'hotel') return null;
-    return buildTripHotelSearchUrl(undefined, {
-      destination: draft.destination,
-      startDate: draft.startDate,
-      endDate: draft.endDate,
-    });
+  const externalLink = useMemo(() => {
+    try {
+      return mode === 'hotel' ? buildSafeHotelLink(draft) : buildSafeFlightLink(draft);
+    } catch {
+      return null;
+    }
   }, [mode, draft]);
 
   const selectedMode = TRANSPORT_MODES.find((m) => m.id === transportMode)!;
@@ -196,7 +206,7 @@ export function AddTravelBlockModal({
                 </DialogTitle>
                 <DialogDescription className="text-sm text-white/50">
                   {mode === 'hotel'
-                    ? 'Cerca l\'hotel e salva i dettagli nel piano.'
+                    ? 'Inserisci hotel e orari check-in / check-out.'
                     : 'Scegli il mezzo e inserisci partenza e orari.'}
                 </DialogDescription>
               </div>
@@ -366,40 +376,18 @@ export function AddTravelBlockModal({
             />
           </div>
 
-          {mode === 'transport' && transportMode === 'flight' && wlId && flightSearch && (
-            <div className="composer-tpwl-shell rounded-2xl overflow-hidden bg-white p-3">
-              <p className="mb-2 text-xs font-medium text-slate-600">
-                Cerca voli — risultati qui sotto
-              </p>
-              <TravelpayoutsFlightWidget
-                key={`flight-${flightSearch}`}
-                wlId={wlId}
-                resultsPath="/dashboard/crea"
-                flightSearch={flightSearch}
-                showSearch
-                showResults
-              />
-            </div>
-          )}
-
-          {mode === 'hotel' && hotelSearchUrl && (
-            <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs text-white/50">
-              Suggerimento: usa la ricerca sopra per trovare l&apos;hotel, poi salva qui.
-              {hotelSearchUrl && (
-                <>
-                  {' '}
-                  <a
-                    href={hotelSearchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer sponsored"
-                    className="text-accent hover:underline"
-                  >
-                    Apri Booking.com
-                  </a>{' '}
-                  in una nuova scheda se serve confrontare prezzi.
-                </>
-              )}
-            </p>
+          {externalLink && (mode === 'hotel' || transportMode === 'flight') && (
+            <a
+              href={externalLink}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/80 transition hover:border-accent/40 hover:bg-white/[0.08] hover:text-white"
+            >
+              <ExternalLink className="h-4 w-4 text-accent" />
+              {mode === 'hotel'
+                ? 'Apri ricerca hotel su Booking.com'
+                : 'Apri ricerca voli su Aviasales'}
+            </a>
           )}
         </div>
 

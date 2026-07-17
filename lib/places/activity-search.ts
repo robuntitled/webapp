@@ -4,7 +4,6 @@ import { haversineKm } from '@/lib/maps/distance';
 import {
   ACTIVITY_CATEGORY_SEARCH,
   buildCategoryQuery,
-  matchesActivityCategory,
   type ActivityPlaceCategory,
 } from '@/lib/places/activity-categories';
 import { searchPlaces } from '@/lib/places/nominatim';
@@ -114,18 +113,8 @@ export async function searchActivitiesInBounds(
   });
 
   if (google.ok && google.results.length > 0) {
-    const filtered = category
-      ? google.results.filter((place) =>
-          matchesActivityCategory(category, {
-            label: place.label,
-            subtitle: place.subtitle,
-            placeTypeLabel: place.placeTypeLabel,
-          })
-        )
-      : google.results;
-    if (filtered.length > 0) {
-      return { results: filtered, source: 'google' };
-    }
+    // Soft boost only — no hard category post-filter (was returning empty lists)
+    return { results: google.results, source: 'google' };
   }
 
   return { results: [], source: 'none' };

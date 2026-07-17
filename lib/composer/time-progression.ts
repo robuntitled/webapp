@@ -67,10 +67,24 @@ export function computeDaySchedule(
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    const duration = parseDurationToMinutes(block.content.duration);
+    const explicitStart =
+      typeof block.content.time === 'string' && block.content.time
+        ? timeToMinutes(block.content.time)
+        : null;
+    const explicitEnd =
+      typeof block.content.endTime === 'string' && block.content.endTime
+        ? timeToMinutes(block.content.endTime)
+        : null;
 
-    const start = cursor;
-    const end = start + duration;
+    const start = explicitStart ?? cursor;
+    let duration = parseDurationToMinutes(block.content.duration);
+    let end = start + duration;
+
+    if (explicitEnd != null && explicitEnd > start) {
+      end = explicitEnd;
+      duration = end - start;
+    }
+
     const schedule: StopSchedule = {
       start: minutesToTime(start),
       end: minutesToTime(end),
@@ -89,6 +103,8 @@ export function computeDaySchedule(
       } else {
         cursor = end + 30;
       }
+    } else {
+      cursor = end;
     }
 
     result.set(block.id, schedule);

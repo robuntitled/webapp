@@ -17,12 +17,15 @@ import {
   saveComposerDraft,
   type ComposerWizardStep,
 } from '@/lib/composer/client-planner';
+import {
+  clearComposerLocalSession,
+  readComposerLocalSession,
+  writeComposerLocalSession,
+} from '@/lib/composer/local-draft';
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
-import { WIZARD_STEPS } from '@/lib/composer/wizard-steps';
+import { normalizeWizardStep, WIZARD_STEPS } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft, ComposerDay } from '@/types/composer';
 import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
-
-const DRAFT_KEY = 'nomadlink-composer-draft';
 
 const EMPTY_DRAFT: ComposerDraft = {
   title: '',
@@ -44,6 +47,18 @@ type TripComposerProps = {
   resumeDraft?: boolean;
 };
 
+function mergeDraft(
+  base: ComposerDraft,
+  partial?: Partial<ComposerDraft> | null,
+  profile?: PlannerProfile | null
+): ComposerDraft {
+  return {
+    ...base,
+    ...partial,
+    plannerProfile: partial?.plannerProfile ?? profile ?? undefined,
+  };
+}
+
 export function TripComposer({
   initialPlannerProfile,
   initialDraft,
@@ -51,51 +66,40 @@ export function TripComposer({
   resumeDraft = false,
 }: TripComposerProps = {}) {
   const router = useRouter();
-  const [step, setStep] = useState<ComposerWizardStep>(initialStep);
-  const [draft, setDraft] = useState<ComposerDraft>({
-    ...EMPTY_DRAFT,
-    ...initialDraft,
-    plannerProfile: initialPlannerProfile ?? undefined,
-  });
+  const [hydrated, setHydrated] = useState(false);
+  const [step, setStep] = useState<ComposerWizardStep>(normalizeWizardStep(initialStep));
+  const [draft, setDraft] = useState<ComposerDraft>(() =>
+    mergeDraft(EMPTY_DRAFT, initialDraft, initialPlannerProfile)
+  );
   const [publishing, setPublishing] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const plannerProfile =
     draft.plannerProfile ?? initialPlannerProfile ?? EMPTY_PLANNER_PROFILE;
 
+  // Restore draft + step after refresh (localStorage), without wiping session work
   useEffect(() => {
-    if (!resumeDraft) {
-      try {
-        localStorage.removeItem(DRAFT_KEY);
-      } catch {
-        /* ignore */
-      }
+    // Server already provided a resume draft
+    if (resumeDraft && initialDraft?.destination) {
+      const merged = mergeDraft(EMPTY_DRAFT, initialDraft, initialPlannerProfile);
+      setDraft(merged);
+      setStep(normalizeWizardStep(initialStep));
+      writeComposerLocalSession(merged, normalizeWizardStep(initialStep));
+      setHydrated(true);
       return;
     }
 
-    if (initialDraft?.destination) {
-      try {
-        localStorage.setItem(
-          DRAFT_KEY,
-          JSON.stringify({ ...EMPTY_DRAFT, ...initialDraft, plannerProfile: initialPlannerProfile })
-        );
-      } catch {
-        /* ignore */
-      }
-      return;
+    const local = readComposerLocalSession();
+    if (local) {
+      setDraft((prev) => ({
+        ...prev,
+        ...local.draft,
+        plannerProfile:
+          local.draft.plannerProfile ?? initialPlannerProfile ?? prev.plannerProfile,
+      }));
+      setStep(local.step);
     }
-
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as ComposerDraft;
-        if (parsed.destination) {
-          setDraft((prev) => ({ ...prev, ...parsed }));
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [resumeDraft, initialDraft, initialPlannerProfile]);
+    setHydrated(true);
+  }, [resumeDraft, initialDraft, initialPlannerProfile, initialStep]);
 
   const scheduleCloudSave = useCallback(
     (nextDraft: ComposerDraft, nextStep: ComposerWizardStep, profile: PlannerProfile) => {
@@ -111,17 +115,19 @@ export function TripComposer({
     []
   );
 
+  // Persist draft + step on every change (after hydration)
   useEffect(() => {
+    if (!hydrated) return;
     try {
-      if (draft.destination) {
+      if (draft.destination?.trim()) {
         const withProfile = { ...draft, plannerProfile };
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(withProfile));
+        writeComposerLocalSession(withProfile, step);
         scheduleCloudSave(withProfile, step, plannerProfile);
       }
     } catch {
       /* ignore */
     }
-  }, [draft, step, plannerProfile, scheduleCloudSave]);
+  }, [draft, step, plannerProfile, scheduleCloudSave, hydrated]);
 
   const patchDraft = useCallback((patch: Partial<ComposerDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
@@ -156,7 +162,7 @@ export function TripComposer({
         return;
       }
 
-      localStorage.removeItem(DRAFT_KEY);
+      clearComposerLocalSession();
       await clearComposerDraft().catch(() => undefined);
       toast.success('Viaggio lanciato! 🚀 Ora invita la crew.');
       router.push(`/viaggi/${data.tripId}`);
@@ -168,6 +174,15 @@ export function TripComposer({
   };
 
   const stepIndex = WIZARD_STEPS.indexOf(step);
+
+  // Avoid flashing landing before localStorage restore
+  if (!hydrated) {
+    return (
+      <div className="composer-shell flex h-full min-h-[40vh] items-center justify-center">
+        <p className="text-sm text-white/50">Caricamento bozza…</p>
+      </div>
+    );
+  }
 
   return (
     <div

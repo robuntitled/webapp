@@ -37,7 +37,7 @@ const daySchema = z.object({
 
 export const publishComposerSchema = z
   .object({
-    title: z.string().min(3).max(120),
+    title: z.string().min(3).max(500),
     destination: z.string().min(2).max(200),
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

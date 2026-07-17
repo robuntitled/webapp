@@ -2,7 +2,6 @@ import type { NominatimResult, PlaceResult } from '@/lib/places/types';
 import { isLatinScriptText, placeUsesLatinScript } from '@/lib/places/latin-script';
 import {
   buildCategoryQuery,
-  matchesActivityCategory,
   type ActivityPlaceCategory,
 } from '@/lib/places/activity-categories';
 
@@ -270,17 +269,8 @@ export async function searchPlaces(
     const place = parseNominatimResult(raw);
     if (!place) continue;
 
-    if (category) {
-      const ok = matchesActivityCategory(category, {
-        label: place.label,
-        subtitle: place.subtitle,
-        placeType: place.placeType,
-        placeTypeLabel: place.placeTypeLabel,
-        // OSM class (amenity, tourism, …) is critical for POI filtering
-        types: [raw.class, raw.type, place.placeType],
-      });
-      if (!ok) continue;
-    }
+    // Category is used only as a soft query boost (buildCategoryQuery above).
+    // Hard post-filters dropped almost all OSM results in production.
 
     // Dedupe same label+coords
     const key = `${place.label.toLowerCase()}|${place.lat.toFixed(3)}|${place.lng.toFixed(3)}`;

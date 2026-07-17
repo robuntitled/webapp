@@ -30,6 +30,7 @@ export type AddActivityPayload = {
   lat?: number;
   lng?: number;
   time?: string;
+  endTime?: string;
   duration?: string;
   price?: number | null;
 };
@@ -60,6 +61,7 @@ export function AddActivityModal({
   const [type, setType] = useState<ActivityTypeFilter>('attraction');
   const [duration, setDuration] = useState<DurationFilter>('1h');
   const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [price, setPrice] = useState('');
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,6 +84,7 @@ export function AddActivityModal({
     setType('attraction');
     setDuration('1h');
     setStartTime('');
+    setEndTime('');
     setPrice('');
     setResults([]);
   };
@@ -95,6 +98,7 @@ export function AddActivityModal({
       setLoading(true);
       try {
         const near = destinationContext ? ` ${destinationContext}` : '';
+        // Soft category boost on the server (no hard filter that empties results)
         const params = new URLSearchParams({
           q: `${q}${near}`.trim(),
           category,
@@ -148,6 +152,7 @@ export function AddActivityModal({
       lat: item.lat,
       lng: item.lng,
       time: startTime || undefined,
+      endTime: endTime || undefined,
       duration: durationValue,
       price: parsedPrice,
     });
@@ -195,14 +200,16 @@ export function AddActivityModal({
           </div>
         </DialogHeader>
 
-        <div className="shrink-0 border-b border-white/10 px-5 py-4 md:px-7 space-y-3">
+        <div className="shrink-0 space-y-3 border-b border-white/10 px-5 py-4 md:px-7">
           <ActivityFilters
             type={type}
             duration={duration}
             startTime={startTime}
+            endTime={endTime}
             onTypeChange={setType}
             onDurationChange={setDuration}
             onStartTimeChange={setStartTime}
+            onEndTimeChange={setEndTime}
           />
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/60">

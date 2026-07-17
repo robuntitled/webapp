@@ -24,7 +24,7 @@ import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupS
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { findDestination } from '@/lib/composer/destinations';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
-import { generateTripTitle, TRIP_TITLE_MAX_LENGTH } from '@/lib/composer/title-generator';
+import { generateTripTitle } from '@/lib/composer/title-generator';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
 import { toast } from 'sonner';
@@ -327,16 +327,10 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
               className="space-y-8"
             >
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
-                  <span className="text-xs text-white/40 tabular-nums">
-                    {draft.title.length}/{TRIP_TITLE_MAX_LENGTH}
-                  </span>
-                </div>
+                <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
                 <Input
                   className="h-14 rounded-2xl composer-field text-white text-lg"
                   value={draft.title}
-                  maxLength={TRIP_TITLE_MAX_LENGTH}
                   onChange={(e) => {
                     titleTouched.current = true;
                     onChange({ title: e.target.value });

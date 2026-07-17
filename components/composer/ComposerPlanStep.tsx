@@ -129,6 +129,7 @@ export function ComposerPlanStep({
       title: payload.title,
       place: payload.place,
       time: payload.time,
+      endTime: payload.endTime,
       duration: payload.duration,
       lat: payload.lat,
       lng: payload.lng,

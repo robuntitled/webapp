@@ -7,6 +7,7 @@ import { it } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { discardComposerDraft } from '@/actions/composer-draft';
 import { summarizeComposerDraftWithStep } from '@/lib/composer/draft-utils';
+import { clearComposerLocalSession } from '@/lib/composer/local-draft';
 import type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft } from '@/types/composer';
 import { BookOpen, Loader2, Pencil, Trash2 } from 'lucide-react';
@@ -33,6 +34,7 @@ export function ComposerDraftCard({ draft, currentStep, updatedAt }: ComposerDra
     startTransition(async () => {
       try {
         await discardComposerDraft();
+        clearComposerLocalSession();
         setRemoved(true);
         toast.message('Bozza eliminata');
       } catch (err) {

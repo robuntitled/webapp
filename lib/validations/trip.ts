@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createTripSchema = z
   .object({
-    title: z.string().min(3, 'Il titolo deve avere almeno 3 caratteri').max(120),
+    title: z.string().min(3, 'Il titolo deve avere almeno 3 caratteri').max(500),
     destination: z.string().min(2, 'La destinazione è obbligatoria').max(100),
     startDate: z.string().min(1, 'La data di inizio è obbligatoria'),
     endDate: z.string().min(1, 'La data di fine è obbligatoria'),

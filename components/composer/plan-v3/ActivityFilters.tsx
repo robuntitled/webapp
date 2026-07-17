@@ -26,18 +26,22 @@ type ActivityFiltersProps = {
   type: ActivityTypeFilter;
   duration: DurationFilter;
   startTime: string;
+  endTime: string;
   onTypeChange: (type: ActivityTypeFilter) => void;
   onDurationChange: (duration: DurationFilter) => void;
   onStartTimeChange: (time: string) => void;
+  onEndTimeChange: (time: string) => void;
 };
 
 export function ActivityFilters({
   type,
   duration,
   startTime,
+  endTime,
   onTypeChange,
   onDurationChange,
   onStartTimeChange,
+  onEndTimeChange,
 }: ActivityFiltersProps) {
   return (
     <div className="space-y-4">
@@ -81,17 +85,30 @@ export function ActivityFilters({
         </div>
       </div>
 
-      <label className="block space-y-1.5 max-w-xs">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-          Orario inizio
-        </span>
-        <input
-          type="time"
-          value={startTime}
-          onChange={(e) => onStartTimeChange(e.target.value)}
-          className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
-        />
-      </label>
+      <div className="grid max-w-md grid-cols-2 gap-3">
+        <label className="block space-y-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+            Orario inizio
+          </span>
+          <input
+            type="time"
+            value={startTime}
+            onChange={(e) => onStartTimeChange(e.target.value)}
+            className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+            Orario fine
+          </span>
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => onEndTimeChange(e.target.value)}
+            className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
+          />
+        </label>
+      </div>
     </div>
   );
 }
