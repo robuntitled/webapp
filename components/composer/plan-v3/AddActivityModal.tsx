@@ -19,7 +19,6 @@ import { ActivityResultsList } from '@/components/composer/plan-v3/ActivityResul
 import type { ActivityResultItem } from '@/components/composer/plan-v3/ActivityResultCard';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { haversineKm } from '@/lib/maps/distance';
-import type { PlaceResult } from '@/lib/places/types';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import { Search, X } from 'lucide-react';
 
@@ -65,15 +64,23 @@ export function AddActivityModal({
   const [price, setPrice] = useState('');
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchHint, setSearchHint] = useState<string | null>(null);
   const debounced = useDebounced(query, 320);
 
-  const center = useMemo(() => {
+  // Come in b196114: ricerca vincolata alle destinazioni del viaggio
+  const destinationBounds = useMemo(() => {
     const dests = getDraftDestinations(draft);
-    if (dests.length > 0) return { lat: dests[0].lat, lng: dests[0].lng };
-    return null;
+    return dests
+      .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+      .map((d) => ({
+        lat: d.lat,
+        lng: d.lng,
+        radiusKm: 80,
+        label: d.label,
+      }));
   }, [draft]);
 
-  const destinationContext = draft.destination?.trim() ?? '';
+  const hasDestinations = destinationBounds.length > 0;
 
   const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
   const blockType =
@@ -87,22 +94,50 @@ export function AddActivityModal({
     setEndTime('');
     setPrice('');
     setResults([]);
+    setSearchHint(null);
   };
 
   const search = useCallback(
     async (q: string) => {
+      if (!hasDestinations) {
+        setResults([]);
+        setSearchHint(
+          'Nessuna destinazione nel viaggio. Torna allo step precedente e seleziona almeno una meta.'
+        );
+        return;
+      }
       if (q.length < 2) {
         setResults([]);
+        setSearchHint(null);
         return;
       }
       setLoading(true);
+      setSearchHint(null);
       try {
-        // Ricerca semplice come prima dei filtri categoria
-        const near = destinationContext ? ` ${destinationContext}` : '';
-        const res = await fetch(
-          `/api/places/search?q=${encodeURIComponent(q + near)}`
-        );
-        const data = (await res.json()) as { results?: PlaceResult[] };
+        // Flusso che funzionava: POST google-search con bounds (Google → OSM fallback)
+        const res = await fetch('/api/places/google-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q, bounds: destinationBounds }),
+        });
+        const data = (await res.json()) as {
+          results?: {
+            id: string;
+            label: string;
+            subtitle: string;
+            lat: number;
+            lng: number;
+            placeTypeLabel: string;
+          }[];
+          warning?: string;
+          error?: string;
+        };
+        if (!res.ok) {
+          setResults([]);
+          setSearchHint(data.error ?? 'Ricerca non disponibile al momento.');
+          return;
+        }
+        const center = destinationBounds[0];
         const typeLabel =
           TYPE_FILTERS.find((t) => t.id === type)?.label ?? 'Luogo';
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
@@ -112,18 +147,25 @@ export function AddActivityModal({
           category: p.placeTypeLabel || typeLabel,
           lat: p.lat,
           lng: p.lng,
-          distanceKm: center
-            ? haversineKm(center, { lat: p.lat, lng: p.lng })
-            : undefined,
+          distanceKm: haversineKm(center, { lat: p.lat, lng: p.lng }),
         }));
         setResults(mapped);
+        if (mapped.length === 0) {
+          setSearchHint(
+            data.warning ??
+              'Nessun risultato nelle destinazioni del viaggio. Prova un termine diverso.'
+          );
+        } else if (data.warning) {
+          setSearchHint(data.warning);
+        }
       } catch {
         setResults([]);
+        setSearchHint('Ricerca non disponibile al momento. Riprova tra poco.');
       } finally {
         setLoading(false);
       }
     },
-    [center, destinationContext, type]
+    [destinationBounds, hasDestinations, type]
   );
 
   useEffect(() => {
@@ -167,7 +209,7 @@ export function AddActivityModal({
             <div>
               <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Cerca luoghi nelle tue destinazioni.
+                Cerca luoghi nelle tue destinazioni (Google Maps + OpenStreetMap).
               </DialogDescription>
             </div>
             <button
@@ -219,10 +261,14 @@ export function AddActivityModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 md:px-7">
+          {searchHint && results.length > 0 && (
+            <p className="mb-3 text-xs text-amber-200/80">{searchHint}</p>
+          )}
           <ActivityResultsList
             items={results}
             loading={loading}
             query={debounced}
+            hint={searchHint}
             onAdd={addFromResult}
           />
         </div>
