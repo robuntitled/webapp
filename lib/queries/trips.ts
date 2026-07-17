@@ -13,6 +13,7 @@ export const TRIP_LIST_SELECT = `
   maxAge: max_age,
   planningMode: planning_mode,
   imageUrl: image_url,
+  creator_id,
   creator:users(id, first_name, last_name, image),
   favorite_trips(user_id),
   trip_participants(user_id, role)

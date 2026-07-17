@@ -4,6 +4,8 @@ import DashboardClient from '@/app/(main)/dashboard/DashboardClient';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const session = await auth();
   const trips = await fetchAllTrips(session?.user?.id);

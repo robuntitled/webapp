@@ -9,10 +9,10 @@ import type { TripWithRelations } from '@/types/trip';
 import type { Session } from 'next-auth';
 import { Compass, Search } from 'lucide-react';
 import {
+  explainEmptyDiscover,
   filterDiscoverResults,
   parseDiscoverSearchParams,
 } from '@/lib/trips/discover-search';
-import { isOpenSoloTrip, isTripCreator } from '@/lib/trips/display';
 
 export function TripSearchResultsClient({
   initialTrips,
@@ -43,11 +43,7 @@ export function TripSearchResultsClient({
 
   const emptyReason = useMemo(() => {
     if (results.length > 0) return null;
-    const soloTrips = initialTrips.filter(isOpenSoloTrip);
-    const ownSolo = userId ? soloTrips.filter((t) => isTripCreator(t, userId)) : [];
-    if (ownSolo.length > 0 && results.length === 0) return 'own-solo-only';
-    if (soloTrips.length === 0) return 'no-solo';
-    return 'filters';
+    return explainEmptyDiscover(initialTrips, userId);
   }, [results.length, initialTrips, userId]);
 
   return (
@@ -87,10 +83,12 @@ export function TripSearchResultsClient({
             <h3 className="font-display text-xl text-white font-semibold">Nessun viaggio trovato</h3>
             <p className="mt-2 text-white/60 max-w-md mx-auto text-sm">
               {emptyReason === 'own-solo-only'
-                ? 'Non compaiono i viaggi che hai organizzato tu — prova con un altro account.'
+                ? 'I viaggi che organizzi tu non compaiono qui. Esci e accedi con un altro account per vederli, oppure invita amici al tuo viaggio.'
                 : emptyReason === 'no-solo'
-                  ? 'Nessun viaggio in modalità Solo al momento.'
-                  : 'Allarga date o prezzo dalla barra in alto.'}
+                  ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
+                  : emptyReason === 'past-or-full'
+                    ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
+                    : 'Allarga date o prezzo dalla barra in alto.'}
             </p>
             <Link href="/dashboard" className="inline-block mt-4 text-sm text-accent hover:underline">
               Torna alla dashboard

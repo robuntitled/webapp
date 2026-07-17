@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     const result = await publishComposerTrip(session.user.id, parsed.data);
 
     revalidatePath('/dashboard');
+    revalidatePath('/dashboard/cerca');
     revalidatePath('/dashboard/miei-viaggi');
     revalidatePath(`/viaggi/${result.tripId}`);
 

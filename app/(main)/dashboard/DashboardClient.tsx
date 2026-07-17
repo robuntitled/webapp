@@ -8,8 +8,7 @@ import type { TripWithRelations } from '@/types/trip';
 import { Compass, Plus } from 'lucide-react';
 import { type Session } from 'next-auth';
 import { Button } from '@/components/ui/button';
-import { filterDiscoverResults } from '@/lib/trips/discover-search';
-import { isOpenSoloTrip, isTripCreator } from '@/lib/trips/display';
+import { explainEmptyDiscover, filterDiscoverResults } from '@/lib/trips/discover-search';
 
 export default function DashboardClient({
   initialTrips,
@@ -43,11 +42,7 @@ export default function DashboardClient({
 
   const emptyReason = useMemo(() => {
     if (results.length > 0) return null;
-    const soloTrips = initialTrips.filter(isOpenSoloTrip);
-    const ownSolo = userId ? soloTrips.filter((t) => isTripCreator(t, userId)) : [];
-    if (ownSolo.length > 0) return 'own-solo-only';
-    if (soloTrips.length === 0) return 'no-solo';
-    return 'filters';
+    return explainEmptyDiscover(initialTrips, userId);
   }, [results.length, initialTrips, userId]);
 
   return (
@@ -100,10 +95,12 @@ export default function DashboardClient({
             <h3 className="font-display text-xl text-white font-semibold">Nessun viaggio trovato</h3>
             <p className="mt-2 text-white/60 max-w-md mx-auto text-sm">
               {emptyReason === 'own-solo-only'
-                ? 'I viaggi che organizzi tu non compaiono qui — prova con un altro account o invita amici al tuo viaggio.'
+                ? 'I viaggi che organizzi tu non compaiono qui — esci e accedi con un altro account, o invita amici al tuo viaggio.'
                 : emptyReason === 'no-solo'
-                  ? 'Nessun viaggio in modalità Solo al momento. Pubblica il tuo con «Chi parte? → Solo».'
-                  : 'Prova a modificare i filtri di ricerca.'}
+                  ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
+                  : emptyReason === 'past-or-full'
+                    ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
+                    : 'Prova a modificare i filtri di ricerca.'}
             </p>
           </div>
         )}

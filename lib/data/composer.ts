@@ -32,7 +32,11 @@ export async function publishComposerTrip(
       image_url: coverImage,
       price,
       min_participants: input.planningMode === 'solo' ? 1 : 2,
-      max_participants: input.maxParticipants,
+      // Almeno 2 posti in solo: l'organizzatore non deve riempire da solo il viaggio
+      max_participants:
+        input.planningMode === 'solo'
+          ? Math.max(2, input.maxParticipants)
+          : Math.max(2, input.maxParticipants),
       min_age: 18,
       max_age: 999,
       planning_mode: input.planningMode,

@@ -34,30 +34,56 @@ export function formatSpotsLabel(maxParticipants: number, participantCount: numb
 }
 
 export function isTripFull(maxParticipants: number, participantCount: number): boolean {
+  // Se max non è valorizzato o è 0, non considerarlo pieno
+  if (!maxParticipants || maxParticipants < 1) return false;
   return getSpotsLeft(maxParticipants, participantCount) === 0;
 }
 
+export function getTripCreatorId(trip: TripWithRelations): string | null {
+  return trip.creator?.id ?? trip.creator_id ?? null;
+}
+
 export function isTripCreator(trip: TripWithRelations, userId?: string | null): boolean {
-  return Boolean(userId && trip.creator?.id === userId);
+  if (!userId) return false;
+  const creatorId = getTripCreatorId(trip);
+  return Boolean(creatorId && creatorId === userId);
 }
 
 export function isTripParticipant(trip: TripWithRelations, userId?: string | null): boolean {
   if (!userId) return false;
+  if (isTripCreator(trip, userId)) return true;
   return trip.trip_participants?.some((p) => p.user_id === userId) ?? false;
 }
 
-export function isOpenSoloTrip(trip: TripWithRelations): boolean {
-  return (trip.planningMode ?? 'group') === 'solo';
+export function resolvePlanningMode(trip: TripWithRelations): TripPlanningMode {
+  const mode = trip.planningMode;
+  if (mode === 'solo' || mode === 'group') return mode;
+  // Legacy / missing: consider open (solo) so trips are discoverable
+  return 'solo';
 }
 
-/** Viaggi visibili in Scopri viaggi (solo/aperti, non pieni, non i tuoi). */
+/** Viaggi “aperti” da mostrare in Scopri (modalità solo / aperti al pubblico). */
+export function isOpenSoloTrip(trip: TripWithRelations): boolean {
+  return resolvePlanningMode(trip) === 'solo';
+}
+
+/**
+ * Viaggi visibili in Scopri viaggi:
+ * - modalità Solo (aperti) — i group restano privati tra amici
+ * - con posti liberi
+ * - non i tuoi
+ * - non quelli a cui sei già iscritto
+ */
 export function isDiscoverableSoloTrip(
   trip: TripWithRelations,
   userId?: string | null
 ): boolean {
   if (!isOpenSoloTrip(trip)) return false;
+
+  const max = Number(trip.maxParticipants) || 0;
   const count = trip.participantCount ?? getParticipantCount(trip.trip_participants);
-  if (isTripFull(trip.maxParticipants, count)) return false;
+  if (isTripFull(max, count)) return false;
+
   if (!userId) return true;
   if (isTripCreator(trip, userId)) return false;
   if (isTripParticipant(trip, userId)) return false;
