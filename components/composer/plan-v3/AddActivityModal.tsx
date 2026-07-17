@@ -209,7 +209,7 @@ export function AddActivityModal({
             <div>
               <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Cerca luoghi nelle tue destinazioni (Google Maps + OpenStreetMap).
+                Cerca luoghi vicino alle destinazioni del viaggio.
               </DialogDescription>
             </div>
             <button
