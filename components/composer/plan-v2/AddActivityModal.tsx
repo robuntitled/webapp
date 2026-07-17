@@ -84,7 +84,7 @@ export function AddActivityModal({
   };
 
   const search = useCallback(
-    async (q: string, category: ActivityTypeFilter) => {
+    async (q: string) => {
       if (q.length < 2) {
         setResults([]);
         return;
@@ -92,17 +92,12 @@ export function AddActivityModal({
       setLoading(true);
       try {
         const near = draft.destination ? ` ${draft.destination}` : '';
-        const params = new URLSearchParams({
-          q: `${q}${near}`.trim(),
-        });
-        // transport non ha filtro POI dedicato: ricerca generica
-        if (category !== 'transport') {
-          params.set('category', category);
-        }
-        const res = await fetch(`/api/places/search?${params.toString()}`);
+        const res = await fetch(
+          `/api/places/search?q=${encodeURIComponent(q + near)}`
+        );
         const data = (await res.json()) as { results?: PlaceResult[] };
         const typeLabel =
-          TYPE_FILTERS.find((t) => t.id === category)?.label || 'Luogo';
+          TYPE_FILTERS.find((t) => t.id === type)?.label || 'Luogo';
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
           id: p.id,
           title: p.label,
@@ -121,13 +116,13 @@ export function AddActivityModal({
         setLoading(false);
       }
     },
-    [center, draft.destination]
+    [center, draft.destination, type]
   );
 
   useEffect(() => {
     if (!open) return;
-    void search(debounced, type);
-  }, [debounced, open, search, type]);
+    void search(debounced);
+  }, [debounced, open, search]);
 
   useEffect(() => {
     if (!open) reset();

@@ -90,23 +90,21 @@ export function AddActivityModal({
   };
 
   const search = useCallback(
-    async (q: string, category: ActivityTypeFilter) => {
+    async (q: string) => {
       if (q.length < 2) {
         setResults([]);
         return;
       }
       setLoading(true);
       try {
+        // Ricerca semplice come prima dei filtri categoria
         const near = destinationContext ? ` ${destinationContext}` : '';
-        // Soft category boost on the server (no hard filter that empties results)
-        const params = new URLSearchParams({
-          q: `${q}${near}`.trim(),
-          category,
-        });
-        const res = await fetch(`/api/places/search?${params.toString()}`);
+        const res = await fetch(
+          `/api/places/search?q=${encodeURIComponent(q + near)}`
+        );
         const data = (await res.json()) as { results?: PlaceResult[] };
         const typeLabel =
-          TYPE_FILTERS.find((t) => t.id === category)?.label ?? 'Luogo';
+          TYPE_FILTERS.find((t) => t.id === type)?.label ?? 'Luogo';
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
           id: p.id,
           title: p.label,
@@ -125,13 +123,13 @@ export function AddActivityModal({
         setLoading(false);
       }
     },
-    [center, destinationContext]
+    [center, destinationContext, type]
   );
 
   useEffect(() => {
     if (!open) return;
-    void search(debounced, type);
-  }, [debounced, open, search, type]);
+    void search(debounced);
+  }, [debounced, open, search]);
 
   useEffect(() => {
     if (!open) reset();
@@ -188,13 +186,7 @@ export function AddActivityModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={
-                type === 'meal'
-                  ? 'Cerca ristoranti, caffè, trattorie…'
-                  : type === 'activity'
-                    ? 'Cerca tour, sport, esperienze…'
-                    : 'Cerca musei, monumenti, attrazioni…'
-              }
+              placeholder="Cerca musei, ristoranti, attrazioni…"
               className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none transition focus:border-amber-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-amber-400/15"
             />
           </div>

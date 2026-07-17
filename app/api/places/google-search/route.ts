@@ -4,7 +4,6 @@ import { searchActivitiesInBounds } from '@/lib/places/activity-search';
 
 const schema = z.object({
   q: z.string().min(2).max(120),
-  category: z.enum(['attraction', 'activity', 'meal']).optional(),
   bounds: z
     .array(
       z.object({
@@ -27,9 +26,7 @@ export async function POST(request: Request) {
 
   const { results, source } = await searchActivitiesInBounds(
     parsed.data.q,
-    parsed.data.bounds,
-    120,
-    parsed.data.category
+    parsed.data.bounds
   );
-  return NextResponse.json({ results, source, category: parsed.data.category ?? null });
+  return NextResponse.json({ results, source });
 }

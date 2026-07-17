@@ -1,9 +1,5 @@
 import type { NominatimResult, PlaceResult } from '@/lib/places/types';
 import { isLatinScriptText, placeUsesLatinScript } from '@/lib/places/latin-script';
-import {
-  buildCategoryQuery,
-  type ActivityPlaceCategory,
-} from '@/lib/places/activity-categories';
 
 const PLACE_TYPE_LABELS: Record<string, string> = {
   country: 'Nazione',
@@ -206,45 +202,17 @@ export function parseNominatimResult(result: NominatimResult): PlaceResult | nul
   };
 }
 
-export type SearchPlacesOptions = {
-  limit?: number;
-  /** Filtra POI per categoria composer (attrazioni / attività / ristoranti). */
-  category?: ActivityPlaceCategory | string | null;
-};
-
-export async function searchPlaces(
-  query: string,
-  limitOrOptions: number | SearchPlacesOptions = 12
-): Promise<PlaceResult[]> {
-  const options: SearchPlacesOptions =
-    typeof limitOrOptions === 'number' ? { limit: limitOrOptions } : limitOrOptions;
-  const limit = options.limit ?? 12;
-  let category: ActivityPlaceCategory | null = null;
-  if (
-    options.category === 'attraction' ||
-    options.category === 'activity' ||
-    options.category === 'meal'
-  ) {
-    category = options.category;
-  }
-
-  const rawQuery = query.trim();
-  if (rawQuery.length < 2) return [];
-
-  const q = category ? buildCategoryQuery(rawQuery, category) : rawQuery;
+export async function searchPlaces(query: string, limit = 12): Promise<PlaceResult[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
 
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('q', q);
   url.searchParams.set('format', 'json');
   url.searchParams.set('addressdetails', '1');
   url.searchParams.set('namedetails', '1');
-  // Extra rows: Latin filter + optional category filter need headroom
-  const fetchLimit = category
-    ? Math.min(Math.max(limit * 6, 30), 50)
-    : Math.min(Math.max(limit * 4, 20), 40);
-  url.searchParams.set('limit', String(fetchLimit));
-  // Prefer Italian, then English (Latin names for most countries)
-  url.searchParams.set('accept-language', 'it,en,de,fr,es,pt');
+  url.searchParams.set('limit', String(Math.min(Math.max(limit * 3, 20), 40)));
+  url.searchParams.set('accept-language', 'it,en');
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -252,7 +220,6 @@ export async function searchPlaces(
       Accept: 'application/json',
       'Accept-Language': 'it,en;q=0.9',
     },
-    // Avoid Next.js data cache returning empty/stale failures for live search
     cache: 'no-store',
   });
 
@@ -268,11 +235,6 @@ export async function searchPlaces(
   for (const raw of data) {
     const place = parseNominatimResult(raw);
     if (!place) continue;
-
-    // Category is used only as a soft query boost (buildCategoryQuery above).
-    // Hard post-filters dropped almost all OSM results in production.
-
-    // Dedupe same label+coords
     const key = `${place.label.toLowerCase()}|${place.lat.toFixed(3)}|${place.lng.toFixed(3)}`;
     if (seen.has(key)) continue;
     seen.add(key);

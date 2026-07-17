@@ -5,8 +5,6 @@ import { rateLimit } from '@/lib/rate-limit';
 
 const querySchema = z.object({
   q: z.string().min(2).max(120),
-  /** attraction | activity | meal — filtra POI per categoria composer */
-  category: z.enum(['attraction', 'activity', 'meal']).optional(),
 });
 
 export async function GET(request: Request) {
@@ -21,25 +19,15 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const categoryRaw = searchParams.get('category');
-  const parsed = querySchema.safeParse({
-    q: searchParams.get('q') ?? '',
-    category:
-      categoryRaw === 'attraction' || categoryRaw === 'activity' || categoryRaw === 'meal'
-        ? categoryRaw
-        : undefined,
-  });
+  const parsed = querySchema.safeParse({ q: searchParams.get('q') ?? '' });
 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Query troppo corta' }, { status: 400 });
   }
 
   try {
-    const results = await searchPlaces(parsed.data.q, {
-      limit: 12,
-      category: parsed.data.category,
-    });
-    return NextResponse.json({ results, category: parsed.data.category ?? null });
+    const results = await searchPlaces(parsed.data.q, 12);
+    return NextResponse.json({ results });
   } catch {
     return NextResponse.json({ error: 'Ricerca luoghi non disponibile' }, { status: 502 });
   }
