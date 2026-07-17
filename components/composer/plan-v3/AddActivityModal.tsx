@@ -87,7 +87,7 @@ export function AddActivityModal({
   };
 
   const search = useCallback(
-    async (q: string) => {
+    async (q: string, category: ActivityTypeFilter) => {
       if (q.length < 2) {
         setResults([]);
         return;
@@ -95,13 +95,19 @@ export function AddActivityModal({
       setLoading(true);
       try {
         const near = destinationContext ? ` ${destinationContext}` : '';
-        const res = await fetch(`/api/places/search?q=${encodeURIComponent(q + near)}`);
+        const params = new URLSearchParams({
+          q: `${q}${near}`.trim(),
+          category,
+        });
+        const res = await fetch(`/api/places/search?${params.toString()}`);
         const data = (await res.json()) as { results?: PlaceResult[] };
+        const typeLabel =
+          TYPE_FILTERS.find((t) => t.id === category)?.label ?? 'Luogo';
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
           id: p.id,
           title: p.label,
           subtitle: p.subtitle || p.placeTypeLabel,
-          category: p.placeTypeLabel,
+          category: p.placeTypeLabel || typeLabel,
           lat: p.lat,
           lng: p.lng,
           distanceKm: center
@@ -120,8 +126,8 @@ export function AddActivityModal({
 
   useEffect(() => {
     if (!open) return;
-    void search(debounced);
-  }, [debounced, open, search]);
+    void search(debounced, type);
+  }, [debounced, open, search, type]);
 
   useEffect(() => {
     if (!open) reset();
@@ -177,7 +183,13 @@ export function AddActivityModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca musei, ristoranti, attrazioni…"
+              placeholder={
+                type === 'meal'
+                  ? 'Cerca ristoranti, caffè, trattorie…'
+                  : type === 'activity'
+                    ? 'Cerca tour, sport, esperienze…'
+                    : 'Cerca musei, monumenti, attrazioni…'
+              }
               className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none transition focus:border-amber-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-amber-400/15"
             />
           </div>

@@ -27,7 +27,7 @@ npm install
 
 ## 2. Variabili d'ambiente
 
-### Opzione A — Da Vercel (consigliata)
+### Opzione A — Da Vercel (consigliata **solo se le env non sono “Sensitive”**)
 
 ```bash
 npx vercel login
@@ -37,7 +37,16 @@ npx vercel link
 npx vercel env pull .env.local --environment=production
 ```
 
-Questo crea `.env.local` con gli stessi valori di produzione.
+Questo crea `.env.local` con gli stessi valori di produzione **solo se le variabili sono di tipo encrypted/plain**.
+
+> ⚠️ Su questo progetto le env di **Production/Preview sono `sensitive`**: Vercel **non le esporta** più.  
+> `vercel env pull` scrive il placeholder letterale `[SENSITIVE]` e l’app fallisce con `Invalid URL` su Supabase.  
+> In quel caso usa **Opzione B** (file dal maintainer) oppure **Opzione C** e copia da:
+> - Supabase → Project Settings → API → Project URL, `anon` key, `service_role` key  
+> - Provider OAuth / AI / Maps come da sezioni sotto  
+>
+> Per lo sviluppo locale conviene anche avere le stesse chiavi sul target **Development** in Vercel  
+> (tipo encrypted, non sensitive), così `npx vercel env pull` torna a funzionare.
 
 ### Opzione B — File ricevuto dal maintainer
 
@@ -102,14 +111,55 @@ FACEBOOK_CLIENT_SECRET=...
 | Google | `http://localhost:3000/api/auth/callback/google` | `https://webapp-bice-six-42.vercel.app/api/auth/callback/google` |
 | Facebook | `http://localhost:3000/api/auth/callback/facebook` | `https://webapp-bice-six-42.vercel.app/api/auth/callback/facebook` |
 
-### Facebook — errore «dominio non incluso»
+### Facebook — checklist completa (login web)
 
 In [Meta for Developers](https://developers.facebook.com/) → la tua app:
 
+#### A. Domini e redirect (obbligatorio)
+
 1. **Settings → Basic → App Domains:** `webapp-bice-six-42.vercel.app` (solo hostname, no `https://`)
-2. **Settings → Basic → Site URL:** `https://webapp-bice-six-42.vercel.app`
-3. **Facebook Login → Settings → Valid OAuth Redirect URIs:** URI callback produzione sopra
-4. App in modalità **Live** (non solo Development) per utenti reali
+2. **Settings → Basic → Site URL** (se presente) / **Website** platform: `https://webapp-bice-six-42.vercel.app`
+3. Aggiungi il prodotto **Facebook Login** se non c’è: **Add Product → Facebook Login → Web**
+4. **Facebook Login → Settings:**
+   - **Client OAuth Login:** Sì  
+   - **Web OAuth Login:** Sì  
+   - **Valid OAuth Redirect URIs** (uno per riga, esatti):
+     - `https://webapp-bice-six-42.vercel.app/api/auth/callback/facebook`
+     - `http://localhost:3000/api/auth/callback/facebook` (solo per test locale)
+5. **Privacy Policy URL** e **User data deletion** (Settings → Basic) — Meta li richiede spesso in Live
+
+#### B. Errore `Invalid Scopes: email` (il tuo caso)
+
+Meta non concede `email` finché non è abilitato nel **Use case** dell’app (anche se lo chiede Auth.js).
+
+1. Vai su **Use cases** (o **Casi d’uso**)
+2. Apri **Authentication and account creation** / **Autenticazione e creazione account** → **Customize**
+3. Nella sezione permessi / dati utente, aggiungi esplicitamente:
+   - `email`
+   - `public_profile`
+4. Salva e riprova il login (svuota cache o usa finestra anonima)
+
+Se non trovi Use cases: **App Review → Permissions and Features** e verifica che `email` e `public_profile` siano **Ready for testing** / Standard Access.
+
+#### C. Modalità app e tester
+
+- In **Development**: solo ruoli dell’app (Admin / Developer / Tester) o Test Users possono fare login.
+- Per utenti reali: passa l’app a **Live** (toggle in alto) dopo aver completato Privacy Policy e permessi standard.
+- Se vedi «Questo contenuto non è disponibile al momento» insieme a Invalid Scopes, di solito manca il punto **B** (permessi Use case), non Vercel.
+
+#### D. Credenziali su Vercel
+
+In Vercel → Project **webapp** → Settings → Environment Variables (Production):
+
+| Nome | Valore |
+|------|--------|
+| `FACEBOOK_CLIENT_ID` | App ID Meta |
+| `FACEBOOK_CLIENT_SECRET` | App Secret Meta |
+| `AUTH_URL` | `https://webapp-bice-six-42.vercel.app` (senza slash finale) |
+| `AUTH_TRUST_HOST` | `true` |
+| `AUTH_SECRET` | già presente se Google funziona |
+
+Dopo ogni modifica env o Meta: **Redeploy** su Vercel non è obbligatorio per i soli settings Meta, ma sì se cambi env.
 
 ### Google — login che si blocca
 

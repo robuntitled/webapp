@@ -84,7 +84,7 @@ export function AddActivityModal({
   };
 
   const search = useCallback(
-    async (q: string) => {
+    async (q: string, category: ActivityTypeFilter) => {
       if (q.length < 2) {
         setResults([]);
         return;
@@ -92,15 +92,22 @@ export function AddActivityModal({
       setLoading(true);
       try {
         const near = draft.destination ? ` ${draft.destination}` : '';
-        const res = await fetch(
-          `/api/places/search?q=${encodeURIComponent(q + near)}`
-        );
+        const params = new URLSearchParams({
+          q: `${q}${near}`.trim(),
+        });
+        // transport non ha filtro POI dedicato: ricerca generica
+        if (category !== 'transport') {
+          params.set('category', category);
+        }
+        const res = await fetch(`/api/places/search?${params.toString()}`);
         const data = (await res.json()) as { results?: PlaceResult[] };
+        const typeLabel =
+          TYPE_FILTERS.find((t) => t.id === category)?.label || 'Luogo';
         const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
           id: p.id,
           title: p.label,
           subtitle: p.subtitle || p.placeTypeLabel,
-          category: p.placeTypeLabel || TYPE_FILTERS.find((t) => t.id === type)?.label || 'Luogo',
+          category: p.placeTypeLabel || typeLabel,
           lat: p.lat,
           lng: p.lng,
           distanceKm: center
@@ -114,13 +121,13 @@ export function AddActivityModal({
         setLoading(false);
       }
     },
-    [center, draft.destination, type]
+    [center, draft.destination]
   );
 
   useEffect(() => {
     if (!open) return;
-    void search(debounced);
-  }, [debounced, open, search]);
+    void search(debounced, type);
+  }, [debounced, open, search, type]);
 
   useEffect(() => {
     if (!open) reset();

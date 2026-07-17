@@ -2,7 +2,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   AccessDenied:
     'Accesso negato. Riprova o usa un altro metodo di registrazione.',
   Configuration:
-    'Configurazione OAuth non valida. Su Vercel manca probabilmente AUTH_SECRET o i secret Google/Facebook. Controlla /api/auth/status',
+    'Configurazione OAuth non valida. Per Facebook: in Meta Developers abilita i permessi email e public_profile nel Use case «Authentication», e verifica Valid OAuth Redirect URIs. Per Google/secret: controlla /api/auth/status',
   OAuthAccountNotLinked:
     'Questa email è già registrata con un altro metodo. Accedi con email e password.',
   OAuthSignin:

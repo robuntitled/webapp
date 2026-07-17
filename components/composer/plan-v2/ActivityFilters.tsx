@@ -5,11 +5,12 @@ import type { ComposerBlockType } from '@/types/composer';
 export type ActivityTypeFilter = 'attraction' | 'meal' | 'activity' | 'transport';
 export type DurationFilter = 'short' | 'medium' | 'long' | 'fullday' | 'any';
 
+/** Ordine UI: Attrazioni → Attività → Ristoranti (poi Trasporti in v2). */
 export const TYPE_FILTERS: { id: ActivityTypeFilter; label: string; blockType: ComposerBlockType }[] =
   [
     { id: 'attraction', label: 'Attrazioni', blockType: 'attraction' },
-    { id: 'meal', label: 'Ristoranti', blockType: 'meal' },
     { id: 'activity', label: 'Attività', blockType: 'activity' },
+    { id: 'meal', label: 'Ristoranti', blockType: 'meal' },
     { id: 'transport', label: 'Trasporti', blockType: 'transport' },
   ];
 

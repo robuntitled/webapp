@@ -1,6 +1,12 @@
 import 'server-only';
 
 import { haversineKm } from '@/lib/maps/distance';
+import {
+  ACTIVITY_CATEGORY_SEARCH,
+  buildCategoryQuery,
+  matchesActivityCategory,
+  type ActivityPlaceCategory,
+} from '@/lib/places/activity-categories';
 import { searchPlaces } from '@/lib/places/nominatim';
 import { searchGooglePlacesInBounds, type GooglePlaceResult } from '@/lib/places/google-text-search';
 
@@ -44,10 +50,14 @@ function buildContextQuery(query: string, bounds: ActivitySearchBounds[]): strin
 async function searchWithNominatim(
   query: string,
   bounds: ActivitySearchBounds[],
-  maxRadiusKm: number
+  maxRadiusKm: number,
+  category: ActivityPlaceCategory | null
 ): Promise<ActivityPlaceResult[]> {
   const contextualQuery = buildContextQuery(query, bounds);
-  const places = await searchPlaces(contextualQuery, 20);
+  const places = await searchPlaces(contextualQuery, {
+    limit: 20,
+    category,
+  });
   const mapped: ActivityPlaceResult[] = places.map((place) => ({
     id: place.id,
     label: place.label,
@@ -63,18 +73,26 @@ async function searchWithNominatim(
 export async function searchActivitiesInBounds(
   query: string,
   bounds: ActivitySearchBounds[],
-  maxRadiusKm = 120
+  maxRadiusKm = 120,
+  categoryInput?: string | null
 ): Promise<ActivitySearchResponse> {
   const q = query.trim();
   if (q.length < 2) {
     return { results: [], source: 'none' };
   }
 
+  // Narrow explicitly — type guards on optional params don't always refine for tsc on Vercel
+  let category: ActivityPlaceCategory | null = null;
+  if (categoryInput === 'attraction' || categoryInput === 'activity' || categoryInput === 'meal') {
+    category = categoryInput;
+  }
+
   try {
     const nominatimResults = await searchWithNominatim(
       q,
       bounds.length > 0 ? bounds : [{ lat: 0, lng: 0, label: '' }],
-      bounds.length > 0 ? maxRadiusKm : 50000
+      bounds.length > 0 ? maxRadiusKm : 50000,
+      category
     );
     if (nominatimResults.length > 0) {
       return { results: nominatimResults, source: 'nominatim' };
@@ -87,9 +105,27 @@ export async function searchActivitiesInBounds(
     return { results: [], source: 'none' };
   }
 
-  const google = await searchGooglePlacesInBounds(q, bounds, maxRadiusKm);
+  const googleQuery = category ? buildCategoryQuery(q, category) : q;
+  const googleType = category ? ACTIVITY_CATEGORY_SEARCH[category].googleType : undefined;
+
+  const google = await searchGooglePlacesInBounds(googleQuery, bounds, {
+    maxRadiusKm,
+    type: googleType,
+  });
+
   if (google.ok && google.results.length > 0) {
-    return { results: google.results, source: 'google' };
+    const filtered = category
+      ? google.results.filter((place) =>
+          matchesActivityCategory(category, {
+            label: place.label,
+            subtitle: place.subtitle,
+            placeTypeLabel: place.placeTypeLabel,
+          })
+        )
+      : google.results;
+    if (filtered.length > 0) {
+      return { results: filtered, source: 'google' };
+    }
   }
 
   return { results: [], source: 'none' };

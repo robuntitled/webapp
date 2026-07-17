@@ -22,11 +22,26 @@ export type GooglePlacesSearchResult = {
   errorMessage?: string;
 };
 
+export type GoogleTextSearchOptions = {
+  maxRadiusKm?: number;
+  /** Google Places type filter, e.g. restaurant | tourist_attraction */
+  type?: string;
+  /** Optional post-filter using place.types */
+  typeAllowlist?: string[];
+  typeBlocklist?: string[];
+};
+
 export async function searchGooglePlacesInBounds(
   query: string,
   bounds: Bounds[],
-  maxRadiusKm = 120
+  maxRadiusKmOrOptions: number | GoogleTextSearchOptions = 120
 ): Promise<GooglePlacesSearchResult> {
+  const options: GoogleTextSearchOptions =
+    typeof maxRadiusKmOrOptions === 'number'
+      ? { maxRadiusKm: maxRadiusKmOrOptions }
+      : maxRadiusKmOrOptions;
+  const maxRadiusKm = options.maxRadiusKm ?? 120;
+
   if (!API_KEY) {
     return { ok: false, results: [], status: 'MISSING_API_KEY' };
   }
@@ -45,10 +60,13 @@ export async function searchGooglePlacesInBounds(
     language: 'it',
     key: API_KEY,
   });
+  if (options.type) {
+    params.set('type', options.type);
+  }
 
   const res = await fetch(
     `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,
-    { next: { revalidate: 300 } }
+    { cache: 'no-store' }
   );
   if (!res.ok) {
     return { ok: false, results: [], status: 'HTTP_ERROR' };
@@ -77,6 +95,8 @@ export async function searchGooglePlacesInBounds(
   }
 
   const allowedCenters = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
+  const allow = options.typeAllowlist?.map((t) => t.toLowerCase());
+  const block = options.typeBlocklist?.map((t) => t.toLowerCase());
 
   const results = (data.results ?? [])
     .map((place) => {
@@ -87,6 +107,13 @@ export async function searchGooglePlacesInBounds(
         ...allowedCenters.map((c) => haversineKm(c, { lat, lng }))
       );
       if (minDist > maxRadiusKm) return null;
+
+      const types = (place.types ?? []).map((t) => t.toLowerCase());
+      if (block?.some((b) => types.includes(b))) return null;
+      if (allow && allow.length > 0 && !allow.some((a) => types.includes(a))) {
+        return null;
+      }
+
       return {
         id: place.place_id,
         label: place.name,
