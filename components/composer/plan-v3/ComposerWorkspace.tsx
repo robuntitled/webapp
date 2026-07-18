@@ -37,12 +37,13 @@ type ComposerWorkspaceProps = {
   onPinClick: (pin: MapPin) => void;
   /** Opzionale: se assente, solo i pin sono cliccabili (niente tappe a caso). */
   onMapClick?: (lat: number, lng: number) => void;
+  onPoiClick?: (payload: { placeId: string; lat: number; lng: number }) => void;
   onBack: () => void;
   onReview: () => void;
 };
 
 export function ComposerWorkspace(props: ComposerWorkspaceProps) {
-  const { onPinClick, onMapClick, ...itineraryProps } = props;
+  const { onPinClick, onMapClick, onPoiClick, ...itineraryProps } = props;
 
   return (
     <div className="composer-v3-workspace flex h-full min-h-0 flex-col overflow-hidden lg:grid lg:grid-cols-[7fr_3fr]">
@@ -58,6 +59,7 @@ export function ComposerWorkspace(props: ComposerWorkspaceProps) {
           highlightedPinId={props.highlightedPinId}
           onPinClick={onPinClick}
           onMapClick={onMapClick}
+          onPoiClick={onPoiClick}
         />
       </div>
     </div>

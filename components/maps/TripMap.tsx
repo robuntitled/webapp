@@ -5,6 +5,12 @@ import type { MapPin } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type { DestinationMeta } from '@/types/composer';
 
+type MapPoiClickPayload = {
+  placeId: string;
+  lat: number;
+  lng: number;
+};
+
 type TripMapProps = {
   destination: string;
   destinationMeta?: DestinationMeta | null;
@@ -13,6 +19,7 @@ type TripMapProps = {
   highlightedPinId?: string | null;
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  onPoiClick?: (payload: MapPoiClickPayload) => void;
   className?: string;
   interactive?: boolean;
   showRoute?: boolean;
@@ -41,6 +48,7 @@ export function TripMap({
   highlightedPinId,
   onPinClick,
   onMapClick,
+  onPoiClick,
   className = '',
   interactive = true,
   mapMode = 'day',
@@ -56,6 +64,7 @@ export function TripMap({
       highlightedPinId={highlightedPinId}
       onPinClick={onPinClick}
       onMapClick={interactive ? onMapClick : undefined}
+      onPoiClick={interactive ? onPoiClick : undefined}
       className={className}
       showRoute={showRoute}
     />

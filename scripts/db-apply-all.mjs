@@ -13,6 +13,7 @@ const MIGRATIONS = [
   'supabase/migrations/005_trip_chat.sql',
   'supabase/migrations/006_planner_profile.sql',
   'supabase/migrations/007_places_search_cache.sql',
+  'supabase/migrations/008_places_details_cache.sql',
 ];
 
 await withPgClient(async (client) => {

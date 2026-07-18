@@ -16,6 +16,7 @@ type MapColumnProps = {
   highlightedPinId: string | null;
   onPinClick: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  onPoiClick?: (payload: { placeId: string; lat: number; lng: number }) => void;
 };
 
 /**
@@ -133,6 +134,7 @@ export function MapColumn(props: MapColumnProps) {
           showRoute={false}
           onPinClick={props.onPinClick}
           onMapClick={props.onMapClick}
+          onPoiClick={props.onPoiClick}
         />
 
         {expanded && (

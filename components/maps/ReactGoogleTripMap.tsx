@@ -26,6 +26,12 @@ const COMPOSER_MAP_ID = 'nomadlink-composer-map';
 
 type LatLng = { lat: number; lng: number };
 
+export type MapPoiClickPayload = {
+  placeId: string;
+  lat: number;
+  lng: number;
+};
+
 type ReactGoogleTripMapProps = {
   destination: string;
   destinationMeta?: DestinationMeta | null;
@@ -35,6 +41,8 @@ type ReactGoogleTripMapProps = {
   highlightedPinId?: string | null;
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  /** Click su POI basemap Google (Circo Massimo, musei, …) — non pin itinerario. */
+  onPoiClick?: (payload: MapPoiClickPayload) => void;
   className?: string;
   showRoute?: boolean;
 };
@@ -112,6 +120,42 @@ function MapFitBounds({
     });
     return () => coreLib.event.removeListener(listener);
   }, [map, coreLib, pins, stopPins, mapMode, activeDayIndex, fallbackCenter]);
+
+  return null;
+}
+
+/**
+ * Blocca l'info window nativa Google sui POI e inoltra placeId al parent.
+ */
+function PoiClickBridge({
+  onPoiClick,
+}: {
+  onPoiClick?: (payload: MapPoiClickPayload) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !onPoiClick) return;
+
+    const listener = map.addListener(
+      'click',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (e: any) => {
+        const placeId = e?.placeId as string | undefined;
+        if (!placeId) return;
+        // Impedisce "View on Google Maps"
+        if (typeof e.stop === 'function') e.stop();
+        const lat = e.latLng?.lat?.() ?? e.latLng?.lat;
+        const lng = e.latLng?.lng?.() ?? e.latLng?.lng;
+        if (typeof lat !== 'number' || typeof lng !== 'number') return;
+        onPoiClick({ placeId, lat, lng });
+      }
+    );
+
+    return () => {
+      listener.remove();
+    };
+  }, [map, onPoiClick]);
 
   return null;
 }
@@ -216,6 +260,7 @@ function TripMapInner({
   highlightedPinId,
   onPinClick,
   onMapClick,
+  onPoiClick,
   className = '',
   showRoute = false,
 }: ReactGoogleTripMapProps) {
@@ -242,17 +287,21 @@ function TripMapInner({
         defaultZoom={12}
         gestureHandling="greedy"
         disableDefaultUI
+        clickableIcons={Boolean(onPoiClick)}
         colorScheme={ColorScheme.DARK}
         styles={GOOGLE_MAP_DARK_STYLES}
         backgroundColor="#0f172a"
         onClick={(e) => {
-          // Solo se onMapClick è passato: altrimenti ignora click a vuoto (solo pin)
+          // POI gestiti da PoiClickBridge (listener nativo + e.stop())
           if (!onMapClick) return;
+          const placeId = (e.detail as { placeId?: string | null }).placeId;
+          if (placeId) return;
           const latLng = e.detail.latLng;
           if (latLng) onMapClick(latLng.lat, latLng.lng);
         }}
         style={{ width: '100%', height: '100%' }}
       >
+        {onPoiClick && <PoiClickBridge onPoiClick={onPoiClick} />}
         <MapFitBounds
           pins={pins}
           stopPins={stopPins}

@@ -8,6 +8,10 @@ import {
   type AddActivityPayload,
 } from '@/components/composer/plan-v3/AddActivityModal';
 import {
+  MapPlaceAddSheet,
+  type MapPlacePreview,
+} from '@/components/composer/plan-v3/MapPlaceAddSheet';
+import {
   AddTravelBlockModal,
   type TravelBlockPayload,
 } from '@/components/composer/plan-v3/AddTravelBlockModal';
@@ -51,6 +55,10 @@ export function ComposerPlanStep({
   const [addOpen, setAddOpen] = useState(false);
   const [travelOpen, setTravelOpen] = useState(false);
   const [travelMode, setTravelMode] = useState<'transport' | 'hotel'>('transport');
+  const [mapPlaceOpen, setMapPlaceOpen] = useState(false);
+  const [mapPlaceLoading, setMapPlaceLoading] = useState(false);
+  const [mapPlaceError, setMapPlaceError] = useState<string | null>(null);
+  const [mapPlace, setMapPlace] = useState<MapPlacePreview | null>(null);
 
   const activeDayIndex = selection === 'overview' ? draft.days[0]?.dayIndex ?? 1 : selection;
   const activeDay =
@@ -364,8 +372,92 @@ export function ComposerPlanStep({
             if (block) setEditingBlock(block);
           }
         }}
+        onPoiClick={(payload) => {
+          // POI basemap Google → sheet Aggiungi con nome/rating/foto
+          if (selection === 'overview' && draft.days[0]) {
+            setSelection(draft.days[0].dayIndex);
+          }
+          setMapPlaceOpen(true);
+          setMapPlaceLoading(true);
+          setMapPlaceError(null);
+          setMapPlace({
+            placeId: payload.placeId,
+            name: '…',
+            lat: payload.lat,
+            lng: payload.lng,
+          });
+
+          void fetch('/api/places/details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ placeId: payload.placeId }),
+          })
+            .then(async (res) => {
+              const data = (await res.json()) as {
+                place?: {
+                  placeId: string;
+                  name: string;
+                  address?: string;
+                  lat: number | null;
+                  lng: number | null;
+                  rating?: number | null;
+                  ratingCount?: number | null;
+                  photoUrl?: string | null;
+                  primaryType?: string | null;
+                };
+                error?: string;
+              };
+              if (!res.ok || !data.place) {
+                throw new Error(data.error || 'Dettagli non disponibili');
+              }
+              setMapPlace({
+                placeId: data.place.placeId,
+                name: data.place.name,
+                address: data.place.address,
+                lat: data.place.lat ?? payload.lat,
+                lng: data.place.lng ?? payload.lng,
+                rating: data.place.rating,
+                ratingCount: data.place.ratingCount,
+                photoUrl: data.place.photoUrl,
+                primaryType: data.place.primaryType,
+              });
+            })
+            .catch((err: unknown) => {
+              setMapPlaceError(
+                err instanceof Error ? err.message : 'Impossibile caricare il luogo'
+              );
+              // Fallback: almeno nome generico + coordinate del click
+              setMapPlace((prev) =>
+                prev
+                  ? { ...prev, name: prev.name === '…' ? 'Luogo sulla mappa' : prev.name }
+                  : null
+              );
+            })
+            .finally(() => setMapPlaceLoading(false));
+        }}
         onBack={onBack}
         onReview={onReview}
+      />
+
+      <MapPlaceAddSheet
+        open={mapPlaceOpen}
+        place={mapPlace}
+        loading={mapPlaceLoading}
+        error={mapPlaceError}
+        isFirstOfDay={!activeDay || activeDay.blocks.length === 0}
+        onOpenChange={(open) => {
+          setMapPlaceOpen(open);
+          if (!open) {
+            setMapPlace(null);
+            setMapPlaceError(null);
+            setMapPlaceLoading(false);
+          }
+        }}
+        onConfirm={(payload) => {
+          addActivity(payload);
+          setMapPlaceOpen(false);
+          setMapPlace(null);
+        }}
       />
 
       <AddActivityModal
