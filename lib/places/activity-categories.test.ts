@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVITY_PLACE_CATEGORY_ORDER,
   buildCategoryQuery,
+  buildOverpassCategoryClauses,
+  isGenericCategoryQuery,
   matchesActivityCategory,
+  tagsMatchActivityCategory,
 } from '@/lib/places/activity-categories';
 
 describe('ACTIVITY_PLACE_CATEGORY_ORDER', () => {
@@ -60,6 +63,55 @@ describe('matchesActivityCategory', () => {
     };
     expect(matchesActivityCategory('meal', city)).toBe(false);
     expect(matchesActivityCategory('attraction', city)).toBe(false);
+  });
+});
+
+describe('tagsMatchActivityCategory', () => {
+  it('classifies OSM tags correctly and excludes food from attractions', () => {
+    expect(
+      tagsMatchActivityCategory({ amenity: 'restaurant', name: 'Da Mario' }, 'meal')
+    ).toBe(true);
+    expect(
+      tagsMatchActivityCategory({ amenity: 'restaurant', name: 'Da Mario' }, 'attraction')
+    ).toBe(false);
+    expect(tagsMatchActivityCategory({ tourism: 'museum', name: 'Uffizi' }, 'attraction')).toBe(
+      true
+    );
+    expect(tagsMatchActivityCategory({ tourism: 'museum', name: 'Uffizi' }, 'meal')).toBe(false);
+    expect(
+      tagsMatchActivityCategory({ leisure: 'swimming_pool', name: 'Piscina' }, 'activity')
+    ).toBe(true);
+    expect(tagsMatchActivityCategory({ leisure: 'park', name: 'Villa Borghese' }, 'attraction')).toBe(
+      true
+    );
+    // City parks non devono finire in "Attività"
+    expect(tagsMatchActivityCategory({ leisure: 'park', name: 'Villa Borghese' }, 'activity')).toBe(
+      false
+    );
+  });
+});
+
+describe('isGenericCategoryQuery', () => {
+  it('detects generic browse terms per tab', () => {
+    expect(isGenericCategoryQuery('museo', 'attraction')).toBe(true);
+    expect(isGenericCategoryQuery('pizzeria', 'meal')).toBe(true);
+    expect(isGenericCategoryQuery('piscina', 'activity')).toBe(true);
+    expect(isGenericCategoryQuery('Colosseo', 'attraction')).toBe(false);
+    expect(isGenericCategoryQuery('Da Mario', 'meal')).toBe(false);
+  });
+});
+
+describe('buildOverpassCategoryClauses', () => {
+  it('scopes name filter inside category selectors', () => {
+    const withName = buildOverpassCategoryClauses('meal', 41.9, 12.5, 10000, 'pizza');
+    expect(withName).toContain('amenity');
+    expect(withName).toContain('pizza');
+    expect(withName).toContain('around:10000,41.9,12.5');
+    expect(withName).toMatch(/name/);
+
+    const browse = buildOverpassCategoryClauses('attraction', 41.9, 12.5, 8000);
+    expect(browse).toContain('tourism');
+    expect(browse).not.toContain('pizza');
   });
 });
 

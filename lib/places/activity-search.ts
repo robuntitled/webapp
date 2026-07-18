@@ -4,6 +4,7 @@ import {
   ACTIVITY_CATEGORY_SEARCH,
   buildCategoryQuery,
   isActivityPlaceCategory,
+  isGenericCategoryQuery,
   matchesActivityCategory,
   type ActivityPlaceCategory,
 } from '@/lib/places/activity-categories';
@@ -43,9 +44,10 @@ function filterByBounds(
   });
 }
 
-function softFilterByCategory(
+function filterByCategory(
   places: ActivityPlaceResult[],
-  category: ActivityPlaceCategory | null
+  category: ActivityPlaceCategory | null,
+  mode: 'soft' | 'hard'
 ): ActivityPlaceResult[] {
   if (!category) return places;
   const matched = places.filter((p) =>
@@ -55,8 +57,13 @@ function softFilterByCategory(
       placeTypeLabel: p.placeTypeLabel,
     })
   );
-  // Soft: se il filtro svuota, tieni i risultati grezzi (meglio qualcosa che nulla)
+  if (mode === 'hard') return matched;
+  // Soft: se il filtro svuota, tieni i grezzi solo se la query non era settoriale stretta
   return matched.length > 0 ? matched : places;
+}
+
+function nameMatchesQuery(label: string, query: string): boolean {
+  return label.toLowerCase().includes(query.trim().toLowerCase());
 }
 
 async function searchWithNominatim(
@@ -81,12 +88,13 @@ async function searchWithNominatim(
 
   const inBounds = filterByBounds(mapped, bounds, maxRadiusKm);
   const base = inBounds.length > 0 ? inBounds : mapped;
-  return softFilterByCategory(base, category).slice(0, 12);
+  // Hard filter se abbiamo categoria: meglio pochi giusti che città/admin spurii
+  return filterByCategory(base, category, category ? 'hard' : 'soft').slice(0, 12);
 }
 
 /**
  * Ricerca attività settorializzata:
- * Overpass (tag OSM per categoria) → Nominatim → Google (se disponibile).
+ * Overpass (tag OSM per tab) → Nominatim → Google (se disponibile).
  */
 export async function searchActivitiesInBounds(
   query: string,
@@ -111,15 +119,22 @@ export async function searchActivitiesInBounds(
     ? categoryInput
     : null;
 
-  // 1) Overpass settorializzato (priorità: funziona senza Google e rispetta le tab)
+  const generic = category ? isGenericCategoryQuery(q, category) : false;
+
+  // 1) Overpass settorializzato (tag OSM della tab)
   try {
     const overpassResults = await searchOverpassNearby(q, bounds, 12, category);
     if (overpassResults.length > 0) {
-      return {
-        results: overpassResults,
-        source: 'overpass',
-        category,
-      };
+      // Con query specifica: accetta solo se almeno un nome matcha, o se era browse generico
+      const anyNameHit = overpassResults.some((r) => nameMatchesQuery(r.label, q));
+      if (generic || anyNameHit || !category) {
+        return {
+          results: overpassResults,
+          source: 'overpass',
+          category,
+        };
+      }
+      // Altrimenti (raro): non usare dump non correlati
     }
   } catch {
     // continue
@@ -146,16 +161,23 @@ export async function searchActivitiesInBounds(
   );
 
   if (google.ok && google.results.length > 0) {
-    const filtered = softFilterByCategory(google.results, category);
+    const filtered = filterByCategory(google.results, category, category ? 'hard' : 'soft');
     if (filtered.length > 0) {
       return { results: filtered, source: 'google', category };
+    }
+    // Se hard svuota, soft come ultima spiaggia
+    if (category) {
+      const soft = filterByCategory(google.results, category, 'soft');
+      if (soft.length > 0) {
+        return { results: soft, source: 'google', category };
+      }
     }
   }
 
   const hints: Record<ActivityPlaceCategory, string> = {
-    attraction: 'Prova «museo», «duomo», «castello» o un nome di monumento.',
-    activity: 'Prova «parco», «piscina», «sport» o un nome di luogo.',
-    meal: 'Prova «trattoria», «pizzeria», «café» o un nome di locale.',
+    attraction: 'Prova «museo», «duomo», «castello» o il nome di un monumento.',
+    activity: 'Prova «piscina», «palestra», «kayak», «spa» o un nome di esperienza.',
+    meal: 'Prova «pizzeria», «trattoria», «café» o il nome del locale.',
   };
 
   return {
