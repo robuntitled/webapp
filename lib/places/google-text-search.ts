@@ -267,27 +267,26 @@ async function legacyTextSearch(
     }
 
     const centers = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
-    const results = (data.results ?? [])
-      .map((place) => {
-        const lat = place.geometry?.location?.lat;
-        const lng = place.geometry?.location?.lng;
-        if (lat == null || lng == null) return null;
-        const minDist = Math.min(...centers.map((c) => haversineKm(c, { lat, lng })));
-        if (minDist > maxRadiusKm) return null;
-        const t0 = place.types?.[0] ?? '';
-        return {
-          id: place.place_id,
-          label: place.name,
-          subtitle: place.formattedAddress ?? '',
-          lat,
-          lng,
-          placeTypeLabel: labelForGoogleType(t0),
-          primaryType: t0,
-          types: place.types,
-        } satisfies GooglePlaceResult;
-      })
-      .filter((p): p is GooglePlaceResult => p !== null)
-      .slice(0, 14);
+    const results: GooglePlaceResult[] = [];
+    for (const place of data.results ?? []) {
+      const lat = place.geometry?.location?.lat;
+      const lng = place.geometry?.location?.lng;
+      if (lat == null || lng == null) continue;
+      const minDist = Math.min(...centers.map((c) => haversineKm(c, { lat, lng })));
+      if (minDist > maxRadiusKm) continue;
+      const t0 = place.types?.[0] ?? '';
+      results.push({
+        id: place.place_id,
+        label: place.name,
+        subtitle: place.formatted_address ?? '',
+        lat,
+        lng,
+        placeTypeLabel: labelForGoogleType(t0),
+        primaryType: t0 || undefined,
+        types: place.types,
+      });
+      if (results.length >= 14) break;
+    }
 
     return { ok: true, results, status };
   } catch {
