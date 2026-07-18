@@ -8,6 +8,7 @@ import {
   buildPrivacyConsentFields,
 } from '@/lib/privacy/consent';
 import { issueEmailVerification } from '@/lib/auth/email-verification';
+import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
 import { clientIp } from '@/lib/api/request-guard';
 import { ZodError } from 'zod';
 
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const username = await allocateUniqueUsername(
+      slugFromPerson({ firstName, lastName, email: normalizedEmail })
+    );
 
     const { data: newUser, error } = await supabaseAdmin
       .from('users')
@@ -64,13 +68,14 @@ export async function POST(request: Request) {
           first_name: firstName,
           last_name: lastName,
           email: normalizedEmail,
+          username,
           hashedPassword,
           email_verified_at: null,
           ...buildPrivacyConsentFields(true),
           ...buildMarketingConsentFields(marketingConsent ?? false),
         },
       ])
-      .select('id, email, first_name, last_name')
+      .select('id, email, username, first_name, last_name')
       .single();
 
     if (error || !newUser) {

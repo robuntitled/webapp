@@ -10,6 +10,7 @@ export type TripMessageRow = {
   created_at: string;
   user: {
     id: string;
+    username?: string | null;
     first_name: string | null;
     last_name: string | null;
     image: string | null;
@@ -43,7 +44,7 @@ export async function getTripMessages(
   let query = supabaseAdmin
     .from('trip_messages')
     .select(
-      'id, trip_id, user_id, body, created_at, user:users(id, first_name, last_name, image)'
+      'id, trip_id, user_id, body, created_at, user:users(id, username, first_name, last_name, image)'
     )
     .eq('trip_id', tripId)
     .order('created_at', { ascending: true })
@@ -81,7 +82,7 @@ export async function postTripMessage(
     .from('trip_messages')
     .insert({ trip_id: tripId, user_id: userId, body: trimmed })
     .select(
-      'id, trip_id, user_id, body, created_at, user:users(id, first_name, last_name, image)'
+      'id, trip_id, user_id, body, created_at, user:users(id, username, first_name, last_name, image)'
     )
     .single();
 

@@ -6,6 +6,13 @@ const optionalString = z.string().trim().optional().or(z.literal(''));
 
 export const updateProfileSchema = z
   .object({
+    username: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(3, 'Username: minimo 3 caratteri')
+      .max(24, 'Username: massimo 24 caratteri')
+      .regex(/^[a-z0-9_]+$/, 'Solo lettere minuscole, numeri e underscore'),
     first_name: z.string().min(1, 'Il nome è obbligatorio').max(80),
     last_name: z.string().min(1, 'Il cognome è obbligatorio').max(80),
     birth_date: z.string().optional(),
@@ -66,6 +73,7 @@ export const legalConsentSchema = z.object({
 
 export function parseProfileFormData(formData: FormData) {
   return updateProfileSchema.parse({
+    username: formData.get('username'),
     first_name: formData.get('first_name'),
     last_name: formData.get('last_name'),
     birth_date: formData.get('birth_date') || undefined,

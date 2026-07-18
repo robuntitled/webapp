@@ -173,7 +173,10 @@ export function TripChatPanel({
           ) : (
             messages.map((msg) => {
               const mine = msg.user_id === currentUserId;
-              const name = [msg.user?.first_name, msg.user?.last_name].filter(Boolean).join(' ') || 'Viaggiatore';
+              const name =
+                (msg.user?.username ? `@${msg.user.username}` : null) ||
+                [msg.user?.first_name, msg.user?.last_name].filter(Boolean).join(' ') ||
+                'Viaggiatore';
               return (
                 <div
                   key={msg.id}

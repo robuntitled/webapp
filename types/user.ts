@@ -1,9 +1,10 @@
 export const USER_PROFILE_SELECT =
-  'id, email, first_name, last_name, birth_date, gender, phone_number, country, address_city, address_street, address_number, address_postal_code, privacy_consent, marketing_consent, image';
+  'id, email, username, first_name, last_name, birth_date, gender, phone_number, country, address_city, address_street, address_number, address_postal_code, privacy_consent, marketing_consent, image';
 
 export type UserProfile = {
   id: string;
   email: string;
+  username: string;
   first_name: string | null;
   last_name: string | null;
   birth_date: string | null;

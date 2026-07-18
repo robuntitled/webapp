@@ -199,8 +199,13 @@ export default function ProfileForm({
           <p className="font-display text-2xl font-semibold truncate">
             {fullName || 'Il tuo profilo'}
           </p>
+          {userProfile?.username && (
+            <p className="text-sm font-medium text-primary mt-1 truncate">
+              @{userProfile.username}
+            </p>
+          )}
           {email && (
-            <p className="text-sm text-muted-foreground mt-1 truncate">{email}</p>
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">{email}</p>
           )}
           {avatarFile && (
             <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
@@ -242,6 +247,29 @@ export default function ProfileForm({
         description="Informazioni di base visibili agli altri viaggiatori"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="username">Username *</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                @
+              </span>
+              <Input
+                id="username"
+                name="username"
+                defaultValue={userProfile?.username ?? ''}
+                required
+                minLength={3}
+                maxLength={24}
+                pattern="[a-zA-Z0-9_]+"
+                autoComplete="username"
+                className={`${fieldClass} pl-8`}
+                placeholder="es. marco_rossi"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Univoco su NomadLink. Solo lettere, numeri e underscore (3–24 caratteri).
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="first_name">Nome *</Label>
             <Input

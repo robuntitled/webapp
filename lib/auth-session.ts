@@ -1,6 +1,7 @@
 import type { Account, User } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { Session } from 'next-auth';
+import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const PROTECTED_PATHS = [
@@ -80,11 +81,15 @@ export async function handleOAuthSignIn(
 
     if (!existingUser) {
       const { firstName, lastName } = splitDisplayName(user.name, email);
+      const username = await allocateUniqueUsername(
+        slugFromPerson({ firstName, lastName, email })
+      );
       const { error: insertError } = await supabaseAdmin.from('users').insert({
         email,
         image: user.image,
         first_name: firstName,
         last_name: lastName,
+        username,
         privacy_consent: false,
         marketing_consent: false,
         // OAuth: email già verificata dal provider

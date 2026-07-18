@@ -14,6 +14,7 @@ import {
   buildMarketingConsentFields,
   buildPrivacyConsentFields,
 } from '@/lib/privacy/consent';
+import { isUsernameAvailable, normalizeUsername } from '@/lib/auth/username';
 
 export async function updateUserAvatar(formData: FormData) {
   const session = await auth();
@@ -72,7 +73,14 @@ export async function updateUserProfile(formData: FormData) {
     ? `${parsed.phone_prefix ?? '+39'} ${parsed.phone_number.trim()}`
     : null;
 
+  const username = normalizeUsername(parsed.username);
+  const available = await isUsernameAvailable(username, userId);
+  if (!available) {
+    throw new Error('Username già in uso. Scegline un altro.');
+  }
+
   const profileData = {
+    username,
     first_name: parsed.first_name,
     last_name: parsed.last_name,
     birth_date: parsed.birth_date || null,
@@ -90,6 +98,9 @@ export async function updateUserProfile(formData: FormData) {
   const { error } = await supabaseAdmin.from('users').update(profileData).eq('id', userId);
   if (error) {
     console.error('Errore aggiornamento profilo:', error);
+    if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
+      throw new Error('Username già in uso. Scegline un altro.');
+    }
     throw new Error('Impossibile aggiornare il profilo.');
   }
 
