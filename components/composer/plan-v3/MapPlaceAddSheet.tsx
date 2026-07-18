@@ -46,6 +46,10 @@ export type MapPlaceAddPayload = {
   endTime?: string;
   duration?: string;
   price?: number | null;
+  placeId?: string;
+  rating?: number | null;
+  ratingCount?: number | null;
+  photoUrl?: string | null;
 };
 
 type MapPlaceAddSheetProps = {
@@ -289,6 +293,10 @@ export function MapPlaceAddSheet({
                       time: startTime || undefined,
                       endTime: endTime || undefined,
                       duration: durationValue,
+                      placeId: place.placeId,
+                      rating: place.rating,
+                      ratingCount: place.ratingCount,
+                      photoUrl: place.photoUrl,
                     });
                   }}
                 >

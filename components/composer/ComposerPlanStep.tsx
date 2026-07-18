@@ -18,6 +18,10 @@ import {
 import type { DayTrackerSelection } from '@/components/composer/plan-v3/DayTracker';
 import { createEmptyBlock } from '@/lib/composer/blocks';
 import {
+  cascadeTimesAfterBlock,
+  repackBlockTimesInOrder,
+} from '@/lib/composer/day-time-schedule';
+import {
   appendComposerDay,
   endDateFromDays,
   removeComposerDay,
@@ -181,6 +185,11 @@ export function ComposerPlanStep({
       lng: payload.lng,
       price: payload.price ?? null,
       timeSlot: 'flex',
+      placeId: payload.placeId,
+      rating: payload.rating ?? null,
+      ratingCount: payload.ratingCount ?? null,
+      photoUrl: payload.photoUrl,
+      photoName: payload.photoName,
     });
     updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
     setHighlightedPinId(block.id);
@@ -215,10 +224,27 @@ export function ComposerPlanStep({
     const blocks = [...activeDay.blocks];
     const [moved] = blocks.splice(fromIndex, 1);
     blocks.splice(toIndex, 0, moved);
+    // Ripacchetta orari in sequenza dopo drag&drop
+    const repacked = repackBlockTimesInOrder(
+      blocks.map((b, i) => ({ ...b, sortOrder: i }))
+    );
     updateDay(activeDay.dayIndex, (d) => ({
       ...d,
-      blocks: blocks.map((b, i) => ({ ...b, sortOrder: i })),
+      blocks: repacked,
     }));
+    toast.message('Orari aggiornati in sequenza');
+  };
+
+  const cascadeDayTimes = (
+    dayIndex: number,
+    editedBlockId: string,
+    startTime: string,
+    endTime: string
+  ) => {
+    const day = draft.days.find((d) => d.dayIndex === dayIndex);
+    if (!day) return;
+    const next = cascadeTimesAfterBlock(day.blocks, editedBlockId, startTime, endTime);
+    updateDay(dayIndex, (d) => ({ ...d, blocks: next }));
   };
 
   const addTravelBlock = (payload: TravelBlockPayload) => {
@@ -485,6 +511,7 @@ export function ComposerPlanStep({
         }}
         onUpdate={updateBlock}
         onRemove={removeBlock}
+        onCascadeDayTimes={cascadeDayTimes}
       />
     </div>
   );

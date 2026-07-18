@@ -13,7 +13,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, Plus, RefreshCw, Trash2, ExternalLink, X, Check, ArrowLeft } from 'lucide-react';
+import {
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  ExternalLink,
+  X,
+  Check,
+  ArrowLeft,
+  Star,
+  MapPin,
+  Search,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { BLOCK_META, createAlternativeId, DURATION_OPTIONS } from '@/lib/composer/blocks';
 import {
@@ -23,9 +35,13 @@ import {
   type DurationFilter,
 } from '@/components/composer/plan-v3/ActivityFilters';
 import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
-import { findTimeOverlapConflict } from '@/lib/composer/day-time-schedule';
+import {
+  cascadeTimesAfterBlock,
+  findTimeOverlapConflict,
+} from '@/lib/composer/day-time-schedule';
 import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import { TIME_SLOTS } from '@/lib/composer/time-slots';
+import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import type { ComposerBlock, ComposerDraft } from '@/types/composer';
 
 const TRANSPORT_MODES = [
@@ -69,6 +85,19 @@ type BlockEditorPanelProps = {
   onOpenChange: (open: boolean) => void;
   onUpdate: (blockId: string, updater: (block: ComposerBlock) => ComposerBlock) => void;
   onRemove: (blockId: string) => void;
+  /** Dopo salvataggio orari: ripacchetta le tappe successive del giorno */
+  onCascadeDayTimes?: (
+    dayIndex: number,
+    editedBlockId: string,
+    startTime: string,
+    endTime: string
+  ) => void;
+};
+
+type PlaceMedia = {
+  photoUrl: string | null;
+  rating: number | null;
+  ratingCount: number | null;
 };
 
 export function BlockEditorPanel({
@@ -78,6 +107,7 @@ export function BlockEditorPanel({
   onOpenChange,
   onUpdate,
   onRemove,
+  onCascadeDayTimes,
 }: BlockEditorPanelProps) {
   const [flightLoading, setFlightLoading] = useState(false);
   const [affiliateUrl, setAffiliateUrl] = useState<string | null>(null);
@@ -92,6 +122,15 @@ export function BlockEditorPanel({
   const [endTime, setEndTime] = useState('');
   const [titleDraft, setTitleDraft] = useState('');
   const [priceDraft, setPriceDraft] = useState('');
+  const [placeMedia, setPlaceMedia] = useState<PlaceMedia | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
+
+  // Hotel: ricerca alternative
+  const [hotelQuery, setHotelQuery] = useState('');
+  const [hotelResults, setHotelResults] = useState<
+    { id: string; label: string; subtitle: string; lat: number; lng: number }[]
+  >([]);
+  const [hotelSearching, setHotelSearching] = useState(false);
 
   useEffect(() => {
     if (embedOnly || !open || !block || (block.type !== 'flight' && block.type !== 'hotel')) {
@@ -136,6 +175,8 @@ export function BlockEditorPanel({
     setShowAltForm(false);
     setAltLabel('');
     setAltPrice('');
+    setHotelQuery('');
+    setHotelResults([]);
 
     // Sync orari/titolo da blocco
     const d = matchDurationFilter(block.content.duration);
@@ -152,6 +193,53 @@ export function BlockEditorPanel({
         ? String(block.content.price)
         : ''
     );
+
+    // Foto + rating da cache/details se abbiamo placeId
+    const placeId =
+      typeof block.content.placeId === 'string' ? block.content.placeId : '';
+    const cachedPhoto =
+      typeof block.content.photoUrl === 'string' ? block.content.photoUrl : null;
+    const cachedRating =
+      typeof block.content.rating === 'number' ? block.content.rating : null;
+    const cachedCount =
+      typeof block.content.ratingCount === 'number' ? block.content.ratingCount : null;
+
+    if (cachedPhoto || cachedRating != null) {
+      setPlaceMedia({
+        photoUrl: cachedPhoto,
+        rating: cachedRating,
+        ratingCount: cachedCount,
+      });
+    } else {
+      setPlaceMedia(null);
+    }
+
+    if (placeId) {
+      setMediaLoading(true);
+      void fetch('/api/places/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId }),
+      })
+        .then(async (res) => {
+          const data = (await res.json()) as {
+            place?: {
+              photoUrl?: string | null;
+              rating?: number | null;
+              ratingCount?: number | null;
+            };
+          };
+          if (data.place) {
+            setPlaceMedia({
+              photoUrl: data.place.photoUrl ?? cachedPhoto,
+              rating: data.place.rating ?? cachedRating,
+              ratingCount: data.place.ratingCount ?? cachedCount,
+            });
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => setMediaLoading(false));
+    }
   }, [open, block?.id]);
 
   if (!block) return null;
@@ -231,9 +319,17 @@ export function BlockEditorPanel({
     });
   };
 
+  const applyCascadeIfNeeded = () => {
+    if (!startTime || !endTime || !onCascadeDayTimes) return;
+    const day = draft.days.find((d) => d.blocks.some((b) => b.id === block.id));
+    if (!day) return;
+    onCascadeDayTimes(day.dayIndex, block.id, startTime, endTime);
+  };
+
   const handleAddConfirm = () => {
     if (!validateTimesOrToast()) return;
     commitPlaceFields();
+    applyCascadeIfNeeded();
     onOpenChange(false);
     toast.success('Luogo aggiunto');
   };
@@ -241,8 +337,86 @@ export function BlockEditorPanel({
   const handleSave = () => {
     if (!validateTimesOrToast()) return;
     commitPlaceFields();
+    applyCascadeIfNeeded();
     onOpenChange(false);
     toast.success('Modifiche salvate');
+  };
+
+  const searchHotels = async () => {
+    const q = hotelQuery.trim();
+    if (q.length < 2) {
+      toast.message('Scrivi almeno 2 caratteri');
+      return;
+    }
+    const bounds = getDraftDestinations(draft)
+      .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+      .map((d) => ({
+        lat: d.lat,
+        lng: d.lng,
+        radiusKm: 30,
+        label: d.label,
+      }));
+    if (bounds.length === 0) {
+      toast.error('Nessuna destinazione nel viaggio');
+      return;
+    }
+    setHotelSearching(true);
+    try {
+      const res = await fetch('/api/places/google-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q, category: 'hotel', bounds }),
+      });
+      const data = (await res.json()) as {
+        results?: {
+          id: string;
+          label: string;
+          subtitle: string;
+          lat: number;
+          lng: number;
+        }[];
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? 'Ricerca non disponibile');
+        setHotelResults([]);
+        return;
+      }
+      setHotelResults(data.results ?? []);
+      if ((data.results ?? []).length === 0) {
+        toast.message('Nessun hotel trovato');
+      }
+    } catch {
+      toast.error('Ricerca hotel non disponibile');
+    } finally {
+      setHotelSearching(false);
+    }
+  };
+
+  const addHotelAlternative = (h: {
+    id: string;
+    label: string;
+    subtitle: string;
+    lat: number;
+    lng: number;
+  }) => {
+    onUpdate(block.id, (b) => ({
+      ...b,
+      alternatives: [
+        ...b.alternatives,
+        {
+          id: createAlternativeId(),
+          label: h.label,
+          price: null,
+          currency: 'EUR',
+          notes: h.subtitle || undefined,
+          meta: { placeId: h.id, lat: h.lat, lng: h.lng },
+        },
+      ],
+    }));
+    toast.success(`Alternativa hotel: ${h.label}`);
+    setHotelQuery('');
+    setHotelResults([]);
   };
 
   const handleBack = () => {
@@ -364,6 +538,39 @@ export function BlockEditorPanel({
         >
           <div className={`h-2 bg-gradient-to-r ${meta.color.split(' ').slice(0, 2).join(' ')}`} />
           {closeBtn}
+
+          {/* Foto + rating da cache Places */}
+          {(placeMedia?.photoUrl || placeMedia?.rating != null || mediaLoading) && (
+            <div className="relative h-40 w-full bg-white/5">
+              {placeMedia?.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={placeMedia.photoUrl}
+                  alt={displayTitle}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-white/30">
+                  {mediaLoading ? (
+                    <Loader2 className="h-7 w-7 animate-spin" />
+                  ) : (
+                    <MapPin className="h-8 w-8" />
+                  )}
+                </div>
+              )}
+              {placeMedia?.rating != null && (
+                <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold backdrop-blur">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  <span>{placeMedia.rating.toFixed(1)}</span>
+                  {placeMedia.ratingCount != null && (
+                    <span className="font-normal text-white/60">
+                      ({placeMedia.ratingCount})
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="relative z-10 space-y-5 p-6 pb-8 pr-14">
             <DialogHeader className="space-y-1">
@@ -621,7 +828,7 @@ export function BlockEditorPanel({
           )}
 
           {block.type === 'hotel' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="relative z-30 grid grid-cols-2 gap-3">
                 <label className="block space-y-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
@@ -684,6 +891,63 @@ export function BlockEditorPanel({
                     }
                   />
                 </div>
+              </div>
+
+              {/* Alternative hotel: ricerca Places */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+                <Label className="text-white/60 text-xs uppercase tracking-wider">
+                  Cerca altro hotel (alternativa)
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                    <Input
+                      className={`${inputClass} pl-9`}
+                      value={hotelQuery}
+                      onChange={(e) => setHotelQuery(e.target.value)}
+                      placeholder="Nome hotel…"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void searchHotels();
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="h-11 shrink-0 rounded-xl"
+                    onClick={() => void searchHotels()}
+                    disabled={hotelSearching}
+                  >
+                    {hotelSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Cerca'
+                    )}
+                  </Button>
+                </div>
+                {hotelResults.length > 0 && (
+                  <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+                    {hotelResults.map((h) => (
+                      <li key={h.id}>
+                        <button
+                          type="button"
+                          onClick={() => addHotelAlternative(h)}
+                          className="flex w-full items-start justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-sm transition hover:border-amber-400/40 hover:bg-white/[0.07]"
+                        >
+                          <span>
+                            <span className="block font-medium text-white">{h.label}</span>
+                            {h.subtitle && (
+                              <span className="block text-xs text-white/45">{h.subtitle}</span>
+                            )}
+                          </span>
+                          <Plus className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           )}

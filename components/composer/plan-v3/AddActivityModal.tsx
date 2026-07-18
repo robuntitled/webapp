@@ -46,6 +46,11 @@ export type AddActivityPayload = {
   endTime?: string;
   duration?: string;
   price?: number | null;
+  placeId?: string;
+  rating?: number | null;
+  ratingCount?: number | null;
+  photoUrl?: string | null;
+  photoName?: string | null;
 };
 
 type AddActivityModalProps = {
@@ -273,6 +278,7 @@ export function AddActivityModal({
       endTime: endTime || undefined,
       duration: durationValue,
       price: parsedPrice,
+      placeId: item.id,
     });
   };
 

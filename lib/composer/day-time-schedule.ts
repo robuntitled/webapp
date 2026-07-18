@@ -163,3 +163,86 @@ export function findTimeOverlapConflict(
 
   return null;
 }
+
+function isPackableBlock(block: ComposerBlock): boolean {
+  return (
+    block.type === 'attraction' ||
+    block.type === 'activity' ||
+    block.type === 'meal' ||
+    block.type === 'transport'
+  );
+}
+
+function blockDurationMinutes(block: ComposerBlock): number {
+  const range = getBlockTimeRange(block);
+  if (range) return Math.max(15, range.endMin - range.startMin);
+  return parseDurationMinutes(block.content.duration);
+}
+
+function withTimes(block: ComposerBlock, startMin: number, endMin: number): ComposerBlock {
+  return {
+    ...block,
+    content: {
+      ...block.content,
+      time: minutesToTime(startMin),
+      endTime: minutesToTime(endMin),
+    },
+  };
+}
+
+/**
+ * Dopo drag&drop: ripacchetta le tappe in ordine (08:00 o primo start, poi adiacenti).
+ * Hotel/volo/note restano invariati.
+ */
+export function repackBlockTimesInOrder(blocks: ComposerBlock[]): ComposerBlock[] {
+  let cursor: number | null = null;
+  return blocks.map((block) => {
+    if (!isPackableBlock(block)) return block;
+    const dur = blockDurationMinutes(block);
+    const range = getBlockTimeRange(block);
+    let start: number;
+    if (cursor == null) {
+      start = range?.startMin ?? 8 * 60;
+    } else {
+      start = cursor;
+    }
+    const end = start + dur;
+    cursor = end;
+    return withTimes(block, start, end);
+  });
+}
+
+/**
+ * Dopo modifica orario di una tappa: le successive (packable) partono dalla fine di quella.
+ * I pasti restano dove sono se non modificati; le altre si spostano in sequenza.
+ */
+export function cascadeTimesAfterBlock(
+  blocks: ComposerBlock[],
+  editedBlockId: string,
+  newStartTime: string,
+  newEndTime: string
+): ComposerBlock[] {
+  const startMin = timeToMinutes(newStartTime);
+  const endMin = timeToMinutes(newEndTime);
+  if (startMin == null || endMin == null || endMin <= startMin) return blocks;
+
+  const idx = blocks.findIndex((b) => b.id === editedBlockId);
+  if (idx < 0) return blocks;
+
+  let cursor = endMin;
+  return blocks.map((block, i) => {
+    if (i < idx) return block;
+    if (i === idx) {
+      return withTimes(block, startMin, endMin);
+    }
+    // successive
+    if (!isPackableBlock(block)) return block;
+    // Pasti: lasciati se non si sovrappongono forzatamente; se vogliamo "tutto si aggiusta"
+    // li spostiamo anche loro in sequenza (più coerente con drag).
+    const dur = blockDurationMinutes(block);
+    const start = cursor;
+    const end = start + dur;
+    cursor = end;
+    return withTimes(block, start, end);
+  });
+}
