@@ -1,12 +1,16 @@
 import type { User } from 'next-auth';
+import { CredentialsSignin } from 'next-auth';
 import bcrypt from 'bcryptjs';
 import { rateLimit } from '@/lib/rate-limit';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+/** Login bloccato: email non ancora verificata. */
+export class EmailNotVerifiedError extends CredentialsSignin {
+  code = 'email_not_verified';
+}
+
 /**
- * Login email/password con rate limit anti-brute force.
- * - per email: max 8 tentativi / 15 min
- * - globale soft: max 40 tentativi / 15 min su chiave fissa (istanza)
+ * Login email/password con rate limit anti-brute force + require email verified.
  */
 export async function authorizeCredentials(
   email: string,
@@ -20,7 +24,6 @@ export async function authorizeCredentials(
     windowMs: 15 * 60_000,
   });
   if (!byEmail.ok) {
-    // Non rivelare se l'email esiste
     return null;
   }
 
@@ -34,7 +37,9 @@ export async function authorizeCredentials(
 
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('id, email, first_name, last_name, image, hashedPassword')
+    .select(
+      'id, email, first_name, last_name, image, hashedPassword, email_verified_at'
+    )
     .eq('email', normalized)
     .maybeSingle();
 
@@ -42,6 +47,11 @@ export async function authorizeCredentials(
 
   const passwordsMatch = await bcrypt.compare(password, user.hashedPassword);
   if (!passwordsMatch) return null;
+
+  // Password ok ma email non verificata → errore distinto (UI può guidare l’utente)
+  if (!user.email_verified_at) {
+    throw new EmailNotVerifiedError();
+  }
 
   return {
     id: user.id,

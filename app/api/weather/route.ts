@@ -11,7 +11,7 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const blocked = rateLimitJson(
+  const blocked = await rateLimitJson(
     `weather:ip:${clientIp(request)}`,
     { limit: 30, windowMs: 60_000 },
     'Troppe richieste meteo'

@@ -12,13 +12,13 @@ export async function GET(request: Request) {
   const authResult = await requireUserId();
   if ('error' in authResult) return authResult.error;
 
-  const ipBlock = rateLimitJson(
+  const ipBlock = await rateLimitJson(
     `nominatim:ip:${clientIp(request)}`,
     { limit: 30, windowMs: 60_000 }
   );
   if (ipBlock) return ipBlock;
 
-  const userBlock = rateLimitJson(
+  const userBlock = await rateLimitJson(
     `nominatim:user:${authResult.userId}`,
     { limit: 40, windowMs: 60_000 }
   );

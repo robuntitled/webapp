@@ -24,8 +24,11 @@ export default function LoginPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,6 +48,18 @@ export default function LoginPage() {
           })
           .catch(() => undefined);
       }
+    }
+
+    const verify = params.get('verify');
+    if (verify === 'ok') {
+      setInfo('Email confermata. Ora puoi accedere con email e password.');
+      setIsRegisterMode(false);
+      const verifiedEmail = params.get('email');
+      if (verifiedEmail) setEmail(verifiedEmail);
+    } else if (verify === 'error') {
+      setError(params.get('reason') || 'Verifica email non riuscita. Richiedi un nuovo link.');
+    } else if (verify === 'rate_limit') {
+      setError('Troppi tentativi di verifica. Riprova tra un minuto.');
     }
   }, []);
 
@@ -93,11 +108,31 @@ export default function LoginPage() {
           throw new Error(errorText || 'Qualcosa è andato storto');
         }
 
+        const data = (await response.json()) as {
+          requiresVerification?: boolean;
+          message?: string;
+          email?: string;
+          devVerifyUrl?: string;
+        };
+
+        if (data.requiresVerification) {
+          setPendingVerifyEmail(data.email || email);
+          setInfo(
+            data.message ||
+              'Controlla la tua email e apri il link di conferma per attivare l’account.'
+          );
+          if (data.devVerifyUrl && process.env.NODE_ENV === 'development') {
+            console.info('[dev] verify url:', data.devVerifyUrl);
+          }
+          setIsRegisterMode(false);
+          return;
+        }
+
         const result = await signIn('credentials', { email, password, redirect: false });
         if (result?.ok) {
           router.push('/dashboard');
         } else {
-          setError('Registrazione riuscita. Prova ad accedere.');
+          setError('Registrazione riuscita. Prova ad accedere dopo aver verificato l’email.');
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Errore imprevisto');
@@ -112,7 +147,19 @@ export default function LoginPage() {
           password,
         });
 
-        if (result?.error) {
+        // Auth.js: code su CredentialsSignin (email non verificata)
+        const code =
+          (result as { code?: string } | undefined)?.code ||
+          (typeof result?.error === 'string' && result.error.includes('email_not_verified')
+            ? 'email_not_verified'
+            : undefined);
+
+        if (code === 'email_not_verified') {
+          setPendingVerifyEmail(email);
+          setError(
+            'Email non ancora confermata. Controlla la casella di posta o reinvia il link.'
+          );
+        } else if (result?.error) {
           setError('Email o password non validi. Riprova.');
         } else if (result?.ok) {
           router.push('/dashboard');
@@ -122,6 +169,33 @@ export default function LoginPage() {
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const target = (pendingVerifyEmail || email).trim();
+    if (!target) {
+      setError('Inserisci l’email per ricevere il link di conferma.');
+      return;
+    }
+    setResendLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: target }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+      if (!res.ok) {
+        setError(data.error || 'Impossibile reinviare. Riprova più tardi.');
+        return;
+      }
+      setInfo(data.message || 'Se l’account esiste, riceverai un’email a breve.');
+    } catch {
+      setError('Errore di rete. Riprova.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -257,10 +331,28 @@ export default function LoginPage() {
                 />
               )}
 
+              {info && (
+                <p className="text-sm text-center bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 rounded-lg py-2 px-3">
+                  {info}
+                </p>
+              )}
+
               {error && (
                 <p className="text-sm text-destructive text-center bg-destructive/10 rounded-lg py-2 px-3">
                   {error}
                 </p>
+              )}
+
+              {(pendingVerifyEmail || error.includes('non ancora confermata')) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-10 rounded-xl text-sm"
+                  disabled={resendLoading}
+                  onClick={() => void handleResendVerification()}
+                >
+                  {resendLoading ? 'Invio…' : 'Reinvia email di conferma'}
+                </Button>
               )}
 
               <Button

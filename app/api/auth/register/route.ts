@@ -7,16 +7,13 @@ import {
   buildMarketingConsentFields,
   buildPrivacyConsentFields,
 } from '@/lib/privacy/consent';
+import { issueEmailVerification } from '@/lib/auth/email-verification';
+import { clientIp } from '@/lib/api/request-guard';
 import { ZodError } from 'zod';
-
-const SAFE_USER_SELECT = 'id, email, first_name, last_name, image';
 
 export async function POST(request: Request) {
   try {
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      request.headers.get('x-real-ip') ??
-      'unknown';
+    const ip = clientIp(request);
     const { ok, retryAfterMs } = rateLimit(`register:${ip}`, { limit: 5, windowMs: 60_000 });
     if (!ok) {
       return new NextResponse('Troppi tentativi. Riprova tra qualche minuto.', {
@@ -29,12 +26,32 @@ export async function POST(request: Request) {
     const { firstName, lastName, email, password, marketingConsent } =
       registerSchema.parse(body);
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
+      .select('id, email_verified_at')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
     if (existingUser) {
+      // Non rivelare se è solo non verificato con messaggio diverso in produzione;
+      // ma permettiamo re-issue se non verificato
+      if (!existingUser.email_verified_at) {
+        try {
+          await issueEmailVerification(existingUser.id, normalizedEmail);
+        } catch {
+          /* ignore */
+        }
+        return NextResponse.json(
+          {
+            requiresVerification: true,
+            message:
+              'Account già registrato ma non verificato. Ti abbiamo reinviato l’email di conferma.',
+          },
+          { status: 200 }
+        );
+      }
       return new NextResponse('Utente già registrato', { status: 409 });
     }
 
@@ -46,20 +63,36 @@ export async function POST(request: Request) {
         {
           first_name: firstName,
           last_name: lastName,
-          email,
+          email: normalizedEmail,
           hashedPassword,
+          email_verified_at: null,
           ...buildPrivacyConsentFields(true),
           ...buildMarketingConsentFields(marketingConsent ?? false),
         },
       ])
-      .select(SAFE_USER_SELECT)
+      .select('id, email, first_name, last_name')
       .single();
 
-    if (error) {
-      throw error;
+    if (error || !newUser) {
+      throw error ?? new Error('Insert failed');
     }
 
-    return NextResponse.json(newUser, { status: 201 });
+    const issued = await issueEmailVerification(newUser.id, newUser.email);
+
+    return NextResponse.json(
+      {
+        requiresVerification: true,
+        email: newUser.email,
+        message:
+          'Registrazione riuscita. Controlla la tua email e apri il link di conferma per accedere.',
+        emailSent: issued.emailSent,
+        // Solo in dev/log mode: utile se non c’è Resend (mai esporre in prod se RESEND attivo)
+        ...(issued.emailMode === 'log'
+          ? { devVerifyUrl: issued.verifyUrl }
+          : {}),
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof ZodError) {
       return new NextResponse(error.issues[0]?.message ?? 'Dati non validi', {

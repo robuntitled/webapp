@@ -87,12 +87,23 @@ export async function handleOAuthSignIn(
         last_name: lastName,
         privacy_consent: false,
         marketing_consent: false,
+        // OAuth: email già verificata dal provider
+        email_verified_at: new Date().toISOString(),
       });
 
       if (insertError) {
         console.error('OAuth user insert error:', insertError);
         return false;
       }
+    } else {
+      // Account esistente: OAuth conferma l’email (anche se registrato con password non verificata)
+      const patch: Record<string, unknown> = {
+        email_verified_at: new Date().toISOString(),
+        email_verify_token_hash: null,
+        email_verify_expires_at: null,
+      };
+      if (user.image) patch.image = user.image;
+      await supabaseAdmin.from('users').update(patch).eq('id', existingUser.id);
     }
 
     return true;
