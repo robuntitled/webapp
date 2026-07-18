@@ -400,6 +400,7 @@ export function BlockEditorPanel({
     lat: number;
     lng: number;
   }) => {
+    const price = altPrice.trim() ? Number(altPrice.replace(',', '.')) : null;
     onUpdate(block.id, (b) => ({
       ...b,
       alternatives: [
@@ -407,7 +408,7 @@ export function BlockEditorPanel({
         {
           id: createAlternativeId(),
           label: h.label,
-          price: null,
+          price: Number.isFinite(price) ? price : null,
           currency: 'EUR',
           notes: h.subtitle || undefined,
           meta: { placeId: h.id, lat: h.lat, lng: h.lng },
@@ -417,6 +418,8 @@ export function BlockEditorPanel({
     toast.success(`Alternativa hotel: ${h.label}`);
     setHotelQuery('');
     setHotelResults([]);
+    setAltPrice('');
+    setShowAltForm(false);
   };
 
   const handleBack = () => {
@@ -835,13 +838,16 @@ export function BlockEditorPanel({
                     Check-in
                   </span>
                   <QuarterHourTimeSelect
-                    value={String(block.content.checkInTime ?? block.content.time ?? '')}
+                    value={String(
+                      block.content.checkInTime ?? block.content.time ?? '14:00'
+                    )}
                     onChange={(v) =>
                       patchContent({
-                        checkInTime: v || undefined,
-                        time: v || undefined,
+                        checkInTime: v || '14:00',
+                        time: v || '14:00',
                       })
                     }
+                    allowEmpty={false}
                   />
                 </label>
                 <label className="block space-y-1.5">
@@ -849,13 +855,16 @@ export function BlockEditorPanel({
                     Check-out
                   </span>
                   <QuarterHourTimeSelect
-                    value={String(block.content.checkOutTime ?? block.content.endTime ?? '')}
+                    value={String(
+                      block.content.checkOutTime ?? block.content.endTime ?? '11:00'
+                    )}
                     onChange={(v) =>
                       patchContent({
-                        checkOutTime: v || undefined,
-                        endTime: v || undefined,
+                        checkOutTime: v || '11:00',
+                        endTime: v || '11:00',
                       })
                     }
+                    allowEmpty={false}
                   />
                 </label>
               </div>
@@ -893,62 +902,6 @@ export function BlockEditorPanel({
                 </div>
               </div>
 
-              {/* Alternative hotel: ricerca Places */}
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
-                <Label className="text-white/60 text-xs uppercase tracking-wider">
-                  Cerca altro hotel (alternativa)
-                </Label>
-                <div className="flex gap-2">
-                  <div className="relative min-w-0 flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                    <Input
-                      className={`${inputClass} pl-9`}
-                      value={hotelQuery}
-                      onChange={(e) => setHotelQuery(e.target.value)}
-                      placeholder="Nome hotel…"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          void searchHotels();
-                        }
-                      }}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    className="h-11 shrink-0 rounded-xl"
-                    onClick={() => void searchHotels()}
-                    disabled={hotelSearching}
-                  >
-                    {hotelSearching ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Cerca'
-                    )}
-                  </Button>
-                </div>
-                {hotelResults.length > 0 && (
-                  <ul className="max-h-40 space-y-1.5 overflow-y-auto">
-                    {hotelResults.map((h) => (
-                      <li key={h.id}>
-                        <button
-                          type="button"
-                          onClick={() => addHotelAlternative(h)}
-                          className="flex w-full items-start justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-sm transition hover:border-amber-400/40 hover:bg-white/[0.07]"
-                        >
-                          <span>
-                            <span className="block font-medium text-white">{h.label}</span>
-                            {h.subtitle && (
-                              <span className="block text-xs text-white/45">{h.subtitle}</span>
-                            )}
-                          </span>
-                          <Plus className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
             </div>
           )}
 
@@ -1022,7 +975,90 @@ export function BlockEditorPanel({
                   </Button>
                 )}
               </div>
-              {showAltForm && (
+              {showAltForm && block.type === 'hotel' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-3 pb-1"
+                >
+                  <div className="flex gap-2">
+                    <div className="relative min-w-0 flex-1">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <Input
+                        className={`${inputClass} pl-9`}
+                        value={hotelQuery}
+                        onChange={(e) => setHotelQuery(e.target.value)}
+                        placeholder="Cerca hotel…"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            void searchHotels();
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="h-11 shrink-0 rounded-xl"
+                      onClick={() => void searchHotels()}
+                      disabled={hotelSearching}
+                    >
+                      {hotelSearching ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Cerca'
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-11 w-11 shrink-0 rounded-xl text-white/40"
+                      onClick={() => {
+                        setShowAltForm(false);
+                        setHotelQuery('');
+                        setHotelResults([]);
+                        setAltPrice('');
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    className={inputClass}
+                    type="number"
+                    placeholder="Prezzo € (opzionale)"
+                    value={altPrice}
+                    onChange={(e) => setAltPrice(e.target.value)}
+                  />
+                  {hotelResults.length > 0 && (
+                    <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+                      {hotelResults.map((h) => (
+                        <li key={h.id}>
+                          <button
+                            type="button"
+                            onClick={() => addHotelAlternative(h)}
+                            className="flex w-full items-start justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-sm transition hover:border-amber-400/40 hover:bg-white/[0.07]"
+                          >
+                            <span>
+                              <span className="block font-medium text-white">{h.label}</span>
+                              {h.subtitle && (
+                                <span className="block text-xs text-white/45">
+                                  {h.subtitle}
+                                </span>
+                              )}
+                            </span>
+                            <Plus className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </motion.div>
+              )}
+
+              {showAltForm && block.type === 'flight' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -1046,7 +1082,7 @@ export function BlockEditorPanel({
                     <Button
                       type="button"
                       size="icon"
-                      className="h-11 w-11 rounded-xl shrink-0"
+                      className="h-11 w-11 shrink-0 rounded-xl"
                       onClick={submitAlternative}
                       disabled={!altLabel.trim()}
                     >
@@ -1056,7 +1092,7 @@ export function BlockEditorPanel({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-11 w-11 rounded-xl shrink-0 text-white/40"
+                      className="h-11 w-11 shrink-0 rounded-xl text-white/40"
                       onClick={() => setShowAltForm(false)}
                     >
                       <X className="h-4 w-4" />
@@ -1064,13 +1100,14 @@ export function BlockEditorPanel({
                   </div>
                 </motion.div>
               )}
+
               {block.alternatives.map((alt) => (
                 <div
                   key={alt.id}
                   className="flex items-center justify-between rounded-xl border border-white/8 px-3 py-2.5 text-sm"
                 >
                   <span>{alt.label}</span>
-                  <span className="text-accent font-semibold">
+                  <span className="font-semibold text-accent">
                     {alt.price != null ? `${alt.price}€` : '—'}
                   </span>
                 </div>

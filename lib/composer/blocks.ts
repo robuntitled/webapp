@@ -113,6 +113,11 @@ export function defaultBlockContent(
         guests: 2,
         stars: null,
         duration: '1 notte',
+        // Standard industria: check-in 14:00 (2 PM), check-out 11:00 (11 AM)
+        checkInTime: '14:00',
+        checkOutTime: '11:00',
+        time: '14:00',
+        endTime: '11:00',
       });
       break;
     case 'attraction':

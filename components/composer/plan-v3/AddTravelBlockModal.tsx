@@ -109,7 +109,7 @@ export function AddTravelBlockModal({
   const [hotelCoords, setHotelCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [departureTime, setDepartureTime] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
-  const [checkInTime, setCheckInTime] = useState('15:00');
+  const [checkInTime, setCheckInTime] = useState('14:00');
   const [checkOutTime, setCheckOutTime] = useState('11:00');
   const [travelerArrivalTime, setTravelerArrivalTime] = useState('');
   const [bookingReference, setBookingReference] = useState('');
@@ -137,7 +137,7 @@ export function AddTravelBlockModal({
     setHotelCoords(undefined);
     setDepartureTime('');
     setArrivalTime('');
-    setCheckInTime('15:00');
+    setCheckInTime('14:00');
     setCheckOutTime('11:00');
     setTravelerArrivalTime('');
     setBookingReference('');

@@ -261,9 +261,16 @@ export function ComposerPlanStep({
       mode: payload.transportMode ?? (isFlight ? 'flight' : 'taxi'),
       departureTime: payload.departureTime,
       arrivalTime: payload.arrivalTime,
-      time: payload.departureTime,
-      checkInTime: payload.checkInTime,
-      checkOutTime: payload.checkOutTime,
+      checkInTime: payload.type === 'hotel' ? payload.checkInTime || '14:00' : payload.checkInTime,
+      checkOutTime: payload.type === 'hotel' ? payload.checkOutTime || '11:00' : payload.checkOutTime,
+      time:
+        payload.type === 'hotel'
+          ? payload.checkInTime || '14:00'
+          : payload.departureTime,
+      endTime:
+        payload.type === 'hotel'
+          ? payload.checkOutTime || '11:00'
+          : payload.arrivalTime,
       travelerArrivalTime: payload.travelerArrivalTime,
       bookingReference: payload.bookingReference,
       price: payload.price ?? null,
