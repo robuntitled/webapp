@@ -1,7 +1,12 @@
 import 'server-only';
 
 import { haversineKm } from '@/lib/maps/distance';
-import { searchGooglePlacesInBounds, type GooglePlaceResult } from '@/lib/places/google-text-search';
+import {
+  hasGooglePlacesKey,
+  searchGooglePlacesInBounds,
+  searchGooglePlacesNearby,
+  type GooglePlaceResult,
+} from '@/lib/places/google-text-search';
 import { searchPlaces } from '@/lib/places/nominatim';
 import { searchOverpassNearby } from '@/lib/places/overpass-search';
 
@@ -42,8 +47,7 @@ async function searchWithNominatim(
 ): Promise<ActivityPlaceResult[]> {
   const primary = bounds[0];
   const contextual = primary.label ? `${query} ${primary.label}` : query;
-
-  const places = await searchPlaces(contextual, 20);
+  const places = await searchPlaces(contextual, 16);
   const mapped: ActivityPlaceResult[] = places.map((place) => ({
     id: place.id,
     label: place.label,
@@ -52,20 +56,18 @@ async function searchWithNominatim(
     lng: place.lng,
     placeTypeLabel: place.placeTypeLabel,
   }));
-
   const inBounds = filterByBounds(mapped, bounds, maxRadiusKm);
   return (inBounds.length > 0 ? inBounds : mapped).slice(0, 16);
 }
 
 /**
- * Ricerca luoghi nell'area destinazione — senza filtri categoria.
- * Query vuota → POI interessanti nell'area mappa.
- * Query con testo → cerca tutto per nome.
+ * Priorità: Google Places (veloce + qualità) → Overpass → Nominatim.
+ * Query vuota = luoghi popolari nell’area mappa (Nearby Search).
  */
 export async function searchActivitiesInBounds(
   query: string,
   bounds: ActivitySearchBounds[],
-  maxRadiusKm = 120
+  maxRadiusKm = 80
 ): Promise<ActivitySearchResponse> {
   const q = query.trim();
 
@@ -78,17 +80,42 @@ export async function searchActivitiesInBounds(
     };
   }
 
-  // 1) Overpass: area mappa (default) o ricerca nome libera
+  // ── 1) Google Places (primario) ──────────────────────────────────────────
+  if (hasGooglePlacesKey()) {
+    try {
+      if (q.length < 2) {
+        const nearby = await searchGooglePlacesNearby(bounds, 30, 16);
+        if (nearby.ok && nearby.results.length > 0) {
+          return { results: nearby.results, source: 'google' };
+        }
+      } else {
+        const text = await searchGooglePlacesInBounds(q, bounds, maxRadiusKm);
+        if (text.ok && text.results.length > 0) {
+          return { results: text.results, source: 'google' };
+        }
+      }
+    } catch {
+      // fallback sotto
+    }
+  }
+
+  // ── 2) Overpass (fallback gratuito, più lento) ───────────────────────────
   try {
     const overpassResults = await searchOverpassNearby(q, bounds, 16);
     if (overpassResults.length > 0) {
-      return { results: overpassResults, source: 'overpass' };
+      return {
+        results: overpassResults,
+        source: 'overpass',
+        warning: hasGooglePlacesKey()
+          ? undefined
+          : 'Risultati OSM (configura Google Places per risultati più rapidi).',
+      };
     }
   } catch {
     // continue
   }
 
-  // 2) Nominatim (solo con testo)
+  // ── 3) Nominatim (solo con testo) ────────────────────────────────────────
   if (q.length >= 2) {
     try {
       const nominatimResults = await searchWithNominatim(q, bounds, maxRadiusKm);
@@ -98,24 +125,15 @@ export async function searchActivitiesInBounds(
     } catch {
       // continue
     }
-
-    // 3) Google opzionale
-    const google = await searchGooglePlacesInBounds(
-      q,
-      bounds.map((b) => ({ ...b, radiusKm: b.radiusKm })),
-      maxRadiusKm
-    );
-
-    if (google.ok && google.results.length > 0) {
-      return { results: google.results.slice(0, 16), source: 'google' };
-    }
   }
 
   return {
     results: [],
     source: 'none',
-    warning: q.length >= 2
-      ? 'Nessun risultato vicino alle destinazioni. Prova un nome diverso.'
-      : 'Nessun luogo trovato nell’area della mappa. Prova a cercare un nome.',
+    warning: !hasGooglePlacesKey()
+      ? 'Aggiungi la chiave Google Maps / Places su Vercel per risultati rapidi e di qualità.'
+      : q.length >= 2
+        ? 'Nessun risultato vicino alle destinazioni. Prova un nome diverso.'
+        : 'Nessun luogo trovato nell’area della mappa. Prova a cercare un nome.',
   };
 }

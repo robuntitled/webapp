@@ -251,7 +251,7 @@ export function AddActivityModal({
             <div>
               <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Luoghi nell’area della mappa. Cerca un nome o scegli dalla lista.
+                Luoghi popolari nell’area mappa (Google Places). Cerca un nome o scegli dalla lista.
               </DialogDescription>
             </div>
             <button
