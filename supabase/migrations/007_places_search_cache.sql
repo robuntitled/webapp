@@ -22,7 +22,7 @@ create index if not exists places_search_cache_zone_cat_idx
   on public.places_search_cache (lat, lng, category);
 
 comment on table public.places_search_cache is
-  'Risultati Places condivisi: chiave zona+categoria+query. TTL applicato in app (~14 giorni).';
+  'Risultati Places condivisi tra tutti gli utenti: chiave zona+categoria+query. Nessuna scadenza in app.';
 
 -- Solo service role (API server). Nessun accesso client anon.
 alter table public.places_search_cache enable row level security;

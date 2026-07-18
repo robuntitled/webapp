@@ -4,12 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { GooglePlaceResult } from '@/lib/places/google-text-search';
 import type { PlaceCategoryId } from '@/lib/places/place-categories';
 
-/** TTL cache DB condivisa (giorni). */
-export const PLACES_DB_CACHE_TTL_DAYS = 14;
-
 /**
- * Chiave stabile e condivisa tra utenti:
- * zona (~100m) + categoria + query normalizzata + lingua
+ * Cache Places **senza scadenza** e **condivisa tra tutti gli utenti**.
+ * Chiave: zona + categoria + query + lingua (non legata a user_id).
  */
 export function buildPlacesCacheKey(options: {
   lat: number;
@@ -30,21 +27,17 @@ function roundCoord(n: number): number {
 }
 
 /**
- * Legge cache DB se fresca. Fail-open: errori → null (si va su Google).
+ * Legge cache DB. Nessun TTL: se c’è, vale per sempre (per tutti).
+ * Fail-open: errori → null (si va su Google).
  */
 export async function getPlacesFromDbCache(
   cacheKey: string
 ): Promise<GooglePlaceResult[] | null> {
   try {
-    const cutoff = new Date(
-      Date.now() - PLACES_DB_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000
-    ).toISOString();
-
     const { data, error } = await supabaseAdmin
       .from('places_search_cache')
       .select('results, hit_count')
       .eq('cache_key', cacheKey)
-      .gte('updated_at', cutoff)
       .maybeSingle();
 
     if (error || !data) return null;
@@ -52,7 +45,7 @@ export async function getPlacesFromDbCache(
     const results = data.results;
     if (!Array.isArray(results) || results.length === 0) return null;
 
-    // Best-effort hit counter (non blocca la risposta)
+    // Best-effort hit counter
     const prev =
       typeof data.hit_count === 'number' && Number.isFinite(data.hit_count)
         ? data.hit_count
@@ -69,7 +62,7 @@ export async function getPlacesFromDbCache(
 }
 
 /**
- * Scrive / aggiorna cache condivisa. Fail-open.
+ * Scrive / aggiorna cache condivisa (qualsiasi utente successivo la riusa).
  */
 export async function setPlacesDbCache(options: {
   cacheKey: string;
