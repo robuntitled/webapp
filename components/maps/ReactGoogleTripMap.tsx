@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   APIProvider,
   Map,
@@ -21,6 +21,9 @@ const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 const ROUTE_COLOR = '#f97316';
 const ROUTE_GLOW = '#fb923c';
 
+/** Stable map id so @vis.gl can reuse the instance across prop updates. */
+const COMPOSER_MAP_ID = 'nomadlink-composer-map';
+
 type LatLng = { lat: number; lng: number };
 
 type ReactGoogleTripMapProps = {
@@ -40,22 +43,62 @@ function isStopPin(pin: MapPin): boolean {
   return pin.id !== 'destination' && Boolean(pin.blockId);
 }
 
+/** Fingerprint of what should trigger camera fit (not highlight-only updates). */
+function fitSignature(
+  mapMode: MapViewMode,
+  activeDayIndex: number,
+  pins: MapPin[]
+): string {
+  const pts = pins
+    .map((p) => `${p.id}:${p.lat.toFixed(4)},${p.lng.toFixed(4)}`)
+    .sort()
+    .join('|');
+  return `${mapMode}|${activeDayIndex}|${pts}`;
+}
+
+/**
+ * Moves the camera when the day / pin set changes.
+ * Does NOT remount the Map — no extra Dynamic Maps load.
+ */
 function MapFitBounds({
   pins,
   mapMode,
+  activeDayIndex,
   stopPins,
+  fallbackCenter,
 }: {
   pins: MapPin[];
   mapMode: MapViewMode;
+  activeDayIndex: number;
   stopPins: MapPin[];
+  fallbackCenter: LatLng;
 }) {
   const map = useMap();
   const coreLib = useMapsLibrary('core');
+  const lastSig = useRef<string>('');
 
   useEffect(() => {
-    if (!map || !coreLib || pins.length === 0) return;
+    if (!map || !coreLib) return;
+
+    const sig = fitSignature(mapMode, activeDayIndex, pins);
+    if (sig === lastSig.current) return;
+    lastSig.current = sig;
 
     const fitPins = stopPins.length > 0 ? stopPins : pins;
+
+    if (fitPins.length === 0) {
+      map.moveCamera({ center: fallbackCenter, zoom: 11 });
+      return;
+    }
+
+    if (fitPins.length === 1) {
+      map.moveCamera({
+        center: { lat: fitPins[0].lat, lng: fitPins[0].lng },
+        zoom: mapMode === 'fullTrip' ? 11 : 13,
+      });
+      return;
+    }
+
     const bounds = new coreLib.LatLngBounds();
     fitPins.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
 
@@ -63,12 +106,12 @@ function MapFitBounds({
     const maxZoom = mapMode === 'fullTrip' ? 11 : 13;
 
     map.fitBounds(bounds, { top: pad, right: pad, bottom: pad, left: pad });
-    const listener = coreLib.event.addListenerOnce(map, 'bounds_changed', () => {
+    const listener = coreLib.event.addListenerOnce(map, 'idle', () => {
       const zoom = map.getZoom();
       if (zoom != null && zoom > maxZoom) map.setZoom(maxZoom);
     });
     return () => coreLib.event.removeListener(listener);
-  }, [map, coreLib, pins, stopPins, mapMode]);
+  }, [map, coreLib, pins, stopPins, mapMode, activeDayIndex, fallbackCenter]);
 
   return null;
 }
@@ -129,9 +172,12 @@ function TripPins({
     <>
       {pins.map((pin) => {
         const stopIndex = stopPins.findIndex((p) => p.id === pin.id);
-        const highlighted = highlightedPinId === pin.id || highlightedPinId === pin.blockId;
+        const highlighted =
+          highlightedPinId === pin.id || highlightedPinId === pin.blockId;
         const color =
-          pin.dayIndex === activeDayIndex || mapMode === 'fullTrip' ? '#f97316' : '#a855f7';
+          pin.dayIndex === activeDayIndex || mapMode === 'fullTrip'
+            ? '#f97316'
+            : '#a855f7';
         const label = pin.emoji || (isStopPin(pin) ? String(stopIndex + 1) : '');
 
         return (
@@ -174,7 +220,11 @@ function TripMapInner({
   showRoute = false,
 }: ReactGoogleTripMapProps) {
   const center = useMemo(
-    () => resolveDestinationCoords(destination, destinationMeta) ?? { lat: 41.9, lng: 12.5 },
+    () =>
+      resolveDestinationCoords(destination, destinationMeta) ?? {
+        lat: 41.9,
+        lng: 12.5,
+      },
     [destination, destinationMeta]
   );
   const stopPins = useMemo(() => pins.filter(isStopPin), [pins]);
@@ -186,6 +236,8 @@ function TripMapInner({
   return (
     <div className={`relative h-full w-full overflow-hidden ${className}`}>
       <Map
+        id={COMPOSER_MAP_ID}
+        reuseMaps
         defaultCenter={center}
         defaultZoom={12}
         gestureHandling="greedy"
@@ -199,7 +251,13 @@ function TripMapInner({
         }}
         style={{ width: '100%', height: '100%' }}
       >
-        <MapFitBounds pins={pins} stopPins={stopPins} mapMode={mapMode} />
+        <MapFitBounds
+          pins={pins}
+          stopPins={stopPins}
+          mapMode={mapMode}
+          activeDayIndex={activeDayIndex}
+          fallbackCenter={center}
+        />
         {showRoute && routePath.length >= 2 && <RoutePolyline path={routePath} />}
         <TripPins
           pins={pins}

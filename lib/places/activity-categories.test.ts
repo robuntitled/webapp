@@ -65,7 +65,9 @@ describe('matchesActivityCategory', () => {
 
 describe('buildCategoryQuery', () => {
   it('appends boost terms', () => {
-    expect(buildCategoryQuery('Colosseo', 'attraction')).toContain('attrazione');
+    expect(buildCategoryQuery('Colosseo', 'attraction').toLowerCase()).toMatch(
+      /museo|monumento|attrazione/
+    );
     expect(buildCategoryQuery('pizza', 'meal')).toContain('ristorante');
   });
 });

@@ -60,6 +60,26 @@ export function ComposerPlanStep({
     selection !== 'overview' && draft.days.some((d) => d.dayIndex === selection + 1);
   const totalBlocks = draft.days.reduce((n, d) => n + d.blocks.length, 0);
 
+  // Fingerprint solo di ciò che i pin usano (blocchi/coord/destinazione).
+  // Esclude note del giorno e titoli giorno → niente ricalcolo/flash mappa digitando note.
+  const pinFingerprint = useMemo(() => {
+    const dest = draft.destinationMeta
+      ? `${draft.destinationMeta.lat},${draft.destinationMeta.lng}`
+      : draft.destination;
+    const daysKey = draft.days
+      .map((d) => {
+        const blocks = d.blocks
+          .map(
+            (b) =>
+              `${b.id}:${b.type}:${String(b.content.lat ?? '')}:${String(b.content.lng ?? '')}:${String(b.content.title ?? '')}`
+          )
+          .join('|');
+        return `${d.dayIndex}{${blocks}}`;
+      })
+      .join(';');
+    return `${dest}::${daysKey}`;
+  }, [draft.destination, draft.destinationMeta, draft.days]);
+
   const pins = useMemo(() => {
     if (mapMode === 'fullTrip' || selection === 'overview') {
       return buildPinsFromDraft(draft, { activeDayIndex });
@@ -68,7 +88,9 @@ export function ComposerPlanStep({
       activeDayIndex,
       dayFilter: activeDayIndex,
     });
-  }, [draft, mapMode, selection, activeDayIndex]);
+    // pinFingerprint cattura i campi rilevanti di draft
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinFingerprint, mapMode, selection, activeDayIndex]);
 
   const updateDay = (dayIndex: number, updater: (day: ComposerDay) => ComposerDay) => {
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
@@ -348,6 +370,7 @@ export function ComposerPlanStep({
         open={addOpen}
         onOpenChange={setAddOpen}
         draft={draft}
+        activeDayIndex={activeDayIndex}
         onConfirm={addActivity}
       />
 

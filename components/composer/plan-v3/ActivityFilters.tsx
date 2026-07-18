@@ -22,6 +22,38 @@ export const DURATION_FILTERS: { id: DurationFilter; label: string; value: strin
   { id: 'fullday', label: 'Intera giornata', value: 'Giornata intera' },
 ];
 
+/** Durata in minuti per calcolare orario fine da inizio + chip durata. */
+export const DURATION_MINUTES: Record<DurationFilter, number> = {
+  '30m': 30,
+  '1h': 60,
+  '2h': 120,
+  '4h': 240,
+  '6h': 360,
+  fullday: 480,
+};
+
+/** Aggiunge minuti a un orario HH:mm (o HH:mm:ss). Ritorna stringa vuota se input non valido. */
+export function addMinutesToTime(time: string, minutes: number): string {
+  const parts = time.trim().split(':');
+  if (parts.length < 2) return '';
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return '';
+  const total = ((h * 60 + m + minutes) % (24 * 60) + 24 * 60) % (24 * 60);
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+}
+
+/** Orario fine da inizio + filtro durata. */
+export function endTimeFromStartAndDuration(
+  startTime: string,
+  duration: DurationFilter
+): string {
+  if (!startTime) return '';
+  return addMinutesToTime(startTime, DURATION_MINUTES[duration]);
+}
+
 type ActivityFiltersProps = {
   type: ActivityTypeFilter;
   duration: DurationFilter;

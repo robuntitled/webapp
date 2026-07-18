@@ -25,7 +25,8 @@ export type GooglePlacesSearchResult = {
 export async function searchGooglePlacesInBounds(
   query: string,
   bounds: Bounds[],
-  maxRadiusKm = 120
+  maxRadiusKm = 120,
+  type?: string
 ): Promise<GooglePlacesSearchResult> {
   if (!API_KEY) {
     return { ok: false, results: [], status: 'MISSING_API_KEY' };
@@ -45,6 +46,7 @@ export async function searchGooglePlacesInBounds(
     language: 'it',
     key: API_KEY,
   });
+  if (type) params.set('type', type);
 
   const res = await fetch(
     `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,

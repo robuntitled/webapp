@@ -1,5 +1,12 @@
 import 'server-only';
 
+import {
+  ACTIVITY_CATEGORY_SEARCH,
+  buildCategoryQuery,
+  isActivityPlaceCategory,
+  matchesActivityCategory,
+  type ActivityPlaceCategory,
+} from '@/lib/places/activity-categories';
 import { haversineKm } from '@/lib/maps/distance';
 import { searchGooglePlacesInBounds, type GooglePlaceResult } from '@/lib/places/google-text-search';
 import { searchPlaces } from '@/lib/places/nominatim';
@@ -18,6 +25,7 @@ export type ActivitySearchResponse = {
   results: ActivityPlaceResult[];
   source: 'google' | 'nominatim' | 'overpass' | 'none';
   warning?: string;
+  category?: ActivityPlaceCategory | null;
 };
 
 function filterByBounds(
@@ -35,64 +43,34 @@ function filterByBounds(
   });
 }
 
-function buildContextQuery(query: string, bounds: ActivitySearchBounds[]): string {
-  const labels = bounds
-    .map((b) => b.label?.trim())
-    .filter((label): label is string => Boolean(label));
-  if (labels.length === 0) return query.trim();
-  const context = labels.slice(0, 2).join(' ');
-  return `${query.trim()} ${context}`.trim();
+function softFilterByCategory(
+  places: ActivityPlaceResult[],
+  category: ActivityPlaceCategory | null
+): ActivityPlaceResult[] {
+  if (!category) return places;
+  const matched = places.filter((p) =>
+    matchesActivityCategory(category, {
+      label: p.label,
+      subtitle: p.subtitle,
+      placeTypeLabel: p.placeTypeLabel,
+    })
+  );
+  // Soft: se il filtro svuota, tieni i risultati grezzi (meglio qualcosa che nulla)
+  return matched.length > 0 ? matched : places;
 }
 
 async function searchWithNominatim(
   query: string,
   bounds: ActivitySearchBounds[],
-  maxRadiusKm: number
+  maxRadiusKm: number,
+  category: ActivityPlaceCategory | null
 ): Promise<ActivityPlaceResult[]> {
   const primary = bounds[0];
-  const contextualQuery = buildContextQuery(query, bounds);
+  const q = category ? buildCategoryQuery(query, category) : query;
+  const contextual = primary.label ? `${q} ${primary.label}` : q;
 
-  // 1) free-text near destination label
-  const places = await searchPlaces(contextualQuery, 20);
-
-  // 2) also try viewbox-biased search around coords
-  let viewboxPlaces: Awaited<ReturnType<typeof searchPlaces>> = [];
-  try {
-    const delta = Math.min(maxRadiusKm, 80) / 111; // ~degrees
-    const url = new URL('https://nominatim.openstreetmap.org/search');
-    url.searchParams.set('q', query.trim());
-    url.searchParams.set('format', 'json');
-    url.searchParams.set('addressdetails', '1');
-    url.searchParams.set('namedetails', '1');
-    url.searchParams.set('limit', '20');
-    url.searchParams.set('accept-language', 'it,en');
-    url.searchParams.set(
-      'viewbox',
-      `${primary.lng - delta},${primary.lat + delta},${primary.lng + delta},${primary.lat - delta}`
-    );
-    // not bounded=1: allow nearby results if viewbox is empty
-    const res = await fetch(url.toString(), {
-      headers: {
-        'User-Agent': 'NomadLink/1.0 (travel composer; contact@nomadlink.app)',
-        Accept: 'application/json',
-        'Accept-Language': 'it,en;q=0.9',
-      },
-      cache: 'no-store',
-    });
-    if (res.ok) {
-      // reuse searchPlaces-like parse via second full query already done;
-      // simpler: just use searchPlaces with "query near lat,lng"
-      viewboxPlaces = await searchPlaces(
-        `${query.trim()} ${primary.lat.toFixed(3)} ${primary.lng.toFixed(3)}`,
-        12
-      );
-    }
-  } catch {
-    viewboxPlaces = [];
-  }
-
-  const merged = [...places, ...viewboxPlaces];
-  const mapped: ActivityPlaceResult[] = merged.map((place) => ({
+  const places = await searchPlaces(contextual, 20);
+  const mapped: ActivityPlaceResult[] = places.map((place) => ({
     id: place.id,
     label: place.label,
     subtitle: place.subtitle,
@@ -101,28 +79,20 @@ async function searchWithNominatim(
     placeTypeLabel: place.placeTypeLabel,
   }));
 
-  // Dedupe
-  const seen = new Set<string>();
-  const unique: ActivityPlaceResult[] = [];
-  for (const p of mapped) {
-    const key = `${p.label.toLowerCase()}|${p.lat.toFixed(3)}|${p.lng.toFixed(3)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(p);
-  }
-
-  const filtered = filterByBounds(unique, bounds, maxRadiusKm);
-  return (filtered.length > 0 ? filtered : unique).slice(0, 12);
+  const inBounds = filterByBounds(mapped, bounds, maxRadiusKm);
+  const base = inBounds.length > 0 ? inBounds : mapped;
+  return softFilterByCategory(base, category).slice(0, 12);
 }
 
 /**
- * Google Places (se abilitato) → Nominatim → Overpass.
- * Non richiede Places API per funzionare.
+ * Ricerca attività settorializzata:
+ * Overpass (tag OSM per categoria) → Nominatim → Google (se disponibile).
  */
 export async function searchActivitiesInBounds(
   query: string,
   bounds: ActivitySearchBounds[],
-  maxRadiusKm = 120
+  maxRadiusKm = 120,
+  categoryInput?: string | null
 ): Promise<ActivitySearchResponse> {
   const q = query.trim();
   if (q.length < 2) {
@@ -137,46 +107,63 @@ export async function searchActivitiesInBounds(
     };
   }
 
-  // 1) Google Places (optional)
-  const google = await searchGooglePlacesInBounds(q, bounds, maxRadiusKm);
-  if (google.ok && google.results.length > 0) {
-    return { results: google.results, source: 'google' };
-  }
+  const category: ActivityPlaceCategory | null = isActivityPlaceCategory(categoryInput)
+    ? categoryInput
+    : null;
 
-  // 2) Nominatim free-text
+  // 1) Overpass settorializzato (priorità: funziona senza Google e rispetta le tab)
   try {
-    const nominatimResults = await searchWithNominatim(q, bounds, maxRadiusKm);
-    if (nominatimResults.length > 0) {
-      return {
-        results: nominatimResults,
-        source: 'nominatim',
-        warning:
-          google.status === 'REQUEST_DENIED' || google.status === 'MISSING_API_KEY'
-            ? undefined // silent OSM success — no scary Google message
-            : undefined,
-      };
-    }
-  } catch {
-    // continue to Overpass
-  }
-
-  // 3) Overpass nearby (works well without Google)
-  try {
-    const overpassResults = await searchOverpassNearby(q, bounds, 12);
+    const overpassResults = await searchOverpassNearby(q, bounds, 12, category);
     if (overpassResults.length > 0) {
       return {
         results: overpassResults,
         source: 'overpass',
+        category,
       };
     }
   } catch {
-    // fall through
+    // continue
   }
+
+  // 2) Nominatim con boost categoria
+  try {
+    const nominatimResults = await searchWithNominatim(q, bounds, maxRadiusKm, category);
+    if (nominatimResults.length > 0) {
+      return { results: nominatimResults, source: 'nominatim', category };
+    }
+  } catch {
+    // continue
+  }
+
+  // 3) Google (opzionale) con type se c'è categoria
+  const googleQuery = category ? buildCategoryQuery(q, category) : q;
+  const googleType = category ? ACTIVITY_CATEGORY_SEARCH[category].googleType : undefined;
+  const google = await searchGooglePlacesInBounds(
+    googleQuery,
+    bounds.map((b) => ({ ...b, radiusKm: b.radiusKm })),
+    maxRadiusKm,
+    googleType
+  );
+
+  if (google.ok && google.results.length > 0) {
+    const filtered = softFilterByCategory(google.results, category);
+    if (filtered.length > 0) {
+      return { results: filtered, source: 'google', category };
+    }
+  }
+
+  const hints: Record<ActivityPlaceCategory, string> = {
+    attraction: 'Prova «museo», «duomo», «castello» o un nome di monumento.',
+    activity: 'Prova «parco», «piscina», «sport» o un nome di luogo.',
+    meal: 'Prova «trattoria», «pizzeria», «café» o un nome di locale.',
+  };
 
   return {
     results: [],
     source: 'none',
-    warning:
-      'Nessun risultato vicino alle destinazioni. Prova un nome più specifico (es. «Colosseo», «trattoria», «museo»).',
+    category,
+    warning: category
+      ? `Nessun risultato in «${category === 'meal' ? 'Ristoranti' : category === 'activity' ? 'Attività' : 'Attrazioni'}». ${hints[category]}`
+      : 'Nessun risultato vicino alle destinazioni. Prova un nome più specifico.',
   };
 }

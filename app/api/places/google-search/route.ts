@@ -4,6 +4,7 @@ import { searchActivitiesInBounds } from '@/lib/places/activity-search';
 
 const schema = z.object({
   q: z.string().min(2).max(120),
+  category: z.enum(['attraction', 'activity', 'meal']).optional(),
   bounds: z
     .array(
       z.object({
@@ -24,9 +25,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const { results, source, warning } = await searchActivitiesInBounds(
+  const { results, source, warning, category } = await searchActivitiesInBounds(
     parsed.data.q,
-    parsed.data.bounds
+    parsed.data.bounds,
+    120,
+    parsed.data.category
   );
-  return NextResponse.json({ results, source, warning });
+  return NextResponse.json({ results, source, warning, category: category ?? null });
 }

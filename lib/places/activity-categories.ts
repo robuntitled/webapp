@@ -21,6 +21,11 @@ type CategorySearchConfig = {
   queryBoost: string;
   /** Google Places Text Search `type` (uno solo supportato). */
   googleType?: string;
+  /**
+   * Frammenti Overpass (senza around) per settorializzare i POI.
+   * Placeholder: __AROUND__ → (around:radius,lat,lng)
+   */
+  overpassSelectors: string[];
   /** Token che indicano appartenenza (match su type/label/subtitle/name). */
   include: string[];
   /** Token che escludono il risultato da questa categoria. */
@@ -33,8 +38,14 @@ type CategorySearchConfig = {
  */
 export const ACTIVITY_CATEGORY_SEARCH: Record<ActivityPlaceCategory, CategorySearchConfig> = {
   attraction: {
-    queryBoost: 'attrazione museo monumento',
+    queryBoost: 'museo monumento attrazione',
     googleType: 'tourist_attraction',
+    overpassSelectors: [
+      'nwr["tourism"~"attraction|museum|gallery|artwork|viewpoint|zoo|theme_park|aquarium|yes",i]__AROUND__',
+      'nwr["historic"]__AROUND__',
+      'nwr["amenity"~"place_of_worship|theatre|arts_centre",i]__AROUND__',
+      'nwr["tourism"="museum"]__AROUND__',
+    ],
     include: [
       'attraction',
       'tourist',
@@ -103,9 +114,14 @@ export const ACTIVITY_CATEGORY_SEARCH: Record<ActivityPlaceCategory, CategorySea
     ],
   },
   activity: {
-    queryBoost: 'attività tour esperienza sport',
-    // no single Google type covers "activities" well
+    queryBoost: 'tour sport attività',
     googleType: undefined,
+    overpassSelectors: [
+      'nwr["leisure"~"sports_centre|fitness_centre|swimming_pool|stadium|pitch|track|golf_course|water_park|park|ice_rink|bowling_alley|trampoline_park",i]__AROUND__',
+      'nwr["sport"]__AROUND__',
+      'nwr["tourism"~"theme_park|zoo|aquarium|picnic_site",i]__AROUND__',
+      'nwr["amenity"~"community_centre|casino|nightclub|events_venue",i]__AROUND__',
+    ],
     include: [
       'activity',
       'attività',
@@ -172,6 +188,10 @@ export const ACTIVITY_CATEGORY_SEARCH: Record<ActivityPlaceCategory, CategorySea
   meal: {
     queryBoost: 'ristorante',
     googleType: 'restaurant',
+    overpassSelectors: [
+      'nwr["amenity"~"restaurant|cafe|fast_food|bar|pub|biergarten|food_court|ice_cream|bistro",i]__AROUND__',
+      'nwr["shop"~"bakery|pastry|coffee",i]__AROUND__',
+    ],
     include: [
       'restaurant',
       'ristorante',
@@ -283,4 +303,17 @@ export function matchesActivityCategory(
 
 export function isActivityPlaceCategory(value: string | null | undefined): value is ActivityPlaceCategory {
   return value === 'attraction' || value === 'activity' || value === 'meal';
+}
+
+/** Costruisce i selettori Overpass con around:radius,lat,lng */
+export function buildOverpassCategoryClauses(
+  category: ActivityPlaceCategory,
+  lat: number,
+  lng: number,
+  radiusM: number
+): string {
+  const around = `(around:${radiusM},${lat},${lng})`;
+  return ACTIVITY_CATEGORY_SEARCH[category].overpassSelectors
+    .map((sel) => sel.replace('__AROUND__', around))
+    .join('\n  ');
 }
