@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from 'next-auth';
 import {
   handleOAuthSignIn,
+  isJwtInvalid,
   populateJwtToken,
   populateSession,
   PROTECTED_PATHS,
@@ -8,7 +9,11 @@ import {
 
 export const authConfig = {
   trustHost: true,
-  session: { strategy: 'jwt' },
+  session: {
+    strategy: 'jwt',
+    // 30 giorni max; invalidazione account è comunque enforced a ogni refresh JWT
+    maxAge: 30 * 24 * 60 * 60,
+  },
   pages: {
     signIn: '/',
     error: '/',
@@ -16,7 +21,8 @@ export const authConfig = {
   providers: [],
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
+      // Richiede user.id valido (token invalid post-delete → non loggato)
+      const isLoggedIn = Boolean(auth?.user?.id);
       const isProtected = PROTECTED_PATHS.some((path) =>
         nextUrl.pathname.startsWith(path)
       );
@@ -27,9 +33,14 @@ export const authConfig = {
       return handleOAuthSignIn(user, account);
     },
     async jwt({ token, trigger, session }) {
+      // Aggiornamento consenso privacy da client (session.update)
       if (trigger === 'update' && session?.privacyConsentAccepted !== undefined) {
+        if (isJwtInvalid(token)) {
+          return token;
+        }
         token.privacyConsentAccepted = session.privacyConsentAccepted;
-        return token;
+        // Riconvalida comunque su DB (account potrebbe essere stato cancellato)
+        return populateJwtToken(token);
       }
       return populateJwtToken(token);
     },

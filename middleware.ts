@@ -10,8 +10,10 @@ const GDPR_PUBLIC = new Set(GDPR_PUBLIC_PATHS);
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
+  const userId = session?.user?.id;
 
-  if (session?.user?.id && !session.user.privacyConsentAccepted) {
+  // Sessione con token invalid (account cancellato): niente redirect GDPR
+  if (userId && !session.user.privacyConsentAccepted) {
     const isExempt =
       GDPR_PUBLIC.has(pathname) || pathname.startsWith('/api');
     if (!isExempt) {
@@ -21,6 +23,7 @@ export default auth((req) => {
 
   if (
     pathname === '/completa-registrazione' &&
+    userId &&
     session?.user?.privacyConsentAccepted
   ) {
     return NextResponse.redirect(new URL('/dashboard', req.nextUrl));

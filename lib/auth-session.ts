@@ -36,6 +36,24 @@ function splitDisplayName(name?: string | null, email?: string | null) {
   };
 }
 
+/** Token JWT da invalidare (account cancellato o non più presente in DB). */
+export function invalidateJwtToken(token: JWT): JWT {
+  return {
+    ...token,
+    id: undefined,
+    email: undefined,
+    name: undefined,
+    picture: undefined,
+    privacyConsentAccepted: false,
+    invalid: true,
+    invalidAt: Date.now(),
+  };
+}
+
+export function isJwtInvalid(token: JWT | null | undefined): boolean {
+  return Boolean(token?.invalid) || !token?.id;
+}
+
 export async function handleOAuthSignIn(
   user: User,
   account?: Account | null
@@ -84,35 +102,81 @@ export async function handleOAuthSignIn(
   }
 }
 
+/**
+ * Sincronizza JWT con la riga `users`.
+ * Se l’utente non esiste più (delete account) → token invalidato.
+ * Errori DB transienti: non invalidare (evita logout a raffica).
+ */
 export async function populateJwtToken(token: JWT): Promise<JWT> {
-  if (!token.email) return token;
-
-  const { data: dbUser, error } = await supabaseAdmin
-    .from('users')
-    .select('id, first_name, last_name, image, privacy_consent')
-    .eq('email', token.email)
-    .maybeSingle();
-
-  if (error) {
-    console.error('JWT populate user lookup error:', error);
+  // Già invalidato: non rianimare senza email/id
+  if (token.invalid && !token.email && !token.id) {
     return token;
   }
 
-  if (dbUser) {
-    token.id = dbUser.id;
-    token.name = `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim();
-    token.picture = dbUser.image;
-    token.privacyConsentAccepted = !!dbUser.privacy_consent;
+  const email =
+    typeof token.email === 'string' ? token.email.trim().toLowerCase() : undefined;
+  const userId = typeof token.id === 'string' ? token.id : undefined;
+
+  if (!email && !userId) {
+    return token;
   }
+
+  let query = supabaseAdmin
+    .from('users')
+    .select('id, first_name, last_name, image, privacy_consent, email');
+
+  if (userId) {
+    query = query.eq('id', userId);
+  } else if (email) {
+    query = query.eq('email', email);
+  }
+
+  const { data: dbUser, error } = await query.maybeSingle();
+
+  if (error) {
+    console.error('JWT populate user lookup error:', error);
+    // Non invalidare su blip di rete/DB
+    return token;
+  }
+
+  if (!dbUser) {
+    // Account eliminato o email non più associata
+    return invalidateJwtToken(token);
+  }
+
+  token.invalid = false;
+  token.invalidAt = undefined;
+  token.id = dbUser.id;
+  token.email = dbUser.email ?? email;
+  token.name = `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim();
+  token.picture = dbUser.image;
+  token.privacyConsentAccepted = !!dbUser.privacy_consent;
+  token.lastUserCheck = Date.now();
 
   return token;
 }
 
 export function populateSession(session: Session, token: JWT): Session {
+  // Sessione “vuota”: middleware e UI trattano come non loggato se manca user.id
+  if (isJwtInvalid(token)) {
+    return {
+      ...session,
+      user: {
+        id: '',
+        name: null,
+        email: null,
+        image: null,
+        privacyConsentAccepted: false,
+      },
+      expires: new Date(0).toISOString(),
+    };
+  }
+
   if (session.user) {
     session.user.id = token.id as string;
-    session.user.name = token.name as string | null;
-    session.user.image = token.picture as string | null;
+    session.user.name = (token.name as string | null) ?? null;
+    session.user.email = (token.email as string | null) ?? session.user.email;
+    session.user.image = (token.picture as string | null) ?? null;
     session.user.privacyConsentAccepted = !!token.privacyConsentAccepted;
   }
   return session;

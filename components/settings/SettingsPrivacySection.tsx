@@ -52,6 +52,8 @@ export function SettingsPrivacySection({ privacyEmail }: { privacyEmail: string 
     startDelete(async () => {
       try {
         await deleteUserAccount(confirmText);
+        toast.success('Account eliminato.');
+        // Invalida cookie di sessione lato client (JWT non deve restare valido in UI)
         await signOut({ redirectTo: '/' });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Errore eliminazione');
