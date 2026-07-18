@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { searchActivitiesInBounds } from '@/lib/places/activity-search';
 
 const schema = z.object({
-  q: z.string().min(2).max(120),
-  category: z.enum(['attraction', 'activity', 'meal']).optional(),
+  /** Vuoto = luoghi nell'area mappa; con testo = ricerca libera */
+  q: z.string().max(120).optional().default(''),
   bounds: z
     .array(
       z.object({
@@ -25,11 +25,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const { results, source, warning, category } = await searchActivitiesInBounds(
-    parsed.data.q,
+  const { results, source, warning } = await searchActivitiesInBounds(
+    parsed.data.q ?? '',
     parsed.data.bounds,
-    120,
-    parsed.data.category
+    120
   );
-  return NextResponse.json({ results, source, warning, category: category ?? null });
+  return NextResponse.json({ results, source, warning });
 }

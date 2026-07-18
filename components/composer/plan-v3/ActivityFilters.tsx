@@ -78,7 +78,12 @@ export function ActivityFilters({
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">Tipo</p>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+          Categoria tappa
+        </p>
+        <p className="mb-2 text-[11px] text-white/35">
+          Solo etichetta sul blocco — non filtra i risultati.
+        </p>
         <div className="flex flex-wrap gap-2">
           {TYPE_FILTERS.map((f) => (
             <button

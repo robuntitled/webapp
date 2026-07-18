@@ -1,11 +1,5 @@
 import 'server-only';
 
-import {
-  buildOverpassCategoryClauses,
-  isGenericCategoryQuery,
-  tagsMatchActivityCategory,
-  type ActivityPlaceCategory,
-} from '@/lib/places/activity-categories';
 import { isLatinScriptText } from '@/lib/places/latin-script';
 
 export type OverpassPlace = {
@@ -30,22 +24,25 @@ function typeLabel(tags: Record<string, string | undefined>): string {
   }
   if (tags.amenity === 'bar' || tags.amenity === 'pub') return 'Bar';
   if (tags.shop === 'bakery' || tags.shop === 'pastry') return 'Panetteria';
-  if (tags.amenity === 'ice_cream' || tags.shop === 'confectionery') return 'Gelateria';
+  if (tags.amenity === 'ice_cream') return 'Gelateria';
   if (tags.tourism === 'museum' || tags.amenity === 'museum') return 'Museo';
   if (tags.tourism === 'gallery') return 'Galleria';
   if (tags.tourism === 'viewpoint') return 'Panorama';
+  if (tags.tourism === 'hotel' || tags.tourism === 'guest_house') return 'Alloggio';
   if (tags.tourism === 'attraction' || tags.tourism === 'yes') return 'Attrazione';
   if (tags.historic === 'castle' || tags.historic === 'fort') return 'Castello';
   if (tags.historic === 'monument' || tags.historic === 'memorial') return 'Monumento';
-  if (tags.historic === 'ruins' || tags.historic === 'archaeological_site') return 'Sito storico';
   if (tags.historic) return 'Storico';
   if (tags.leisure === 'park' || tags.leisure === 'garden') return 'Parco';
   if (tags.leisure === 'sports_centre' || tags.leisure === 'fitness_centre') return 'Sport';
   if (tags.leisure === 'swimming_pool') return 'Piscina';
   if (tags.leisure || tags.sport) return 'Attività';
   if (tags.amenity === 'place_of_worship') return 'Luogo di culto';
+  if (tags.amenity === 'cinema') return 'Cinema';
+  if (tags.amenity === 'theatre') return 'Teatro';
   if (tags.amenity) return tags.amenity.replace(/_/g, ' ');
   if (tags.tourism) return tags.tourism.replace(/_/g, ' ');
+  if (tags.shop) return tags.shop.replace(/_/g, ' ');
   return 'Luogo';
 }
 
@@ -99,8 +96,6 @@ function elementsToPlaces(
   elements: Awaited<ReturnType<typeof runOverpass>>,
   primaryLabel: string | undefined,
   limit: number,
-  category?: ActivityPlaceCategory | null,
-  /** Se true, richiede che il nome contenga nameNeedle */
   nameNeedle?: string
 ): OverpassPlace[] {
   const seen = new Set<string>();
@@ -114,7 +109,6 @@ function elementsToPlaces(
     const name = (tags.name || tags['name:it'] || tags['name:en'] || '').trim();
     if (lat == null || lng == null || !name) continue;
     if (!isLatinScriptText(name)) continue;
-    if (category && !tagsMatchActivityCategory(tags, category)) continue;
     if (needle && !name.toLowerCase().includes(needle)) continue;
 
     const key = `${name.toLowerCase()}|${lat.toFixed(4)}|${lng.toFixed(4)}`;
@@ -151,81 +145,59 @@ out center ${outLimit};
 }
 
 /**
- * Ricerca POI settorializzata (attrazioni / attività / ristoranti) via Overpass.
- *
- * Strategia:
- * 1) Categoria + nome (es. ristoranti con "pizza" nel nome) — risultati precisi
- * 2) Solo se la query è generica ("museo", "pizzeria", "piscina"): browse categoria in zona
- * 3) Nessun dump di POI random quando il nome non matcha in una tab sbagliata
+ * POI interessanti nell'area (senza filtro nome): mix turismo, cibo, leisure, storico.
+ */
+function nearbyInterestingClauses(around: string): string {
+  return `
+  nwr["tourism"]${around};
+  nwr["historic"]${around};
+  nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|biergarten|food_court|ice_cream|bistro|museum|theatre|cinema|place_of_worship|arts_centre|marketplace|nightclub|casino|library|fountain)$"]${around};
+  nwr["leisure"~"^(park|garden|nature_reserve|sports_centre|fitness_centre|swimming_pool|stadium|marina|water_park|beach_resort)$"]${around};
+  nwr["shop"~"^(bakery|pastry|mall|department_store|supermarket)$"]${around};
+`.trim();
+}
+
+/**
+ * Ricerca luoghi via Overpass — senza categorie.
+ * - query vuota / corta → POI interessanti nell'area mappa
+ * - query con testo → tutti i nomi che matchano nella zona
  */
 export async function searchOverpassNearby(
   query: string,
   bounds: Bounds[],
-  limit = 12,
-  category?: ActivityPlaceCategory | null
+  limit = 16
 ): Promise<OverpassPlace[]> {
-  const q = query.trim();
-  if (q.length < 2 || bounds.length === 0) return [];
+  if (bounds.length === 0) return [];
 
   const primary = bounds[0];
-  const radiusM = Math.min(Math.round((primary.radiusKm ?? 40) * 1000), 35_000);
-  const outLimit = Math.min(limit * 5, 60);
+  const q = query.trim();
+  const outLimit = Math.min(limit * 5, 80);
 
-  // --- Con categoria: query vincolate ai tag OSM della tab ---
-  if (category) {
-    // 1) Nome + categoria
-    const namedClauses = buildOverpassCategoryClauses(
-      category,
-      primary.lat,
-      primary.lng,
-      radiusM,
-      q.slice(0, 60)
-    );
-    const namedEls = await runOverpass(overpassBody(namedClauses, outLimit));
-    const namedPlaces = elementsToPlaces(namedEls, primary.label, limit, category);
+  // Area mappa: raggio più stretto per i default, più ampio per la ricerca testuale
+  const radiusM = q
+    ? Math.min(Math.round((primary.radiusKm ?? 50) * 1000), 45_000)
+    : Math.min(Math.round((primary.radiusKm ?? 25) * 1000), 20_000);
 
-    if (namedPlaces.length >= Math.min(4, limit)) {
-      return namedPlaces;
-    }
-
-    // 2) Query generica → elenco POI della categoria in zona (es. "museo", "piscina")
-    if (isGenericCategoryQuery(q, category)) {
-      const browseClauses = buildOverpassCategoryClauses(
-        category,
-        primary.lat,
-        primary.lng,
-        // raggio un po' più stretto per browse (meno rumore)
-        Math.min(radiusM, 12_000),
-        undefined
-      );
-      const browseEls = await runOverpass(overpassBody(browseClauses, outLimit));
-      const browsePlaces = elementsToPlaces(browseEls, primary.label, limit, category);
-
-      // Preferisci comunque i match per nome se ce n'erano
-      if (namedPlaces.length === 0) return browsePlaces;
-
-      const seen = new Set(namedPlaces.map((p) => p.id));
-      const merged = [...namedPlaces];
-      for (const p of browsePlaces) {
-        if (seen.has(p.id)) continue;
-        seen.add(p.id);
-        merged.push(p);
-        if (merged.length >= limit) break;
-      }
-      return merged;
-    }
-
-    // Nome specifico: restituisci solo i match per nome (anche pochi).
-    // Se zero → lascia che Nominatim/Google provino, non riempire con POI irrilevanti.
-    return namedPlaces;
-  }
-
-  // --- Senza categoria: ricerca per nome generica ---
   const around = `(around:${radiusM},${primary.lat},${primary.lng})`;
-  const token = q.slice(0, 60).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const freeClauses = `
+
+  if (q.length >= 2) {
+    const token = q.slice(0, 60).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Nome ovunque nella zona — nessun filtro categoria
+    const clauses = `
   nwr[~"^name(:[a-z]{2})?$"~"${token}",i]${around};
 `.trim();
-  const freeEls = await runOverpass(overpassBody(freeClauses, outLimit));
-  return elementsToPlaces(freeEls, primary.label, limit, null, q);
+    const els = await runOverpass(overpassBody(clauses, outLimit));
+    const byName = elementsToPlaces(els, primary.label, limit, q);
+    if (byName.length > 0) return byName;
+
+    // Fallback: POI in zona il cui nome contiene la query (da set interessante)
+    const browseEls = await runOverpass(
+      overpassBody(nearbyInterestingClauses(around), outLimit)
+    );
+    return elementsToPlaces(browseEls, primary.label, limit, q);
+  }
+
+  // Default: luoghi nell'area visualizzata
+  const els = await runOverpass(overpassBody(nearbyInterestingClauses(around), outLimit));
+  return elementsToPlaces(els, primary.label, limit);
 }

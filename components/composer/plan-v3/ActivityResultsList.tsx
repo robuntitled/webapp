@@ -35,9 +35,9 @@ export function ActivityResultsList({
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <p className="text-sm text-white/50">
           {hint ??
-            (query.length < 2
-              ? 'Digita almeno 2 caratteri per cercare nelle tue destinazioni.'
-              : 'Nessun risultato nelle destinazioni del viaggio. Prova un termine diverso.')}
+            (query.trim().length < 2
+              ? 'Caricamento luoghi nell’area della mappa…'
+              : 'Nessun risultato. Prova un termine diverso.')}
         </p>
       </div>
     );
