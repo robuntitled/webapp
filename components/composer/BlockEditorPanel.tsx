@@ -18,9 +18,11 @@ import { toast } from 'sonner';
 import { BLOCK_META, createAlternativeId, DURATION_OPTIONS } from '@/lib/composer/blocks';
 import {
   DURATION_FILTERS,
+  MEAL_DURATION_FILTERS,
   endTimeFromStartAndDuration,
   type DurationFilter,
 } from '@/components/composer/plan-v3/ActivityFilters';
+import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
 import { findTimeOverlapConflict } from '@/lib/composer/day-time-schedule';
 import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import { TIME_SLOTS } from '@/lib/composer/time-slots';
@@ -219,8 +221,8 @@ export function BlockEditorPanel({
   const commitPlaceFields = () => {
     const price = priceDraft.trim() ? Number(priceDraft.replace(',', '.')) : null;
     const durationValue = DURATION_FILTERS.find((f) => f.id === duration)?.value ?? duration;
+    // Titolo non modificabile in Modifica: non sovrascrivere
     patchContent({
-      title: titleDraft.trim() || block.content.title,
       time: startTime || undefined,
       endTime: endTime || undefined,
       duration: durationValue,
@@ -333,50 +335,55 @@ export function BlockEditorPanel({
   const inputClass =
     'composer-input h-11 rounded-xl bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 focus:border-accent/40';
 
+  const displayTitle =
+    (typeof block.content.title === 'string' && block.content.title.trim()) ||
+    titleDraft.trim() ||
+    meta.label;
+
+  const closeBtn = (
+    <button
+      type="button"
+      onClick={() => onOpenChange(false)}
+      className="absolute right-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+      aria-label="Chiudi"
+    >
+      <X className="h-4 w-4" />
+    </button>
+  );
+
+  const durationOptions =
+    block.type === 'meal' ? MEAL_DURATION_FILTERS : DURATION_FILTERS;
+
   // ── UI luogo (attraction / activity / meal) ──────────────────────────────
   if (isPlaceBlock) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="composer-editor-dialog max-h-[min(92dvh,820px)] max-w-lg gap-0 overflow-y-auto overflow-x-visible rounded-3xl border-white/10 bg-slate-950/95 p-0 text-white backdrop-blur-xl">
+        <DialogContent
+          showCloseButton={false}
+          className="composer-editor-dialog max-h-[min(92dvh,820px)] max-w-lg gap-0 overflow-y-auto overflow-x-visible rounded-3xl border-white/10 bg-slate-950/95 p-0 text-white backdrop-blur-xl"
+        >
           <div className={`h-2 bg-gradient-to-r ${meta.color.split(' ').slice(0, 2).join(' ')}`} />
+          {closeBtn}
 
-          <div className="relative z-10 space-y-5 p-6 pb-8">
+          <div className="relative z-10 space-y-5 p-6 pb-8 pr-14">
             <DialogHeader className="space-y-1">
-              <DialogTitle className="font-display text-xl flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xl">
+              <DialogTitle className="font-display text-left text-xl leading-snug text-white">
+                <span className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-lg align-middle">
                   {meta.emoji}
                 </span>
-                <div>
-                  <span className="block text-white">{dialogTitle}</span>
-                  <span className="block text-xs font-normal text-white/40 mt-0.5">
-                    {meta.label}
-                    {typeof block.content.place === 'string' && block.content.place
-                      ? ` · ${block.content.place}`
-                      : ''}
-                  </span>
-                </div>
+                {displayTitle}
               </DialogTitle>
-              <DialogDescription className="sr-only">
-                {isAddMode ? 'Aggiungi tappa al piano' : 'Modifica tappa del piano'}
+              <DialogDescription className="text-left text-xs text-white/45">
+                {dialogTitle} · {meta.label}
               </DialogDescription>
             </DialogHeader>
-
-            <div className="space-y-2">
-              <Label className="text-white/50 text-xs uppercase tracking-wider">Titolo</Label>
-              <Input
-                className={inputClass}
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                placeholder="Nome del luogo"
-              />
-            </div>
 
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
                 Durata
               </p>
               <div className="flex flex-wrap gap-2">
-                {DURATION_FILTERS.map((f) => (
+                {durationOptions.map((f) => (
                   <button
                     key={f.id}
                     type="button"
@@ -398,22 +405,18 @@ export function BlockEditorPanel({
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                   Orario inizio
                 </span>
-                <input
-                  type="time"
+                <QuarterHourTimeSelect
                   value={startTime}
-                  onChange={(e) => handleStartTimeChange(e.target.value)}
-                  className="relative z-30 h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
+                  onChange={handleStartTimeChange}
                 />
               </label>
               <label className="block space-y-1.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                   Orario fine
                 </span>
-                <input
-                  type="time"
+                <QuarterHourTimeSelect
                   value={endTime}
-                  onChange={(e) => handleEndTimeChange(e.target.value)}
-                  className="relative z-30 h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
+                  onChange={handleEndTimeChange}
                 />
               </label>
             </div>
@@ -496,67 +499,65 @@ export function BlockEditorPanel({
   // ── UI generica (volo, hotel, trasporto, note…) ──────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="composer-editor-dialog max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-white/10 bg-slate-950/95 backdrop-blur-xl text-white p-0 gap-0">
+      <DialogContent
+        showCloseButton={false}
+        className="composer-editor-dialog max-h-[min(92dvh,820px)] max-w-lg gap-0 overflow-y-auto rounded-3xl border-white/10 bg-slate-950/95 p-0 text-white backdrop-blur-xl"
+      >
         <div className={`h-2 bg-gradient-to-r ${meta.color.split(' ').slice(0, 2).join(' ')}`} />
+        {closeBtn}
 
-        <div className="p-6 space-y-5">
+        <div className="relative z-10 space-y-5 p-6 pb-8 pr-14">
           <DialogHeader className="space-y-1">
-            <DialogTitle className="font-display text-xl flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xl">
+            <DialogTitle className="font-display text-left text-xl leading-snug text-white">
+              <span className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-lg align-middle">
                 {meta.emoji}
               </span>
-              <div>
-                <span className="block text-white">Modifica {meta.label}</span>
-                <span className="block text-xs font-normal text-white/40 mt-0.5">{meta.hint}</span>
-              </div>
+              {displayTitle}
             </DialogTitle>
-            <DialogDescription className="sr-only">
-              Modifica i dettagli del blocco {meta.label} nel piano di viaggio
+            <DialogDescription className="text-left text-xs text-white/45">
+              Modifica · {meta.label}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
-            <Label className="text-white/50 text-xs uppercase tracking-wider">Titolo</Label>
-            <Input
-              className={inputClass}
-              value={String(block.content.title ?? '')}
-              onChange={(e) => patchContent({ title: e.target.value })}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-white/50 text-xs uppercase tracking-wider">Fascia oraria</Label>
-              <select
-                className={`${inputClass} w-full px-3`}
-                value={String(block.content.timeSlot ?? 'flex')}
-                onChange={(e) => patchContent({ timeSlot: e.target.value })}
-              >
-                {TIME_SLOTS.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-slate-900">
-                    {s.emoji} {s.label}
+          {block.type !== 'hotel' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-white/50 text-xs uppercase tracking-wider">
+                  Fascia oraria
+                </Label>
+                <select
+                  className={`${inputClass} w-full px-3`}
+                  value={String(block.content.timeSlot ?? 'flex')}
+                  onChange={(e) => patchContent({ timeSlot: e.target.value })}
+                >
+                  {TIME_SLOTS.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-slate-900">
+                      {s.emoji} {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white/50 text-xs uppercase tracking-wider">Durata</Label>
+                <select
+                  className={`${inputClass} w-full px-3`}
+                  value={String(block.content.duration ?? '')}
+                  onChange={(e) => patchContent({ duration: e.target.value })}
+                >
+                  <option value="" className="bg-slate-900">
+                    —
                   </option>
-                ))}
-              </select>
+                  {DURATION_OPTIONS.filter((d) =>
+                    block.type === 'meal' ? d !== 'Giornata intera' && d !== 'Mezza giornata' : true
+                  ).map((d) => (
+                    <option key={d} value={d} className="bg-slate-900">
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-white/50 text-xs uppercase tracking-wider">Durata</Label>
-              <select
-                className={`${inputClass} w-full px-3`}
-                value={String(block.content.duration ?? '')}
-                onChange={(e) => patchContent({ duration: e.target.value })}
-              >
-                <option value="" className="bg-slate-900">
-                  —
-                </option>
-                {DURATION_OPTIONS.map((d) => (
-                  <option key={d} value={d} className="bg-slate-900">
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          )}
 
           {block.type === 'flight' && (
             <div className="space-y-3">
@@ -621,16 +622,35 @@ export function BlockEditorPanel({
 
           {block.type === 'hotel' && (
             <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-white/50 text-xs uppercase tracking-wider">
-                  Zona / quartiere
-                </Label>
-                <Input
-                  className={inputClass}
-                  value={String(block.content.area ?? '')}
-                  onChange={(e) => patchContent({ area: e.target.value })}
-                  placeholder="Es. Centro storico…"
-                />
+              <div className="relative z-30 grid grid-cols-2 gap-3">
+                <label className="block space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                    Check-in
+                  </span>
+                  <QuarterHourTimeSelect
+                    value={String(block.content.checkInTime ?? block.content.time ?? '')}
+                    onChange={(v) =>
+                      patchContent({
+                        checkInTime: v || undefined,
+                        time: v || undefined,
+                      })
+                    }
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                    Check-out
+                  </span>
+                  <QuarterHourTimeSelect
+                    value={String(block.content.checkOutTime ?? block.content.endTime ?? '')}
+                    onChange={(v) =>
+                      patchContent({
+                        checkOutTime: v || undefined,
+                        endTime: v || undefined,
+                      })
+                    }
+                  />
+                </label>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">

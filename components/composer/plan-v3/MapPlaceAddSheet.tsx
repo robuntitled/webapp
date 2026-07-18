@@ -10,9 +10,11 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   DURATION_FILTERS,
+  MEAL_DURATION_FILTERS,
   endTimeFromStartAndDuration,
   type DurationFilter,
 } from '@/components/composer/plan-v3/ActivityFilters';
+import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
 import {
   findTimeOverlapConflict,
   getDefaultTimeSlotForNewBlock,
@@ -220,7 +222,7 @@ export function MapPlaceAddSheet({
                   Durata
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {DURATION_FILTERS.map((f) => (
+                  {(category === 'meal' ? MEAL_DURATION_FILTERS : DURATION_FILTERS).map((f) => (
                     <button
                       key={f.id}
                       type="button"
@@ -237,28 +239,18 @@ export function MapPlaceAddSheet({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="relative z-30 grid grid-cols-2 gap-3">
                 <label className="block space-y-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                     Inizio
                   </span>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => handleStart(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-amber-400/50"
-                  />
+                  <QuarterHourTimeSelect value={startTime} onChange={handleStart} />
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                     Fine
                   </span>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-amber-400/50"
-                  />
+                  <QuarterHourTimeSelect value={endTime} onChange={setEndTime} />
                 </label>
               </div>
 

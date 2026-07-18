@@ -1,5 +1,6 @@
 'use client';
 
+import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
 import {
   PLACE_CATEGORIES,
   type PlaceCategoryId,
@@ -30,6 +31,9 @@ export const DURATION_FILTERS: { id: DurationFilter; label: string; value: strin
   { id: '6h', label: '6 ore', value: '6h' },
   { id: 'fullday', label: 'Intera giornata', value: 'Giornata intera' },
 ];
+
+/** Per ristoranti / pasti: niente “intera giornata”. */
+export const MEAL_DURATION_FILTERS = DURATION_FILTERS.filter((f) => f.id !== 'fullday');
 
 export const DURATION_MINUTES: Record<DurationFilter, number> = {
   '30m': 30,
@@ -81,6 +85,9 @@ export function ActivityFilters({
   onStartTimeChange,
   onEndTimeChange,
 }: ActivityFiltersProps) {
+  const durationOptions =
+    type === 'meal' ? MEAL_DURATION_FILTERS : DURATION_FILTERS;
+
   return (
     <div className="space-y-4">
       <div>
@@ -113,7 +120,7 @@ export function ActivityFilters({
           Durata
         </p>
         <div className="flex flex-wrap gap-2">
-          {DURATION_FILTERS.map((f) => (
+          {durationOptions.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -130,28 +137,18 @@ export function ActivityFilters({
         </div>
       </div>
 
-      <div className="grid max-w-md grid-cols-2 gap-3">
+      <div className="relative z-30 grid max-w-md grid-cols-2 gap-3">
         <label className="block space-y-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
             Orario inizio
           </span>
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => onStartTimeChange(e.target.value)}
-            className="relative z-30 h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
-          />
+          <QuarterHourTimeSelect value={startTime} onChange={onStartTimeChange} />
         </label>
         <label className="block space-y-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
             Orario fine
           </span>
-          <input
-            type="time"
-            value={endTime}
-            onChange={(e) => onEndTimeChange(e.target.value)}
-            className="relative z-30 h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
-          />
+          <QuarterHourTimeSelect value={endTime} onChange={onEndTimeChange} />
         </label>
       </div>
     </div>

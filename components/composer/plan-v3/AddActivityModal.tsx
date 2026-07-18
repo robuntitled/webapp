@@ -113,6 +113,15 @@ export function AddActivityModal({
     if (startTime) setEndTime(endTimeFromStartAndDuration(startTime, next));
   };
 
+  const handleCategoryChange = (next: PlaceCategoryId) => {
+    setCategory(next);
+    // Ristoranti: niente intera giornata
+    if (next === 'meal' && duration === 'fullday') {
+      setDuration('1h');
+      if (startTime) setEndTime(endTimeFromStartAndDuration(startTime, '1h'));
+    }
+  };
+
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
     if (next) setEndTime(endTimeFromStartAndDuration(next, duration));
@@ -309,7 +318,7 @@ export function AddActivityModal({
             duration={duration}
             startTime={startTime}
             endTime={endTime}
-            onTypeChange={setCategory}
+            onTypeChange={handleCategoryChange}
             onDurationChange={handleDurationChange}
             onStartTimeChange={handleStartTimeChange}
             onEndTimeChange={setEndTime}

@@ -480,7 +480,9 @@ export function ComposerPlanStep({
         block={editingBlock}
         draft={draft}
         open={!!editingBlock}
-        onOpenChange={(open) => !open && setEditingBlock(null)}
+        onOpenChange={(open) => {
+          if (!open) setEditingBlock(null);
+        }}
         onUpdate={updateBlock}
         onRemove={removeBlock}
       />
