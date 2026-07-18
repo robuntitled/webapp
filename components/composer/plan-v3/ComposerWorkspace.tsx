@@ -35,7 +35,8 @@ type ComposerWorkspaceProps = {
   onAddAttachment: (blockId: string, label: string, url: string) => void;
   onRemoveAttachment: (blockId: string, id: string) => void;
   onPinClick: (pin: MapPin) => void;
-  onMapClick: (lat: number, lng: number) => void;
+  /** Opzionale: se assente, solo i pin sono cliccabili (niente tappe a caso). */
+  onMapClick?: (lat: number, lng: number) => void;
   onBack: () => void;
   onReview: () => void;
 };

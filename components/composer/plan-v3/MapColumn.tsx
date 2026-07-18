@@ -15,7 +15,7 @@ type MapColumnProps = {
   activeDayIndex: number;
   highlightedPinId: string | null;
   onPinClick: (pin: MapPin) => void;
-  onMapClick: (lat: number, lng: number) => void;
+  onMapClick?: (lat: number, lng: number) => void;
 };
 
 /**

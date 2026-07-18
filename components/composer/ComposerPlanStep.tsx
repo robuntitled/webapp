@@ -164,20 +164,6 @@ export function ComposerPlanStep({
     toast.success('Attività aggiunta');
   };
 
-  const addPinFromMap = (lat: number, lng: number) => {
-    const day = ensureActiveDay();
-    if (!day) return;
-    const block = createEmptyBlock('attraction', day.blocks.length, {
-      title: 'Nuova tappa',
-      place: 'Segnata sulla mappa',
-      lat,
-      lng,
-    });
-    updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
-    setEditingBlock(block);
-    setHighlightedPinId(block.id);
-  };
-
   const updateBlock = (blockId: string, updater: (block: ComposerBlock) => ComposerBlock) => {
     if (!activeDay) return;
     updateDay(activeDay.dayIndex, (d) => ({
@@ -352,6 +338,7 @@ export function ComposerPlanStep({
         onAddAttachment={addAttachment}
         onRemoveAttachment={removeAttachment}
         onPinClick={(pin) => {
+          // Solo pin già presenti nel piano — niente click a caso sulla mappa
           if (pin.blockId) {
             setSelection(pin.dayIndex);
             setMapMode('day');
@@ -361,7 +348,6 @@ export function ComposerPlanStep({
             if (block) setEditingBlock(block);
           }
         }}
-        onMapClick={addPinFromMap}
         onBack={onBack}
         onReview={onReview}
       />

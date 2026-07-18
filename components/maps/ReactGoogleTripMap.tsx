@@ -246,8 +246,10 @@ function TripMapInner({
         styles={GOOGLE_MAP_DARK_STYLES}
         backgroundColor="#0f172a"
         onClick={(e) => {
+          // Solo se onMapClick è passato: altrimenti ignora click a vuoto (solo pin)
+          if (!onMapClick) return;
           const latLng = e.detail.latLng;
-          if (latLng && onMapClick) onMapClick(latLng.lat, latLng.lng);
+          if (latLng) onMapClick(latLng.lat, latLng.lng);
         }}
         style={{ width: '100%', height: '100%' }}
       >
@@ -268,12 +270,6 @@ function TripMapInner({
           onPinClick={onPinClick}
         />
       </Map>
-
-      {onMapClick && (
-        <p className="pointer-events-none absolute bottom-3 left-3 right-3 z-10 rounded-full bg-black/60 px-3 py-1.5 text-center text-[10px] text-white/80 backdrop-blur">
-          Clicca sulla mappa per aggiungere una tappa
-        </p>
-      )}
     </div>
   );
 }
