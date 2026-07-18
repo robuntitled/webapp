@@ -17,11 +17,17 @@ import {
 import { ActivityResultsList } from '@/components/composer/plan-v3/ActivityResultsList';
 import type { ActivityResultItem } from '@/components/composer/plan-v3/ActivityResultCard';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
-import { haversineKm } from '@/lib/maps/distance';
 import {
   getPlaceCategory,
   type PlaceCategoryId,
 } from '@/lib/places/place-categories';
+import {
+  boundsCacheKey,
+  fetchPlacesForComposer,
+  getCachedPlaces,
+  MIN_SEARCH_CHARS,
+  placesCacheKey,
+} from '@/lib/places/places-search-client';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import { Search, X } from 'lucide-react';
 
@@ -44,9 +50,6 @@ type AddActivityModalProps = {
   activeDayIndex?: number;
   onConfirm: (payload: AddActivityPayload) => void;
 };
-
-const clientCache = new Map<string, { at: number; items: ActivityResultItem[] }>();
-const CLIENT_TTL = 10 * 60_000;
 
 function useDebounced<T>(value: T, delay: number): T {
   const [v, setV] = useState(value);
@@ -73,7 +76,8 @@ export function AddActivityModal({
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchHint, setSearchHint] = useState<string | null>(null);
-  const debounced = useDebounced(query, query.trim() ? 180 : 0);
+  // Debounce più alto → meno chiamate mentre digiti
+  const debounced = useDebounced(query, query.trim() ? 350 : 0);
   const abortRef = useRef<AbortController | null>(null);
   const reqId = useRef(0);
 
@@ -90,11 +94,10 @@ export function AddActivityModal({
   }, [draft]);
 
   const hasDestinations = destinationBounds.length > 0;
-  const cacheKeyBase = useMemo(() => {
-    const p = destinationBounds[0];
-    if (!p) return '';
-    return `${p.lat.toFixed(3)},${p.lng.toFixed(3)}`;
-  }, [destinationBounds]);
+  const cacheKeyBase = useMemo(
+    () => boundsCacheKey(destinationBounds),
+    [destinationBounds]
+  );
 
   const categoryMeta = getPlaceCategory(category);
   const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
@@ -110,14 +113,6 @@ export function AddActivityModal({
     if (next) setEndTime(endTimeFromStartAndDuration(next, duration));
   };
 
-  const handleCategoryChange = (next: PlaceCategoryId) => {
-    setCategory(next);
-    // Durate sensate per hotel
-    if (next === 'hotel' && duration === '1h') {
-      // lascia pure 1h, l'utente può cambiare
-    }
-  };
-
   const search = useCallback(
     async (q: string, cat: PlaceCategoryId) => {
       if (!hasDestinations) {
@@ -129,16 +124,20 @@ export function AddActivityModal({
       }
 
       const trimmed = q.trim();
-      const cacheKey = `${cacheKeyBase}|${cat}|${trimmed.toLowerCase()}`;
-      const hit = clientCache.get(cacheKey);
-      if (hit && Date.now() - hit.at < CLIENT_TTL) {
-        setResults(hit.items);
+
+      // 1–2 caratteri: non chiamare Google, tieni lista categoria se c’è
+      if (trimmed.length > 0 && trimmed.length < MIN_SEARCH_CHARS) {
+        setSearchHint(`Digita almeno ${MIN_SEARCH_CHARS} caratteri per cercare…`);
+        setLoading(false);
+        return;
+      }
+
+      const cacheKey = placesCacheKey(cacheKeyBase, cat, trimmed);
+      const hit = getCachedPlaces(cacheKey);
+      if (hit) {
+        setResults(hit);
         const label = getPlaceCategory(cat).label;
-        setSearchHint(
-          trimmed
-            ? null
-            : `${label} nell’area mappa · Google Places`
-        );
+        setSearchHint(trimmed ? null : `${label} nell’area mappa`);
         setLoading(false);
         return;
       }
@@ -148,67 +147,29 @@ export function AddActivityModal({
       abortRef.current = ac;
       const myId = ++reqId.current;
 
-      // Se abbiamo già risultati, non svuotare (switch categoria con cache miss)
       setLoading(true);
-      if (!hit) setSearchHint(null);
+      setSearchHint(null);
 
       try {
-        const res = await fetch('/api/places/google-search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            q: trimmed,
-            category: cat,
-            bounds: destinationBounds,
-          }),
+        const { items, warning } = await fetchPlacesForComposer({
+          q: trimmed,
+          category: cat,
+          bounds: destinationBounds,
           signal: ac.signal,
         });
         if (myId !== reqId.current) return;
 
-        const data = (await res.json()) as {
-          results?: {
-            id: string;
-            label: string;
-            subtitle: string;
-            lat: number;
-            lng: number;
-            placeTypeLabel: string;
-          }[];
-          warning?: string;
-          error?: string;
-        };
-        if (!res.ok) {
-          setResults([]);
-          setSearchHint(data.error ?? 'Ricerca non disponibile al momento.');
-          return;
-        }
-        const center = destinationBounds[0];
-        const mapped: ActivityResultItem[] = (data.results ?? []).map((p) => ({
-          id: p.id,
-          title: p.label,
-          subtitle: p.subtitle || p.placeTypeLabel,
-          category: p.placeTypeLabel || getPlaceCategory(cat).label,
-          lat: p.lat,
-          lng: p.lng,
-          distanceKm: haversineKm(center, { lat: p.lat, lng: p.lng }),
-        }));
-        mapped.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
-        setResults(mapped);
-        if (mapped.length > 0) {
-          clientCache.set(cacheKey, { at: Date.now(), items: mapped });
-        }
+        setResults(items);
         const catLabel = getPlaceCategory(cat).label;
-        if (mapped.length === 0) {
+        if (items.length === 0) {
           setSearchHint(
-            data.warning ??
+            warning ??
               (trimmed
                 ? `Nessun risultato in «${catLabel}». Prova un altro termine.`
                 : `Nessun luogo «${catLabel}» nell’area al momento.`)
           );
         } else if (!trimmed) {
-          setSearchHint(`${catLabel} nell’area mappa · Google Places`);
-        } else if (data.warning) {
-          setSearchHint(data.warning);
+          setSearchHint(`${catLabel} nell’area mappa`);
         } else {
           setSearchHint(null);
         }
@@ -216,7 +177,9 @@ export function AddActivityModal({
         if (e instanceof DOMException && e.name === 'AbortError') return;
         if (myId !== reqId.current) return;
         setResults([]);
-        setSearchHint('Ricerca non disponibile al momento. Riprova tra poco.');
+        setSearchHint(
+          e instanceof Error ? e.message : 'Ricerca non disponibile al momento.'
+        );
       } finally {
         if (myId === reqId.current) setLoading(false);
       }
@@ -224,7 +187,6 @@ export function AddActivityModal({
     [cacheKeyBase, destinationBounds, hasDestinations]
   );
 
-  // Query o categoria cambiano → ricerca (cache rende i tab veloci al 2° click)
   useEffect(() => {
     if (!open) return;
     void search(debounced, category);
@@ -247,11 +209,12 @@ export function AddActivityModal({
     setCategory('attraction');
     setPrice('');
 
-    const nearbyKey = `${cacheKeyBase}|attraction|`;
-    const hit = clientCache.get(nearbyKey);
-    if (hit && Date.now() - hit.at < CLIENT_TTL) {
-      setResults(hit.items);
-      setSearchHint('Attrazioni nell’area mappa · Google Places');
+    // Prefetch / cache: mostra subito Attrazioni se già caricate
+    const nearbyKey = placesCacheKey(cacheKeyBase, 'attraction', '');
+    const hit = getCachedPlaces(nearbyKey);
+    if (hit) {
+      setResults(hit);
+      setSearchHint('Attrazioni nell’area mappa');
     }
 
     const day = draft.days.find((d) => d.dayIndex === activeDayIndex);
@@ -301,7 +264,7 @@ export function AddActivityModal({
             <div>
               <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Scegli una categoria e cerca nell’area mappa con Google Places.
+                Categoria + area mappa. Digita almeno {MIN_SEARCH_CHARS} caratteri per cercare.
               </DialogDescription>
             </div>
             <button
@@ -332,7 +295,7 @@ export function AddActivityModal({
             duration={duration}
             startTime={startTime}
             endTime={endTime}
-            onTypeChange={handleCategoryChange}
+            onTypeChange={setCategory}
             onDurationChange={handleDurationChange}
             onStartTimeChange={handleStartTimeChange}
             onEndTimeChange={setEndTime}

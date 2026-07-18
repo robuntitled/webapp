@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BlockEditorPanel } from '@/components/composer/BlockEditorPanel';
 import { ComposerWorkspace } from '@/components/composer/plan-v3/ComposerWorkspace';
 import {
@@ -18,8 +18,10 @@ import {
   endDateFromDays,
   removeComposerDay,
 } from '@/lib/composer/days';
+import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
+import { prefetchPlacesForComposer } from '@/lib/places/places-search-client';
 import type {
   ComposerBlock,
   ComposerDay,
@@ -91,6 +93,20 @@ export function ComposerPlanStep({
     // pinFingerprint cattura i campi rilevanti di draft
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinFingerprint, mapMode, selection, activeDayIndex]);
+
+  // Prefetch Attrazioni per la destinazione: aprire Aggiungi è più rapido
+  useEffect(() => {
+    const dests = getDraftDestinations(draft)
+      .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+      .map((d) => ({
+        lat: d.lat,
+        lng: d.lng,
+        radiusKm: 30,
+        label: d.label,
+      }));
+    if (dests.length === 0) return;
+    prefetchPlacesForComposer({ category: 'attraction', bounds: dests });
+  }, [draft.destination, draft.destinationMeta?.lat, draft.destinationMeta?.lng]);
 
   const updateDay = (dayIndex: number, updater: (day: ComposerDay) => ComposerDay) => {
     onChangeDays(draft.days.map((d) => (d.dayIndex === dayIndex ? updater(d) : d)));
