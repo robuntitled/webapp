@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAiConfig, shouldUseExternalAi } from '@/lib/ai/config';
+import { pickGeminiAnswerText } from '@/lib/ai/json-extract';
 import type { ComposerDraft } from '@/types/composer';
 import type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 import type { PlannerProfile } from '@/types/planner';
@@ -16,6 +17,18 @@ export type AssistRequest = {
   draft: Partial<ComposerDraft>;
   step: ComposerWizardStep;
   plannerProfile?: PlannerProfile | null;
+};
+
+/** Output budget assist: include margine se il modello “pensa” (thinking tokens). */
+const ASSIST_MAX_OUTPUT_TOKENS = 2048;
+
+type GeminiAssistPart = { text?: string; thought?: boolean };
+type GeminiAssistResponse = {
+  candidates?: Array<{
+    content?: { parts?: GeminiAssistPart[] };
+    finishReason?: string;
+  }>;
+  error?: { message?: string };
 };
 
 function summarizeDraft(draft: Partial<ComposerDraft>, step: ComposerWizardStep): string {
@@ -74,6 +87,56 @@ export function mockAssistReply(req: AssistRequest): string {
   return `Ho capito. ${ctx ? `Contesto: ${ctx}. ` : ''}Puoi chiedermi idee per le giornate, chiarimenti sul flusso, o quando aggiungere voli e hotel.`;
 }
 
+/** Rimuove scorie di reasoning / meta-prompt che a volte leakano in UI. */
+export function cleanAssistReply(raw: string): string {
+  let text = raw.trim();
+  if (!text) return '';
+
+  // Blocchi tipo "* *Attempt 2…*" o "Attempt N (...):"
+  text = text.replace(/^\s*\*+\s*\*?Attempt\s+\d+[^\n]*\n?/gim, '');
+  text = text.replace(/^\s*Attempt\s+\d+\s*\([^)]*\)\s*:?\s*/gim, '');
+  text = text.replace(/^\s*\(Refining[^)]*\)\s*:?\s*/gim, '');
+
+  // Righe meta esplicite
+  text = text
+    .split('\n')
+    .filter((line) => {
+      const l = line.trim().toLowerCase();
+      if (!l) return true;
+      if (/^attempt\s+\d+/.test(l)) return false;
+      if (/refining and counting/.test(l)) return false;
+      if (/counting sentences/.test(l)) return false;
+      if (/^thinking:/.test(l)) return false;
+      return true;
+    })
+    .join('\n')
+    .trim();
+
+  return text;
+}
+
+function buildAssistSystem(context: string, profile?: PlannerProfile | null): string {
+  const profileBits: string[] = [];
+  if (profile) {
+    // Campi tipici opzionali — non fallire se assenti
+    const p = profile as Record<string, unknown>;
+    if (typeof p.travelStyle === 'string') profileBits.push(`stile: ${p.travelStyle}`);
+    if (typeof p.pace === 'string') profileBits.push(`ritmo: ${p.pace}`);
+  }
+
+  return [
+    'Sei l\'assistente di viaggio di NomadLink (viaggi di gruppo).',
+    'Rispondi SEMPRE in italiano, tono amichevole e chiaro.',
+    'Scrivi una risposta completa e naturale (circa 40–120 parole). Non troncare a metà frase.',
+    'Non contare le frasi, non mostrare ragionamenti interni, tentativi o meta-commenti (niente "Attempt", "Refining", "Thinking").',
+    'Non inventare prezzi precisi. Voli e hotel si affinano nel piano; puoi dare consigli di zona e orari.',
+    `Contesto bozza: ${context}`,
+    profileBits.length ? `Profilo: ${profileBits.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 async function callAssistAi(req: AssistRequest): Promise<string | null> {
   const { use } = shouldUseExternalAi();
   if (!use) return null;
@@ -85,8 +148,8 @@ async function callAssistAi(req: AssistRequest): Promise<string | null> {
     .map((m) => `${m.role === 'user' ? 'Utente' : 'Assistente'}: ${m.content}`)
     .join('\n');
 
-  const system = `Sei l'assistente di NomadLink per creare viaggi di gruppo. Rispondi in italiano, massimo 4 frasi, tono amichevole e chiaro. Non inventare prezzi precisi. Voli/hotel si aggiungono dopo la pubblicazione. Contesto bozza: ${context}`;
-  const user = [history, `Utente: ${req.message}`].filter(Boolean).join('\n\n');
+  const system = buildAssistSystem(context, req.plannerProfile);
+  const user = [history, `Utente: ${req.message}`, 'Rispondi solo all\'utente, con il testo finale.'].filter(Boolean).join('\n\n');
 
   try {
     if (config.provider === 'gemini' && config.geminiApiKey) {
@@ -97,13 +160,46 @@ async function callAssistAi(req: AssistRequest): Promise<string | null> {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: 'user', parts: [{ text: user }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 400 },
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: ASSIST_MAX_OUTPUT_TOKENS,
+            // Gemini 2.5/3.x: riduce token “thinking” che mangiavano l’output (troncature)
+            thinkingConfig: { thinkingBudget: 0 },
+          },
         }),
-        signal: AbortSignal.timeout(18_000),
+        signal: AbortSignal.timeout(25_000),
       });
-      const payload = await response.json();
-      const text = payload.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      return text || null;
+      const payload = (await response.json().catch(() => ({}))) as GeminiAssistResponse;
+      if (!response.ok) {
+        // Se thinkingConfig non è supportato su qualche modello, riprova senza
+        if (
+          typeof payload.error?.message === 'string' &&
+          /thinking|unknown name|invalid/i.test(payload.error.message)
+        ) {
+          return callGeminiAssistSimple({
+            apiKey: config.geminiApiKey,
+            model: config.model,
+            system,
+            user,
+          });
+        }
+        return null;
+      }
+
+      const candidate = payload.candidates?.[0];
+      const text = cleanAssistReply(pickGeminiAnswerText(candidate?.content?.parts));
+      if (!text) return null;
+
+      // Se troncato per MAX_TOKENS e testo corto/incompleto, non mostrare spezzatura brutta
+      if (
+        candidate?.finishReason === 'MAX_TOKENS' &&
+        text.length < 40 &&
+        !/[.!?…]$/.test(text)
+      ) {
+        return null;
+      }
+
+      return text;
     }
 
     if (config.openaiApiKey || config.openaiBaseUrl) {
@@ -120,19 +216,52 @@ async function callAssistAi(req: AssistRequest): Promise<string | null> {
             { role: 'system', content: system },
             { role: 'user', content: user },
           ],
-          temperature: 0.4,
-          max_tokens: 400,
+          temperature: 0.5,
+          max_tokens: ASSIST_MAX_OUTPUT_TOKENS,
         }),
-        signal: AbortSignal.timeout(18_000),
+        signal: AbortSignal.timeout(25_000),
       });
-      const payload = await response.json();
-      return payload.choices?.[0]?.message?.content?.trim() || null;
+      const payload = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = cleanAssistReply(payload.choices?.[0]?.message?.content?.trim() || '');
+      return text || null;
     }
   } catch {
     return null;
   }
 
   return null;
+}
+
+/** Fallback se thinkingConfig non è accettato dal modello. */
+async function callGeminiAssistSimple(params: {
+  apiKey: string;
+  model: string;
+  system: string;
+  user: string;
+}): Promise<string | null> {
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: params.system }] },
+        contents: [{ role: 'user', parts: [{ text: params.user }] }],
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: ASSIST_MAX_OUTPUT_TOKENS,
+        },
+      }),
+      signal: AbortSignal.timeout(25_000),
+    });
+    const payload = (await response.json().catch(() => ({}))) as GeminiAssistResponse;
+    if (!response.ok) return null;
+    return cleanAssistReply(pickGeminiAnswerText(payload.candidates?.[0]?.content?.parts)) || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function replyToAssist(req: AssistRequest): Promise<{
