@@ -870,14 +870,36 @@ export function BlockEditorPanel({
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-white/50 text-xs uppercase tracking-wider">Notti</Label>
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">N. notti</Label>
                   <Input
                     className={inputClass}
                     type="number"
                     min={1}
                     value={String(block.content.nights ?? 1)}
-                    onChange={(e) => patchContent({ nights: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const n = Math.max(1, Number(e.target.value) || 1);
+                      const checkInDate =
+                        typeof block.content.checkInDate === 'string' && block.content.checkInDate
+                          ? block.content.checkInDate
+                          : draft.startDate;
+                      let checkOutDate = block.content.checkOutDate;
+                      if (checkInDate) {
+                        const d = new Date(`${checkInDate}T12:00:00`);
+                        d.setDate(d.getDate() + n);
+                        checkOutDate = d.toISOString().slice(0, 10);
+                      }
+                      patchContent({
+                        nights: n,
+                        checkOutDate,
+                        duration: n === 1 ? '1 notte' : `${n} notti`,
+                      });
+                    }}
                   />
+                  {typeof block.content.checkOutDate === 'string' && block.content.checkOutDate && (
+                    <p className="text-[10px] text-white/40">
+                      Check-out giorno {block.content.checkOutDate}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-white/50 text-xs uppercase tracking-wider">Ospiti</Label>

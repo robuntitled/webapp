@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
+import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
 import { primaryOriginIata } from '@/lib/composer/origins';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import {
@@ -41,7 +42,29 @@ export type TravelBlockPayload = {
   checkInTime?: string;
   checkOutTime?: string;
   travelerArrivalTime?: string;
+  nights?: number;
+  checkInDate?: string;
+  checkOutDate?: string;
 };
+
+function addDaysIso(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatItDate(iso: string): string {
+  try {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  } catch {
+    return iso;
+  }
+}
 
 const TRANSPORT_MODES: {
   id: TransportMode;
@@ -111,12 +134,20 @@ export function AddTravelBlockModal({
   const [arrivalTime, setArrivalTime] = useState('');
   const [checkInTime, setCheckInTime] = useState('14:00');
   const [checkOutTime, setCheckOutTime] = useState('11:00');
+  const [nights, setNights] = useState(1);
   const [travelerArrivalTime, setTravelerArrivalTime] = useState('');
   const [bookingReference, setBookingReference] = useState('');
   const [price, setPrice] = useState('');
   const [transportMode, setTransportMode] = useState<TransportMode>('flight');
 
   const destLabel = draft.destinationMeta?.label ?? draft.destination;
+
+  const hotelDates = useMemo(() => {
+    const checkInDate = draft.startDate || new Date().toISOString().slice(0, 10);
+    const n = Math.max(1, nights || 1);
+    const checkOutDate = addDaysIso(checkInDate, n);
+    return { checkInDate, checkOutDate, nights: n };
+  }, [draft.startDate, nights]);
 
   const externalLink = useMemo(() => {
     try {
@@ -139,6 +170,7 @@ export function AddTravelBlockModal({
     setArrivalTime('');
     setCheckInTime('14:00');
     setCheckOutTime('11:00');
+    setNights(1);
     setTravelerArrivalTime('');
     setBookingReference('');
     setPrice('');
@@ -156,12 +188,15 @@ export function AddTravelBlockModal({
     if (mode === 'hotel') {
       onConfirm({
         type: 'hotel',
-        title: label.trim() || `Hotel — ${destLabel}`,
+        title: label.trim() || hotelPlace.trim() || `Hotel — ${destLabel}`,
         place: hotelPlace.trim() || destLabel,
         lat: hotelCoords?.lat,
         lng: hotelCoords?.lng,
-        checkInTime: checkInTime || undefined,
-        checkOutTime: checkOutTime || undefined,
+        checkInTime: checkInTime || '14:00',
+        checkOutTime: checkOutTime || '11:00',
+        nights: hotelDates.nights,
+        checkInDate: hotelDates.checkInDate,
+        checkOutDate: hotelDates.checkOutDate,
         travelerArrivalTime: travelerArrivalTime || undefined,
         price: parsedPrice,
       });
@@ -332,33 +367,52 @@ export function AddTravelBlockModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-white/60">Check-in</label>
-                  <Input
-                    type="time"
+                  <label className="text-xs font-medium text-white/60">
+                    Check-in (orario)
+                  </label>
+                  <QuarterHourTimeSelect
                     value={checkInTime}
-                    onChange={(e) => setCheckInTime(e.target.value)}
-                    className="h-11 rounded-xl border-white/10 bg-white/5 text-white"
+                    onChange={setCheckInTime}
+                    allowEmpty={false}
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-white/60">Check-out</label>
-                  <Input
-                    type="time"
+                  <label className="text-xs font-medium text-white/60">
+                    Check-out (orario)
+                  </label>
+                  <QuarterHourTimeSelect
                     value={checkOutTime}
-                    onChange={(e) => setCheckOutTime(e.target.value)}
-                    className="h-11 rounded-xl border-white/10 bg-white/5 text-white"
+                    onChange={setCheckOutTime}
+                    allowEmpty={false}
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-white/60">N. notti</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={nights}
+                  onChange={(e) => setNights(Math.max(1, Number(e.target.value) || 1))}
+                  className="h-11 rounded-xl border-white/10 bg-white/5 text-white"
+                />
+                <p className="text-xs text-white/45">
+                  Check-in {formatItDate(hotelDates.checkInDate)} · Check-out{' '}
+                  {formatItDate(hotelDates.checkOutDate)} ({hotelDates.nights}{' '}
+                  {hotelDates.nights === 1 ? 'notte' : 'notti'})
+                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-white/60">
                   Orario arrivo effettivo del viaggiatore
                 </label>
-                <Input
-                  type="time"
+                <QuarterHourTimeSelect
                   value={travelerArrivalTime}
-                  onChange={(e) => setTravelerArrivalTime(e.target.value)}
-                  className="h-11 rounded-xl border-white/10 bg-white/5 text-white"
+                  onChange={setTravelerArrivalTime}
+                  className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white"
                 />
               </div>
             </>

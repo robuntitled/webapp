@@ -175,7 +175,7 @@ function isPackableBlock(block: ComposerBlock): boolean {
 
 function blockDurationMinutes(block: ComposerBlock): number {
   const range = getBlockTimeRange(block);
-  if (range) return Math.max(15, range.endMin - range.startMin);
+  if (range) return Math.max(30, range.endMin - range.startMin);
   return parseDurationMinutes(block.content.duration);
 }
 
@@ -191,21 +191,25 @@ function withTimes(block: ComposerBlock, startMin: number, endMin: number): Comp
 }
 
 /**
- * Dopo drag&drop: ripacchetta le tappe in ordine (08:00 o primo start, poi adiacenti).
+ * Dopo drag&drop: ripacchetta dall’orario **minimo** del giorno (es. 08:00),
+ * non dall’orario del blocco finito in testa. Così se trascini l’ultima (16:00)
+ * in prima posizione, quella parte da 08:00 e le altre scalano in sequenza.
  * Hotel/volo/note restano invariati.
  */
 export function repackBlockTimesInOrder(blocks: ComposerBlock[]): ComposerBlock[] {
-  let cursor: number | null = null;
+  let minStart: number | null = null;
+  for (const b of blocks) {
+    if (!isPackableBlock(b)) continue;
+    const r = getBlockTimeRange(b);
+    if (r == null) continue;
+    if (minStart == null || r.startMin < minStart) minStart = r.startMin;
+  }
+  let cursor = minStart ?? 8 * 60;
+
   return blocks.map((block) => {
     if (!isPackableBlock(block)) return block;
     const dur = blockDurationMinutes(block);
-    const range = getBlockTimeRange(block);
-    let start: number;
-    if (cursor == null) {
-      start = range?.startMin ?? 8 * 60;
-    } else {
-      start = cursor;
-    }
+    const start = cursor;
     const end = start + dur;
     cursor = end;
     return withTimes(block, start, end);

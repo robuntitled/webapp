@@ -197,15 +197,10 @@ export function MapPlaceAddSheet({
 
           {place && (
             <>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                  Titolo
-                </label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-amber-400/50"
-                />
+              <div className="space-y-1">
+                <p className="font-display text-lg font-semibold leading-snug text-white">
+                  {title || place.name}
+                </p>
                 {place.address && (
                   <p className="text-xs text-white/40">{place.address}</p>
                 )}

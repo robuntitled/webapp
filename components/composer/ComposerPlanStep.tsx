@@ -263,6 +263,9 @@ export function ComposerPlanStep({
       arrivalTime: payload.arrivalTime,
       checkInTime: payload.type === 'hotel' ? payload.checkInTime || '14:00' : payload.checkInTime,
       checkOutTime: payload.type === 'hotel' ? payload.checkOutTime || '11:00' : payload.checkOutTime,
+      nights: payload.type === 'hotel' ? payload.nights ?? 1 : undefined,
+      checkInDate: payload.checkInDate,
+      checkOutDate: payload.checkOutDate,
       time:
         payload.type === 'hotel'
           ? payload.checkInTime || '14:00'
