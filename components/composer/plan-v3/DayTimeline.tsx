@@ -83,19 +83,12 @@ export function DayTimeline({
                         : s?.start ?? '11:00';
                     timeRange = `Check-out ${co}`;
                   } else {
+                    // Solo check-in in timeline (niente "out +1g 11:00")
                     const ci =
                       typeof block.content.checkInTime === 'string'
                         ? block.content.checkInTime
                         : s?.start;
-                    const nights =
-                      typeof block.content.nights === 'number' ? block.content.nights : 1;
-                    const co =
-                      typeof block.content.checkOutTime === 'string'
-                        ? block.content.checkOutTime
-                        : '11:00';
-                    timeRange = ci
-                      ? `Check-in ${ci} · out +${nights}g ${co}`
-                      : `out +${nights}g ${co}`;
+                    timeRange = ci ? `Check-in ${ci}` : 'Check-in';
                   }
                 } else if (s) {
                   timeRange =

@@ -51,22 +51,18 @@ function isStopPin(pin: MapPin): boolean {
   return pin.id !== 'destination' && Boolean(pin.blockId);
 }
 
-/** Fingerprint of what should trigger camera fit (not highlight-only updates). */
-function fitSignature(
-  mapMode: MapViewMode,
-  activeDayIndex: number,
-  pins: MapPin[]
-): string {
-  const pts = pins
-    .map((p) => `${p.id}:${p.lat.toFixed(4)},${p.lng.toFixed(4)}`)
-    .sort()
-    .join('|');
-  return `${mapMode}|${activeDayIndex}|${pts}`;
+/**
+ * Camera fit solo al cambio giorno/modalità — NON ad ogni pin aggiunto.
+ * Evita zoom in/out quando si aggiunge un luogo dalla mappa (fullscreen o no).
+ */
+function fitSignature(mapMode: MapViewMode, activeDayIndex: number): string {
+  return `${mapMode}|${activeDayIndex}`;
 }
 
 /**
- * Moves the camera when the day / pin set changes.
+ * Moves the camera when the day / view mode changes.
  * Does NOT remount the Map — no extra Dynamic Maps load.
+ * Does NOT refit when pins are added/removed (stable viewport while composing).
  */
 function MapFitBounds({
   pins,
@@ -88,11 +84,12 @@ function MapFitBounds({
   useEffect(() => {
     if (!map || !coreLib) return;
 
-    const sig = fitSignature(mapMode, activeDayIndex, pins);
+    const sig = fitSignature(mapMode, activeDayIndex);
     if (sig === lastSig.current) return;
     lastSig.current = sig;
 
     const fitPins = stopPins.length > 0 ? stopPins : pins;
+    const maxZoom = mapMode === 'fullTrip' ? 11 : 13;
 
     if (fitPins.length === 0) {
       map.moveCamera({ center: fallbackCenter, zoom: 11 });
@@ -102,7 +99,7 @@ function MapFitBounds({
     if (fitPins.length === 1) {
       map.moveCamera({
         center: { lat: fitPins[0].lat, lng: fitPins[0].lng },
-        zoom: mapMode === 'fullTrip' ? 11 : 13,
+        zoom: maxZoom,
       });
       return;
     }
@@ -111,12 +108,14 @@ function MapFitBounds({
     fitPins.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
 
     const pad = mapMode === 'fullTrip' ? 60 : 50;
-    const maxZoom = mapMode === 'fullTrip' ? 11 : 13;
-
+    // Cap maxZoom prima di fitBounds → niente bounce zoom-in poi zoom-out
+    const prevMaxZoom = map.get('maxZoom') as number | null | undefined;
+    map.setOptions({ maxZoom });
     map.fitBounds(bounds, { top: pad, right: pad, bottom: pad, left: pad });
     const listener = coreLib.event.addListenerOnce(map, 'idle', () => {
-      const zoom = map.getZoom();
-      if (zoom != null && zoom > maxZoom) map.setZoom(maxZoom);
+      map.setOptions({
+        maxZoom: prevMaxZoom == null ? undefined : prevMaxZoom,
+      });
     });
     return () => coreLib.event.removeListener(listener);
   }, [map, coreLib, pins, stopPins, mapMode, activeDayIndex, fallbackCenter]);
