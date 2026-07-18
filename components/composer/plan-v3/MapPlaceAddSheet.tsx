@@ -50,6 +50,9 @@ export type MapPlaceAddPayload = {
   rating?: number | null;
   ratingCount?: number | null;
   photoUrl?: string | null;
+  checkInTime?: string;
+  checkOutTime?: string;
+  nights?: number;
 };
 
 type MapPlaceAddSheetProps = {
@@ -98,22 +101,33 @@ export function MapPlaceAddSheet({
   const blockType =
     PLACE_CATEGORIES.find((c) => c.id === category)?.blockType ?? 'attraction';
 
+  const isHotel = category === 'hotel';
+
   useEffect(() => {
     if (!open || !place) return;
     setTitle(place.name === '…' ? '' : place.name);
+    const cat = guessCategory(place.primaryType);
+    if (cat === 'hotel') {
+      setDuration('1h');
+      setStartTime('14:00');
+      setEndTime('11:00');
+      return;
+    }
     const slot = getDefaultTimeSlotForNewBlock(dayBlocks, 60);
     setDuration('1h');
     setStartTime(slot.startTime);
     setEndTime(slot.endTime);
-  }, [open, place?.placeId, place?.name, dayBlocks]);
+  }, [open, place?.placeId, place?.name, place?.primaryType, dayBlocks]);
 
   const handleDuration = (d: DurationFilter) => {
+    if (isHotel) return;
     setDuration(d);
     if (startTime) setEndTime(endTimeFromStartAndDuration(startTime, d));
   };
 
   const handleStart = (t: string) => {
     setStartTime(t);
+    if (isHotel) return;
     if (t) setEndTime(endTimeFromStartAndDuration(t, duration));
   };
 
@@ -216,42 +230,57 @@ export function MapPlaceAddSheet({
                 </span>
               </div>
 
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                  Durata
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(category === 'meal' ? MEAL_DURATION_FILTERS : DURATION_FILTERS).map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => handleDuration(f.id)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        duration === f.id
-                          ? 'bg-white/15 text-white'
-                          : 'bg-white/5 text-white/60 hover:bg-white/10'
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
+              {!isHotel && (
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                    Durata
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(category === 'meal' ? MEAL_DURATION_FILTERS : DURATION_FILTERS).map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => handleDuration(f.id)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                          duration === f.id
+                            ? 'bg-white/15 text-white'
+                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="relative z-30 grid grid-cols-2 gap-3">
                 <label className="block space-y-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                    Inizio
+                    {isHotel ? 'Check-in' : 'Inizio'}
                   </span>
-                  <QuarterHourTimeSelect value={startTime} onChange={handleStart} />
+                  <QuarterHourTimeSelect
+                    value={startTime}
+                    onChange={handleStart}
+                    allowEmpty={!isHotel}
+                  />
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                    Fine
+                    {isHotel ? 'Check-out' : 'Fine'}
                   </span>
-                  <QuarterHourTimeSelect value={endTime} onChange={setEndTime} />
+                  <QuarterHourTimeSelect
+                    value={endTime}
+                    onChange={setEndTime}
+                    allowEmpty={!isHotel}
+                  />
                 </label>
               </div>
+              {isHotel && (
+                <p className="text-[11px] text-white/40">
+                  Standard: check-in 14:00 · check-out 11:00 del giorno successivo (1 notte).
+                </p>
+              )}
 
               <div className="flex gap-2 pt-1">
                 <Button
@@ -268,6 +297,28 @@ export function MapPlaceAddSheet({
                   className="flex-1 rounded-full bg-gradient-to-r from-violet-600 to-orange-500 text-white disabled:opacity-40"
                   onClick={() => {
                     if (!place || !canAdd) return;
+                    if (isHotel) {
+                      const checkIn = startTime || '14:00';
+                      const checkOut = endTime || '11:00';
+                      onConfirm({
+                        type: 'hotel',
+                        title: title.trim(),
+                        place: place.address || undefined,
+                        lat: place.lat,
+                        lng: place.lng,
+                        time: checkIn,
+                        endTime: undefined,
+                        duration: undefined,
+                        checkInTime: checkIn,
+                        checkOutTime: checkOut,
+                        nights: 1,
+                        placeId: place.placeId,
+                        rating: place.rating,
+                        ratingCount: place.ratingCount,
+                        photoUrl: place.photoUrl,
+                      });
+                      return;
+                    }
                     if (startTime && endTime) {
                       const conflict = findTimeOverlapConflict(dayBlocks, {
                         startTime,

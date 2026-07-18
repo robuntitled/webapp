@@ -179,6 +179,44 @@ export function ComposerPlanStep({
   const addActivity = (payload: AddActivityPayload) => {
     const day = ensureActiveDay();
     if (!day) return;
+
+    // Hotel da Aggiungi / mappa POI: stesso modello check-in/out (no durata)
+    if (payload.type === 'hotel') {
+      const checkIn = payload.checkInTime || payload.time || '14:00';
+      const checkOut = payload.checkOutTime || '11:00';
+      const nights = Math.max(1, payload.nights ?? 1);
+      const block = createEmptyBlock('hotel', day.blocks.length, {
+        title: payload.title,
+        place: payload.place,
+        area: payload.place,
+        lat: payload.lat,
+        lng: payload.lng,
+        price: payload.price ?? null,
+        timeSlot: 'flex',
+        placeId: payload.placeId,
+        rating: payload.rating ?? null,
+        ratingCount: payload.ratingCount ?? null,
+        photoUrl: payload.photoUrl,
+        photoName: payload.photoName,
+        hotelPhase: 'checkin',
+        checkInTime: checkIn,
+        checkOutTime: checkOut,
+        nights,
+        checkInDate: day.date,
+        time: checkIn,
+        endTime: undefined,
+      });
+      let days = draft.days.map((d) =>
+        d.dayIndex === day.dayIndex ? { ...d, blocks: [...d.blocks, block] } : d
+      );
+      const synced = syncHotelCheckoutBlocks(days, day.dayIndex, block);
+      commitDays(synced.days);
+      setHighlightedPinId(block.id);
+      setMapMode('day');
+      toast.success(`Hotel aggiunto · check-out nel giorno ${day.dayIndex + nights}`);
+      return;
+    }
+
     const block = createEmptyBlock(payload.type, day.blocks.length, {
       title: payload.title,
       place: payload.place,

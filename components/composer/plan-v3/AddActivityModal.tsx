@@ -51,6 +51,10 @@ export type AddActivityPayload = {
   ratingCount?: number | null;
   photoUrl?: string | null;
   photoName?: string | null;
+  /** Solo hotel */
+  checkInTime?: string;
+  checkOutTime?: string;
+  nights?: number;
 };
 
 type AddActivityModalProps = {
@@ -114,12 +118,19 @@ export function AddActivityModal({
   const blockType = categoryMeta.blockType;
 
   const handleDurationChange = (next: DurationFilter) => {
+    if (category === 'hotel') return;
     setDuration(next);
     if (startTime) setEndTime(endTimeFromStartAndDuration(startTime, next));
   };
 
   const handleCategoryChange = (next: PlaceCategoryId) => {
     setCategory(next);
+    // Hotel: no durata, check-in 14:00 / check-out 11:00 giorno dopo
+    if (next === 'hotel') {
+      setStartTime('14:00');
+      setEndTime('11:00');
+      return;
+    }
     // Ristoranti: niente intera giornata
     if (next === 'meal' && duration === 'fullday') {
       setDuration('1h');
@@ -129,6 +140,8 @@ export function AddActivityModal({
 
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
+    // Hotel: check-out indipendente (giorno successivo), non calcolato dalla durata
+    if (category === 'hotel') return;
     if (next) setEndTime(endTimeFromStartAndDuration(next, duration));
   };
 
@@ -252,7 +265,8 @@ export function AddActivityModal({
   }, [draft.days, activeDayIndex]);
 
   const confirm = (payload: AddActivityPayload) => {
-    if (payload.time && payload.endTime) {
+    // Hotel: check-out è un altro giorno → no anti-sovrapposizione su inizio/fine stessa giornata
+    if (payload.type !== 'hotel' && payload.time && payload.endTime) {
       const conflict = findTimeOverlapConflict(activeDayBlocks, {
         startTime: payload.time,
         endTime: payload.endTime,
@@ -268,6 +282,29 @@ export function AddActivityModal({
   };
 
   const addFromResult = (item: ActivityResultItem) => {
+    if (category === 'hotel' || blockType === 'hotel') {
+      const checkIn = startTime || '14:00';
+      const checkOut = endTime || '11:00';
+      confirm({
+        type: 'hotel',
+        title: item.title,
+        place: item.subtitle,
+        lat: item.lat,
+        lng: item.lng,
+        time: checkIn,
+        endTime: undefined,
+        duration: undefined,
+        checkInTime: checkIn,
+        checkOutTime: checkOut,
+        nights: 1,
+        price: parsedPrice,
+        placeId: item.id,
+        rating: item.rating ?? null,
+        ratingCount: item.ratingCount ?? null,
+        photoUrl: item.photoUrl ?? null,
+      });
+      return;
+    }
     confirm({
       type: blockType,
       title: item.title,

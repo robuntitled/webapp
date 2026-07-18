@@ -85,6 +85,7 @@ export function ActivityFilters({
   onStartTimeChange,
   onEndTimeChange,
 }: ActivityFiltersProps) {
+  const isHotel = type === 'hotel';
   const durationOptions =
     type === 'meal' ? MEAL_DURATION_FILTERS : DURATION_FILTERS;
 
@@ -115,42 +116,57 @@ export function ActivityFilters({
         </div>
       </div>
 
-      <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
-          Durata
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {durationOptions.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => onDurationChange(f.id)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                duration === f.id
-                  ? 'bg-white/15 text-white shadow-sm'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+      {!isHotel && (
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+            Durata
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {durationOptions.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => onDurationChange(f.id)}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                  duration === f.id
+                    ? 'bg-white/15 text-white shadow-sm'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="relative z-30 grid max-w-md grid-cols-2 gap-3">
         <label className="block space-y-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-            Orario inizio
+            {isHotel ? 'Check-in' : 'Orario inizio'}
           </span>
-          <QuarterHourTimeSelect value={startTime} onChange={onStartTimeChange} />
+          <QuarterHourTimeSelect
+            value={startTime}
+            onChange={onStartTimeChange}
+            allowEmpty={!isHotel}
+          />
         </label>
         <label className="block space-y-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-            Orario fine
+            {isHotel ? 'Check-out' : 'Orario fine'}
           </span>
-          <QuarterHourTimeSelect value={endTime} onChange={onEndTimeChange} />
+          <QuarterHourTimeSelect
+            value={endTime}
+            onChange={onEndTimeChange}
+            allowEmpty={!isHotel}
+          />
         </label>
       </div>
+      {isHotel && (
+        <p className="text-[11px] text-white/40">
+          Standard: check-in 14:00 · check-out 11:00 del giorno successivo (1 notte).
+        </p>
+      )}
     </div>
   );
 }

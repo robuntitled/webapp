@@ -31,7 +31,7 @@ export type PlaceCategory = {
   textBoost?: string;
 };
 
-/** Ordine UI: visita → cibo → fare → comprare → dormire */
+/** Ordine UI: visita → ristoranti → fare → comprare → dormire */
 export const PLACE_CATEGORIES: PlaceCategory[] = [
   {
     id: 'attraction',
@@ -55,7 +55,7 @@ export const PLACE_CATEGORIES: PlaceCategory[] = [
   },
   {
     id: 'meal',
-    label: 'Cibo',
+    label: 'Ristoranti',
     searchPlaceholder: 'Ristoranti, caffè, pizzerie…',
     blockType: 'meal',
     googleTypes: ['restaurant', 'cafe', 'bar', 'bakery', 'meal_takeaway'],
