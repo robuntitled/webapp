@@ -60,6 +60,7 @@ export function ComposerWorkspace(props: ComposerWorkspaceProps) {
           onPinClick={onPinClick}
           onMapClick={onMapClick}
           onPoiClick={onPoiClick}
+          onAddActivity={props.onAddActivity}
           onAddTransport={props.onAddTransport}
           onAddHotel={props.onAddHotel}
         />

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { MapPin } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type { ComposerDraft } from '@/types/composer';
-import { Bus, Hotel, Maximize2, Minimize2, X } from 'lucide-react';
+import { Bus, Hotel, Maximize2, Minimize2, Plus, X } from 'lucide-react';
 
 type MapColumnProps = {
   draft: ComposerDraft;
@@ -17,6 +17,7 @@ type MapColumnProps = {
   onPinClick: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
   onPoiClick?: (payload: { placeId: string; lat: number; lng: number }) => void;
+  onAddActivity?: () => void;
   onAddTransport?: () => void;
   onAddHotel?: () => void;
 };
@@ -26,9 +27,18 @@ type MapColumnProps = {
  * Evita un secondo Dynamic Maps billable load in fullscreen.
  */
 export function MapColumn(props: MapColumnProps) {
-  const { draft, pins, mapMode, activeDayIndex, onAddTransport, onAddHotel } = props;
+  const {
+    draft,
+    pins,
+    mapMode,
+    activeDayIndex,
+    onAddActivity,
+    onAddTransport,
+    onAddHotel,
+  } = props;
   const [expanded, setExpanded] = useState(false);
   const stopCount = pins.filter((p) => p.id !== 'destination' && p.blockId).length;
+  const hasAddActions = Boolean(onAddActivity || onAddTransport || onAddHotel);
 
   useEffect(() => {
     if (!expanded) return;
@@ -60,26 +70,33 @@ export function MapColumn(props: MapColumnProps) {
       ? `Percorso completo · ${stopCount} tappe`
       : `Giorno ${activeDayIndex} · ${stopCount} tappe`;
 
-  const openTransport = () => {
-    // Chiudi fullscreen così il modal (z-50) resta sopra e usabile
+  /** Chiude fullscreen così il modal (z-50) resta sopra e usabile */
+  const runAdd = (fn?: () => void) => {
     setExpanded(false);
-    onAddTransport?.();
+    fn?.();
   };
 
-  const openHotel = () => {
-    setExpanded(false);
-    onAddHotel?.();
-  };
-
-  const travelActions = (onAddTransport || onAddHotel) && (
-    <div className="flex shrink-0 items-center gap-2">
+  // Stesso look dell’itinerario (Aggiungi gradient, Trasporto/Hotel outline)
+  const addActions = hasAddActions && (
+    <div className="flex shrink-0 flex-wrap items-center gap-2">
+      {onAddActivity && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => runAdd(onAddActivity)}
+          className="h-9 rounded-xl bg-gradient-to-r from-violet-600 to-orange-500 px-3 font-bold text-white shadow-lg shadow-orange-500/20 hover:brightness-110"
+        >
+          <Plus className="mr-1.5 h-4 w-4" />
+          Aggiungi
+        </Button>
+      )}
       {onAddTransport && (
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={openTransport}
-          className="h-9 rounded-full border-white/15 bg-white/5 px-3 text-white hover:bg-white/10"
+          onClick={() => runAdd(onAddTransport)}
+          className="h-9 rounded-xl border-white/15 bg-white/5 px-3 text-white hover:bg-white/10"
         >
           <Bus className="mr-1.5 h-4 w-4" />
           Trasporto
@@ -90,14 +107,51 @@ export function MapColumn(props: MapColumnProps) {
           type="button"
           variant="outline"
           size="sm"
-          onClick={openHotel}
-          className="h-9 rounded-full border-white/15 bg-white/5 px-3 text-white hover:bg-white/10"
+          onClick={() => runAdd(onAddHotel)}
+          className="h-9 rounded-xl border-white/15 bg-white/5 px-3 text-white hover:bg-white/10"
         >
           <Hotel className="mr-1.5 h-4 w-4" />
           Hotel
         </Button>
       )}
     </div>
+  );
+
+  const floatingAddActions = hasAddActions && (
+    <>
+      {onAddActivity && (
+        <Button
+          type="button"
+          onClick={() => runAdd(onAddActivity)}
+          className="pointer-events-auto h-11 rounded-xl bg-gradient-to-r from-violet-600 to-orange-500 px-4 font-bold text-white shadow-lg shadow-orange-500/20 hover:brightness-110"
+        >
+          <Plus className="mr-1.5 h-4 w-4" />
+          Aggiungi
+        </Button>
+      )}
+      {onAddTransport && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => runAdd(onAddTransport)}
+          className="pointer-events-auto h-11 rounded-xl border-white/15 bg-[#0b1120]/90 px-4 text-white shadow-xl backdrop-blur-md hover:bg-white/10"
+        >
+          <Bus className="mr-1.5 h-4 w-4" />
+          Trasporto
+        </Button>
+      )}
+      {onAddHotel && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => runAdd(onAddHotel)}
+          className="pointer-events-auto h-11 rounded-xl border-white/15 bg-[#0b1120]/90 px-4 text-white shadow-xl backdrop-blur-md hover:bg-white/10"
+        >
+          <Hotel className="mr-1.5 h-4 w-4" />
+          Hotel
+        </Button>
+      )}
+    </>
   );
 
   return (
@@ -126,7 +180,7 @@ export function MapColumn(props: MapColumnProps) {
 
         {expanded ? (
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {travelActions}
+            {addActions}
             <Button
               type="button"
               size="sm"
@@ -180,36 +234,11 @@ export function MapColumn(props: MapColumnProps) {
 
         {expanded && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center justify-center gap-2 px-4 pb-6">
-            {(onAddTransport || onAddHotel) && (
-              <>
-                {onAddTransport && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={openTransport}
-                    className="pointer-events-auto h-11 rounded-full border-white/20 bg-[#0b1120]/90 px-4 font-semibold text-white shadow-xl backdrop-blur-md hover:bg-[#0f172a]"
-                  >
-                    <Bus className="mr-1.5 h-4 w-4" />
-                    Trasporto
-                  </Button>
-                )}
-                {onAddHotel && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={openHotel}
-                    className="pointer-events-auto h-11 rounded-full border-white/20 bg-[#0b1120]/90 px-4 font-semibold text-white shadow-xl backdrop-blur-md hover:bg-[#0f172a]"
-                  >
-                    <Hotel className="mr-1.5 h-4 w-4" />
-                    Hotel
-                  </Button>
-                )}
-              </>
-            )}
+            {floatingAddActions}
             <button
               type="button"
               onClick={() => setExpanded(false)}
-              className="pointer-events-auto flex h-11 items-center gap-2 rounded-full border border-white/20 bg-[#0b1120]/90 px-5 text-sm font-semibold text-white shadow-2xl backdrop-blur-md transition hover:border-accent/50 hover:bg-[#0f172a]"
+              className="pointer-events-auto flex h-11 items-center gap-2 rounded-xl border border-white/20 bg-[#0b1120]/90 px-5 text-sm font-semibold text-white shadow-2xl backdrop-blur-md transition hover:border-accent/50 hover:bg-[#0f172a]"
             >
               <Minimize2 className="h-4 w-4 text-accent" />
               Torna al piano
