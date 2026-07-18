@@ -262,30 +262,22 @@ export function BlockEditorPanel({
     }));
   };
 
+  // Solo stato locale: NON scrivere sul draft finché non si salva
+  // (evita orari applicati anche quando la validazione fallisce).
   const handleDurationChange = (next: DurationFilter) => {
     setDuration(next);
-    const value = DURATION_FILTERS.find((f) => f.id === next)?.value ?? next;
     const nextEnd = startTime ? endTimeFromStartAndDuration(startTime, next) : endTime;
     setEndTime(nextEnd);
-    patchContent({
-      duration: value,
-      ...(nextEnd ? { endTime: nextEnd } : {}),
-    });
   };
 
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
     const nextEnd = next ? endTimeFromStartAndDuration(next, duration) : '';
     setEndTime(nextEnd);
-    patchContent({
-      time: next || undefined,
-      endTime: nextEnd || undefined,
-    });
   };
 
   const handleEndTimeChange = (next: string) => {
     setEndTime(next);
-    patchContent({ endTime: next || undefined });
   };
 
   const dayBlocksForOverlap =
@@ -844,7 +836,9 @@ export function BlockEditorPanel({
                     onChange={(v) =>
                       patchContent({
                         checkInTime: v || '14:00',
+                        // Solo check-in nella giornata del blocco (non endTime di attività)
                         time: v || '14:00',
+                        endTime: undefined,
                       })
                     }
                     allowEmpty={false}
@@ -852,22 +846,24 @@ export function BlockEditorPanel({
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                    Check-out
+                    Check-out (giorno successivo)
                   </span>
                   <QuarterHourTimeSelect
-                    value={String(
-                      block.content.checkOutTime ?? block.content.endTime ?? '11:00'
-                    )}
+                    value={String(block.content.checkOutTime ?? '11:00')}
                     onChange={(v) =>
                       patchContent({
                         checkOutTime: v || '11:00',
-                        endTime: v || '11:00',
+                        // Non scrivere endTime: checkout è un altro giorno
                       })
                     }
                     allowEmpty={false}
                   />
                 </label>
               </div>
+              <p className="text-[11px] text-white/40">
+                Check-in nella giornata di questa tappa · Check-out solo nei giorni dopo (n.
+                notti).
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label className="text-white/50 text-xs uppercase tracking-wider">N. notti</Label>

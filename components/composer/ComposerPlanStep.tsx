@@ -270,10 +270,8 @@ export function ComposerPlanStep({
         payload.type === 'hotel'
           ? payload.checkInTime || '14:00'
           : payload.departureTime,
-      endTime:
-        payload.type === 'hotel'
-          ? payload.checkOutTime || '11:00'
-          : payload.arrivalTime,
+      // Hotel: non impostare endTime = checkout (è un altro giorno)
+      endTime: payload.type === 'hotel' ? undefined : payload.arrivalTime,
       travelerArrivalTime: payload.travelerArrivalTime,
       bookingReference: payload.bookingReference,
       price: payload.price ?? null,

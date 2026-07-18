@@ -210,12 +210,10 @@ export function ItineraryColumn({
                 onRemoveAttachment={onRemoveAttachment}
               />
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                <DayNotesField
-                  value={activeDay.notes ?? ''}
-                  onChange={onUpdateDayNotes}
-                />
-              </div>
+              <DayNotesField
+                value={activeDay.notes ?? ''}
+                onChange={onUpdateDayNotes}
+              />
             </motion.div>
           ) : null}
         </AnimatePresence>

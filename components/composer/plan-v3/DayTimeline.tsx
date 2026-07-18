@@ -73,7 +73,30 @@ export function DayTimeline({
             >
               {blocks.map((block, index) => {
                 const s = schedule.get(block.id);
-                const timeRange = s ? formatTimeRange(s.start, s.end) : '';
+                let timeRange = '';
+                if (block.type === 'hotel') {
+                  const ci =
+                    typeof block.content.checkInTime === 'string'
+                      ? block.content.checkInTime
+                      : s?.start;
+                  timeRange = ci ? `Check-in ${ci}` : '';
+                  const nights =
+                    typeof block.content.nights === 'number' ? block.content.nights : 1;
+                  const co =
+                    typeof block.content.checkOutTime === 'string'
+                      ? block.content.checkOutTime
+                      : '11:00';
+                  if (nights >= 1) {
+                    timeRange = timeRange
+                      ? `${timeRange} · out +${nights}g ${co}`
+                      : `Checkout +${nights}g ${co}`;
+                  }
+                } else if (s) {
+                  timeRange =
+                    s.durationMinutes === 0
+                      ? s.start
+                      : formatTimeRange(s.start, s.end);
+                }
                 return (
                   <Draggable key={block.id} draggableId={block.id} index={index}>
                     {(dragProvided, snapshot) => (

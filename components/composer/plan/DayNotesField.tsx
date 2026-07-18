@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import { StickyNote } from 'lucide-react';
 
 type DayNotesFieldProps = {
   value: string;
@@ -9,21 +10,21 @@ type DayNotesFieldProps = {
 };
 
 /**
- * Stato locale + debounce: evita di aggiornare il draft a ogni tasto
- * (che faceva ricalcolare i pin e "flashare" la mappa).
+ * Note del giorno a comparsa (icona) per UI più pulita.
+ * Stato locale + debounce per non thrashare il draft.
  */
 export function DayNotesField({ value, onChange }: DayNotesFieldProps) {
+  const [open, setOpen] = useState(Boolean(value?.trim()));
   const [local, setLocal] = useState(value);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  // Traccia l'ultimo value "esterno" per non sovrascrivere mentre digiti
   const lastCommitted = useRef(value);
 
   useEffect(() => {
-    // Sync solo se il parent ha un valore diverso (cambio giorno / reset)
     if (value !== lastCommitted.current) {
       lastCommitted.current = value;
       setLocal(value);
+      if (value?.trim()) setOpen(true);
     }
   }, [value]);
 
@@ -36,23 +37,45 @@ export function DayNotesField({ value, onChange }: DayNotesFieldProps) {
     return () => window.clearTimeout(t);
   }, [local]);
 
+  const hasNotes = Boolean(local.trim());
+
   return (
-    <div className="space-y-1.5">
-      <p className="px-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-        Note del giorno
-      </p>
-      <Textarea
-        className="min-h-[72px] resize-none rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
-        placeholder="Promemoria, idee, link utili per questa giornata…"
-        value={local}
-        onChange={(e) => setLocal(e.target.value)}
-        onBlur={() => {
-          if (local !== lastCommitted.current) {
-            lastCommitted.current = local;
-            onChange(local);
-          }
-        }}
-      />
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+          open || hasNotes
+            ? 'border-amber-400/40 bg-amber-400/10 text-amber-200'
+            : 'border-white/15 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+        }`}
+        aria-expanded={open}
+        title="Note del giorno"
+      >
+        <StickyNote className="h-3.5 w-3.5" />
+        Note
+        {hasNotes && !open && (
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />
+        )}
+      </button>
+
+      {open && (
+        <div className="space-y-1.5">
+          <Textarea
+            className="min-h-[72px] resize-none rounded-xl border-white/15 bg-white/5 text-sm text-white placeholder:text-white/35 focus-visible:ring-amber-400/30"
+            placeholder="Promemoria, idee, link utili per questa giornata…"
+            value={local}
+            onChange={(e) => setLocal(e.target.value)}
+            onBlur={() => {
+              if (local !== lastCommitted.current) {
+                lastCommitted.current = local;
+                onChange(local);
+              }
+            }}
+            autoFocus
+          />
+        </div>
+      )}
     </div>
   );
 }

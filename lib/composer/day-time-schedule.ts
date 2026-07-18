@@ -48,6 +48,12 @@ export type BlockTimeRange = {
 
 /** Intervallo esplicito di un blocco, se ha almeno start (o end). */
 export function getBlockTimeRange(block: ComposerBlock): BlockTimeRange | null {
+  // Hotel: non entra nella timeline “attività” né nelle sovrapposizioni.
+  // Check-in è nella giornata del blocco; check-out è solo data+orario nei giorni dopo.
+  if (block.type === 'hotel' || block.type === 'flight' || block.type === 'note') {
+    return null;
+  }
+
   const startRaw =
     typeof block.content.time === 'string' ? block.content.time : '';
   const endRaw =

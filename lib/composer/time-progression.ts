@@ -67,6 +67,50 @@ export function computeDaySchedule(
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
+
+    // Hotel: solo orario check-in nel giorno del blocco (check-out è un altro giorno).
+    if (block.type === 'hotel') {
+      const checkIn =
+        typeof block.content.checkInTime === 'string' && block.content.checkInTime
+          ? block.content.checkInTime
+          : typeof block.content.time === 'string' && block.content.time
+            ? block.content.time
+            : '14:00';
+      const start = timeToMinutes(checkIn);
+      result.set(block.id, {
+        start: minutesToTime(start),
+        end: minutesToTime(start),
+        durationMinutes: 0,
+      });
+      // Non sposta il cursore delle attività: hotel non occupa la timeline
+      continue;
+    }
+
+    // Volo: usa departure/arrival se presenti, senza forzare fine < inizio
+    if (block.type === 'flight') {
+      const dep =
+        typeof block.content.departureTime === 'string' && block.content.departureTime
+          ? block.content.departureTime
+          : typeof block.content.time === 'string'
+            ? block.content.time
+            : null;
+      const arr =
+        typeof block.content.arrivalTime === 'string' && block.content.arrivalTime
+          ? block.content.arrivalTime
+          : null;
+      if (dep) {
+        const start = timeToMinutes(dep);
+        const end = arr ? timeToMinutes(arr) : start;
+        const endOk = end >= start ? end : start;
+        result.set(block.id, {
+          start: minutesToTime(start),
+          end: minutesToTime(endOk),
+          durationMinutes: Math.max(0, endOk - start),
+        });
+      }
+      continue;
+    }
+
     const explicitStart =
       typeof block.content.time === 'string' && block.content.time
         ? timeToMinutes(block.content.time)
@@ -93,15 +137,20 @@ export function computeDaySchedule(
 
     if (i < blocks.length - 1) {
       const next = blocks[i + 1];
-      const a = readCoords(block);
-      const b = readCoords(next);
-      if (a && b) {
-        const distanceKm = haversineKm(a, b);
-        const transitMinutes = estimateTransitMinutes(distanceKm);
-        schedule.transitToNext = { distanceKm, minutes: transitMinutes };
-        cursor = end + transitMinutes;
+      // Salta hotel nel calcolo transit (non è una tappa “visita”)
+      if (next.type === 'hotel' || next.type === 'flight') {
+        cursor = end;
       } else {
-        cursor = end + 30;
+        const a = readCoords(block);
+        const b = readCoords(next);
+        if (a && b) {
+          const distanceKm = haversineKm(a, b);
+          const transitMinutes = estimateTransitMinutes(distanceKm);
+          schedule.transitToNext = { distanceKm, minutes: transitMinutes };
+          cursor = end + transitMinutes;
+        } else {
+          cursor = end + 30;
+        }
       }
     } else {
       cursor = end;
