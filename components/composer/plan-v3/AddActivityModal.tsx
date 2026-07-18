@@ -18,6 +18,11 @@ import { ActivityResultsList } from '@/components/composer/plan-v3/ActivityResul
 import type { ActivityResultItem } from '@/components/composer/plan-v3/ActivityResultCard';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import {
+  findTimeOverlapConflict,
+  getDefaultTimeSlotForNewBlock,
+} from '@/lib/composer/day-time-schedule';
+import { toast } from 'sonner';
+import {
   getPlaceCategory,
   type PlaceCategoryId,
 } from '@/lib/places/place-categories';
@@ -217,24 +222,33 @@ export function AddActivityModal({
       setSearchHint('Attrazioni nell’area mappa');
     }
 
+    // Orari in sequenza: prima 08–09, poi subito dopo l’ultima (09–10, …)
     const day = draft.days.find((d) => d.dayIndex === activeDayIndex);
-    const isFirstAddOfDay = !day || day.blocks.length === 0;
-
-    if (isFirstAddOfDay) {
-      setDuration('1h');
-      setStartTime('08:00');
-      setEndTime('09:00');
-    } else {
-      setDuration('1h');
-      setStartTime('');
-      setEndTime('');
-    }
+    const slot = getDefaultTimeSlotForNewBlock(day?.blocks ?? [], 60);
+    setDuration('1h');
+    setStartTime(slot.startTime);
+    setEndTime(slot.endTime);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const parsedPrice = price.trim() ? Number(price.replace(',', '.')) : null;
 
+  const activeDayBlocks = useMemo(() => {
+    return draft.days.find((d) => d.dayIndex === activeDayIndex)?.blocks ?? [];
+  }, [draft.days, activeDayIndex]);
+
   const confirm = (payload: AddActivityPayload) => {
+    if (payload.time && payload.endTime) {
+      const conflict = findTimeOverlapConflict(activeDayBlocks, {
+        startTime: payload.time,
+        endTime: payload.endTime,
+        type: payload.type,
+      });
+      if (conflict) {
+        toast.error(conflict.message);
+        return;
+      }
+    }
     onConfirm(payload);
     onOpenChange(false);
   };
@@ -257,7 +271,7 @@ export function AddActivityModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="composer-v3-modal flex h-[min(92dvh,880px)] w-[min(96vw,920px)] max-w-none flex-col gap-0 overflow-hidden rounded-3xl border-white/10 bg-[#0b1120] p-0 shadow-2xl"
+        className="composer-v3-modal flex h-[min(92dvh,880px)] w-[min(96vw,920px)] max-w-none flex-col gap-0 overflow-visible rounded-3xl border-white/10 bg-[#0b1120] p-0 shadow-2xl sm:overflow-hidden"
       >
         <DialogHeader className="shrink-0 space-y-3 border-b border-white/10 bg-[#0f172a] px-5 py-4 text-left md:px-7">
           <div className="flex items-start justify-between gap-3">
@@ -289,7 +303,7 @@ export function AddActivityModal({
           </div>
         </DialogHeader>
 
-        <div className="shrink-0 space-y-3 border-b border-white/10 px-5 py-4 md:px-7">
+        <div className="relative z-20 shrink-0 space-y-3 border-b border-white/10 px-5 py-4 md:px-7">
           <ActivityFilters
             type={category}
             duration={duration}

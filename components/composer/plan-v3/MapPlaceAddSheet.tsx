@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,8 +13,13 @@ import {
   endTimeFromStartAndDuration,
   type DurationFilter,
 } from '@/components/composer/plan-v3/ActivityFilters';
+import {
+  findTimeOverlapConflict,
+  getDefaultTimeSlotForNewBlock,
+} from '@/lib/composer/day-time-schedule';
 import { PLACE_CATEGORIES, type PlaceCategoryId } from '@/lib/places/place-categories';
-import type { ComposerBlockType } from '@/types/composer';
+import type { ComposerBlock, ComposerBlockType } from '@/types/composer';
+import { toast } from 'sonner';
 import { Loader2, MapPin, Star, X } from 'lucide-react';
 
 export type MapPlacePreview = {
@@ -47,18 +51,15 @@ type MapPlaceAddSheetProps = {
   place: MapPlacePreview | null;
   loading?: boolean;
   error?: string | null;
-  isFirstOfDay?: boolean;
+  /** Blocchi del giorno attivo — per orari in sequenza e anti-sovrapposizione */
+  dayBlocks?: ComposerBlock[];
   onOpenChange: (open: boolean) => void;
   onConfirm: (payload: MapPlaceAddPayload) => void;
 };
 
 function guessCategory(primaryType?: string | null): PlaceCategoryId {
   const t = (primaryType || '').toLowerCase();
-  if (
-    /restaurant|cafe|bar|bakery|meal|food/.test(t)
-  ) {
-    return 'meal';
-  }
+  if (/restaurant|cafe|bar|bakery|meal|food/.test(t)) return 'meal';
   if (/lodging|hotel/.test(t)) return 'hotel';
   if (/spa|gym|stadium|amusement|night_club|movie|bowling|marina|casino/.test(t)) {
     return 'activity';
@@ -72,30 +73,33 @@ export function MapPlaceAddSheet({
   place,
   loading,
   error,
-  isFirstOfDay,
+  dayBlocks = [],
   onOpenChange,
   onConfirm,
 }: MapPlaceAddSheetProps) {
-  const [category, setCategory] = useState<PlaceCategoryId>('attraction');
   const [duration, setDuration] = useState<DurationFilter>('1h');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [title, setTitle] = useState('');
 
+  // Categoria fissa dal tipo Google — non modificabile in UI
+  const category = useMemo(
+    () => guessCategory(place?.primaryType),
+    [place?.primaryType]
+  );
+  const categoryLabel =
+    PLACE_CATEGORIES.find((c) => c.id === category)?.label ?? 'Attrazioni';
+  const blockType =
+    PLACE_CATEGORIES.find((c) => c.id === category)?.blockType ?? 'attraction';
+
   useEffect(() => {
     if (!open || !place) return;
-    setTitle(place.name);
-    setCategory(guessCategory(place.primaryType));
-    if (isFirstOfDay) {
-      setDuration('1h');
-      setStartTime('08:00');
-      setEndTime('09:00');
-    } else {
-      setDuration('1h');
-      setStartTime('');
-      setEndTime('');
-    }
-  }, [open, place?.placeId, place?.name, isFirstOfDay]);
+    setTitle(place.name === '…' ? '' : place.name);
+    const slot = getDefaultTimeSlotForNewBlock(dayBlocks, 60);
+    setDuration('1h');
+    setStartTime(slot.startTime);
+    setEndTime(slot.endTime);
+  }, [open, place?.placeId, place?.name, dayBlocks]);
 
   const handleDuration = (d: DurationFilter) => {
     setDuration(d);
@@ -107,8 +111,6 @@ export function MapPlaceAddSheet({
     if (t) setEndTime(endTimeFromStartAndDuration(t, duration));
   };
 
-  const blockType =
-    PLACE_CATEGORIES.find((c) => c.id === category)?.blockType ?? 'attraction';
   const durationValue =
     DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
 
@@ -124,9 +126,17 @@ export function MapPlaceAddSheet({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-md gap-0 overflow-hidden rounded-3xl border-white/10 bg-[#0b1120] p-0 text-white"
+        className="max-h-[min(92dvh,720px)] max-w-md gap-0 overflow-y-auto overflow-x-visible rounded-3xl border-white/10 bg-[#0b1120] p-0 text-white"
       >
-        {/* Foto */}
+        {/* a11y: titolo nascosto (niente header “Aggiungi / Luogo dalla mappa…”) */}
+        <DialogTitle className="sr-only">
+          {place?.name && place.name !== '…' ? place.name : 'Aggiungi luogo'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Aggiungi questo luogo al piano di viaggio
+        </DialogDescription>
+
+        {/* Foto + rating */}
         <div className="relative h-44 w-full bg-white/5">
           {place?.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -166,20 +176,13 @@ export function MapPlaceAddSheet({
         </div>
 
         <div className="space-y-4 p-5">
-          <DialogHeader className="space-y-1 text-left">
-            <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
-            <DialogDescription className="text-sm text-white/50">
-              Luogo dalla mappa · titolo già compilato
-            </DialogDescription>
-          </DialogHeader>
-
           {error && (
             <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
               {error}
             </p>
           )}
 
-          {loading && !place && (
+          {loading && !place?.name?.trim() && (
             <div className="flex items-center gap-2 text-sm text-white/50">
               <Loader2 className="h-4 w-4 animate-spin" />
               Carico dettagli…
@@ -202,26 +205,14 @@ export function MapPlaceAddSheet({
                 )}
               </div>
 
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+              {/* Categoria fissa dal POI — non modificabile */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                   Categoria
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PLACE_CATEGORIES.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setCategory(c.id)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        category === c.id
-                          ? 'bg-gradient-to-r from-violet-600 to-orange-500 text-white'
-                          : 'bg-white/5 text-white/65 hover:bg-white/10'
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
+                </span>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">
+                  {categoryLabel}
+                </span>
               </div>
 
               <div>
@@ -286,6 +277,17 @@ export function MapPlaceAddSheet({
                   className="flex-1 rounded-full bg-gradient-to-r from-violet-600 to-orange-500 text-white disabled:opacity-40"
                   onClick={() => {
                     if (!place || !canAdd) return;
+                    if (startTime && endTime) {
+                      const conflict = findTimeOverlapConflict(dayBlocks, {
+                        startTime,
+                        endTime,
+                        type: blockType,
+                      });
+                      if (conflict) {
+                        toast.error(conflict.message);
+                        return;
+                      }
+                    }
                     onConfirm({
                       type: blockType,
                       title: title.trim(),

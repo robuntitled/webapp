@@ -74,7 +74,7 @@ export function ItineraryColumn({
 
   return (
     <section className="composer-v3-itinerary flex h-full min-h-0 flex-col">
-      <header className="shrink-0 space-y-4 border-b border-white/10 px-5 py-4 md:px-7">
+      <header className="relative z-10 shrink-0 space-y-4 border-b border-white/10 bg-[#0b1120]/95 px-5 py-4 backdrop-blur md:px-7">
         <div className="flex items-center gap-3">
           <Button
             type="button"

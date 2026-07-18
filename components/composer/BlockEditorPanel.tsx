@@ -21,6 +21,7 @@ import {
   endTimeFromStartAndDuration,
   type DurationFilter,
 } from '@/components/composer/plan-v3/ActivityFilters';
+import { findTimeOverlapConflict } from '@/lib/composer/day-time-schedule';
 import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import { TIME_SLOTS } from '@/lib/composer/time-slots';
 import type { ComposerBlock, ComposerDraft } from '@/types/composer';
@@ -197,6 +198,24 @@ export function BlockEditorPanel({
     patchContent({ endTime: next || undefined });
   };
 
+  const dayBlocksForOverlap =
+    draft.days.find((d) => d.blocks.some((b) => b.id === block.id))?.blocks ?? [];
+
+  const validateTimesOrToast = (): boolean => {
+    if (!startTime || !endTime) return true;
+    const conflict = findTimeOverlapConflict(dayBlocksForOverlap, {
+      startTime,
+      endTime,
+      type: block.type,
+      excludeBlockId: block.id,
+    });
+    if (conflict) {
+      toast.error(conflict.message);
+      return false;
+    }
+    return true;
+  };
+
   const commitPlaceFields = () => {
     const price = priceDraft.trim() ? Number(priceDraft.replace(',', '.')) : null;
     const durationValue = DURATION_FILTERS.find((f) => f.id === duration)?.value ?? duration;
@@ -211,12 +230,14 @@ export function BlockEditorPanel({
   };
 
   const handleAddConfirm = () => {
+    if (!validateTimesOrToast()) return;
     commitPlaceFields();
     onOpenChange(false);
     toast.success('Luogo aggiunto');
   };
 
   const handleSave = () => {
+    if (!validateTimesOrToast()) return;
     commitPlaceFields();
     onOpenChange(false);
     toast.success('Modifiche salvate');
@@ -316,10 +337,10 @@ export function BlockEditorPanel({
   if (isPlaceBlock) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="composer-editor-dialog max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-white/10 bg-slate-950/95 backdrop-blur-xl text-white p-0 gap-0">
+        <DialogContent className="composer-editor-dialog max-h-[min(92dvh,820px)] max-w-lg gap-0 overflow-y-auto overflow-x-visible rounded-3xl border-white/10 bg-slate-950/95 p-0 text-white backdrop-blur-xl">
           <div className={`h-2 bg-gradient-to-r ${meta.color.split(' ').slice(0, 2).join(' ')}`} />
 
-          <div className="p-6 space-y-5">
+          <div className="relative z-10 space-y-5 p-6 pb-8">
             <DialogHeader className="space-y-1">
               <DialogTitle className="font-display text-xl flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xl">
@@ -372,7 +393,7 @@ export function BlockEditorPanel({
               </div>
             </div>
 
-            <div className="grid max-w-md grid-cols-2 gap-3">
+            <div className="relative z-30 grid max-w-md grid-cols-2 gap-3">
               <label className="block space-y-1.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                   Orario inizio
@@ -381,7 +402,7 @@ export function BlockEditorPanel({
                   type="time"
                   value={startTime}
                   onChange={(e) => handleStartTimeChange(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
+                  className="relative z-30 h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
                 />
               </label>
               <label className="block space-y-1.5">
@@ -392,7 +413,7 @@ export function BlockEditorPanel({
                   type="time"
                   value={endTime}
                   onChange={(e) => handleEndTimeChange(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
+                  className="relative z-30 h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/15"
                 />
               </label>
             </div>

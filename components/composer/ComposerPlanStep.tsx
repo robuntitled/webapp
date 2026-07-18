@@ -444,7 +444,7 @@ export function ComposerPlanStep({
         place={mapPlace}
         loading={mapPlaceLoading}
         error={mapPlaceError}
-        isFirstOfDay={!activeDay || activeDay.blocks.length === 0}
+        dayBlocks={activeDay?.blocks ?? draft.days[0]?.blocks ?? []}
         onOpenChange={(open) => {
           setMapPlaceOpen(open);
           if (!open) {
