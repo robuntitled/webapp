@@ -70,9 +70,8 @@ export function MapColumn(props: MapColumnProps) {
       ? `Percorso completo · ${stopCount} tappe`
       : `Giorno ${activeDayIndex} · ${stopCount} tappe`;
 
-  /** Chiude fullscreen così il modal (z-50) resta sopra e usabile */
+  /** Lascia la mappa in fullscreen; i Dialog (z-50) restano sopra z-40. */
   const runAdd = (fn?: () => void) => {
-    setExpanded(false);
     fn?.();
   };
 
