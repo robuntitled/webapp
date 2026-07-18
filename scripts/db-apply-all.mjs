@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Applica tutte le migration Supabase in ordine (001 → 006).
+ * Applica tutte le migration Supabase in ordine (001 → 007).
  * Richiede SUPABASE_DB_URL in .env.local
  */
 import { runSqlFile, withPgClient } from './db-utils.mjs';
@@ -12,6 +12,7 @@ const MIGRATIONS = [
   'supabase/migrations/004_trip_composer.sql',
   'supabase/migrations/005_trip_chat.sql',
   'supabase/migrations/006_planner_profile.sql',
+  'supabase/migrations/007_places_search_cache.sql',
 ];
 
 await withPgClient(async (client) => {
