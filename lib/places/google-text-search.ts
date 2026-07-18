@@ -1,8 +1,12 @@
 import 'server-only';
 
 import { haversineKm } from '@/lib/maps/distance';
+import {
+  getPlaceCategory,
+  labelForGoogleType,
+  type PlaceCategoryId,
+} from '@/lib/places/place-categories';
 
-/** Server-side preferibile; fallback alla key pubblica usata dalla mappa. */
 const API_KEY =
   process.env.GOOGLE_MAPS_API_KEY?.trim() ||
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
@@ -15,6 +19,8 @@ export type GooglePlaceResult = {
   lat: number;
   lng: number;
   placeTypeLabel: string;
+  primaryType?: string;
+  types?: string[];
 };
 
 type Bounds = { lat: number; lng: number; radiusKm?: number; label?: string };
@@ -26,42 +32,8 @@ export type GooglePlacesSearchResult = {
   errorMessage?: string;
 };
 
-/** Field mask minimal: meno payload = un po’ più veloce. */
 const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types';
-
-/** Pochi tipi = Nearby più leggero (OR). */
-const NEARBY_TYPES = [
-  'tourist_attraction',
-  'museum',
-  'restaurant',
-  'cafe',
-  'park',
-];
-
-const TYPE_LABELS_IT: Record<string, string> = {
-  tourist_attraction: 'Attrazione',
-  museum: 'Museo',
-  art_gallery: 'Galleria',
-  park: 'Parco',
-  church: 'Chiesa',
-  restaurant: 'Ristorante',
-  cafe: 'Caffè',
-  bar: 'Bar',
-  bakery: 'Panetteria',
-  amusement_park: 'Divertimenti',
-  zoo: 'Zoo',
-  aquarium: 'Acquario',
-  stadium: 'Stadio',
-  spa: 'Spa',
-  night_club: 'Nightlife',
-  movie_theater: 'Cinema',
-  shopping_mall: 'Shopping',
-  lodging: 'Alloggio',
-  hotel: 'Hotel',
-  point_of_interest: 'Luogo',
-  establishment: 'Luogo',
-};
 
 type PlacesApiPlace = {
   id?: string;
@@ -72,11 +44,10 @@ type PlacesApiPlace = {
   primaryType?: string;
 };
 
-// Cache in-memory (serverless warm instances) — evita doppie chiamate Google
 type CacheEntry = { at: number; result: GooglePlacesSearchResult };
 const cache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 8 * 60_000; // 8 min
-const CACHE_MAX = 80;
+const CACHE_TTL_MS = 8 * 60_000;
+const CACHE_MAX = 120;
 
 function cacheGet(key: string): GooglePlacesSearchResult | null {
   const hit = cache.get(key);
@@ -98,22 +69,18 @@ function cacheSet(key: string, result: GooglePlacesSearchResult) {
 }
 
 function placeTypeLabel(place: PlacesApiPlace): string {
-  const primary = place.primaryType;
-  if (primary && TYPE_LABELS_IT[primary]) return TYPE_LABELS_IT[primary];
-  for (const t of place.types ?? []) {
-    if (TYPE_LABELS_IT[t]) return TYPE_LABELS_IT[t];
-  }
-  const raw = primary || place.types?.[0];
-  return raw ? raw.replace(/_/g, ' ') : 'Luogo';
+  return labelForGoogleType(place.primaryType || place.types?.[0]);
 }
 
 function mapPlaces(
   places: PlacesApiPlace[],
   bounds: Bounds[],
   maxRadiusKm: number,
-  limit: number
+  limit: number,
+  categoryTypes?: string[]
 ): GooglePlaceResult[] {
   const centers = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
+  const typeSet = categoryTypes?.length ? new Set(categoryTypes) : null;
   const out: GooglePlaceResult[] = [];
 
   for (const place of places) {
@@ -125,6 +92,22 @@ function mapPlaces(
     const minDist = Math.min(...centers.map((c) => haversineKm(c, { lat, lng })));
     if (minDist > maxRadiusKm) continue;
 
+    const types = place.types ?? [];
+    const primary = place.primaryType;
+
+    // Soft filter: se Google ha restituito tipi, preferisci match categoria
+    if (typeSet) {
+      const hits =
+        (primary && typeSet.has(primary)) || types.some((t) => typeSet.has(t));
+      // Se non c'è match ma Google ha già filtrato via includedTypes, tieni comunque
+      // Solo scarta se ha tipi e nessuno è in categoria e non è POI generico solo
+      if (!hits && types.length > 0 && primary && !typeSet.has(primary)) {
+        // tieni se includedTypes era applicato a monte — qui filtriamo solo junk
+        const junk = ['political', 'locality', 'route', 'plus_code', 'geocode'];
+        if (types.every((t) => junk.includes(t))) continue;
+      }
+    }
+
     out.push({
       id: place.id || `g-${lat.toFixed(5)}-${lng.toFixed(5)}`,
       label: name,
@@ -132,6 +115,8 @@ function mapPlaces(
       lat,
       lng,
       placeTypeLabel: placeTypeLabel(place),
+      primaryType: primary,
+      types,
     });
     if (out.length >= limit) break;
   }
@@ -197,55 +182,72 @@ async function placesPost(
 }
 
 /**
- * Luoghi popolari nell’area — una sola chiamata Nearby (cache 8 min).
+ * Nearby per categoria (bottoni). Una chiamata, tipi Google della tab.
  */
 export async function searchGooglePlacesNearby(
   bounds: Bounds[],
   maxRadiusKm = 25,
-  limit = 14
+  limit = 14,
+  categoryId?: PlaceCategoryId | null
 ): Promise<GooglePlacesSearchResult> {
   if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
   if (bounds.length === 0) return { ok: false, results: [], status: 'INVALID_REQUEST' };
 
   const primary = bounds[0];
-  const cacheKey = `nb:${primary.lat.toFixed(3)},${primary.lng.toFixed(3)}:${limit}`;
+  const cat = categoryId ? getPlaceCategory(categoryId) : null;
+  const includedTypes = cat?.googleTypes ?? [
+    'tourist_attraction',
+    'museum',
+    'restaurant',
+    'cafe',
+    'park',
+  ];
+
+  const cacheKey = `nb:${categoryId ?? 'all'}:${primary.lat.toFixed(3)},${primary.lng.toFixed(3)}:${limit}`;
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
   const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 1500), 25_000);
+  const locationCircle = {
+    circle: {
+      center: { latitude: primary.lat, longitude: primary.lng },
+      radius: radiusM,
+    },
+  };
 
   const result = await placesPost('places:searchNearby', {
-    includedTypes: NEARBY_TYPES,
+    includedTypes,
     maxResultCount: Math.min(limit, 20),
     rankPreference: 'POPULARITY',
     languageCode: 'it',
-    locationRestriction: {
-      circle: {
-        center: { latitude: primary.lat, longitude: primary.lng },
-        radius: radiusM,
-      },
-    },
+    locationRestriction: locationCircle,
   });
 
-  // Se Nearby fallisce: una sola Text Search, niente catene lunghe
+  // Fallback: text search con tipo primario della categoria
   if (!result.ok || result.places.length === 0) {
-    const text = await placesPost('places:searchText', {
-      textQuery: primary.label
-        ? `cose da fare e ristoranti a ${primary.label}`
-        : 'attrazioni e ristoranti',
+    const textQuery = cat
+      ? primary.label
+        ? `${cat.textBoost ?? cat.label} a ${primary.label}`
+        : (cat.textBoost ?? cat.label)
+      : primary.label
+        ? `attrazioni e ristoranti a ${primary.label}`
+        : 'attrazioni e ristoranti';
+
+    const textBody: Record<string, unknown> = {
+      textQuery,
       languageCode: 'it',
       maxResultCount: Math.min(limit, 20),
-      locationBias: {
-        circle: {
-          center: { latitude: primary.lat, longitude: primary.lng },
-          radius: radiusM,
-        },
-      },
-    });
+      locationBias: locationCircle,
+    };
+    if (cat?.textIncludedType) {
+      textBody.includedType = cat.textIncludedType;
+    }
+
+    const text = await placesPost('places:searchText', textBody);
     if (text.ok && text.places.length > 0) {
       const mapped = {
         ok: true as const,
-        results: mapPlaces(text.places, bounds, maxRadiusKm, limit),
+        results: mapPlaces(text.places, bounds, maxRadiusKm, limit, includedTypes),
         status: text.status,
       };
       cacheSet(cacheKey, mapped);
@@ -261,7 +263,7 @@ export async function searchGooglePlacesNearby(
 
   const mapped = {
     ok: true as const,
-    results: mapPlaces(result.places, bounds, maxRadiusKm, limit),
+    results: mapPlaces(result.places, bounds, maxRadiusKm, limit, includedTypes),
     status: result.status,
   };
   cacheSet(cacheKey, mapped);
@@ -269,13 +271,13 @@ export async function searchGooglePlacesNearby(
 }
 
 /**
- * Ricerca testuale — una sola Text Search (New). Cache breve per query ripetute.
+ * Text Search nella categoria: includedType Google + bias area.
  */
 export async function searchGooglePlacesInBounds(
   query: string,
   bounds: Bounds[],
   maxRadiusKm = 60,
-  _type?: string
+  categoryId?: PlaceCategoryId | null
 ): Promise<GooglePlacesSearchResult> {
   if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
   if (query.trim().length < 2 || bounds.length === 0) {
@@ -283,110 +285,62 @@ export async function searchGooglePlacesInBounds(
   }
 
   const primary = bounds[0];
-  const q = query.trim().toLowerCase();
-  const cacheKey = `tx:${primary.lat.toFixed(3)},${primary.lng.toFixed(3)}:${q}`;
+  const cat = categoryId ? getPlaceCategory(categoryId) : null;
+  const q = query.trim();
+  const cacheKey = `tx:${categoryId ?? 'all'}:${primary.lat.toFixed(3)},${primary.lng.toFixed(3)}:${q.toLowerCase()}`;
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
   const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 2000), 40_000);
 
-  // Query semplice: destinazione come locationBias, non sempre in text (più veloce/rilevante)
-  const result = await placesPost('places:searchText', {
-    textQuery: query.trim(),
+  const body: Record<string, unknown> = {
+    textQuery: q,
     languageCode: 'it',
     maxResultCount: 14,
-    regionCode: 'IT',
     locationBias: {
       circle: {
         center: { latitude: primary.lat, longitude: primary.lng },
         radius: radiusM,
       },
     },
-  });
+  };
+
+  if (cat?.textIncludedType) {
+    body.includedType = cat.textIncludedType;
+  }
+
+  const result = await placesPost('places:searchText', body);
+
+  // Se includedType stringe troppo, ritenta senza tipo ma con boost testuale
+  if ((!result.ok || result.places.length === 0) && cat) {
+    const retry = await placesPost('places:searchText', {
+      textQuery: `${q} ${cat.textBoost ?? cat.label}`,
+      languageCode: 'it',
+      maxResultCount: 14,
+      locationBias: body.locationBias,
+    });
+    if (retry.ok && retry.places.length > 0) {
+      const mapped = {
+        ok: true as const,
+        results: mapPlaces(retry.places, bounds, maxRadiusKm, 14, cat.googleTypes),
+        status: retry.status,
+      };
+      cacheSet(cacheKey, mapped);
+      return mapped;
+    }
+  }
 
   if (!result.ok) {
-    return legacyTextSearch(query.trim(), bounds, maxRadiusKm);
+    return { ok: false, results: [], status: result.status, errorMessage: result.errorMessage };
   }
 
   const mapped = {
     ok: true as const,
-    results: mapPlaces(result.places, bounds, maxRadiusKm, 14),
+    results: mapPlaces(result.places, bounds, maxRadiusKm, 14, cat?.googleTypes),
     status: result.status,
   };
   cacheSet(cacheKey, mapped);
   return mapped;
-}
-
-async function legacyTextSearch(
-  query: string,
-  bounds: Bounds[],
-  maxRadiusKm: number
-): Promise<GooglePlacesSearchResult> {
-  if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
-
-  const primary = bounds[0];
-  const params = new URLSearchParams({
-    query: primary.label ? `${query} ${primary.label}` : query,
-    location: `${primary.lat},${primary.lng}`,
-    radius: String(Math.min(maxRadiusKm * 1000, 40_000)),
-    language: 'it',
-    key: API_KEY,
-  });
-
-  try {
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(4_000) }
-    );
-    if (!res.ok) return { ok: false, results: [], status: 'HTTP_ERROR' };
-
-    const data = (await res.json()) as {
-      results?: {
-        place_id: string;
-        name: string;
-        formatted_address?: string;
-        geometry?: { location?: { lat: number; lng: number } };
-        types?: string[];
-      }[];
-      status?: string;
-      error_message?: string;
-    };
-
-    const status = data.status ?? 'UNKNOWN_ERROR';
-    if (status !== 'OK' && status !== 'ZERO_RESULTS') {
-      return {
-        ok: false,
-        results: [],
-        status,
-        errorMessage: data.error_message,
-      };
-    }
-
-    const centers = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
-    const results = (data.results ?? [])
-      .map((place) => {
-        const lat = place.geometry?.location?.lat;
-        const lng = place.geometry?.location?.lng;
-        if (lat == null || lng == null) return null;
-        const minDist = Math.min(...centers.map((c) => haversineKm(c, { lat, lng })));
-        if (minDist > maxRadiusKm) return null;
-        const t0 = place.types?.[0] ?? '';
-        return {
-          id: place.place_id,
-          label: place.name,
-          subtitle: place.formatted_address ?? '',
-          lat,
-          lng,
-          placeTypeLabel: TYPE_LABELS_IT[t0] ?? (t0.replace(/_/g, ' ') || 'Luogo'),
-        } satisfies GooglePlaceResult;
-      })
-      .filter((p): p is GooglePlaceResult => p !== null)
-      .slice(0, 14);
-
-    return { ok: true, results, status };
-  } catch {
-    return { ok: false, results: [], status: 'NETWORK_ERROR' };
-  }
 }
 
 export function hasGooglePlacesKey(): boolean {

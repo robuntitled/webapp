@@ -1,17 +1,26 @@
 'use client';
 
+import {
+  PLACE_CATEGORIES,
+  type PlaceCategoryId,
+} from '@/lib/places/place-categories';
 import type { ComposerBlockType } from '@/types/composer';
 
-export type ActivityTypeFilter = 'attraction' | 'meal' | 'activity';
+/** @deprecated usa PlaceCategoryId — alias per compat */
+export type ActivityTypeFilter = PlaceCategoryId;
+
 export type DurationFilter = '30m' | '1h' | '2h' | '4h' | '6h' | 'fullday';
 
-/** Ordine UI: Attrazioni → Attività → Ristoranti */
-export const TYPE_FILTERS: { id: ActivityTypeFilter; label: string; blockType: ComposerBlockType }[] =
-  [
-    { id: 'attraction', label: 'Attrazioni', blockType: 'attraction' },
-    { id: 'activity', label: 'Attività', blockType: 'activity' },
-    { id: 'meal', label: 'Ristoranti', blockType: 'meal' },
-  ];
+/** Compat: bottoni categoria da config Google Places */
+export const TYPE_FILTERS: {
+  id: PlaceCategoryId;
+  label: string;
+  blockType: ComposerBlockType;
+}[] = PLACE_CATEGORIES.map((c) => ({
+  id: c.id,
+  label: c.label,
+  blockType: c.blockType,
+}));
 
 export const DURATION_FILTERS: { id: DurationFilter; label: string; value: string }[] = [
   { id: '30m', label: '30 min', value: '30m' },
@@ -22,7 +31,6 @@ export const DURATION_FILTERS: { id: DurationFilter; label: string; value: strin
   { id: 'fullday', label: 'Intera giornata', value: 'Giornata intera' },
 ];
 
-/** Durata in minuti per calcolare orario fine da inizio + chip durata. */
 export const DURATION_MINUTES: Record<DurationFilter, number> = {
   '30m': 30,
   '1h': 60,
@@ -32,7 +40,6 @@ export const DURATION_MINUTES: Record<DurationFilter, number> = {
   fullday: 480,
 };
 
-/** Aggiunge minuti a un orario HH:mm (o HH:mm:ss). Ritorna stringa vuota se input non valido. */
 export function addMinutesToTime(time: string, minutes: number): string {
   const parts = time.trim().split(':');
   if (parts.length < 2) return '';
@@ -45,7 +52,6 @@ export function addMinutesToTime(time: string, minutes: number): string {
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
 
-/** Orario fine da inizio + filtro durata. */
 export function endTimeFromStartAndDuration(
   startTime: string,
   duration: DurationFilter
@@ -55,11 +61,11 @@ export function endTimeFromStartAndDuration(
 }
 
 type ActivityFiltersProps = {
-  type: ActivityTypeFilter;
+  type: PlaceCategoryId;
   duration: DurationFilter;
   startTime: string;
   endTime: string;
-  onTypeChange: (type: ActivityTypeFilter) => void;
+  onTypeChange: (type: PlaceCategoryId) => void;
   onDurationChange: (duration: DurationFilter) => void;
   onStartTimeChange: (time: string) => void;
   onEndTimeChange: (time: string) => void;
@@ -79,13 +85,13 @@ export function ActivityFilters({
     <div className="space-y-4">
       <div>
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
-          Categoria tappa
+          Categoria
         </p>
         <p className="mb-2 text-[11px] text-white/35">
-          Solo etichetta sul blocco — non filtra i risultati.
+          Filtra i luoghi Google Places nell’area (e imposta il tipo di tappa).
         </p>
         <div className="flex flex-wrap gap-2">
-          {TYPE_FILTERS.map((f) => (
+          {PLACE_CATEGORIES.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -103,7 +109,9 @@ export function ActivityFilters({
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">Durata</p>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+          Durata
+        </p>
         <div className="flex flex-wrap gap-2">
           {DURATION_FILTERS.map((f) => (
             <button

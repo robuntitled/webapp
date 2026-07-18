@@ -11,15 +11,17 @@ import {
 import {
   ActivityFilters,
   DURATION_FILTERS,
-  TYPE_FILTERS,
   endTimeFromStartAndDuration,
-  type ActivityTypeFilter,
   type DurationFilter,
 } from '@/components/composer/plan-v3/ActivityFilters';
 import { ActivityResultsList } from '@/components/composer/plan-v3/ActivityResultsList';
 import type { ActivityResultItem } from '@/components/composer/plan-v3/ActivityResultCard';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { haversineKm } from '@/lib/maps/distance';
+import {
+  getPlaceCategory,
+  type PlaceCategoryId,
+} from '@/lib/places/place-categories';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import { Search, X } from 'lucide-react';
 
@@ -43,7 +45,6 @@ type AddActivityModalProps = {
   onConfirm: (payload: AddActivityPayload) => void;
 };
 
-/** Cache client: riaprire Aggiungi sullo stesso posto = istantaneo */
 const clientCache = new Map<string, { at: number; items: ActivityResultItem[] }>();
 const CLIENT_TTL = 10 * 60_000;
 
@@ -64,7 +65,7 @@ export function AddActivityModal({
   onConfirm,
 }: AddActivityModalProps) {
   const [query, setQuery] = useState('');
-  const [type, setType] = useState<ActivityTypeFilter>('attraction');
+  const [category, setCategory] = useState<PlaceCategoryId>('attraction');
   const [duration, setDuration] = useState<DurationFilter>('1h');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -72,7 +73,6 @@ export function AddActivityModal({
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchHint, setSearchHint] = useState<string | null>(null);
-  // Debounce più corto sulla digitazione; query vuota non aspetta
   const debounced = useDebounced(query, query.trim() ? 180 : 0);
   const abortRef = useRef<AbortController | null>(null);
   const reqId = useRef(0);
@@ -96,9 +96,9 @@ export function AddActivityModal({
     return `${p.lat.toFixed(3)},${p.lng.toFixed(3)}`;
   }, [destinationBounds]);
 
+  const categoryMeta = getPlaceCategory(category);
   const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
-  const blockType =
-    TYPE_FILTERS.find((t) => t.id === type)?.blockType ?? 'attraction';
+  const blockType = categoryMeta.blockType;
 
   const handleDurationChange = (next: DurationFilter) => {
     setDuration(next);
@@ -110,8 +110,16 @@ export function AddActivityModal({
     if (next) setEndTime(endTimeFromStartAndDuration(next, duration));
   };
 
+  const handleCategoryChange = (next: PlaceCategoryId) => {
+    setCategory(next);
+    // Durate sensate per hotel
+    if (next === 'hotel' && duration === '1h') {
+      // lascia pure 1h, l'utente può cambiare
+    }
+  };
+
   const search = useCallback(
-    async (q: string) => {
+    async (q: string, cat: PlaceCategoryId) => {
       if (!hasDestinations) {
         setResults([]);
         setSearchHint(
@@ -121,14 +129,15 @@ export function AddActivityModal({
       }
 
       const trimmed = q.trim();
-      const cacheKey = `${cacheKeyBase}|${trimmed.toLowerCase()}`;
+      const cacheKey = `${cacheKeyBase}|${cat}|${trimmed.toLowerCase()}`;
       const hit = clientCache.get(cacheKey);
       if (hit && Date.now() - hit.at < CLIENT_TTL) {
         setResults(hit.items);
+        const label = getPlaceCategory(cat).label;
         setSearchHint(
           trimmed
             ? null
-            : 'Luoghi nell’area della mappa. Cerca un nome per filtrare.'
+            : `${label} nell’area mappa · Google Places`
         );
         setLoading(false);
         return;
@@ -139,14 +148,17 @@ export function AddActivityModal({
       abortRef.current = ac;
       const myId = ++reqId.current;
 
+      // Se abbiamo già risultati, non svuotare (switch categoria con cache miss)
       setLoading(true);
-      setSearchHint(null);
+      if (!hit) setSearchHint(null);
+
       try {
         const res = await fetch('/api/places/google-search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             q: trimmed,
+            category: cat,
             bounds: destinationBounds,
           }),
           signal: ac.signal,
@@ -175,7 +187,7 @@ export function AddActivityModal({
           id: p.id,
           title: p.label,
           subtitle: p.subtitle || p.placeTypeLabel,
-          category: p.placeTypeLabel || 'Luogo',
+          category: p.placeTypeLabel || getPlaceCategory(cat).label,
           lat: p.lat,
           lng: p.lng,
           distanceKm: haversineKm(center, { lat: p.lat, lng: p.lng }),
@@ -185,17 +197,20 @@ export function AddActivityModal({
         if (mapped.length > 0) {
           clientCache.set(cacheKey, { at: Date.now(), items: mapped });
         }
+        const catLabel = getPlaceCategory(cat).label;
         if (mapped.length === 0) {
           setSearchHint(
             data.warning ??
               (trimmed
-                ? 'Nessun risultato. Prova un termine diverso.'
-                : 'Nessun luogo nell’area della mappa al momento.')
+                ? `Nessun risultato in «${catLabel}». Prova un altro termine.`
+                : `Nessun luogo «${catLabel}» nell’area al momento.`)
           );
         } else if (!trimmed) {
-          setSearchHint('Luoghi nell’area della mappa. Cerca un nome per filtrare.');
+          setSearchHint(`${catLabel} nell’area mappa · Google Places`);
         } else if (data.warning) {
           setSearchHint(data.warning);
+        } else {
+          setSearchHint(null);
         }
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -209,35 +224,34 @@ export function AddActivityModal({
     [cacheKeyBase, destinationBounds, hasDestinations]
   );
 
+  // Query o categoria cambiano → ricerca (cache rende i tab veloci al 2° click)
   useEffect(() => {
     if (!open) return;
-    void search(debounced);
-  }, [debounced, open, search]);
+    void search(debounced, category);
+  }, [debounced, category, open, search]);
 
   useEffect(() => {
     if (!open) {
       abortRef.current?.abort();
       setQuery('');
-      setType('attraction');
+      setCategory('attraction');
       setDuration('1h');
       setStartTime('');
       setEndTime('');
       setPrice('');
-      // Non svuotare results: se riapri e c’è cache, non flasha vuoto
       setSearchHint(null);
       return;
     }
 
     setQuery('');
-    setType('attraction');
+    setCategory('attraction');
     setPrice('');
 
-    // Mostra subito cache area se c’è
-    const nearbyKey = `${cacheKeyBase}|`;
+    const nearbyKey = `${cacheKeyBase}|attraction|`;
     const hit = clientCache.get(nearbyKey);
     if (hit && Date.now() - hit.at < CLIENT_TTL) {
       setResults(hit.items);
-      setSearchHint('Luoghi nell’area della mappa. Cerca un nome per filtrare.');
+      setSearchHint('Attrazioni nell’area mappa · Google Places');
     }
 
     const day = draft.days.find((d) => d.dayIndex === activeDayIndex);
@@ -287,7 +301,7 @@ export function AddActivityModal({
             <div>
               <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Luoghi popolari nell’area (Google Places). Cerca un nome o scegli dalla lista.
+                Scegli una categoria e cerca nell’area mappa con Google Places.
               </DialogDescription>
             </div>
             <button
@@ -306,7 +320,7 @@ export function AddActivityModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca qualsiasi luogo… museo, ristorante, parco…"
+              placeholder={categoryMeta.searchPlaceholder}
               className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none transition focus:border-amber-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-amber-400/15"
             />
           </div>
@@ -314,11 +328,11 @@ export function AddActivityModal({
 
         <div className="shrink-0 space-y-3 border-b border-white/10 px-5 py-4 md:px-7">
           <ActivityFilters
-            type={type}
+            type={category}
             duration={duration}
             startTime={startTime}
             endTime={endTime}
-            onTypeChange={setType}
+            onTypeChange={handleCategoryChange}
             onDurationChange={handleDurationChange}
             onStartTimeChange={handleStartTimeChange}
             onEndTimeChange={setEndTime}
