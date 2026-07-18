@@ -1,5 +1,5 @@
 export const USER_PROFILE_SELECT =
-  'id, email, username, first_name, last_name, birth_date, gender, phone_number, country, address_city, address_street, address_number, address_postal_code, privacy_consent, marketing_consent, image';
+  'id, email, username, first_name, last_name, birth_date, gender, phone_number, phone_e164, phone_verified_at, email_verified_at, country, address_city, address_street, address_number, address_postal_code, privacy_consent, marketing_consent, image';
 
 export type UserProfile = {
   id: string;
@@ -10,6 +10,9 @@ export type UserProfile = {
   birth_date: string | null;
   gender: string | null;
   phone_number: string | null;
+  phone_e164: string | null;
+  phone_verified_at: string | null;
+  email_verified_at: string | null;
   country: string | null;
   address_city: string | null;
   address_street: string | null;
@@ -28,4 +31,7 @@ export type UserSettings = {
   email: string;
   marketing_consent: boolean | null;
   canChangePassword: boolean;
+  phone_e164: string | null;
+  phone_verified_at: string | null;
+  email_verified_at: string | null;
 };

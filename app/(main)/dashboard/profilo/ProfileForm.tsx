@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
 import { MIN_AGE_YEARS } from '@/lib/privacy/constants';
+import { VerifiedBadges } from '@/components/profile/VerifiedBadges';
 
 function ProfileSection({
   icon: Icon,
@@ -207,6 +208,11 @@ export default function ProfileForm({
           {email && (
             <p className="text-sm text-muted-foreground mt-0.5 truncate">{email}</p>
           )}
+          <VerifiedBadges
+            className="mt-2 justify-center sm:justify-start"
+            phoneVerified={Boolean(userProfile?.phone_verified_at)}
+            emailVerified={Boolean(userProfile?.email_verified_at)}
+          />
           {avatarFile && (
             <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
               <Button

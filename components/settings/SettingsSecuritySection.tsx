@@ -10,6 +10,8 @@ import {
   SettingsSection,
   settingsFieldClass,
 } from '@/components/settings/SettingsSection';
+import { PhoneVerificationSection } from '@/components/settings/PhoneVerificationSection';
+import { maskPhoneE164 } from '@/lib/phone/normalize';
 import { toast } from 'sonner';
 import type { UserSettings } from '@/types/user';
 
@@ -36,8 +38,19 @@ export function SettingsSecuritySection({
     setIsChangingPassword(false);
   };
 
+  const phoneVerified = Boolean(userSettings?.phone_verified_at);
+  const phoneMasked =
+    phoneVerified && userSettings?.phone_e164
+      ? maskPhoneE164(userSettings.phone_e164)
+      : null;
+
   return (
     <div className="space-y-10">
+      <PhoneVerificationSection
+        phoneMasked={phoneMasked}
+        phoneVerified={phoneVerified}
+      />
+
       <SettingsSection
         icon={Mail}
         title="Email di accesso"

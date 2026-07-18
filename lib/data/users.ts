@@ -30,7 +30,9 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('email, marketing_consent, hashedPassword')
+    .select(
+      'email, marketing_consent, hashedPassword, phone_e164, phone_verified_at, email_verified_at'
+    )
     .eq('id', userId)
     .single();
 
@@ -43,5 +45,8 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
     email: data.email,
     marketing_consent: data.marketing_consent,
     canChangePassword: !!data.hashedPassword,
+    phone_e164: data.phone_e164 ?? null,
+    phone_verified_at: data.phone_verified_at ?? null,
+    email_verified_at: data.email_verified_at ?? null,
   };
 }
