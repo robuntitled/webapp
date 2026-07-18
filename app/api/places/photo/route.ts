@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server';
+import { guardPaidApi } from '@/lib/api/request-guard';
 import { fetchPlacePhotoBytes } from '@/lib/places/google-place-details';
 
 /**
  * Proxy foto Places (non espone la API key al browser).
- * Cache HTTP lunga: stessa foto → meno round-trip.
+ * Richiede sessione (cookie) — le <img> same-origin inviano la sessione.
+ * Cache HTTP lunga: stessa foto → meno round-trip / meno Google.
  */
 export async function GET(request: Request) {
+  const gate = await guardPaidApi(request, 'places-photo', {
+    perUser: 120,
+    perIp: 150,
+    windowMs: 60_000,
+  });
+  if ('error' in gate) return gate.error;
+
   const url = new URL(request.url);
   const name = url.searchParams.get('name')?.trim() ?? '';
   const h = Number(url.searchParams.get('h') ?? '400');
@@ -27,11 +36,12 @@ export async function GET(request: Request) {
     );
   }
 
-  return new NextResponse(result.bytes, {
+  return new NextResponse(new Uint8Array(result.bytes), {
     status: 200,
     headers: {
       'Content-Type': result.contentType || 'image/jpeg',
-      'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+      // private: non condividere foto autenticata su CDN pubblici indiscriminati
+      'Cache-Control': 'private, max-age=86400',
     },
   });
 }

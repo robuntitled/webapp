@@ -1,22 +1,28 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { clientIp, rateLimitJson, requireUserId } from '@/lib/api/request-guard';
 import { searchPlaces } from '@/lib/places/nominatim';
-import { rateLimit } from '@/lib/rate-limit';
 
 const querySchema = z.object({
   q: z.string().min(2).max(120),
 });
 
+/** Destinazioni (Nominatim) — auth + rate limit (evita scrapers). */
 export async function GET(request: Request) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anon';
-  const limited = rateLimit(`places:${ip}`, { limit: 30, windowMs: 60_000 });
+  const authResult = await requireUserId();
+  if ('error' in authResult) return authResult.error;
 
-  if (!limited.ok) {
-    return NextResponse.json(
-      { error: 'Troppe ricerche, riprova tra poco' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil(limited.retryAfterMs / 1000)) } }
-    );
-  }
+  const ipBlock = rateLimitJson(
+    `nominatim:ip:${clientIp(request)}`,
+    { limit: 30, windowMs: 60_000 }
+  );
+  if (ipBlock) return ipBlock;
+
+  const userBlock = rateLimitJson(
+    `nominatim:user:${authResult.userId}`,
+    { limit: 40, windowMs: 60_000 }
+  );
+  if (userBlock) return userBlock;
 
   const { searchParams } = new URL(request.url);
   const parsed = querySchema.safeParse({ q: searchParams.get('q') ?? '' });

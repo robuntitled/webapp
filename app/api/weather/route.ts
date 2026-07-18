@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { clientIp, rateLimitJson } from '@/lib/api/request-guard';
 import { fetchTripWeather } from '@/lib/weather/open-meteo';
 
 const querySchema = z.object({
@@ -10,6 +11,13 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const blocked = rateLimitJson(
+    `weather:ip:${clientIp(request)}`,
+    { limit: 30, windowMs: 60_000 },
+    'Troppe richieste meteo'
+  );
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const parsed = querySchema.safeParse({
     lat: searchParams.get('lat'),

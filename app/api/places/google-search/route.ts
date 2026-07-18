@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { guardPaidApi } from '@/lib/api/request-guard';
 import { searchActivitiesInBounds } from '@/lib/places/activity-search';
 
 const schema = z.object({
@@ -23,6 +24,13 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const gate = await guardPaidApi(request, 'places-search', {
+    perUser: 40,
+    perIp: 60,
+    windowMs: 60_000,
+  });
+  if ('error' in gate) return gate.error;
+
   const json = await request.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
