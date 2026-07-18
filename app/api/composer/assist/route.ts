@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { replyToAssist } from '@/lib/composer/assist';
+import {
+  isCheapAssistIntent,
+  mockAssistReply,
+  replyToAssist,
+  type AssistRequest,
+} from '@/lib/composer/assist';
 import { rateLimit } from '@/lib/rate-limit';
 import { plannerProfileSchema } from '@/lib/validations/planner';
 
@@ -29,22 +34,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Messaggio non valido' }, { status: 400 });
   }
 
+  // Limite messaggi totali (mock + AI)
   const limited = rateLimit(`composer-assist:${session.user.id}`, {
     limit: 60,
     windowMs: 60 * 60 * 1000,
   });
-
   if (!limited.ok) {
     return NextResponse.json({ error: 'Limite messaggi raggiunto' }, { status: 429 });
   }
 
-  const result = await replyToAssist({
+  const assistReq: AssistRequest = {
     message: parsed.data.message,
     history: parsed.data.history,
     draft: parsed.data.draft ?? {},
     step: parsed.data.step,
     plannerProfile: parsed.data.plannerProfile,
-  });
+  };
 
+  // FAQ / saluti → mock immediato (0 token Gemini)
+  if (isCheapAssistIntent(assistReq.message)) {
+    return NextResponse.json({
+      reply: mockAssistReply(assistReq),
+      source: 'mock' as const,
+    });
+  }
+
+  // Cap chiamate AI/ora per utente (oltre il mock)
+  const aiLimited = rateLimit(`composer-assist-ai:${session.user.id}`, {
+    limit: 25,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!aiLimited.ok) {
+    return NextResponse.json({
+      reply: mockAssistReply(assistReq),
+      source: 'mock' as const,
+    });
+  }
+
+  const result = await replyToAssist(assistReq);
   return NextResponse.json(result);
 }
