@@ -279,6 +279,9 @@ export function AddActivityModal({
       duration: durationValue,
       price: parsedPrice,
       placeId: item.id,
+      rating: item.rating ?? null,
+      ratingCount: item.ratingCount ?? null,
+      photoUrl: item.photoUrl ?? null,
     });
   };
 

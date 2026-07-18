@@ -120,6 +120,10 @@ export async function fetchPlacesForComposer(options: {
         lat: number;
         lng: number;
         placeTypeLabel: string;
+        rating?: number | null;
+        ratingCount?: number | null;
+        photoUrl?: string | null;
+        photoName?: string | null;
       }[];
       warning?: string;
       error?: string;
@@ -141,6 +145,13 @@ export async function fetchPlacesForComposer(options: {
       distanceKm: center
         ? haversineKm(center, { lat: p.lat, lng: p.lng })
         : undefined,
+      rating: p.rating ?? null,
+      ratingCount: p.ratingCount ?? null,
+      photoUrl:
+        p.photoUrl ??
+        (p.photoName
+          ? `/api/places/photo?name=${encodeURIComponent(p.photoName)}&h=200`
+          : null),
     }));
     mapped.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
     setCachedPlaces(cacheKey, mapped);

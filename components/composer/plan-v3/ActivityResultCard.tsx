@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { formatDistanceKm } from '@/lib/maps/distance';
-import { MapPin, Plus } from 'lucide-react';
+import { MapPin, Plus, Star } from 'lucide-react';
 
 export type ActivityResultItem = {
   id: string;
@@ -13,6 +13,9 @@ export type ActivityResultItem = {
   lng: number;
   distanceKm?: number;
   imageHue?: number;
+  photoUrl?: string | null;
+  rating?: number | null;
+  ratingCount?: number | null;
 };
 
 type ActivityResultCardProps = {
@@ -27,13 +30,27 @@ export function ActivityResultCard({ item, onAdd }: ActivityResultCardProps) {
     <article className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-sm transition hover:border-amber-400/30 hover:bg-white/[0.05]">
       <div
         className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl"
-        style={{
-          background: `linear-gradient(135deg, hsl(${hue} 65% 65%), hsl(${(hue + 40) % 360} 55% 45%))`,
-        }}
+        style={
+          item.photoUrl
+            ? undefined
+            : {
+                background: `linear-gradient(135deg, hsl(${hue} 65% 65%), hsl(${(hue + 40) % 360} 55% 45%))`,
+              }
+        }
       >
-        <div className="absolute inset-0 flex items-center justify-center text-white/80">
-          <MapPin className="h-6 w-6" />
-        </div>
+        {item.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.photoUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-white/80">
+            <MapPin className="h-6 w-6" />
+          </div>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -56,6 +73,15 @@ export function ActivityResultCard({ item, onAdd }: ActivityResultCardProps) {
           <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 font-medium text-white/70">
             {item.category}
           </span>
+          {item.rating != null && (
+            <span className="inline-flex items-center gap-1 font-semibold text-amber-300/90">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              {item.rating.toFixed(1)}
+              {item.ratingCount != null && (
+                <span className="font-normal text-white/40">({item.ratingCount})</span>
+              )}
+            </span>
+          )}
           {item.distanceKm != null && (
             <span className="font-medium text-white/40">{formatDistanceKm(item.distanceKm)}</span>
           )}

@@ -25,6 +25,12 @@ export type GooglePlaceResult = {
   placeTypeLabel: string;
   primaryType?: string;
   types?: string[];
+  rating?: number | null;
+  ratingCount?: number | null;
+  /** Resource name Places API New (photos/…) */
+  photoName?: string | null;
+  /** Proxy URL /api/places/photo */
+  photoUrl?: string | null;
 };
 
 type Bounds = { lat: number; lng: number; radiusKm?: number; label?: string };
@@ -37,7 +43,7 @@ export type GooglePlacesSearchResult = {
 };
 
 const FIELD_MASK =
-  'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types';
+  'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types,places.rating,places.userRatingCount,places.photos';
 
 const SETUP_HINT =
   'Abilita «Places API (New)» in Google Cloud e sulla API key (API restrictions). ' +
@@ -50,6 +56,9 @@ type PlacesApiPlace = {
   location?: { latitude?: number; longitude?: number };
   types?: string[];
   primaryType?: string;
+  rating?: number;
+  userRatingCount?: number;
+  photos?: Array<{ name?: string }>;
 };
 
 type CacheEntry = { at: number; result: GooglePlacesSearchResult };
@@ -138,6 +147,11 @@ function mapPlaces(
     const minDist = Math.min(...centers.map((c) => haversineKm(c, { lat, lng })));
     if (minDist > maxRadiusKm) continue;
 
+    const photoName = place.photos?.[0]?.name?.trim() || null;
+    const rating = typeof place.rating === 'number' ? place.rating : null;
+    const ratingCount =
+      typeof place.userRatingCount === 'number' ? place.userRatingCount : null;
+
     out.push({
       id: place.id || `g-${lat.toFixed(5)}-${lng.toFixed(5)}`,
       label: name,
@@ -147,6 +161,12 @@ function mapPlaces(
       placeTypeLabel: placeTypeLabel(place),
       primaryType: place.primaryType,
       types: place.types,
+      rating,
+      ratingCount,
+      photoName,
+      photoUrl: photoName
+        ? `/api/places/photo?name=${encodeURIComponent(photoName)}&h=200`
+        : null,
     });
     if (out.length >= limit) break;
   }

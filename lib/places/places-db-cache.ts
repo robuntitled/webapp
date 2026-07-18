@@ -19,7 +19,8 @@ export function buildPlacesCacheKey(options: {
   const lng = roundCoord(options.lng);
   const q = options.query.trim().toLowerCase().slice(0, 80);
   const lang = options.language ?? 'it';
-  return `${lat},${lng}|${options.category}|${q}|${lang}`;
+  // v2: risultati con rating + photoUrl (invalida cache senza media)
+  return `${lat},${lng}|${options.category}|${q}|${lang}|v2`;
 }
 
 function roundCoord(n: number): number {
