@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -39,10 +39,13 @@ type AddActivityModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   draft: ComposerDraft;
-  /** Giorno attivo: serve per default 08:00–09:00 al primo aggiungi del giorno. */
   activeDayIndex?: number;
   onConfirm: (payload: AddActivityPayload) => void;
 };
+
+/** Cache client: riaprire Aggiungi sullo stesso posto = istantaneo */
+const clientCache = new Map<string, { at: number; items: ActivityResultItem[] }>();
+const CLIENT_TTL = 10 * 60_000;
 
 function useDebounced<T>(value: T, delay: number): T {
   const [v, setV] = useState(value);
@@ -61,7 +64,6 @@ export function AddActivityModal({
   onConfirm,
 }: AddActivityModalProps) {
   const [query, setQuery] = useState('');
-  /** Solo categoria del blocco da salvare — non filtra la ricerca */
   const [type, setType] = useState<ActivityTypeFilter>('attraction');
   const [duration, setDuration] = useState<DurationFilter>('1h');
   const [startTime, setStartTime] = useState('');
@@ -70,9 +72,11 @@ export function AddActivityModal({
   const [results, setResults] = useState<ActivityResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchHint, setSearchHint] = useState<string | null>(null);
-  const debounced = useDebounced(query, 320);
+  // Debounce più corto sulla digitazione; query vuota non aspetta
+  const debounced = useDebounced(query, query.trim() ? 180 : 0);
+  const abortRef = useRef<AbortController | null>(null);
+  const reqId = useRef(0);
 
-  // Area della mappa = destinazioni del viaggio (centro ricerca)
   const destinationBounds = useMemo(() => {
     const dests = getDraftDestinations(draft);
     return dests
@@ -80,12 +84,17 @@ export function AddActivityModal({
       .map((d) => ({
         lat: d.lat,
         lng: d.lng,
-        radiusKm: 40,
+        radiusKm: 30,
         label: d.label,
       }));
   }, [draft]);
 
   const hasDestinations = destinationBounds.length > 0;
+  const cacheKeyBase = useMemo(() => {
+    const p = destinationBounds[0];
+    if (!p) return '';
+    return `${p.lat.toFixed(3)},${p.lng.toFixed(3)}`;
+  }, [destinationBounds]);
 
   const durationValue = DURATION_FILTERS.find((d) => d.id === duration)?.value ?? '1h';
   const blockType =
@@ -93,19 +102,14 @@ export function AddActivityModal({
 
   const handleDurationChange = (next: DurationFilter) => {
     setDuration(next);
-    if (startTime) {
-      setEndTime(endTimeFromStartAndDuration(startTime, next));
-    }
+    if (startTime) setEndTime(endTimeFromStartAndDuration(startTime, next));
   };
 
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
-    if (next) {
-      setEndTime(endTimeFromStartAndDuration(next, duration));
-    }
+    if (next) setEndTime(endTimeFromStartAndDuration(next, duration));
   };
 
-  /** Ricerca libera (tutto) o, se query vuota, luoghi nell'area mappa. Non usa la categoria. */
   const search = useCallback(
     async (q: string) => {
       if (!hasDestinations) {
@@ -116,6 +120,25 @@ export function AddActivityModal({
         return;
       }
 
+      const trimmed = q.trim();
+      const cacheKey = `${cacheKeyBase}|${trimmed.toLowerCase()}`;
+      const hit = clientCache.get(cacheKey);
+      if (hit && Date.now() - hit.at < CLIENT_TTL) {
+        setResults(hit.items);
+        setSearchHint(
+          trimmed
+            ? null
+            : 'Luoghi nell’area della mappa. Cerca un nome per filtrare.'
+        );
+        setLoading(false);
+        return;
+      }
+
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+      const myId = ++reqId.current;
+
       setLoading(true);
       setSearchHint(null);
       try {
@@ -123,10 +146,13 @@ export function AddActivityModal({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            q: q.trim(),
+            q: trimmed,
             bounds: destinationBounds,
           }),
+          signal: ac.signal,
         });
+        if (myId !== reqId.current) return;
+
         const data = (await res.json()) as {
           results?: {
             id: string;
@@ -154,47 +180,50 @@ export function AddActivityModal({
           lng: p.lng,
           distanceKm: haversineKm(center, { lat: p.lat, lng: p.lng }),
         }));
-        // Più vicini prima
         mapped.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
         setResults(mapped);
+        if (mapped.length > 0) {
+          clientCache.set(cacheKey, { at: Date.now(), items: mapped });
+        }
         if (mapped.length === 0) {
           setSearchHint(
             data.warning ??
-              (q.trim().length >= 2
+              (trimmed
                 ? 'Nessun risultato. Prova un termine diverso.'
                 : 'Nessun luogo nell’area della mappa al momento.')
           );
-        } else if (!q.trim()) {
+        } else if (!trimmed) {
           setSearchHint('Luoghi nell’area della mappa. Cerca un nome per filtrare.');
         } else if (data.warning) {
           setSearchHint(data.warning);
         }
-      } catch {
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        if (myId !== reqId.current) return;
         setResults([]);
         setSearchHint('Ricerca non disponibile al momento. Riprova tra poco.');
       } finally {
-        setLoading(false);
+        if (myId === reqId.current) setLoading(false);
       }
     },
-    [destinationBounds, hasDestinations]
+    [cacheKeyBase, destinationBounds, hasDestinations]
   );
 
-  // Solo query / apertura: cambiare Attrazioni/Attività/Ristoranti NON ri-lancia la ricerca
   useEffect(() => {
     if (!open) return;
     void search(debounced);
   }, [debounced, open, search]);
 
-  // Apertura modal: reset form + default orari
   useEffect(() => {
     if (!open) {
+      abortRef.current?.abort();
       setQuery('');
       setType('attraction');
       setDuration('1h');
       setStartTime('');
       setEndTime('');
       setPrice('');
-      setResults([]);
+      // Non svuotare results: se riapri e c’è cache, non flasha vuoto
       setSearchHint(null);
       return;
     }
@@ -202,7 +231,14 @@ export function AddActivityModal({
     setQuery('');
     setType('attraction');
     setPrice('');
-    // results caricati dall'effetto search con q vuota (area mappa)
+
+    // Mostra subito cache area se c’è
+    const nearbyKey = `${cacheKeyBase}|`;
+    const hit = clientCache.get(nearbyKey);
+    if (hit && Date.now() - hit.at < CLIENT_TTL) {
+      setResults(hit.items);
+      setSearchHint('Luoghi nell’area della mappa. Cerca un nome per filtrare.');
+    }
 
     const day = draft.days.find((d) => d.dayIndex === activeDayIndex);
     const isFirstAddOfDay = !day || day.blocks.length === 0;
@@ -251,7 +287,7 @@ export function AddActivityModal({
             <div>
               <DialogTitle className="font-display text-xl text-white">Aggiungi</DialogTitle>
               <DialogDescription className="text-sm text-white/50">
-                Luoghi popolari nell’area mappa (Google Places). Cerca un nome o scegli dalla lista.
+                Luoghi popolari nell’area (Google Places). Cerca un nome o scegli dalla lista.
               </DialogDescription>
             </div>
             <button
@@ -308,7 +344,7 @@ export function AddActivityModal({
           )}
           <ActivityResultsList
             items={results}
-            loading={loading}
+            loading={loading && results.length === 0}
             query={debounced}
             hint={searchHint}
             onAdd={addFromResult}

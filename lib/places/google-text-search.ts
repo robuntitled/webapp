@@ -26,31 +26,17 @@ export type GooglePlacesSearchResult = {
   errorMessage?: string;
 };
 
+/** Field mask minimal: meno payload = un po’ più veloce. */
 const FIELD_MASK =
-  'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.primaryTypeDisplayName,places.primaryType';
+  'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types';
 
-/** Tipi Table A Places API (New) — solo valori validi (OR). */
+/** Pochi tipi = Nearby più leggero (OR). */
 const NEARBY_TYPES = [
   'tourist_attraction',
   'museum',
-  'art_gallery',
-  'park',
-  'church',
   'restaurant',
   'cafe',
-  'bar',
-  'bakery',
-  'amusement_park',
-  'zoo',
-  'aquarium',
-  'stadium',
-  'spa',
-  'night_club',
-  'movie_theater',
-  'shopping_mall',
-  'hindu_temple',
-  'mosque',
-  'synagogue',
+  'park',
 ];
 
 const TYPE_LABELS_IT: Record<string, string> = {
@@ -58,7 +44,6 @@ const TYPE_LABELS_IT: Record<string, string> = {
   museum: 'Museo',
   art_gallery: 'Galleria',
   park: 'Parco',
-  historical_landmark: 'Storico',
   church: 'Chiesa',
   restaurant: 'Ristorante',
   cafe: 'Caffè',
@@ -72,8 +57,6 @@ const TYPE_LABELS_IT: Record<string, string> = {
   night_club: 'Nightlife',
   movie_theater: 'Cinema',
   shopping_mall: 'Shopping',
-  market: 'Mercato',
-  viewpoint: 'Panorama',
   lodging: 'Alloggio',
   hotel: 'Hotel',
   point_of_interest: 'Luogo',
@@ -87,11 +70,34 @@ type PlacesApiPlace = {
   location?: { latitude?: number; longitude?: number };
   types?: string[];
   primaryType?: string;
-  primaryTypeDisplayName?: { text?: string };
 };
 
+// Cache in-memory (serverless warm instances) — evita doppie chiamate Google
+type CacheEntry = { at: number; result: GooglePlacesSearchResult };
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 8 * 60_000; // 8 min
+const CACHE_MAX = 80;
+
+function cacheGet(key: string): GooglePlacesSearchResult | null {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return hit.result;
+}
+
+function cacheSet(key: string, result: GooglePlacesSearchResult) {
+  if (!result.ok || result.results.length === 0) return;
+  if (cache.size >= CACHE_MAX) {
+    const first = cache.keys().next().value;
+    if (first) cache.delete(first);
+  }
+  cache.set(key, { at: Date.now(), result });
+}
+
 function placeTypeLabel(place: PlacesApiPlace): string {
-  if (place.primaryTypeDisplayName?.text) return place.primaryTypeDisplayName.text;
   const primary = place.primaryType;
   if (primary && TYPE_LABELS_IT[primary]) return TYPE_LABELS_IT[primary];
   for (const t of place.types ?? []) {
@@ -130,7 +136,6 @@ function mapPlaces(
     if (out.length >= limit) break;
   }
 
-  // Più vicini prima
   out.sort((a, b) => {
     const da = Math.min(...centers.map((c) => haversineKm(c, a)));
     const db = Math.min(...centers.map((c) => haversineKm(c, b)));
@@ -142,7 +147,8 @@ function mapPlaces(
 
 async function placesPost(
   path: 'places:searchText' | 'places:searchNearby',
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  timeoutMs = 4_500
 ): Promise<{ ok: boolean; places: PlacesApiPlace[]; status: string; errorMessage?: string }> {
   if (!API_KEY) {
     return { ok: false, places: [], status: 'MISSING_API_KEY' };
@@ -158,7 +164,7 @@ async function placesPost(
       },
       body: JSON.stringify(body),
       cache: 'no-store',
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     const data = (await res.json().catch(() => ({}))) as {
@@ -191,61 +197,59 @@ async function placesPost(
 }
 
 /**
- * Luoghi popolari nell’area (senza testo) — Places Nearby Search (New).
+ * Luoghi popolari nell’area — una sola chiamata Nearby (cache 8 min).
  */
 export async function searchGooglePlacesNearby(
   bounds: Bounds[],
   maxRadiusKm = 25,
-  limit = 16
+  limit = 14
 ): Promise<GooglePlacesSearchResult> {
   if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
   if (bounds.length === 0) return { ok: false, results: [], status: 'INVALID_REQUEST' };
 
   const primary = bounds[0];
-  const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 1000), 50_000);
+  const cacheKey = `nb:${primary.lat.toFixed(3)},${primary.lng.toFixed(3)}:${limit}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
 
-  const locationRestriction = {
-    circle: {
-      center: { latitude: primary.lat, longitude: primary.lng },
-      radius: radiusM,
-    },
-  };
+  const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 1500), 25_000);
 
-  let result = await placesPost('places:searchNearby', {
+  const result = await placesPost('places:searchNearby', {
     includedTypes: NEARBY_TYPES,
     maxResultCount: Math.min(limit, 20),
     rankPreference: 'POPULARITY',
     languageCode: 'it',
-    locationRestriction,
+    locationRestriction: {
+      circle: {
+        center: { latitude: primary.lat, longitude: primary.lng },
+        radius: radiusM,
+      },
+    },
   });
 
-  // Se fallisce (tipo non supportato / API), ritenta con set minimale
-  if (!result.ok) {
-    result = await placesPost('places:searchNearby', {
-      includedTypes: ['tourist_attraction', 'restaurant', 'museum', 'park', 'cafe'],
-      maxResultCount: Math.min(limit, 20),
-      rankPreference: 'POPULARITY',
-      languageCode: 'it',
-      locationRestriction,
-    });
-  }
-
-  // Ultimo fallback: text search “cose da fare” nell’area
+  // Se Nearby fallisce: una sola Text Search, niente catene lunghe
   if (!result.ok || result.places.length === 0) {
-    const textFallback = await placesPost('places:searchText', {
+    const text = await placesPost('places:searchText', {
       textQuery: primary.label
-        ? `attrazioni ristoranti ${primary.label}`
-        : 'attrazioni ristoranti',
+        ? `cose da fare e ristoranti a ${primary.label}`
+        : 'attrazioni e ristoranti',
       languageCode: 'it',
       maxResultCount: Math.min(limit, 20),
-      locationBias: locationRestriction,
+      locationBias: {
+        circle: {
+          center: { latitude: primary.lat, longitude: primary.lng },
+          radius: radiusM,
+        },
+      },
     });
-    if (textFallback.ok && textFallback.places.length > 0) {
-      return {
-        ok: true,
-        results: mapPlaces(textFallback.places, bounds, maxRadiusKm, limit),
-        status: textFallback.status,
+    if (text.ok && text.places.length > 0) {
+      const mapped = {
+        ok: true as const,
+        results: mapPlaces(text.places, bounds, maxRadiusKm, limit),
+        status: text.status,
       };
+      cacheSet(cacheKey, mapped);
+      return mapped;
     }
     return {
       ok: false,
@@ -255,20 +259,22 @@ export async function searchGooglePlacesNearby(
     };
   }
 
-  return {
-    ok: true,
+  const mapped = {
+    ok: true as const,
     results: mapPlaces(result.places, bounds, maxRadiusKm, limit),
     status: result.status,
   };
+  cacheSet(cacheKey, mapped);
+  return mapped;
 }
 
 /**
- * Ricerca testuale libera — Places Text Search (New), bias sull’area mappa.
+ * Ricerca testuale — una sola Text Search (New). Cache breve per query ripetute.
  */
 export async function searchGooglePlacesInBounds(
   query: string,
   bounds: Bounds[],
-  maxRadiusKm = 80,
+  maxRadiusKm = 60,
   _type?: string
 ): Promise<GooglePlacesSearchResult> {
   if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
@@ -277,17 +283,19 @@ export async function searchGooglePlacesInBounds(
   }
 
   const primary = bounds[0];
-  const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 2000), 50_000);
+  const q = query.trim().toLowerCase();
+  const cacheKey = `tx:${primary.lat.toFixed(3)},${primary.lng.toFixed(3)}:${q}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
 
-  // Preferisci query + destinazione per risultati più rilevanti
-  const textQuery = primary.label
-    ? `${query.trim()} ${primary.label}`
-    : query.trim();
+  const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 2000), 40_000);
 
+  // Query semplice: destinazione come locationBias, non sempre in text (più veloce/rilevante)
   const result = await placesPost('places:searchText', {
-    textQuery,
+    textQuery: query.trim(),
     languageCode: 'it',
-    maxResultCount: 16,
+    maxResultCount: 14,
+    regionCode: 'IT',
     locationBias: {
       circle: {
         center: { latitude: primary.lat, longitude: primary.lng },
@@ -297,20 +305,18 @@ export async function searchGooglePlacesInBounds(
   });
 
   if (!result.ok) {
-    // Fallback legacy Text Search se Places API (New) non è abilitata
     return legacyTextSearch(query.trim(), bounds, maxRadiusKm);
   }
 
-  const mapped = mapPlaces(result.places, bounds, maxRadiusKm, 16);
-  if (mapped.length > 0) {
-    return { ok: true, results: mapped, status: result.status };
-  }
-
-  // Zero results con New → prova legacy una volta
-  return legacyTextSearch(query.trim(), bounds, maxRadiusKm);
+  const mapped = {
+    ok: true as const,
+    results: mapPlaces(result.places, bounds, maxRadiusKm, 14),
+    status: result.status,
+  };
+  cacheSet(cacheKey, mapped);
+  return mapped;
 }
 
-/** Legacy Places Text Search (se solo “Places API” classica è attiva). */
 async function legacyTextSearch(
   query: string,
   bounds: Bounds[],
@@ -319,13 +325,10 @@ async function legacyTextSearch(
   if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
 
   const primary = bounds[0];
-  const location = `${primary.lat},${primary.lng}`;
-  const radiusM = Math.min(maxRadiusKm * 1000, 50_000);
-
   const params = new URLSearchParams({
     query: primary.label ? `${query} ${primary.label}` : query,
-    location,
-    radius: String(radiusM),
+    location: `${primary.lat},${primary.lng}`,
+    radius: String(Math.min(maxRadiusKm * 1000, 40_000)),
     language: 'it',
     key: API_KEY,
   });
@@ -333,7 +336,7 @@ async function legacyTextSearch(
   try {
     const res = await fetch(
       `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(8_000) }
+      { cache: 'no-store', signal: AbortSignal.timeout(4_000) }
     );
     if (!res.ok) return { ok: false, results: [], status: 'HTTP_ERROR' };
 
@@ -378,7 +381,7 @@ async function legacyTextSearch(
         } satisfies GooglePlaceResult;
       })
       .filter((p): p is GooglePlaceResult => p !== null)
-      .slice(0, 16);
+      .slice(0, 14);
 
     return { ok: true, results, status };
   } catch {

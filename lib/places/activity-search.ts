@@ -1,14 +1,11 @@
 import 'server-only';
 
-import { haversineKm } from '@/lib/maps/distance';
 import {
   hasGooglePlacesKey,
   searchGooglePlacesInBounds,
   searchGooglePlacesNearby,
   type GooglePlaceResult,
 } from '@/lib/places/google-text-search';
-import { searchPlaces } from '@/lib/places/nominatim';
-import { searchOverpassNearby } from '@/lib/places/overpass-search';
 
 export type ActivityPlaceResult = GooglePlaceResult;
 
@@ -25,49 +22,15 @@ export type ActivitySearchResponse = {
   warning?: string;
 };
 
-function filterByBounds(
-  places: ActivityPlaceResult[],
-  bounds: ActivitySearchBounds[],
-  maxRadiusKm: number
-): ActivityPlaceResult[] {
-  if (bounds.length === 0) return places;
-  const centers = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
-  return places.filter((place) => {
-    const minDist = Math.min(
-      ...centers.map((c) => haversineKm(c, { lat: place.lat, lng: place.lng }))
-    );
-    return minDist <= maxRadiusKm;
-  });
-}
-
-async function searchWithNominatim(
-  query: string,
-  bounds: ActivitySearchBounds[],
-  maxRadiusKm: number
-): Promise<ActivityPlaceResult[]> {
-  const primary = bounds[0];
-  const contextual = primary.label ? `${query} ${primary.label}` : query;
-  const places = await searchPlaces(contextual, 16);
-  const mapped: ActivityPlaceResult[] = places.map((place) => ({
-    id: place.id,
-    label: place.label,
-    subtitle: place.subtitle,
-    lat: place.lat,
-    lng: place.lng,
-    placeTypeLabel: place.placeTypeLabel,
-  }));
-  const inBounds = filterByBounds(mapped, bounds, maxRadiusKm);
-  return (inBounds.length > 0 ? inBounds : mapped).slice(0, 16);
-}
-
 /**
- * Priorità: Google Places (veloce + qualità) → Overpass → Nominatim.
- * Query vuota = luoghi popolari nell’area mappa (Nearby Search).
+ * Solo Google Places (veloce).
+ * Niente Overpass/Nominatim in cascata: erano la causa principale di lentezza
+ * quando Google restituiva vuoto o era un po’ lento.
  */
 export async function searchActivitiesInBounds(
   query: string,
   bounds: ActivitySearchBounds[],
-  maxRadiusKm = 80
+  maxRadiusKm = 60
 ): Promise<ActivitySearchResponse> {
   const q = query.trim();
 
@@ -80,60 +43,46 @@ export async function searchActivitiesInBounds(
     };
   }
 
-  // ── 1) Google Places (primario) ──────────────────────────────────────────
-  if (hasGooglePlacesKey()) {
-    try {
-      if (q.length < 2) {
-        const nearby = await searchGooglePlacesNearby(bounds, 30, 16);
-        if (nearby.ok && nearby.results.length > 0) {
-          return { results: nearby.results, source: 'google' };
-        }
-      } else {
-        const text = await searchGooglePlacesInBounds(q, bounds, maxRadiusKm);
-        if (text.ok && text.results.length > 0) {
-          return { results: text.results, source: 'google' };
-        }
-      }
-    } catch {
-      // fallback sotto
-    }
+  if (!hasGooglePlacesKey()) {
+    return {
+      results: [],
+      source: 'none',
+      warning:
+        'Manca la chiave Google Maps su Vercel (NEXT_PUBLIC_GOOGLE_MAPS_API_KEY o GOOGLE_MAPS_API_KEY).',
+    };
   }
 
-  // ── 2) Overpass (fallback gratuito, più lento) ───────────────────────────
   try {
-    const overpassResults = await searchOverpassNearby(q, bounds, 16);
-    if (overpassResults.length > 0) {
+    if (q.length < 2) {
+      const nearby = await searchGooglePlacesNearby(bounds, 30, 14);
+      if (nearby.ok && nearby.results.length > 0) {
+        return { results: nearby.results, source: 'google' };
+      }
       return {
-        results: overpassResults,
-        source: 'overpass',
-        warning: hasGooglePlacesKey()
-          ? undefined
-          : 'Risultati OSM (configura Google Places per risultati più rapidi).',
+        results: [],
+        source: 'none',
+        warning:
+          nearby.errorMessage ||
+          'Nessun luogo nell’area. Verifica che Places API (New) sia abilitata sulla key.',
       };
     }
-  } catch {
-    // continue
-  }
 
-  // ── 3) Nominatim (solo con testo) ────────────────────────────────────────
-  if (q.length >= 2) {
-    try {
-      const nominatimResults = await searchWithNominatim(q, bounds, maxRadiusKm);
-      if (nominatimResults.length > 0) {
-        return { results: nominatimResults, source: 'nominatim' };
-      }
-    } catch {
-      // continue
+    const text = await searchGooglePlacesInBounds(q, bounds, maxRadiusKm);
+    if (text.ok && text.results.length > 0) {
+      return { results: text.results, source: 'google' };
     }
+    return {
+      results: [],
+      source: 'none',
+      warning:
+        text.errorMessage ||
+        'Nessun risultato. Prova un nome diverso o più generico.',
+    };
+  } catch {
+    return {
+      results: [],
+      source: 'none',
+      warning: 'Ricerca Google non disponibile al momento. Riprova.',
+    };
   }
-
-  return {
-    results: [],
-    source: 'none',
-    warning: !hasGooglePlacesKey()
-      ? 'Aggiungi la chiave Google Maps / Places su Vercel per risultati rapidi e di qualità.'
-      : q.length >= 2
-        ? 'Nessun risultato vicino alle destinazioni. Prova un nome diverso.'
-        : 'Nessun luogo trovato nell’area della mappa. Prova a cercare un nome.',
-  };
 }
