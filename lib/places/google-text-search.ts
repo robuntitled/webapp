@@ -7,6 +7,10 @@ import {
   type PlaceCategoryId,
 } from '@/lib/places/place-categories';
 
+/**
+ * Solo Places API (New) — places.googleapis.com/v1
+ * Non usa più Text Search legacy (maps.googleapis.com/maps/api/place/...).
+ */
 const API_KEY =
   process.env.GOOGLE_MAPS_API_KEY?.trim() ||
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
@@ -35,6 +39,10 @@ export type GooglePlacesSearchResult = {
 const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types';
 
+const SETUP_HINT =
+  'Abilita «Places API (New)» in Google Cloud e sulla API key (API restrictions). ' +
+  'Per chiamate da Vercel: Application restriction = None, oppure usa GOOGLE_MAPS_API_KEY dedicata.';
+
 type PlacesApiPlace = {
   id?: string;
   displayName?: { text?: string };
@@ -49,9 +57,9 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 8 * 60_000;
 const CACHE_MAX = 120;
 
-/** Se Nearby/New è bloccato dalla key, non riprovare ogni volta. */
+/** Evita di ritentare metodi bloccati dalla key. */
 let nearbyBlocked = false;
-let placesNewBlocked = false;
+let textSearchBlocked = false;
 
 function isBlockedError(status: string, message?: string): boolean {
   const m = (message || '').toLowerCase();
@@ -67,7 +75,9 @@ function isBlockedError(status: string, message?: string): boolean {
     m.includes('referer restrictions') ||
     m.includes('has not been used') ||
     m.includes('is disabled') ||
-    m.includes('not enabled')
+    m.includes('not enabled') ||
+    m.includes('legacy') ||
+    m.includes('not been activated')
   );
 }
 
@@ -137,10 +147,10 @@ function mapPlaces(
 async function placesPost(
   path: 'places:searchText' | 'places:searchNearby',
   body: Record<string, unknown>,
-  timeoutMs = 4_500
+  timeoutMs = 5_000
 ): Promise<{ ok: boolean; places: PlacesApiPlace[]; status: string; errorMessage?: string }> {
   if (!API_KEY) {
-    return { ok: false, places: [], status: 'MISSING_API_KEY' };
+    return { ok: false, places: [], status: 'MISSING_API_KEY', errorMessage: SETUP_HINT };
   }
 
   try {
@@ -185,119 +195,18 @@ async function placesPost(
   }
 }
 
-/** Mappa type Google → type legacy Text Search (uno solo). */
-function legacyTypeForCategory(categoryId?: PlaceCategoryId | null): string | undefined {
-  if (!categoryId) return undefined;
-  const map: Record<PlaceCategoryId, string> = {
-    attraction: 'tourist_attraction',
-    meal: 'restaurant',
-    activity: 'spa',
-    shopping: 'shopping_mall',
-    hotel: 'lodging',
+function locationCircle(primary: Bounds, radiusM: number) {
+  return {
+    circle: {
+      center: { latitude: primary.lat, longitude: primary.lng },
+      radius: radiusM,
+    },
   };
-  return map[categoryId];
 }
 
 /**
- * Places API classica (maps.googleapis.com) — spesso già abilitata con la key mappa.
- * Funziona anche se Places API (New) / SearchNearby è bloccato.
- */
-async function legacyTextSearch(
-  query: string,
-  bounds: Bounds[],
-  maxRadiusKm: number,
-  categoryId?: PlaceCategoryId | null
-): Promise<GooglePlacesSearchResult> {
-  if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
-
-  const primary = bounds[0];
-  const cat = categoryId ? getPlaceCategory(categoryId) : null;
-  const text = cat
-    ? `${query} ${cat.textBoost ?? cat.label}`.trim()
-    : query;
-
-  const params = new URLSearchParams({
-    query: primary.label ? `${text} ${primary.label}` : text,
-    location: `${primary.lat},${primary.lng}`,
-    radius: String(Math.min(maxRadiusKm * 1000, 40_000)),
-    language: 'it',
-    key: API_KEY,
-  });
-
-  const legacyType = legacyTypeForCategory(categoryId);
-  if (legacyType) params.set('type', legacyType);
-
-  try {
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(5_000) }
-    );
-    if (!res.ok) return { ok: false, results: [], status: 'HTTP_ERROR' };
-
-    const data = (await res.json()) as {
-      results?: {
-        place_id: string;
-        name: string;
-        formatted_address?: string;
-        geometry?: { location?: { lat: number; lng: number } };
-        types?: string[];
-      }[];
-      status?: string;
-      error_message?: string;
-    };
-
-    const status = data.status ?? 'UNKNOWN_ERROR';
-    if (status === 'REQUEST_DENIED' || status === 'OVER_QUERY_LIMIT') {
-      return {
-        ok: false,
-        results: [],
-        status,
-        errorMessage:
-          data.error_message ||
-          'Places API (legacy) negata. Abilita Places API sulla key o togli restrizioni referrer per uso server.',
-      };
-    }
-    if (status !== 'OK' && status !== 'ZERO_RESULTS') {
-      return {
-        ok: false,
-        results: [],
-        status,
-        errorMessage: data.error_message,
-      };
-    }
-
-    const centers = bounds.map((b) => ({ lat: b.lat, lng: b.lng }));
-    const results: GooglePlaceResult[] = [];
-    for (const place of data.results ?? []) {
-      const lat = place.geometry?.location?.lat;
-      const lng = place.geometry?.location?.lng;
-      if (lat == null || lng == null) continue;
-      const minDist = Math.min(...centers.map((c) => haversineKm(c, { lat, lng })));
-      if (minDist > maxRadiusKm) continue;
-      const t0 = place.types?.[0] ?? '';
-      results.push({
-        id: place.place_id,
-        label: place.name,
-        subtitle: place.formatted_address ?? '',
-        lat,
-        lng,
-        placeTypeLabel: labelForGoogleType(t0),
-        primaryType: t0 || undefined,
-        types: place.types,
-      });
-      if (results.length >= 14) break;
-    }
-
-    return { ok: true, results, status };
-  } catch {
-    return { ok: false, results: [], status: 'NETWORK_ERROR' };
-  }
-}
-
-/**
- * Browse area per categoria.
- * Prova Nearby (New) → Text Search (New) → Text Search legacy.
- * Se Nearby è bloccato dalla key, salta e usa solo Text.
+ * Browse area per categoria — solo Places API (New).
+ * Preferisce Text Search (più spesso abilitato); Nearby se disponibile.
  */
 export async function searchGooglePlacesNearby(
   bounds: Bounds[],
@@ -305,8 +214,12 @@ export async function searchGooglePlacesNearby(
   limit = 14,
   categoryId?: PlaceCategoryId | null
 ): Promise<GooglePlacesSearchResult> {
-  if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
-  if (bounds.length === 0) return { ok: false, results: [], status: 'INVALID_REQUEST' };
+  if (!API_KEY) {
+    return { ok: false, results: [], status: 'MISSING_API_KEY', errorMessage: SETUP_HINT };
+  }
+  if (bounds.length === 0) {
+    return { ok: false, results: [], status: 'INVALID_REQUEST' };
+  }
 
   const primary = bounds[0];
   const cat = categoryId ? getPlaceCategory(categoryId) : null;
@@ -323,44 +236,11 @@ export async function searchGooglePlacesNearby(
   if (cached) return cached;
 
   const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 1500), 25_000);
-  const locationCircle = {
-    circle: {
-      center: { latitude: primary.lat, longitude: primary.lng },
-      radius: radiusM,
-    },
-  };
+  const circle = locationCircle(primary, radiusM);
 
-  // 1) Nearby (New) — solo se non già bloccato
-  if (!nearbyBlocked && !placesNewBlocked) {
-    const result = await placesPost('places:searchNearby', {
-      includedTypes,
-      maxResultCount: Math.min(limit, 20),
-      rankPreference: 'POPULARITY',
-      languageCode: 'it',
-      locationRestriction: locationCircle,
-    });
-
-    if (result.ok && result.places.length > 0) {
-      const mapped = {
-        ok: true as const,
-        results: mapPlaces(result.places, bounds, maxRadiusKm, limit),
-        status: result.status,
-      };
-      cacheSet(cacheKey, mapped);
-      return mapped;
-    }
-
-    if (isBlockedError(result.status, result.errorMessage)) {
-      nearbyBlocked = true;
-      // se il messaggio cita places.googleapis.com in generale, New intera
-      if ((result.errorMessage || '').includes('places.googleapis.com')) {
-        // Nearby specific — SearchText potrebbe ancora funzionare
-      }
-    }
-  }
-
-  // 2) Text Search (New) con query di categoria + destinazione
-  if (!placesNewBlocked) {
+  // ── A) Text Search (New) — percorso principale (lista area + categoria) ──
+  // Spesso funziona anche quando SearchNearby è bloccato dalle restriction.
+  if (!textSearchBlocked) {
     const textQuery = cat
       ? primary.label
         ? `${cat.textBoost ?? cat.label} a ${primary.label}`
@@ -373,7 +253,7 @@ export async function searchGooglePlacesNearby(
       textQuery,
       languageCode: 'it',
       maxResultCount: Math.min(limit, 20),
-      locationBias: locationCircle,
+      locationBias: circle,
     };
     if (cat?.textIncludedType) {
       textBody.includedType = cat.textIncludedType;
@@ -391,33 +271,80 @@ export async function searchGooglePlacesNearby(
     }
 
     if (isBlockedError(text.status, text.errorMessage)) {
-      placesNewBlocked = true;
+      textSearchBlocked = true;
       nearbyBlocked = true;
+      return {
+        ok: false,
+        results: [],
+        status: text.status,
+        errorMessage: `${text.errorMessage || 'Places API (New) bloccata.'} ${SETUP_HINT}`,
+      };
+    }
+
+    // Zero results con includedType → ritenta senza tipo
+    if (cat && text.ok && text.places.length === 0) {
+      const retry = await placesPost('places:searchText', {
+        textQuery,
+        languageCode: 'it',
+        maxResultCount: Math.min(limit, 20),
+        locationBias: circle,
+      });
+      if (retry.ok && retry.places.length > 0) {
+        const mapped = {
+          ok: true as const,
+          results: mapPlaces(retry.places, bounds, maxRadiusKm, limit),
+          status: retry.status,
+        };
+        cacheSet(cacheKey, mapped);
+        return mapped;
+      }
     }
   }
 
-  // 3) Legacy Text Search (Places API classica)
-  const legacyQuery = cat
-    ? cat.textBoost ?? cat.label
-    : 'attrazioni';
-  const legacy = await legacyTextSearch(legacyQuery, bounds, maxRadiusKm, categoryId);
-  if (legacy.ok && legacy.results.length > 0) {
-    cacheSet(cacheKey, legacy);
-    return legacy;
+  // ── B) Nearby Search (New) — se Text non ha dato risultati ──
+  if (!nearbyBlocked) {
+    const nearby = await placesPost('places:searchNearby', {
+      includedTypes,
+      maxResultCount: Math.min(limit, 20),
+      rankPreference: 'POPULARITY',
+      languageCode: 'it',
+      locationRestriction: circle,
+    });
+
+    if (nearby.ok && nearby.places.length > 0) {
+      const mapped = {
+        ok: true as const,
+        results: mapPlaces(nearby.places, bounds, maxRadiusKm, limit),
+        status: nearby.status,
+      };
+      cacheSet(cacheKey, mapped);
+      return mapped;
+    }
+
+    if (isBlockedError(nearby.status, nearby.errorMessage)) {
+      nearbyBlocked = true;
+      // non fallire se Text aveva solo zero results
+    }
+  }
+
+  if (textSearchBlocked) {
+    return {
+      ok: false,
+      results: [],
+      status: 'PERMISSION_DENIED',
+      errorMessage: SETUP_HINT,
+    };
   }
 
   return {
-    ok: false,
+    ok: true,
     results: [],
-    status: legacy.status || 'BLOCKED',
-    errorMessage:
-      legacy.errorMessage ||
-      'Places bloccato. In Google Cloud abilita «Places API (New)» e «Places API» sulla key, e per il server usa Application restriction None (non solo HTTP referrer).',
+    status: 'ZERO_RESULTS',
   };
 }
 
 /**
- * Ricerca testuale per categoria.
+ * Ricerca testuale — solo Places API (New) searchText.
  */
 export async function searchGooglePlacesInBounds(
   query: string,
@@ -425,7 +352,9 @@ export async function searchGooglePlacesInBounds(
   maxRadiusKm = 60,
   categoryId?: PlaceCategoryId | null
 ): Promise<GooglePlacesSearchResult> {
-  if (!API_KEY) return { ok: false, results: [], status: 'MISSING_API_KEY' };
+  if (!API_KEY) {
+    return { ok: false, results: [], status: 'MISSING_API_KEY', errorMessage: SETUP_HINT };
+  }
   if (query.trim().length < 2 || bounds.length === 0) {
     return { ok: false, results: [], status: 'INVALID_REQUEST' };
   }
@@ -437,69 +366,84 @@ export async function searchGooglePlacesInBounds(
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
-  const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 2000), 40_000);
-  const locationBias = {
-    circle: {
-      center: { latitude: primary.lat, longitude: primary.lng },
-      radius: radiusM,
-    },
-  };
+  if (textSearchBlocked) {
+    return {
+      ok: false,
+      results: [],
+      status: 'PERMISSION_DENIED',
+      errorMessage: SETUP_HINT,
+    };
+  }
 
-  // 1) Places New Text Search
-  if (!placesNewBlocked) {
-    const body: Record<string, unknown> = {
-      textQuery: q,
+  const radiusM = Math.min(Math.max((primary.radiusKm ?? maxRadiusKm) * 1000, 2000), 40_000);
+  const locationBias = locationCircle(primary, radiusM);
+
+  const body: Record<string, unknown> = {
+    textQuery: q,
+    languageCode: 'it',
+    maxResultCount: 14,
+    locationBias,
+  };
+  if (cat?.textIncludedType) {
+    body.includedType = cat.textIncludedType;
+  }
+
+  const result = await placesPost('places:searchText', body);
+
+  if (result.ok && result.places.length > 0) {
+    const mapped = {
+      ok: true as const,
+      results: mapPlaces(result.places, bounds, maxRadiusKm, 14),
+      status: result.status,
+    };
+    cacheSet(cacheKey, mapped);
+    return mapped;
+  }
+
+  if (isBlockedError(result.status, result.errorMessage)) {
+    textSearchBlocked = true;
+    nearbyBlocked = true;
+    return {
+      ok: false,
+      results: [],
+      status: result.status,
+      errorMessage: `${result.errorMessage || 'Places API (New) bloccata.'} ${SETUP_HINT}`,
+    };
+  }
+
+  // Ritenta senza includedType / con boost categoria
+  if (cat) {
+    const retry = await placesPost('places:searchText', {
+      textQuery: `${q} ${cat.textBoost ?? cat.label}`,
       languageCode: 'it',
       maxResultCount: 14,
       locationBias,
-    };
-    if (cat?.textIncludedType) body.includedType = cat.textIncludedType;
-
-    const result = await placesPost('places:searchText', body);
-
-    if (result.ok && result.places.length > 0) {
+    });
+    if (retry.ok && retry.places.length > 0) {
       const mapped = {
         ok: true as const,
-        results: mapPlaces(result.places, bounds, maxRadiusKm, 14),
-        status: result.status,
+        results: mapPlaces(retry.places, bounds, maxRadiusKm, 14),
+        status: retry.status,
       };
       cacheSet(cacheKey, mapped);
       return mapped;
     }
-
-    if (isBlockedError(result.status, result.errorMessage)) {
-      placesNewBlocked = true;
-      nearbyBlocked = true;
-    } else if (cat && (!result.ok || result.places.length === 0)) {
-      // ritenta senza includedType
-      const retry = await placesPost('places:searchText', {
-        textQuery: `${q} ${cat.textBoost ?? cat.label}`,
-        languageCode: 'it',
-        maxResultCount: 14,
-        locationBias,
-      });
-      if (retry.ok && retry.places.length > 0) {
-        const mapped = {
-          ok: true as const,
-          results: mapPlaces(retry.places, bounds, maxRadiusKm, 14),
-          status: retry.status,
-        };
-        cacheSet(cacheKey, mapped);
-        return mapped;
-      }
-      if (isBlockedError(retry.status, retry.errorMessage)) {
-        placesNewBlocked = true;
-        nearbyBlocked = true;
-      }
+    if (isBlockedError(retry.status, retry.errorMessage)) {
+      textSearchBlocked = true;
+      return {
+        ok: false,
+        results: [],
+        status: retry.status,
+        errorMessage: `${retry.errorMessage || ''} ${SETUP_HINT}`,
+      };
     }
   }
 
-  // 2) Legacy
-  const legacy = await legacyTextSearch(q, bounds, maxRadiusKm, categoryId);
-  if (legacy.ok && legacy.results.length > 0) {
-    cacheSet(cacheKey, legacy);
-  }
-  return legacy;
+  return {
+    ok: true,
+    results: [],
+    status: 'ZERO_RESULTS',
+  };
 }
 
 export function hasGooglePlacesKey(): boolean {
