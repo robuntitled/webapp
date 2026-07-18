@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
 import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
+import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { primaryOriginIata } from '@/lib/composer/origins';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import {
@@ -19,7 +20,10 @@ import {
   Car,
   ExternalLink,
   Hotel,
+  Loader2,
   Plane,
+  Plus,
+  Search,
   Ship,
   Train,
   X,
@@ -45,6 +49,10 @@ export type TravelBlockPayload = {
   nights?: number;
   checkInDate?: string;
   checkOutDate?: string;
+  placeId?: string;
+  photoUrl?: string | null;
+  rating?: number | null;
+  ratingCount?: number | null;
 };
 
 function addDaysIso(isoDate: string, days: number): string {
@@ -130,6 +138,15 @@ export function AddTravelBlockModal({
   const [departureCoords, setDepartureCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [hotelPlace, setHotelPlace] = useState('');
   const [hotelCoords, setHotelCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [hotelPlaceId, setHotelPlaceId] = useState<string | undefined>();
+  const [hotelPhotoUrl, setHotelPhotoUrl] = useState<string | null>(null);
+  const [hotelRating, setHotelRating] = useState<number | null>(null);
+  const [hotelRatingCount, setHotelRatingCount] = useState<number | null>(null);
+  const [hotelQuery, setHotelQuery] = useState('');
+  const [hotelResults, setHotelResults] = useState<
+    { id: string; label: string; subtitle: string; lat: number; lng: number }[]
+  >([]);
+  const [hotelSearching, setHotelSearching] = useState(false);
   const [departureTime, setDepartureTime] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
   const [checkInTime, setCheckInTime] = useState('14:00');
@@ -166,6 +183,12 @@ export function AddTravelBlockModal({
     setDepartureCoords(undefined);
     setHotelPlace('');
     setHotelCoords(undefined);
+    setHotelPlaceId(undefined);
+    setHotelPhotoUrl(null);
+    setHotelRating(null);
+    setHotelRatingCount(null);
+    setHotelQuery('');
+    setHotelResults([]);
     setDepartureTime('');
     setArrivalTime('');
     setCheckInTime('14:00');
@@ -175,6 +198,82 @@ export function AddTravelBlockModal({
     setBookingReference('');
     setPrice('');
     setTransportMode('flight');
+  };
+
+  const searchHotels = async () => {
+    const q = hotelQuery.trim();
+    if (q.length < 2) return;
+    const bounds = getDraftDestinations(draft)
+      .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+      .map((d) => ({
+        lat: d.lat,
+        lng: d.lng,
+        radiusKm: 30,
+        label: d.label,
+      }));
+    if (bounds.length === 0) return;
+    setHotelSearching(true);
+    try {
+      const res = await fetch('/api/places/google-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q, category: 'hotel', bounds }),
+      });
+      const data = (await res.json()) as {
+        results?: {
+          id: string;
+          label: string;
+          subtitle: string;
+          lat: number;
+          lng: number;
+        }[];
+      };
+      setHotelResults(data.results ?? []);
+    } catch {
+      setHotelResults([]);
+    } finally {
+      setHotelSearching(false);
+    }
+  };
+
+  const pickHotel = async (h: {
+    id: string;
+    label: string;
+    subtitle: string;
+    lat: number;
+    lng: number;
+  }) => {
+    setHotelPlace(h.label);
+    setLabel(h.label);
+    setHotelCoords({ lat: h.lat, lng: h.lng });
+    setHotelPlaceId(h.id);
+    setHotelResults([]);
+    setHotelQuery(h.label);
+    // Reset media precedenti, poi dettagli foto/rating (cache Places)
+    setHotelPhotoUrl(null);
+    setHotelRating(null);
+    setHotelRatingCount(null);
+    try {
+      const res = await fetch('/api/places/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId: h.id }),
+      });
+      const data = (await res.json()) as {
+        place?: {
+          photoUrl?: string | null;
+          rating?: number | null;
+          ratingCount?: number | null;
+        };
+      };
+      if (data.place) {
+        setHotelPhotoUrl(data.place.photoUrl ?? null);
+        setHotelRating(data.place.rating ?? null);
+        setHotelRatingCount(data.place.ratingCount ?? null);
+      }
+    } catch {
+      // ok: placeId resta, media opzionale
+    }
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -199,6 +298,10 @@ export function AddTravelBlockModal({
         checkOutDate: hotelDates.checkOutDate,
         travelerArrivalTime: travelerArrivalTime || undefined,
         price: parsedPrice,
+        placeId: hotelPlaceId,
+        photoUrl: hotelPhotoUrl,
+        rating: hotelRating,
+        ratingCount: hotelRatingCount,
       });
     } else {
       onConfirm({
@@ -354,16 +457,78 @@ export function AddTravelBlockModal({
           ) : (
             <>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Cerca hotel (indirizzo/zona)</label>
-                <PlaceSearchInput
-                  value={hotelPlace}
-                  onChange={(place, coords) => {
-                    setHotelPlace(place);
-                    setHotelCoords(coords);
-                  }}
-                  placeholder="Es. Hotel vicino al centro"
-                  className="h-11 rounded-xl border-white/10 bg-white/5 pl-10 text-white"
-                />
+                <label className="text-xs font-medium text-white/60">Cerca hotel</label>
+                <div className="flex gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                    <Input
+                      value={hotelQuery}
+                      onChange={(e) => setHotelQuery(e.target.value)}
+                      placeholder="Es. Hotel vicino al centro"
+                      className="h-11 rounded-xl border-white/10 bg-white/5 pl-10 text-white"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void searchHotels();
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="h-11 shrink-0 rounded-xl"
+                    onClick={() => void searchHotels()}
+                    disabled={hotelSearching}
+                  >
+                    {hotelSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Cerca'
+                    )}
+                  </Button>
+                </div>
+                {hotelResults.length > 0 && (
+                  <ul className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1">
+                    {hotelResults.map((h) => (
+                      <li key={h.id}>
+                        <button
+                          type="button"
+                          onClick={() => pickHotel(h)}
+                          className="flex w-full items-start justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10"
+                        >
+                          <span>
+                            <span className="block font-medium">{h.label}</span>
+                            {h.subtitle && (
+                              <span className="block text-xs text-white/45">{h.subtitle}</span>
+                            )}
+                          </span>
+                          <Plus className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {hotelPlace && (
+                  <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+                    {hotelPhotoUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={hotelPhotoUrl}
+                        alt={hotelPlace}
+                        className="h-28 w-full object-cover"
+                      />
+                    )}
+                    <div className="flex items-center justify-between gap-2 px-3 py-2">
+                      <p className="truncate text-sm font-medium text-white">{hotelPlace}</p>
+                      {hotelRating != null && (
+                        <span className="shrink-0 text-xs font-semibold text-amber-300">
+                          ★ {hotelRating.toFixed(1)}
+                          {hotelRatingCount != null ? ` (${hotelRatingCount})` : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">

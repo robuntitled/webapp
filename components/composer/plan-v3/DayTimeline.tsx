@@ -75,21 +75,27 @@ export function DayTimeline({
                 const s = schedule.get(block.id);
                 let timeRange = '';
                 if (block.type === 'hotel') {
-                  const ci =
-                    typeof block.content.checkInTime === 'string'
-                      ? block.content.checkInTime
-                      : s?.start;
-                  timeRange = ci ? `Check-in ${ci}` : '';
-                  const nights =
-                    typeof block.content.nights === 'number' ? block.content.nights : 1;
-                  const co =
-                    typeof block.content.checkOutTime === 'string'
-                      ? block.content.checkOutTime
-                      : '11:00';
-                  if (nights >= 1) {
-                    timeRange = timeRange
-                      ? `${timeRange} · out +${nights}g ${co}`
-                      : `Checkout +${nights}g ${co}`;
+                  const isCheckout = block.content.hotelPhase === 'checkout';
+                  if (isCheckout) {
+                    const co =
+                      typeof block.content.checkOutTime === 'string'
+                        ? block.content.checkOutTime
+                        : s?.start ?? '11:00';
+                    timeRange = `Check-out ${co}`;
+                  } else {
+                    const ci =
+                      typeof block.content.checkInTime === 'string'
+                        ? block.content.checkInTime
+                        : s?.start;
+                    const nights =
+                      typeof block.content.nights === 'number' ? block.content.nights : 1;
+                    const co =
+                      typeof block.content.checkOutTime === 'string'
+                        ? block.content.checkOutTime
+                        : '11:00';
+                    timeRange = ci
+                      ? `Check-in ${ci} · out +${nights}g ${co}`
+                      : `out +${nights}g ${co}`;
                   }
                 } else if (s) {
                   timeRange =

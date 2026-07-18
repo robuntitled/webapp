@@ -407,6 +407,52 @@ export function BlockEditorPanel({
         },
       ],
     }));
+    // Se l’hotel principale non ha ancora placeId/media, arricchiscilo dal risultato
+    if (!block.content.placeId) {
+      onUpdate(block.id, (b) => ({
+        ...b,
+        content: {
+          ...b.content,
+          placeId: h.id,
+          title: b.content.title === 'Hotel' || !b.content.title ? h.label : b.content.title,
+          place: h.subtitle || b.content.place,
+          lat: h.lat,
+          lng: h.lng,
+        },
+      }));
+      // Carica foto/rating in UI e content
+      void fetch('/api/places/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId: h.id }),
+      })
+        .then(async (res) => {
+          const data = (await res.json()) as {
+            place?: {
+              photoUrl?: string | null;
+              rating?: number | null;
+              ratingCount?: number | null;
+              name?: string;
+            };
+          };
+          if (!data.place) return;
+          setPlaceMedia({
+            photoUrl: data.place.photoUrl ?? null,
+            rating: data.place.rating ?? null,
+            ratingCount: data.place.ratingCount ?? null,
+          });
+          onUpdate(block.id, (b) => ({
+            ...b,
+            content: {
+              ...b.content,
+              photoUrl: data.place?.photoUrl ?? undefined,
+              rating: data.place?.rating ?? null,
+              ratingCount: data.place?.ratingCount ?? null,
+            },
+          }));
+        })
+        .catch(() => undefined);
+    }
     toast.success(`Alternativa hotel: ${h.label}`);
     setHotelQuery('');
     setHotelResults([]);
@@ -698,6 +744,36 @@ export function BlockEditorPanel({
     );
   }
 
+  const mediaBanner = (placeMedia?.photoUrl || placeMedia?.rating != null || mediaLoading) && (
+    <div className="relative h-40 w-full bg-white/5">
+      {placeMedia?.photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={placeMedia.photoUrl}
+          alt={displayTitle}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center text-white/30">
+          {mediaLoading ? (
+            <Loader2 className="h-7 w-7 animate-spin" />
+          ) : (
+            <MapPin className="h-8 w-8" />
+          )}
+        </div>
+      )}
+      {placeMedia?.rating != null && (
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold backdrop-blur">
+          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+          <span>{placeMedia.rating.toFixed(1)}</span>
+          {placeMedia.ratingCount != null && (
+            <span className="font-normal text-white/60">({placeMedia.ratingCount})</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   // ── UI generica (volo, hotel, trasporto, note…) ──────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -707,6 +783,7 @@ export function BlockEditorPanel({
       >
         <div className={`h-2 bg-gradient-to-r ${meta.color.split(' ').slice(0, 2).join(' ')}`} />
         {closeBtn}
+        {block.type === 'hotel' && mediaBanner}
 
         <div className="relative z-10 space-y-5 p-6 pb-8 pr-14">
           <DialogHeader className="space-y-1">
@@ -717,9 +794,18 @@ export function BlockEditorPanel({
               {displayTitle}
             </DialogTitle>
             <DialogDescription className="text-left text-xs text-white/45">
-              Modifica · {meta.label}
+              {block.type === 'hotel' && block.content.hotelPhase === 'checkout'
+                ? 'Check-out · Hotel'
+                : `Modifica · ${meta.label}`}
             </DialogDescription>
           </DialogHeader>
+
+          {block.type === 'hotel' && block.content.hotelPhase === 'checkout' && (
+            <p className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/55">
+              Check-out automatico collegato al check-in. Orario modificabile; le notti si
+              gestiscono dal blocco check-in.
+            </p>
+          )}
 
           {block.type !== 'hotel' && (
             <div className="grid grid-cols-2 gap-3">

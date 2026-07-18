@@ -72,13 +72,24 @@ export function TimelineStopCard({
   dragHandleProps,
 }: TimelineStopCardProps) {
   const meta = BLOCK_META[block.type];
-  const title = getBlockDisplayTitle(block);
+  const title =
+    block.type === 'hotel' && block.content.hotelPhase === 'checkout'
+      ? `Check-out · ${getBlockDisplayTitle(block)}`
+      : getBlockDisplayTitle(block);
   const duration =
     typeof block.content.duration === 'string' ? block.content.duration : null;
   const place =
     typeof block.content.place === 'string' && block.content.place ? block.content.place : null;
   const pickup =
     typeof block.content.pickupAddress === 'string' ? block.content.pickupAddress : null;
+  const photoUrl =
+    typeof block.content.photoUrl === 'string' && block.content.photoUrl
+      ? block.content.photoUrl
+      : null;
+  const rating =
+    typeof block.content.rating === 'number' ? block.content.rating : null;
+  const ratingCount =
+    typeof block.content.ratingCount === 'number' ? block.content.ratingCount : null;
   const notes = typeof block.content.notes === 'string' ? block.content.notes : '';
   const attachments = attachmentsList(block);
   const [showNotes, setShowNotes] = useState(false);
@@ -139,17 +150,34 @@ export function TimelineStopCard({
           </button>
 
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <span
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br text-lg ${gradient}`}
-            >
-              {meta.emoji}
-            </span>
+            {photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={photoUrl}
+                alt=""
+                className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 object-cover"
+              />
+            ) : (
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br text-lg ${gradient}`}
+              >
+                {meta.emoji}
+              </span>
+            )}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-white">{title}</span>
               <span className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-white/55">
                 <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
                   {meta.label}
                 </span>
+                {rating != null && (
+                  <span className="font-semibold text-amber-300/90">
+                    ★ {rating.toFixed(1)}
+                    {ratingCount != null ? (
+                      <span className="font-normal text-white/40"> ({ratingCount})</span>
+                    ) : null}
+                  </span>
+                )}
                 {duration && <span>{duration}</span>}
                 {(pickup || place) && (
                   <span className="truncate text-white/40">{pickup ?? place}</span>

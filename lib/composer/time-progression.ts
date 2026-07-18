@@ -68,21 +68,26 @@ export function computeDaySchedule(
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
 
-    // Hotel: solo orario check-in nel giorno del blocco (check-out è un altro giorno).
+    // Hotel: check-in o check-out a seconda della fase (giorni diversi)
     if (block.type === 'hotel') {
-      const checkIn =
-        typeof block.content.checkInTime === 'string' && block.content.checkInTime
+      const isCheckout = block.content.hotelPhase === 'checkout';
+      const t = isCheckout
+        ? typeof block.content.checkOutTime === 'string' && block.content.checkOutTime
+          ? block.content.checkOutTime
+          : typeof block.content.time === 'string' && block.content.time
+            ? block.content.time
+            : '11:00'
+        : typeof block.content.checkInTime === 'string' && block.content.checkInTime
           ? block.content.checkInTime
           : typeof block.content.time === 'string' && block.content.time
             ? block.content.time
             : '14:00';
-      const start = timeToMinutes(checkIn);
+      const start = timeToMinutes(t);
       result.set(block.id, {
         start: minutesToTime(start),
         end: minutesToTime(start),
         durationMinutes: 0,
       });
-      // Non sposta il cursore delle attività: hotel non occupa la timeline
       continue;
     }
 

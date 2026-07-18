@@ -26,6 +26,10 @@ import {
   endDateFromDays,
   removeComposerDay,
 } from '@/lib/composer/days';
+import {
+  removeHotelAndLinkedCheckouts,
+  syncHotelCheckoutBlocks,
+} from '@/lib/composer/hotel-checkout-sync';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
@@ -199,7 +203,29 @@ export function ComposerPlanStep({
 
   const updateBlock = (blockId: string, updater: (block: ComposerBlock) => ComposerBlock) => {
     if (!activeDay) return;
-    updateDay(activeDay.dayIndex, (d) => ({
+    const dayIndex = activeDay.dayIndex;
+    const prevBlock = activeDay.blocks.find((b) => b.id === blockId);
+    const nextBlock = prevBlock ? updater(prevBlock) : null;
+
+    // Hotel check-in: dopo update notti/orari → risincronizza checkout nei giorni dopo
+    if (nextBlock?.type === 'hotel' && nextBlock.content.hotelPhase !== 'checkout') {
+      let days = draft.days.map((d) =>
+        d.dayIndex === dayIndex
+          ? {
+              ...d,
+              blocks: d.blocks.map((b) => (b.id === blockId ? nextBlock : b)),
+            }
+          : d
+      );
+      const synced = syncHotelCheckoutBlocks(days, dayIndex, nextBlock);
+      commitDays(synced.days);
+      if (editingBlock?.id === blockId) {
+        setEditingBlock(nextBlock);
+      }
+      return;
+    }
+
+    updateDay(dayIndex, (d) => ({
       ...d,
       blocks: d.blocks.map((b) => (b.id === blockId ? updater(b) : b)),
     }));
@@ -211,10 +237,9 @@ export function ComposerPlanStep({
   const removeBlock = (blockId: string) => {
     const day = activeDay ?? draft.days.find((d) => d.blocks.some((b) => b.id === blockId));
     if (!day) return;
-    updateDay(day.dayIndex, (d) => ({
-      ...d,
-      blocks: d.blocks.filter((b) => b.id !== blockId),
-    }));
+    // Hotel check-in: rimuove anche check-out nei giorni dopo
+    const nextDays = removeHotelAndLinkedCheckouts(draft.days, blockId);
+    commitDays(nextDays);
     if (editingBlock?.id === blockId) setEditingBlock(null);
     if (highlightedPinId === blockId) setHighlightedPinId(null);
   };
@@ -264,23 +289,41 @@ export function ComposerPlanStep({
       checkInTime: payload.type === 'hotel' ? payload.checkInTime || '14:00' : payload.checkInTime,
       checkOutTime: payload.type === 'hotel' ? payload.checkOutTime || '11:00' : payload.checkOutTime,
       nights: payload.type === 'hotel' ? payload.nights ?? 1 : undefined,
-      checkInDate: payload.checkInDate,
+      checkInDate: payload.checkInDate ?? day.date,
       checkOutDate: payload.checkOutDate,
+      hotelPhase: payload.type === 'hotel' ? 'checkin' : undefined,
       time:
         payload.type === 'hotel'
           ? payload.checkInTime || '14:00'
           : payload.departureTime,
-      // Hotel: non impostare endTime = checkout (è un altro giorno)
       endTime: payload.type === 'hotel' ? undefined : payload.arrivalTime,
       travelerArrivalTime: payload.travelerArrivalTime,
       bookingReference: payload.bookingReference,
       price: payload.price ?? null,
       lat: payload.lat,
       lng: payload.lng,
+      placeId: payload.placeId,
+      photoUrl: payload.photoUrl,
+      rating: payload.rating ?? null,
+      ratingCount: payload.ratingCount ?? null,
       timeSlot: 'flex',
     });
+
+    if (payload.type === 'hotel') {
+      // Check-in oggi + check-out automatico nei giorni successivi (tab)
+      let days = draft.days.map((d) =>
+        d.dayIndex === day.dayIndex ? { ...d, blocks: [...d.blocks, block] } : d
+      );
+      const synced = syncHotelCheckoutBlocks(days, day.dayIndex, block);
+      commitDays(synced.days);
+      toast.success(
+        `Hotel aggiunto · check-out nel giorno ${day.dayIndex + (payload.nights ?? 1)}`
+      );
+      return;
+    }
+
     updateDay(day.dayIndex, (d) => ({ ...d, blocks: [...d.blocks, block] }));
-    toast.success(payload.type === 'hotel' ? 'Hotel aggiunto' : 'Trasporto aggiunto');
+    toast.success('Trasporto aggiunto');
   };
 
   const updateBlockNotes = (blockId: string, notes: string) => {

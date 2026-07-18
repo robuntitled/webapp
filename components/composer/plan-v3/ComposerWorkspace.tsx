@@ -46,7 +46,7 @@ export function ComposerWorkspace(props: ComposerWorkspaceProps) {
   const { onPinClick, onMapClick, onPoiClick, ...itineraryProps } = props;
 
   return (
-    <div className="composer-v3-workspace flex h-full min-h-0 flex-col overflow-hidden lg:grid lg:grid-cols-[7fr_3fr]">
+    <div className="composer-v3-workspace flex h-full min-h-0 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)]">
       <div className="min-h-0 flex-1 overflow-hidden">
         <ItineraryColumn {...itineraryProps} />
       </div>
@@ -60,6 +60,8 @@ export function ComposerWorkspace(props: ComposerWorkspaceProps) {
           onPinClick={onPinClick}
           onMapClick={onMapClick}
           onPoiClick={onPoiClick}
+          onAddTransport={props.onAddTransport}
+          onAddHotel={props.onAddHotel}
         />
       </div>
     </div>
