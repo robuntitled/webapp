@@ -183,7 +183,7 @@ export function PhoneVerificationSection({
                     disabled={sending}
                     onClick={() => void sendCode()}
                   >
-                    Reinvia SMS
+                    Reinvia codice
                   </Button>
                   <Button
                     type="button"
