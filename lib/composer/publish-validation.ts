@@ -17,11 +17,23 @@ function flightIsComplete(block: { content: Record<string, unknown> }): boolean 
   return Boolean(title && from && departureTime && arrivalTime);
 }
 
+/**
+ * Solo i check-in contano per la pubblicazione.
+ * I blocchi "check-out" automatici non devono bloccare (sono collegati al check-in).
+ */
 function hotelIsComplete(block: { content: Record<string, unknown> }): boolean {
+  // Check-out automatico: ok se ha almeno titolo e orario check-out
+  if (block.content.hotelPhase === 'checkout') {
+    return true;
+  }
+
   const title = String(block.content.title ?? '').trim();
   const area = String(block.content.area ?? block.content.place ?? '').trim();
-  const checkIn = String(block.content.checkInTime ?? '').trim();
+  const checkIn = String(
+    block.content.checkInTime ?? block.content.time ?? ''
+  ).trim();
   const checkOut = String(block.content.checkOutTime ?? '').trim();
+  // Zona/indirizzo: place da Google o area; orari con default tipici se assenti in UI
   return Boolean(title && area && checkIn && checkOut);
 }
 
@@ -30,7 +42,10 @@ export function validatePublishDraft(draft: ComposerDraft): PublishValidationIss
   const issues: PublishValidationIssue[] = [];
 
   const flights = blocks.filter((b) => b.type === 'flight');
-  const hotels = blocks.filter((b) => b.type === 'hotel');
+  // Solo check-in hotel (non i tab check-out automatici)
+  const hotelCheckins = blocks.filter(
+    (b) => b.type === 'hotel' && b.content.hotelPhase !== 'checkout'
+  );
 
   if (flights.length > 0 && !flights.every(flightIsComplete)) {
     issues.push({
@@ -40,11 +55,11 @@ export function validatePublishDraft(draft: ComposerDraft): PublishValidationIss
     });
   }
 
-  if (hotels.length > 0 && !hotels.every(hotelIsComplete)) {
+  if (hotelCheckins.length > 0 && !hotelCheckins.every(hotelIsComplete)) {
     issues.push({
       code: 'hotel-incomplete',
       message:
-        'Completa gli hotel nel piano: indirizzo/zona, orario check-in e check-out.',
+        'Completa gli hotel nel piano: scegli l’hotel (nome e zona/indirizzo) e imposta check-in (es. 14:00) e check-out (es. 11:00).',
     });
   }
 
