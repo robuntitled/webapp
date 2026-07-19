@@ -47,7 +47,7 @@ export async function getTripMessages(
   let query = supabaseAdmin
     .from('trip_messages')
     .select(
-      'id, trip_id, user_id, body, created_at, user:users(id, username, first_name, last_name, image)'
+      'id, trip_id, user_id, body, created_at, user:users!trip_messages_user_id_fkey(id, username, first_name, last_name, image)'
     )
     .eq('trip_id', tripId)
     .order('created_at', { ascending: true })
@@ -92,7 +92,7 @@ export async function postTripMessage(
     .from('trip_messages')
     .insert({ trip_id: tripId, user_id: userId, body: trimmed })
     .select(
-      'id, trip_id, user_id, body, created_at, user:users(id, username, first_name, last_name, image)'
+      'id, trip_id, user_id, body, created_at, user:users!trip_messages_user_id_fkey(id, username, first_name, last_name, image)'
     )
     .single();
 
@@ -163,7 +163,7 @@ const MEMBERSHIP_SELECT = `
   imageUrl: image_url,
   endDate: end_date,
   creator_id,
-  creator:users(id),
+  creator:users!trips_creator_id_fkey(id),
   trip_participants(user_id, role)
 `;
 
@@ -333,7 +333,7 @@ export async function searchChatMessagesForUser(
   const { data, error } = await supabaseAdmin
     .from('trip_messages')
     .select(
-      'id, trip_id, body, created_at, user:users(first_name, last_name, username)'
+      'id, trip_id, body, created_at, user:users!trip_messages_user_id_fkey(first_name, last_name, username)'
     )
     .in('trip_id', tripIds)
     .ilike('body', `%${q.replace(/[%_]/g, '')}%`)
