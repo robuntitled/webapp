@@ -39,16 +39,16 @@ export function SettingsSecuritySection({
   };
 
   const phoneVerified = Boolean(userSettings?.phone_verified_at);
-  const phoneMasked =
-    phoneVerified && userSettings?.phone_e164
-      ? maskPhoneE164(userSettings.phone_e164)
-      : null;
+  const phoneMasked = userSettings?.phone_e164
+    ? maskPhoneE164(userSettings.phone_e164)
+    : null;
 
   return (
     <div className="space-y-10">
       <PhoneVerificationSection
         phoneMasked={phoneMasked}
         phoneVerified={phoneVerified}
+        otpPending={Boolean(userSettings?.phone_otp_pending)}
       />
 
       <SettingsSection

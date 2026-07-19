@@ -211,7 +211,6 @@ export default function ProfileForm({
           <VerifiedBadges
             className="mt-2 justify-center sm:justify-start"
             phoneVerified={Boolean(userProfile?.phone_verified_at)}
-            emailVerified={Boolean(userProfile?.email_verified_at)}
           />
           {avatarFile && (
             <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">

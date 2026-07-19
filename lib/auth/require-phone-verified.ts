@@ -8,7 +8,7 @@ export class PhoneVerifyRequiredError extends Error {
   readonly code = PHONE_VERIFY_REQUIRED_CODE;
 
   constructor(
-    message = 'Per creare un viaggio o unirti a uno devi verificare il telefono. Vai in Impostazioni → Sicurezza.'
+    message = 'Per creare un viaggio o unirti a uno devi verificare il telefono (un solo codice WhatsApp).'
   ) {
     super(message);
     this.name = 'PhoneVerifyRequiredError';

@@ -26,6 +26,7 @@ import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { normalizeWizardStep, WIZARD_STEPS } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft, ComposerDay } from '@/types/composer';
 import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
+import { PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
 const EMPTY_DRAFT: ComposerDraft = {
   title: '',
@@ -72,6 +73,7 @@ export function TripComposer({
     mergeDraft(EMPTY_DRAFT, initialDraft, initialPlannerProfile)
   );
   const [publishing, setPublishing] = useState(false);
+  const [phoneGateOpen, setPhoneGateOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const plannerProfile =
     draft.plannerProfile ?? initialPlannerProfile ?? EMPTY_PLANNER_PROFILE;
@@ -159,13 +161,7 @@ export function TripComposer({
 
       if (!response.ok) {
         if (data.code === 'PHONE_VERIFY_REQUIRED' || /telefono/i.test(String(data.error ?? ''))) {
-          toast.error(data.error ?? 'Verifica il telefono per pubblicare');
-          toast.message('Impostazioni → Sicurezza → verifica cellulare', {
-            action: {
-              label: 'Verifica',
-              onClick: () => router.push('/dashboard/impostazioni'),
-            },
-          });
+          setPhoneGateOpen(true);
           return;
         }
         toast.error(data.hint ? `${data.error} — ${data.hint}` : data.error ?? 'Errore pubblicazione');
@@ -200,6 +196,13 @@ export function TripComposer({
         step === 'plan' ? 'bg-[#f4f7fa]' : 'composer-shell'
       }`}
     >
+      <PhoneVerifyGate
+        open={phoneGateOpen}
+        onOpenChange={setPhoneGateOpen}
+        onVerified={() => {
+          void publish();
+        }}
+      />
       {step !== 'plan' && <div className="composer-aurora" aria-hidden />}
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">

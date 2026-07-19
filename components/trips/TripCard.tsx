@@ -25,6 +25,7 @@ import {
   isTripParticipant,
   canJoinTrip,
 } from '@/lib/trips/display';
+import { isPhoneGateError, PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
 export type { TripWithRelations } from '@/types/trip';
 
@@ -41,6 +42,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
   const [joinPending, startJoinTransition] = useTransition();
   const [optimisticFavorited, setOptimisticFavorited] = useState(trip.isFavorited);
   const [optimisticJoined, setOptimisticJoined] = useState(false);
+  const [phoneGateOpen, setPhoneGateOpen] = useState(false);
 
   const userId = session?.user?.id;
 
@@ -82,30 +84,28 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
     });
   };
 
+  const doJoin = async () => {
+    try {
+      await joinTrip(trip.id);
+      setOptimisticJoined(true);
+      toast.success('Sei dentro! Modalità relax attiva 🏖️');
+      router.refresh();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Errore imprevisto';
+      if (isPhoneGateError(msg)) {
+        setPhoneGateOpen(true);
+        return;
+      }
+      toast.error(msg);
+    }
+  };
+
   const handleJoinClick = () => {
     if (!session) {
       router.push('/');
       return;
     }
-    startJoinTransition(async () => {
-      try {
-        await joinTrip(trip.id);
-        setOptimisticJoined(true);
-        toast.success('Sei dentro! Modalità relax attiva 🏖️');
-        router.refresh();
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Errore imprevisto';
-        toast.error(msg);
-        if (msg.toLowerCase().includes('telefono') || msg.includes('PHONE_VERIFY')) {
-          toast.message('Verifica il numero in Impostazioni → Sicurezza', {
-            action: {
-              label: 'Vai',
-              onClick: () => router.push('/dashboard/impostazioni'),
-            },
-          });
-        }
-      }
-    });
+    startJoinTransition(() => doJoin());
   };
 
   const imageUrl = trip.imageUrl || DEFAULT_TRIP_IMAGE;
@@ -113,6 +113,13 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
 
   return (
     <div className="h-full">
+      <PhoneVerifyGate
+        open={phoneGateOpen}
+        onOpenChange={setPhoneGateOpen}
+        onVerified={() => {
+          startJoinTransition(() => doJoin());
+        }}
+      />
       <Card className="card-travel h-full group flex flex-col bg-card border-0 shadow-xl">
         <div className="relative h-60 w-full shrink-0">
           <Link href={tripHref} className="block h-full w-full overflow-hidden">

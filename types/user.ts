@@ -34,4 +34,6 @@ export type UserSettings = {
   phone_e164: string | null;
   phone_verified_at: string | null;
   email_verified_at: string | null;
+  /** OTP già inviato, in attesa di conferma */
+  phone_otp_pending?: boolean;
 };

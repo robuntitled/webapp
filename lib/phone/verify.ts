@@ -4,10 +4,16 @@ import { createHash, randomInt } from 'crypto';
 import { sendWhatsAppOtp, whatsappConfigured } from '@/lib/phone/whatsapp';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-const OTP_TTL_MS = 10 * 60_000;
+/** Codice valido 24h — un solo invio a vita, serve tempo per inserirlo. */
+const OTP_TTL_MS = 24 * 60 * 60_000;
 const MAX_ATTEMPTS = 5;
+/** Un solo messaggio OTP per account (fino a verifica riuscita). */
+const MAX_OTP_SENDS = 1;
 
 export type PhoneOtpMode = 'whatsapp' | 'twilio' | 'dev';
+
+/** Solo da create/join/publish trip — non da “giochi” in impostazioni. */
+export type PhoneOtpPurpose = 'trip_action';
 
 function hashOtp(code: string, userId: string): string {
   return createHash('sha256').update(`${userId}:${code}`).digest('hex');
@@ -27,10 +33,7 @@ async function twilioStart(e164: string): Promise<{ ok: true } | { ok: false; er
   const service = process.env.TWILIO_VERIFY_SERVICE_SID!.trim();
   const auth = Buffer.from(`${sid}:${token}`).toString('base64');
 
-  const body = new URLSearchParams({
-    To: e164,
-    Channel: 'sms',
-  });
+  const body = new URLSearchParams({ To: e164, Channel: 'sms' });
 
   const res = await fetch(
     `https://verify.twilio.com/v2/Services/${service}/Verifications`,
@@ -48,7 +51,7 @@ async function twilioStart(e164: string): Promise<{ ok: true } | { ok: false; er
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     console.error('[twilio-verify] start failed', res.status, text.slice(0, 200));
-    return { ok: false, error: 'Impossibile inviare l’SMS. Riprova tra poco.' };
+    return { ok: false, error: 'Impossibile inviare il codice. Riprova tra poco.' };
   }
   return { ok: true };
 }
@@ -62,10 +65,7 @@ async function twilioCheck(
   const service = process.env.TWILIO_VERIFY_SERVICE_SID!.trim();
   const auth = Buffer.from(`${sid}:${token}`).toString('base64');
 
-  const body = new URLSearchParams({
-    To: e164,
-    Code: code,
-  });
+  const body = new URLSearchParams({ To: e164, Code: code });
 
   const res = await fetch(
     `https://verify.twilio.com/v2/Services/${service}/VerificationCheck`,
@@ -87,42 +87,45 @@ async function twilioCheck(
   return { ok: true };
 }
 
-async function saveLocalOtp(
-  userId: string,
-  e164: string,
-  code: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const otpHash = hashOtp(code, userId);
-  const expires = new Date(Date.now() + OTP_TTL_MS).toISOString();
-
-  const { error } = await supabaseAdmin
-    .from('users')
-    .update({
-      phone_e164: e164,
-      phone_otp_hash: otpHash,
-      phone_otp_expires_at: expires,
-      phone_otp_attempts: 0,
-      phone_verified_at: null,
-    })
-    .eq('id', userId);
-
-  if (error) {
-    console.error('[phone-otp] save failed', error);
-    return { ok: false, error: 'Impossibile avviare la verifica.' };
-  }
-  return { ok: true };
-}
-
 /**
- * Priorità canale:
- * 1) WhatsApp Cloud API (se configurato)
- * 2) Twilio Verify SMS
- * 3) Dev: log server
+ * Un solo OTP a vita per account, solo con purpose trip_action.
+ * Validità codice: 24 ore.
  */
 export async function sendPhoneOtp(
   userId: string,
-  e164: string
+  e164: string,
+  purpose: PhoneOtpPurpose
 ): Promise<{ ok: true; mode: PhoneOtpMode } | { ok: false; error: string }> {
+  if (purpose !== 'trip_action') {
+    return {
+      ok: false,
+      error: 'Il codice si riceve solo quando crei o ti unisci a un viaggio.',
+    };
+  }
+
+  const { data: row, error: loadErr } = await supabaseAdmin
+    .from('users')
+    .select('id, phone_verified_at, phone_otp_send_count, phone_e164')
+    .eq('id', userId)
+    .single();
+
+  if (loadErr || !row) {
+    return { ok: false, error: 'Utente non trovato.' };
+  }
+
+  if (row.phone_verified_at) {
+    return { ok: false, error: 'Telefono già verificato.' };
+  }
+
+  const sendCount = Number(row.phone_otp_send_count ?? 0);
+  if (sendCount >= MAX_OTP_SENDS) {
+    return {
+      ok: false,
+      error:
+        'Hai già ricevuto l’unico codice di verifica. Controlla WhatsApp (valido 24 ore) e inseriscilo, oppure contatta il supporto se non l’hai ricevuto.',
+    };
+  }
+
   const { data: taken } = await supabaseAdmin
     .from('users')
     .select('id')
@@ -135,21 +138,52 @@ export async function sendPhoneOtp(
     return { ok: false, error: 'Questo numero è già verificato su un altro account.' };
   }
 
-  // ── WhatsApp (preferito) ─────────────────────────────────────────────────
+  const nowIso = new Date().toISOString();
+  const expires = new Date(Date.now() + OTP_TTL_MS).toISOString();
+
+  // ── WhatsApp (preferito): 1 messaggio, OTP locale 24h ────────────────────
   if (whatsappConfigured()) {
     const code = String(randomInt(100000, 999999));
-    const saved = await saveLocalOtp(userId, e164, code);
-    if (!saved.ok) return saved;
+    const otpHash = hashOtp(code, userId);
+
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({
+        phone_e164: e164,
+        phone_otp_hash: otpHash,
+        phone_otp_expires_at: expires,
+        phone_otp_attempts: 0,
+        phone_verified_at: null,
+        phone_otp_send_count: sendCount + 1,
+        phone_otp_sent_at: nowIso,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('[phone-otp] save failed', error);
+      return { ok: false, error: 'Impossibile avviare la verifica.' };
+    }
 
     const sent = await sendWhatsAppOtp(e164, code);
     if (!sent.ok) {
-      // Non lasciare un OTP “fantasma” se l’invio fallisce del tutto
+      // rollback count so rare send failure non brucia lo slot (opzionale: user asked max 1 send)
+      // Teniamo count=1 comunque se messaggio poteva essere partito; qui rollback per sicurezza costi
+      await supabaseAdmin
+        .from('users')
+        .update({
+          phone_otp_send_count: sendCount,
+          phone_otp_hash: null,
+          phone_otp_expires_at: null,
+          phone_otp_sent_at: null,
+        })
+        .eq('id', userId);
       return { ok: false, error: sent.error };
     }
+
     return { ok: true, mode: 'whatsapp' };
   }
 
-  // ── Twilio SMS ───────────────────────────────────────────────────────────
+  // ── Twilio SMS: 1 sola Verification ─────────────────────────────────────
   if (twilioConfigured()) {
     const started = await twilioStart(e164);
     if (!started.ok) return started;
@@ -160,20 +194,39 @@ export async function sendPhoneOtp(
         phone_e164: e164,
         phone_verified_at: null,
         phone_otp_hash: null,
-        phone_otp_expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+        phone_otp_expires_at: expires,
         phone_otp_attempts: 0,
+        phone_otp_send_count: sendCount + 1,
+        phone_otp_sent_at: nowIso,
       })
       .eq('id', userId);
 
     return { ok: true, mode: 'twilio' };
   }
 
-  // ── Dev ──────────────────────────────────────────────────────────────────
+  // ── Dev: 1 codice in log ────────────────────────────────────────────────
   const code = String(randomInt(100000, 999999));
-  const saved = await saveLocalOtp(userId, e164, code);
-  if (!saved.ok) return saved;
+  const otpHash = hashOtp(code, userId);
 
-  console.info('[phone-otp:dev]', { userId, e164, code });
+  const { error } = await supabaseAdmin
+    .from('users')
+    .update({
+      phone_e164: e164,
+      phone_otp_hash: otpHash,
+      phone_otp_expires_at: expires,
+      phone_otp_attempts: 0,
+      phone_verified_at: null,
+      phone_otp_send_count: sendCount + 1,
+      phone_otp_sent_at: nowIso,
+    })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('[phone-otp] save failed', error);
+    return { ok: false, error: 'Impossibile avviare la verifica.' };
+  }
+
+  console.info('[phone-otp:dev] UNICO invio', { userId, e164, code, validHours: 24 });
   return { ok: true, mode: 'dev' };
 }
 
@@ -183,19 +236,22 @@ export async function confirmPhoneOtp(
 ): Promise<{ ok: true; e164: string } | { ok: false; error: string }> {
   const cleaned = code.replace(/\D/g, '');
   if (cleaned.length < 4 || cleaned.length > 8) {
-    return { ok: false, error: 'Inserisci il codice ricevuto su WhatsApp o SMS.' };
+    return { ok: false, error: 'Inserisci il codice ricevuto su WhatsApp.' };
   }
 
   const { data: user, error } = await supabaseAdmin
     .from('users')
     .select(
-      'id, phone_e164, phone_otp_hash, phone_otp_expires_at, phone_otp_attempts, phone_verified_at'
+      'id, phone_e164, phone_otp_hash, phone_otp_expires_at, phone_otp_attempts, phone_verified_at, phone_otp_send_count'
     )
     .eq('id', userId)
     .single();
 
   if (error || !user?.phone_e164) {
-    return { ok: false, error: 'Avvia prima l’invio del codice al telefono.' };
+    return {
+      ok: false,
+      error: 'Nessuna verifica in corso. Avvia la verifica creando o unendoti a un viaggio.',
+    };
   }
 
   if (user.phone_verified_at) {
@@ -204,10 +260,13 @@ export async function confirmPhoneOtp(
 
   const attempts = user.phone_otp_attempts ?? 0;
   if (attempts >= MAX_ATTEMPTS) {
-    return { ok: false, error: 'Troppi tentativi. Richiedi un nuovo codice.' };
+    return {
+      ok: false,
+      error:
+        'Troppi tentativi errati. L’unico codice era già stato inviato — contatta il supporto se serve aiuto.',
+    };
   }
 
-  // Twilio Verify: nessun hash locale
   if (twilioConfigured() && !user.phone_otp_hash) {
     const checked = await twilioCheck(user.phone_e164, cleaned);
     if (!checked.ok) {
@@ -218,12 +277,15 @@ export async function confirmPhoneOtp(
       return checked;
     }
   } else {
-    // WhatsApp / dev: OTP locale
     const exp = user.phone_otp_expires_at
       ? new Date(user.phone_otp_expires_at).getTime()
       : 0;
     if (!exp || exp < Date.now()) {
-      return { ok: false, error: 'Codice scaduto. Richiedi un nuovo codice.' };
+      return {
+        ok: false,
+        error:
+          'Codice scaduto (valido 24 ore). Non possiamo reinviarlo: contatta il supporto se serve.',
+      };
     }
     const expected = user.phone_otp_hash;
     if (!expected || expected !== hashOtp(cleaned, userId)) {
@@ -266,15 +328,26 @@ export async function confirmPhoneOtp(
   return { ok: true, e164: user.phone_e164 };
 }
 
-export async function clearPhoneVerification(userId: string): Promise<void> {
-  await supabaseAdmin
+/** Stato per UI: già inviato? verificato? */
+export async function getPhoneVerifyStatus(userId: string): Promise<{
+  verified: boolean;
+  otpSent: boolean;
+  phoneMasked: string | null;
+  e164: string | null;
+}> {
+  const { data } = await supabaseAdmin
     .from('users')
-    .update({
-      phone_e164: null,
-      phone_verified_at: null,
-      phone_otp_hash: null,
-      phone_otp_expires_at: null,
-      phone_otp_attempts: 0,
-    })
-    .eq('id', userId);
+    .select('phone_verified_at, phone_otp_send_count, phone_e164')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const e164 = data?.phone_e164 ?? null;
+  return {
+    verified: Boolean(data?.phone_verified_at),
+    otpSent: Number(data?.phone_otp_send_count ?? 0) >= 1,
+    phoneMasked: e164
+      ? `${e164.slice(0, 3)} ••• ••• ${e164.slice(-4)}`
+      : null,
+    e164,
+  };
 }

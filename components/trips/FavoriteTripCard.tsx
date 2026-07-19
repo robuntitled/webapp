@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MapPin, X, LogIn } from 'lucide-react';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { toggleFavorite } from '@/actions/favorites';
 import { joinTrip } from '@/actions/trip-management';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import type { TripWithRelations } from '@/types/trip';
 import { getTripStatus } from '@/lib/utils/trip';
 import { getInitialsFromNames } from '@/lib/utils/user';
+import { isPhoneGateError, PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
 export function FavoriteTripCard({
   trip,
@@ -27,6 +28,7 @@ export function FavoriteTripCard({
   const router = useRouter();
   const [isRemoving, startRemoving] = useTransition();
   const [isJoining, startJoining] = useTransition();
+  const [phoneGateOpen, setPhoneGateOpen] = useState(false);
 
   const imageUrl = trip.imageUrl || '/images/trips/placeholder.jpg';
   const status = getTripStatus(trip.startDate, trip.endDate);
@@ -48,6 +50,21 @@ export function FavoriteTripCard({
     });
   };
 
+  const doJoin = async () => {
+    try {
+      await joinTrip(trip.id);
+      toast.success('Ti sei unito al viaggio con successo!');
+      router.refresh();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Errore imprevisto';
+      if (isPhoneGateError(msg)) {
+        setPhoneGateOpen(true);
+        return;
+      }
+      toast.error(msg);
+    }
+  };
+
   const handleJoinClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -55,28 +72,16 @@ export function FavoriteTripCard({
       router.push('/');
       return;
     }
-    startJoining(async () => {
-      try {
-        await joinTrip(trip.id);
-        toast.success('Ti sei unito al viaggio con successo!');
-        router.refresh();
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Errore imprevisto';
-        toast.error(msg);
-        if (msg.toLowerCase().includes('telefono')) {
-          toast.message('Verifica il numero in Impostazioni → Sicurezza', {
-            action: {
-              label: 'Vai',
-              onClick: () => router.push('/dashboard/impostazioni'),
-            },
-          });
-        }
-      }
-    });
+    startJoining(() => doJoin());
   };
 
   return (
     <Card className="w-full transition-all hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700">
+      <PhoneVerifyGate
+        open={phoneGateOpen}
+        onOpenChange={setPhoneGateOpen}
+        onVerified={() => startJoining(() => doJoin())}
+      />
       <div className="flex flex-col sm:flex-row">
         <div className="relative h-40 sm:h-auto sm:w-48 flex-shrink-0">
           <Link href={`/viaggi/${trip.id}`}>

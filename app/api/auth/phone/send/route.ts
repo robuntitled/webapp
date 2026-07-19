@@ -7,6 +7,8 @@ import { sendPhoneOtp } from '@/lib/phone/verify';
 
 const schema = z.object({
   phone: z.string().min(6).max(30),
+  /** Solo da create/join trip */
+  purpose: z.literal('trip_action'),
 });
 
 export async function POST(request: Request) {
@@ -17,22 +19,28 @@ export async function POST(request: Request) {
 
   const ipBlock = await rateLimitJson(
     `phone-send:ip:${clientIp(request)}`,
-    { limit: 8, windowMs: 15 * 60_000 },
-    'Troppe richieste SMS. Riprova più tardi.'
+    { limit: 5, windowMs: 60 * 60_000 },
+    'Troppe richieste. Riprova più tardi.'
   );
   if (ipBlock) return ipBlock;
 
   const userBlock = await rateLimitJson(
     `phone-send:user:${session.user.id}`,
-    { limit: 5, windowMs: 15 * 60_000 },
-    'Hai raggiunto il limite di invii. Riprova tra 15 minuti.'
+    { limit: 2, windowMs: 24 * 60 * 60_000 },
+    'Puoi ricevere un solo codice di verifica.'
   );
   if (userBlock) return userBlock;
 
   const json = await request.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Numero non valido' }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          'Il codice WhatsApp si invia solo quando crei o ti unisci a un viaggio (un solo invio).',
+      },
+      { status: 400 }
+    );
   }
 
   const norm = normalizePhoneE164(parsed.data.phone);
@@ -40,20 +48,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: norm.error }, { status: 400 });
   }
 
-  const result = await sendPhoneOtp(session.user.id, norm.e164);
+  const result = await sendPhoneOtp(session.user.id, norm.e164, 'trip_action');
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
   const messages: Record<string, string> = {
-    whatsapp: 'Ti abbiamo inviato un codice su WhatsApp. Aprilo e inseriscilo qui sotto.',
-    twilio: 'Ti abbiamo inviato un SMS con il codice di verifica.',
-    dev: 'Codice generato (dev: vedi log server). Inseriscilo qui sotto.',
+    whatsapp:
+      'Ti abbiamo inviato l’unico codice su WhatsApp (valido 24 ore). Non potremo reinviarlo.',
+    twilio: 'Ti abbiamo inviato l’unico SMS con il codice (valido 24 ore). Non potremo reinviarlo.',
+    dev: 'Codice generato (dev: log server). Valido 24 ore — un solo invio.',
   };
 
   return NextResponse.json({
     ok: true,
     mode: result.mode,
-    message: messages[result.mode] ?? 'Codice inviato.',
+    once: true,
+    validHours: 24,
+    message: messages[result.mode] ?? 'Codice inviato (un solo invio).',
   });
 }
