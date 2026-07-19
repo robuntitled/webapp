@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Sans, Fraunces } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 import { Providers } from '@/app/providers';
@@ -45,6 +47,8 @@ export default async function RootLayout({
           </div>
           <CookieBanner />
           <Toaster richColors position="top-right" />
+          <Analytics />
+          <SpeedInsights />
         </Providers>
       </body>
     </html>

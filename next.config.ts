@@ -6,7 +6,9 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), payment=()',
+    // geolocation=(self): serve al composer ("usa la mia posizione").
+    // camera/mic/payment restano disabilitati.
+    value: 'camera=(), microphone=(), geolocation=(self), payment=()',
   },
   {
     key: 'Strict-Transport-Security',
@@ -25,6 +27,8 @@ const nextConfig: NextConfig = {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [
       {
         protocol: 'https',

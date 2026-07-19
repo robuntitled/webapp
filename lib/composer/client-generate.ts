@@ -14,6 +14,37 @@ function parseJsonSafe(text: string): unknown {
   }
 }
 
+async function sleep(ms: number) {
+  await new Promise((r) => setTimeout(r, ms));
+}
+
+async function pollJob(jobId: string): Promise<ComposerGenerateResponse> {
+  const maxAttempts = 90; // ~90s con backoff leggero
+  for (let i = 0; i < maxAttempts; i++) {
+    const res = await fetch(`/api/composer/jobs/${jobId}`, { cache: 'no-store' });
+    const raw = await res.text();
+    const data = parseJsonSafe(raw) as {
+      error?: string;
+      status?: string;
+      result?: ComposerGenerateResponse;
+    };
+
+    if (!res.ok) {
+      throw new Error(data.error ?? `Job fallito (HTTP ${res.status})`);
+    }
+
+    if (data.status === 'done' && data.result) {
+      return data.result;
+    }
+    if (data.status === 'error') {
+      throw new Error(data.error ?? 'Generazione fallita');
+    }
+
+    await sleep(i < 10 ? 800 : 1200);
+  }
+  throw new Error('Generazione troppo lenta — riprova');
+}
+
 export async function requestDayGeneration(
   body: ComposerGenerateRequest
 ): Promise<ComposerGenerateResponse> {
@@ -29,11 +60,20 @@ export async function requestDayGeneration(
   }
 
   const raw = await response.text();
-  const data = parseJsonSafe(raw) as { error?: string } & Partial<ComposerGenerateResponse>;
+  const data = parseJsonSafe(raw) as {
+    error?: string;
+    jobId?: string;
+    status?: string;
+  } & Partial<ComposerGenerateResponse>;
+
+  if (response.status === 202 && data.jobId) {
+    return pollJob(data.jobId);
+  }
 
   if (!response.ok) {
     throw new Error(data.error ?? `Generazione fallita (HTTP ${response.status})`);
   }
 
+  // Risposta sync (fallback o emergency mock)
   return data as ComposerGenerateResponse;
 }

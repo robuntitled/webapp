@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { composerGenerateRequestSchema } from '@/lib/composer/generate-schemas';
 import {
@@ -7,6 +7,7 @@ import {
 } from '@/lib/composer/orchestrator';
 import { shouldUseExternalAi } from '@/lib/ai/config';
 import { rateLimitAsync } from '@/lib/rate-limit';
+import { enqueueGenerateJob, processGenerateJob } from '@/lib/composer/jobs';
 
 export const maxDuration = 60;
 
@@ -56,10 +57,29 @@ export async function POST(request: Request) {
     }
   }
 
+  // sync=1 → comportamento legacy (test / fallback)
+  const sync = new URL(request.url).searchParams.get('sync') === '1';
+  if (sync) {
+    try {
+      const result = await orchestrateDayGeneration(parsed.data);
+      return NextResponse.json(result);
+    } catch {
+      return NextResponse.json(buildEmergencyMockResponse(parsed.data));
+    }
+  }
+
   try {
-    const result = await orchestrateDayGeneration(parsed.data);
-    return NextResponse.json(result);
-  } catch {
-    return NextResponse.json(buildEmergencyMockResponse(parsed.data));
+    const jobId = await enqueueGenerateJob(session.user.id, parsed.data);
+    after(() => processGenerateJob(jobId));
+    return NextResponse.json({ jobId, status: 'queued' as const }, { status: 202 });
+  } catch (e) {
+    // Tabella job assente / DB down → fallback sync
+    console.warn('[generate] async enqueue failed, sync fallback', e);
+    try {
+      const result = await orchestrateDayGeneration(parsed.data);
+      return NextResponse.json(result);
+    } catch {
+      return NextResponse.json(buildEmergencyMockResponse(parsed.data));
+    }
   }
 }

@@ -108,6 +108,17 @@ export async function recordAiSpendAsync(
   } else {
     monthSpend.spentUsd += cost;
   }
+  void import('@/lib/api/cost-events')
+    .then(({ recordCostEvent }) =>
+      recordCostEvent({
+        service: 'ai',
+        op: 'token-spend',
+        source: 'network',
+        costUsd: cost,
+        meta: { inputTokens, outputTokens, provider },
+      })
+    )
+    .catch(() => undefined);
   return cost;
 }
 

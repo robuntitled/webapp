@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { publicReadsClient, scopedForUser } from '@/lib/supabase-scoped';
 import {
   getAllTrips,
   getTripById,
@@ -9,22 +9,28 @@ import {
   getFavoriteTrips,
 } from '@/lib/queries/trips';
 
+/** Lista pubblica — preferisce client anon (RLS). */
 export async function fetchAllTrips(userId?: string) {
-  return getAllTrips(supabaseAdmin, userId);
+  const client = await publicReadsClient();
+  return getAllTrips(client, userId);
 }
 
 export async function fetchTripById(tripId: string, userId?: string) {
-  return getTripById(supabaseAdmin, tripId, userId);
+  const client = await publicReadsClient();
+  return getTripById(client, tripId, userId);
 }
 
 export async function fetchCreatedTrips(userId: string) {
-  return getCreatedTrips(supabaseAdmin, userId);
+  const { db } = scopedForUser(userId);
+  return getCreatedTrips(db, userId);
 }
 
 export async function fetchJoinedTrips(userId: string) {
-  return getJoinedTrips(supabaseAdmin, userId);
+  const { db } = scopedForUser(userId);
+  return getJoinedTrips(db, userId);
 }
 
 export async function fetchFavoriteTrips(userId: string) {
-  return getFavoriteTrips(supabaseAdmin, userId);
+  const { db } = scopedForUser(userId);
+  return getFavoriteTrips(db, userId);
 }

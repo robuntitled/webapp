@@ -2,7 +2,7 @@
 
 import { auth } from '@/auth';
 import { requirePhoneVerified } from '@/lib/auth/require-phone-verified';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { scopedForUser } from '@/lib/supabase-scoped';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseTripFormData } from '@/lib/validations/trip';
@@ -43,7 +43,9 @@ export async function createTrip(formData: FormData) {
     throw error;
   }
 
-  const { data: created, error } = await supabaseAdmin
+  const { db } = scopedForUser(session.user.id);
+
+  const { data: created, error } = await db
     .from('trips')
     .insert([
       {
@@ -59,7 +61,7 @@ export async function createTrip(formData: FormData) {
     throw new Error(error?.message ?? 'Creazione viaggio fallita');
   }
 
-  const { error: ownerError } = await supabaseAdmin.from('trip_participants').insert({
+  const { error: ownerError } = await db.from('trip_participants').insert({
     trip_id: created.id,
     user_id: session.user.id,
     role: 'owner',
@@ -91,7 +93,8 @@ export async function updateTrip(tripId: string, formData: FormData) {
     throw error;
   }
 
-  const { error } = await supabaseAdmin
+  const { db } = scopedForUser(session.user.id);
+  const { error } = await db
     .from('trips')
     .update(toTripRecord(parsed))
     .match({ id: tripId, creator_id: session.user.id });

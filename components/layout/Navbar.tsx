@@ -5,9 +5,11 @@ import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
 import { Heart, Plus } from 'lucide-react';
+import { isAdminEmail } from '@/lib/admin';
 
 export async function Navbar() {
   const session = await auth();
+  const showCostsDashboard = isAdminEmail(session?.user?.email);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
@@ -70,7 +72,10 @@ export async function Navbar() {
                   </Link>
                 </Button>
               )}
-              <UserNav user={session.user} />
+              <UserNav
+                user={session.user}
+                showCostsDashboard={showCostsDashboard}
+              />
             </>
           ) : (
             <div className="hidden sm:flex items-center gap-2">

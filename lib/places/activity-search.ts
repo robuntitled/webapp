@@ -16,7 +16,7 @@ import {
   getPlacesFromDbCache,
   setPlacesDbCache,
 } from '@/lib/places/places-db-cache';
-import { logApiMetric } from '@/lib/api/metrics';
+import { recordCostEvent } from '@/lib/api/cost-events';
 
 export type ActivityPlaceResult = GooglePlaceResult;
 
@@ -83,21 +83,21 @@ async function fetchFromGoogle(options: {
         results,
         language: 'it',
       });
-      logApiMetric({
+      void recordCostEvent({
         service: 'places',
         op: 'activity-search',
         source: 'network',
-        ms: Date.now() - started,
-        extra: { category, qLen: q.length },
+        meta: { category, qLen: q.length, ms: Date.now() - started },
       });
       return { results, source: 'google', category };
     }
 
-    logApiMetric({
+    void recordCostEvent({
       service: 'places',
       op: 'activity-search',
       source: 'none',
-      ms: Date.now() - started,
+      costUsd: 0,
+      meta: { ms: Date.now() - started },
     });
     return { results: [], source: 'none', category, warning };
   } catch {
@@ -152,11 +152,12 @@ export async function searchActivitiesInBounds(
   const run = (async (): Promise<ActivitySearchResponse> => {
     const cached = await getPlacesFromDbCache(cacheKey);
     if (cached && cached.results.length > 0) {
-      logApiMetric({
+      void recordCostEvent({
         service: 'places',
         op: 'activity-search',
         source: 'cache',
-        extra: { stale: cached.stale, category },
+        costUsd: 0,
+        meta: { stale: cached.stale, category },
       });
 
       if (cached.stale && hasGooglePlacesKey()) {

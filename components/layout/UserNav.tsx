@@ -18,7 +18,13 @@ import { getInitialsFromFullName } from '@/lib/utils/user';
 
 type User = Session['user'];
 
-export function UserNav({ user }: { user: User }) {
+export function UserNav({
+  user,
+  showCostsDashboard = false,
+}: {
+  user: User;
+  showCostsDashboard?: boolean;
+}) {
   if (!user) return null;
 
   return (
@@ -48,6 +54,11 @@ export function UserNav({ user }: { user: User }) {
           <DropdownMenuItem asChild>
             <Link href="/dashboard/impostazioni">Impostazioni</Link>
           </DropdownMenuItem>
+          {showCostsDashboard ? (
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/costi">Costi API</Link>
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => signOut({ callbackUrl: '/' })}>
