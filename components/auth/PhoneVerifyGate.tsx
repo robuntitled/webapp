@@ -95,9 +95,10 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
             Verifica telefono
           </DialogTitle>
           <DialogDescription className="text-white/55 text-left">
-            Per creare un viaggio o unirti serve un numero verificato. Ricevi{' '}
-            <strong className="text-white/80">un solo codice WhatsApp</strong>, valido{' '}
-            <strong className="text-white/80">24 ore</strong> — non potremo reinviarlo.
+            Per creare un viaggio o unirti serve un numero verificato. Ti inviamo un codice
+            WhatsApp valido <strong className="text-white/80">24 ore</strong>. Di norma{' '}
+            <strong className="text-white/80">un solo invio</strong>; un secondo solo se scade
+            senza che tu abbia provato codici (es. numero sbagliato).
           </DialogDescription>
         </DialogHeader>
 
@@ -125,14 +126,14 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
                 onClick={() => void sendCode()}
               >
                 <Phone className="mr-2 h-4 w-4" />
-                {sending ? 'Invio…' : 'Ricevi l’unico codice WhatsApp'}
+                {sending ? 'Invio…' : 'Ricevi codice WhatsApp'}
               </Button>
             </>
           ) : (
             <>
               <div className="space-y-2">
                 <Label htmlFor="gate-otp" className="text-white/70">
-                  Codice (24 ore, un solo invio)
+                  Codice (valido 24 ore)
                 </Label>
                 <Input
                   id="gate-otp"
@@ -145,7 +146,7 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
                   maxLength={8}
                 />
                 <p className="text-[11px] text-white/40">
-                  Controlla WhatsApp. Non c’è reinvio: evita di chiudere la chat.
+                  Controlla WhatsApp. Non reinviare se il codice è ancora valido.
                 </p>
               </div>
               <Button

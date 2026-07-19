@@ -55,9 +55,9 @@ export async function POST(request: Request) {
 
   const messages: Record<string, string> = {
     whatsapp:
-      'Ti abbiamo inviato l’unico codice su WhatsApp (valido 24 ore). Non potremo reinviarlo.',
-    twilio: 'Ti abbiamo inviato l’unico SMS con il codice (valido 24 ore). Non potremo reinviarlo.',
-    dev: 'Codice generato (dev: log server). Valido 24 ore — un solo invio.',
+      'Codice inviato su WhatsApp (valido 24 ore). Un secondo invio solo se scade senza tentativi.',
+    twilio: 'Codice inviato via SMS (valido 24 ore).',
+    dev: 'Codice generato (dev: log server). Valido 24 ore.',
   };
 
   return NextResponse.json({

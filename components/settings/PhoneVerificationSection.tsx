@@ -67,7 +67,7 @@ export function PhoneVerificationSection({
     <SettingsSection
       icon={Phone}
       title="Verifica telefono"
-      description="Spunta blu “Verificato” solo con cellulare confermato. Il codice WhatsApp si riceve una sola volta, quando crei o ti unisci a un viaggio (valido 24 ore)."
+      description="Spunta blu “Verificato” solo con cellulare. Codice WhatsApp quando crei o ti unisci a un viaggio (24 ore; di norma un invio, secondo solo se scaduto senza tentativi)."
     >
       <div className="space-y-5">
         {verified ? (
@@ -90,8 +90,8 @@ export function PhoneVerificationSection({
         ) : pending ? (
           <div className="rounded-2xl border border-border/70 bg-muted/20 p-5 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Ti abbiamo già inviato l’unico codice (WhatsApp). Valido 24 ore — inseriscilo qui.
-              Non possiamo reinviarlo.
+              Ti abbiamo inviato un codice WhatsApp (valido 24 ore). Inseriscilo qui. Un secondo
+              invio solo se scade senza tentativi di codice.
             </p>
             {masked && (
               <p className="text-xs text-muted-foreground font-mono">Inviato a {masked}</p>
@@ -124,8 +124,7 @@ export function PhoneVerificationSection({
               Non hai ancora la spunta blu. Quando proverai a{' '}
               <strong className="text-foreground">creare</strong> o{' '}
               <strong className="text-foreground">unirti</strong> a un viaggio, ti chiederemo il
-              cellulare e invieremo <strong className="text-foreground">un solo</strong> codice
-              WhatsApp (24 ore).
+              cellulare e invieremo un codice WhatsApp (valido 24 ore).
             </p>
             <p className="text-xs text-muted-foreground">
               Navigare e comporre bozze non richiede verifica.

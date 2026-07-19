@@ -4,11 +4,16 @@ import { createHash, randomInt } from 'crypto';
 import { sendWhatsAppOtp, whatsappConfigured } from '@/lib/phone/whatsapp';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-/** Codice valido 24h — un solo invio a vita, serve tempo per inserirlo. */
+/** Codice valido 24h. */
 const OTP_TTL_MS = 24 * 60 * 60_000;
 const MAX_ATTEMPTS = 5;
-/** Un solo messaggio OTP per account (fino a verifica riuscita). */
-const MAX_OTP_SENDS = 1;
+/**
+ * Invii OTP:
+ * - 1°: sempre (create/join)
+ * - 2°: solo se il 1° è scaduto e zero tentativi di codice (numero sbagliato / messaggio perso)
+ * Mai oltre 2.
+ */
+const MAX_OTP_SENDS_HARD = 2;
 
 export type PhoneOtpMode = 'whatsapp' | 'twilio' | 'dev';
 
@@ -105,7 +110,9 @@ export async function sendPhoneOtp(
 
   const { data: row, error: loadErr } = await supabaseAdmin
     .from('users')
-    .select('id, phone_verified_at, phone_otp_send_count, phone_e164')
+    .select(
+      'id, phone_verified_at, phone_otp_send_count, phone_e164, phone_otp_expires_at, phone_otp_attempts'
+    )
     .eq('id', userId)
     .single();
 
@@ -118,11 +125,37 @@ export async function sendPhoneOtp(
   }
 
   const sendCount = Number(row.phone_otp_send_count ?? 0);
-  if (sendCount >= MAX_OTP_SENDS) {
+  const attempts = Number(row.phone_otp_attempts ?? 0);
+  const expMs = row.phone_otp_expires_at
+    ? new Date(row.phone_otp_expires_at).getTime()
+    : 0;
+  const expired = !expMs || expMs < Date.now();
+
+  // Soft re-send: solo 2° invio se 1° scaduto e mai provato un codice
+  const canSoftResend =
+    sendCount === 1 && expired && attempts === 0;
+
+  if (sendCount >= MAX_OTP_SENDS_HARD) {
     return {
       ok: false,
       error:
-        'Hai già ricevuto l’unico codice di verifica. Controlla WhatsApp (valido 24 ore) e inseriscilo, oppure contatta il supporto se non l’hai ricevuto.',
+        'Hai raggiunto il limite di codici di verifica. Contatta il supporto se serve aiuto.',
+    };
+  }
+
+  if (sendCount >= 1 && !canSoftResend) {
+    if (!expired) {
+      return {
+        ok: false,
+        error:
+          'Hai già ricevuto il codice (valido 24 ore). Controlla WhatsApp e inseriscilo — non possiamo reinviarlo ora.',
+      };
+    }
+    // Scaduto ma ha già provato codici sbagliati → no re-send (anti-brute / anti-bot)
+    return {
+      ok: false,
+      error:
+        'Il codice è scaduto e non possiamo reinviarlo. Contatta il supporto se serve aiuto.',
     };
   }
 
