@@ -85,19 +85,22 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
   };
 
   const doJoin = async () => {
-    try {
-      await joinTrip(trip.id);
-      setOptimisticJoined(true);
-      toast.success('Sei dentro! Modalità relax attiva 🏖️');
-      router.refresh();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Errore imprevisto';
-      if (isPhoneGateError(msg)) {
+    const result = await joinTrip(trip.id);
+    if (!result.ok) {
+      if (result.code === 'PHONE_VERIFY_REQUIRED' || isPhoneGateError(result.error)) {
         setPhoneGateOpen(true);
         return;
       }
-      toast.error(msg);
+      toast.error(result.error);
+      return;
     }
+    setOptimisticJoined(true);
+    toast.success(
+      result.alreadyJoined
+        ? 'Sei già nella crew di questo viaggio'
+        : 'Sei dentro! Modalità relax attiva 🏖️'
+    );
+    router.refresh();
   };
 
   const handleJoinClick = () => {

@@ -48,18 +48,21 @@ export function TripDetailActions({
   };
 
   const doJoin = async () => {
-    try {
-      await joinTrip(tripId);
-      toast.success('Sei dentro! Modalità relax attiva 🏖️');
-      router.refresh();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Errore imprevisto';
-      if (isPhoneGateError(msg)) {
+    const result = await joinTrip(tripId);
+    if (!result.ok) {
+      if (result.code === 'PHONE_VERIFY_REQUIRED' || isPhoneGateError(result.error)) {
         setPhoneGateOpen(true);
         return;
       }
-      toast.error(msg);
+      toast.error(result.error);
+      return;
     }
+    toast.success(
+      result.alreadyJoined
+        ? 'Sei già nella crew di questo viaggio'
+        : 'Sei dentro! Modalità relax attiva 🏖️'
+    );
+    router.refresh();
   };
 
   const handleJoin = () => {

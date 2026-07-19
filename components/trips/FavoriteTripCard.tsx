@@ -51,18 +51,21 @@ export function FavoriteTripCard({
   };
 
   const doJoin = async () => {
-    try {
-      await joinTrip(trip.id);
-      toast.success('Ti sei unito al viaggio con successo!');
-      router.refresh();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Errore imprevisto';
-      if (isPhoneGateError(msg)) {
+    const result = await joinTrip(trip.id);
+    if (!result.ok) {
+      if (result.code === 'PHONE_VERIFY_REQUIRED' || isPhoneGateError(result.error)) {
         setPhoneGateOpen(true);
         return;
       }
-      toast.error(msg);
+      toast.error(result.error);
+      return;
     }
+    toast.success(
+      result.alreadyJoined
+        ? 'Sei già nella crew di questo viaggio'
+        : 'Ti sei unito al viaggio con successo!'
+    );
+    router.refresh();
   };
 
   const handleJoinClick = (e: React.MouseEvent) => {
