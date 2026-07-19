@@ -18,23 +18,38 @@ function flightIsComplete(block: { content: Record<string, unknown> }): boolean 
 }
 
 /**
- * Solo i check-in contano per la pubblicazione.
- * I blocchi "check-out" automatici non devono bloccare (sono collegati al check-in).
+ * Allineato al form "Aggiungi hotel":
+ * - ricerca (nome + place/coords/placeId)
+ * - check-in / check-out (default 14:00 e 11:00 se assenti)
+ * - prezzo opzionale
+ * I check-out automatici non bloccano la pubblicazione.
  */
 function hotelIsComplete(block: { content: Record<string, unknown> }): boolean {
-  // Check-out automatico: ok se ha almeno titolo e orario check-out
   if (block.content.hotelPhase === 'checkout') {
     return true;
   }
 
   const title = String(block.content.title ?? '').trim();
-  const area = String(block.content.area ?? block.content.place ?? '').trim();
+  if (!title) return false;
+
+  // "Zona" nel messaggio = place/area dalla ricerca hotel (non un campo separato in UI)
+  const hasWhere = Boolean(
+    String(block.content.place ?? '').trim() ||
+      String(block.content.area ?? '').trim() ||
+      String(block.content.placeId ?? '').trim() ||
+      (typeof block.content.lat === 'number' &&
+        typeof block.content.lng === 'number' &&
+        Number.isFinite(block.content.lat) &&
+        Number.isFinite(block.content.lng))
+  );
+
+  // Stessi default del form Aggiungi hotel
   const checkIn = String(
-    block.content.checkInTime ?? block.content.time ?? ''
+    block.content.checkInTime ?? block.content.time ?? '14:00'
   ).trim();
-  const checkOut = String(block.content.checkOutTime ?? '').trim();
-  // Zona/indirizzo: place da Google o area; orari con default tipici se assenti in UI
-  return Boolean(title && area && checkIn && checkOut);
+  const checkOut = String(block.content.checkOutTime ?? '11:00').trim();
+
+  return Boolean(hasWhere && checkIn && checkOut);
 }
 
 export function validatePublishDraft(draft: ComposerDraft): PublishValidationIssue[] {
@@ -42,7 +57,6 @@ export function validatePublishDraft(draft: ComposerDraft): PublishValidationIss
   const issues: PublishValidationIssue[] = [];
 
   const flights = blocks.filter((b) => b.type === 'flight');
-  // Solo check-in hotel (non i tab check-out automatici)
   const hotelCheckins = blocks.filter(
     (b) => b.type === 'hotel' && b.content.hotelPhase !== 'checkout'
   );
@@ -59,7 +73,7 @@ export function validatePublishDraft(draft: ComposerDraft): PublishValidationIss
     issues.push({
       code: 'hotel-incomplete',
       message:
-        'Completa gli hotel nel piano: scegli l’hotel (nome e zona/indirizzo) e imposta check-in (es. 14:00) e check-out (es. 11:00).',
+        'Completa gli hotel: scegli l’hotel dalla ricerca (nome e luogo), con check-in e check-out (es. 14:00 e 11:00).',
     });
   }
 
