@@ -88,13 +88,14 @@ export function TripChatPanel({
     }
 
     void loadMessages(false).finally(() => setLoading(false));
+    void fetch(`/api/chat/groups/${tripId}/read`, { method: 'POST' });
 
     const interval = setInterval(() => {
       void loadMessages(true);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [canAccess, loadMessages]);
+  }, [canAccess, loadMessages, tripId]);
 
   const sendMessage = async () => {
     const body = text.trim();

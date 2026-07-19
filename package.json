@@ -15,6 +15,7 @@
     "db:composer": "node scripts/apply-composer.mjs",
     "db:verify-composer": "node scripts/verify-composer.mjs",
     "db:chat": "node scripts/apply-chat.mjs",
+    "db:chat-reads": "node scripts/db-exec.mjs supabase/migrations/015_chat_reads_hides.sql",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",
     "db:email-verify": "node scripts/db-exec.mjs supabase/migrations/009_email_verification.sql",
