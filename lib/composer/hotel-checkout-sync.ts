@@ -159,6 +159,44 @@ export function syncHotelCheckoutBlocks(
 }
 
 /**
+ * Dopo rimozione/aggiunta giorni (reindex): ricrea i check-out
+ * sul giorno corretto (check-in + notti).
+ * - Se il giorno del checkout era stato eliminato → ricompare sul giorno sostitutivo
+ * - Se manca lo slot → estende le tab (syncHotelCheckoutBlocks)
+ * - Check-out orfani (check-in cancellato) → rimossi
+ */
+export function resyncAllHotelCheckouts(days: ComposerDay[]): {
+  days: ComposerDay[];
+  endDate: string;
+} {
+  const checkIns: { dayIndex: number; blockId: string }[] = [];
+
+  for (const day of days) {
+    for (const block of day.blocks) {
+      if (block.type === 'hotel' && isHotelCheckinBlock(block)) {
+        checkIns.push({ dayIndex: day.dayIndex, blockId: block.id });
+      }
+    }
+  }
+
+  // Pulisci tutti i checkout (verranno ricreati dai check-in vivi)
+  let next: ComposerDay[] = days.map((day) => ({
+    ...day,
+    blocks: day.blocks.filter((b) => !isHotelCheckoutBlock(b)),
+  }));
+
+  for (const { dayIndex, blockId } of checkIns) {
+    const day = next.find((d) => d.dayIndex === dayIndex);
+    const block = day?.blocks.find((b) => b.id === blockId);
+    if (!block || block.type !== 'hotel') continue;
+    const synced = syncHotelCheckoutBlocks(next, dayIndex, block);
+    next = synced.days;
+  }
+
+  return { days: next, endDate: endDateFromDays(next) };
+}
+
+/**
  * Se rimuovi un check-in, togli anche i checkout collegati.
  * Se rimuovi solo un checkout, ok lasciare il check-in.
  */

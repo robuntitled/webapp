@@ -28,6 +28,7 @@ import {
 } from '@/lib/composer/days';
 import {
   removeHotelAndLinkedCheckouts,
+  resyncAllHotelCheckouts,
   syncHotelCheckoutBlocks,
 } from '@/lib/composer/hotel-checkout-sync';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
@@ -138,10 +139,12 @@ export function ComposerPlanStep({
 
   const addDay = () => {
     const days = appendComposerDay(draft.days);
-    commitDays(days);
-    setSelection(days[days.length - 1].dayIndex);
+    // Riallinea check-out hotel se le notti puntano a giorni nuovi
+    const synced = resyncAllHotelCheckouts(days);
+    commitDays(synced.days);
+    setSelection(synced.days[synced.days.length - 1].dayIndex);
     setMapMode('day');
-    toast.success(`Giorno ${days.length} aggiunto`);
+    toast.success(`Giorno ${synced.days.length} aggiunto`);
   };
 
   const removeDay = (dayIndex: number) => {
@@ -149,13 +152,17 @@ export function ComposerPlanStep({
       toast.message('Serve almeno un giorno');
       return;
     }
-    const days = removeComposerDay(draft.days, dayIndex);
-    commitDays(days);
+    // 1) togli il giorno e ricompatta indici/date
+    // 2) ricrea i check-out hotel sul giorno check-in + notti
+    //    (se eliminavi il giorno del check-out, ricompare sul giorno giusto)
+    const compacted = removeComposerDay(draft.days, dayIndex);
+    const synced = resyncAllHotelCheckouts(compacted);
+    commitDays(synced.days);
     setSelection((prev) => {
       if (prev === 'overview') return 'overview';
-      return Math.min(prev, days.length);
+      return Math.min(prev, synced.days.length);
     });
-    toast.message('Giorno rimosso');
+    toast.message('Giorno rimosso · check-out hotel riallineati');
   };
 
   const goToNextDay = () => {
