@@ -6,8 +6,8 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',
-    // geolocation=(self): serve al composer ("usa la mia posizione").
-    // camera/mic/payment restano disabilitati.
+    // geolocation=(self): indispensabile per "Usa la mia posizione" nel composer.
+    // Non usare geolocation=() — il browser nega senza prompt.
     value: 'camera=(), microphone=(), geolocation=(self), payment=()',
   },
   {

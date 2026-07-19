@@ -118,6 +118,12 @@ export function parseNominatimResult(result: NominatimResult): PlaceResult {
   };
 }
 
+const NOMINATIM_HEADERS = {
+  'User-Agent': 'NomadLink/1.0 (travel composer; contact@nomadlink.app)',
+  Accept: 'application/json',
+  'Accept-Language': 'it,en;q=0.9',
+} as const;
+
 export async function searchPlaces(query: string, limit = 12): Promise<PlaceResult[]> {
   const q = query.trim();
   if (q.length < 2) return [];
@@ -131,11 +137,7 @@ export async function searchPlaces(query: string, limit = 12): Promise<PlaceResu
   url.searchParams.set('accept-language', 'it,en');
 
   const response = await fetch(url.toString(), {
-    headers: {
-      'User-Agent': 'NomadLink/1.0 (travel composer; contact@nomadlink.app)',
-      Accept: 'application/json',
-      'Accept-Language': 'it,en;q=0.9',
-    },
+    headers: NOMINATIM_HEADERS,
     cache: 'no-store',
   });
 
@@ -149,4 +151,33 @@ export async function searchPlaces(query: string, limit = 12): Promise<PlaceResu
     .map(parseNominatimResult)
     .filter((place) => placeUsesLatinScript(place.label, place.subtitle))
     .slice(0, limit);
+}
+
+/** Reverse geocode lat/lng → città (server-side, User-Agent valido). */
+export async function reverseGeocode(lat: number, lng: number): Promise<PlaceResult | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  const url = new URL('https://nominatim.openstreetmap.org/reverse');
+  url.searchParams.set('lat', lat.toFixed(6));
+  url.searchParams.set('lon', lng.toFixed(6));
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('namedetails', '1');
+  url.searchParams.set('accept-language', 'it,en');
+  url.searchParams.set('zoom', '10');
+
+  const response = await fetch(url.toString(), {
+    headers: NOMINATIM_HEADERS,
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Nominatim reverse error: ${response.status}`);
+  }
+
+  const data = (await response.json()) as NominatimResult & { error?: string };
+  if (!data || data.error || !data.lat || !data.lon) return null;
+
+  return parseNominatimResult(data);
 }

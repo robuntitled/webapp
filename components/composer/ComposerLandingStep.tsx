@@ -88,26 +88,49 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
     else onStart();
   };
 
-  const detectOrigin = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocalizzazione non supportata');
+  const detectOrigin = async () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      toast.error('Geolocalizzazione non supportata su questo browser');
       return;
     }
+
+    if (!window.isSecureContext) {
+      toast.error('La posizione richiede HTTPS');
+      return;
+    }
+
+    // Se l’utente ha già negato, il browser non riprompta: messaggio chiaro
+    try {
+      const status = await navigator.permissions?.query?.({ name: 'geolocation' });
+      if (status?.state === 'denied') {
+        toast.error(
+          'Posizione bloccata nelle impostazioni del browser. Clicca l’icona lucchetto nella barra indirizzi → Posizione → Consenti, poi riprova.',
+          { duration: 8000 }
+        );
+        return;
+      }
+    } catch {
+      // permissions API non ovunque (es. Safari) — continua con getCurrentPosition
+    }
+
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           const { latitude, longitude } = pos.coords;
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=it`
+            `/api/places/reverse?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}`
           );
           const data = (await res.json()) as {
-            address?: { city?: string; town?: string; village?: string; country?: string };
-            display_name?: string;
+            place?: { label: string; subtitle?: string };
+            error?: string;
           };
-          const city =
-            data.address?.city ?? data.address?.town ?? data.address?.village ?? 'La tua città';
-          const label = data.display_name?.split(',')[0] ?? city;
+          if (!res.ok || !data.place) {
+            toast.error(data.error ?? 'Impossibile risolvere la posizione');
+            return;
+          }
+          const city = data.place.label;
+          const label = data.place.subtitle ? `${city}` : city;
           onChange({
             organizerOrigin: {
               id: `geo-${Date.now()}`,
@@ -120,14 +143,26 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
           toast.success(`Partenza da ${label}`);
         } catch {
           toast.error('Impossibile risolvere la posizione');
+        } finally {
+          setGeoLoading(false);
         }
-        setGeoLoading(false);
       },
-      () => {
-        toast.error('Permesso posizione negato');
+      (err) => {
         setGeoLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error(
+            'Posizione negata. Consenti l’accesso dalla barra indirizzi (icona lucchetto) e riprova.',
+            { duration: 8000 }
+          );
+          return;
+        }
+        if (err.code === err.TIMEOUT) {
+          toast.error('Timeout posizione — riprova o inserisci la città a mano');
+          return;
+        }
+        toast.error('Posizione non disponibile — inserisci la città a mano');
       },
-      { enableHighAccuracy: true, timeout: 12000 }
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 300_000 }
     );
   };
 
