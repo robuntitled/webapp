@@ -4,6 +4,16 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const PHONE_VERIFY_REQUIRED_CODE = 'PHONE_VERIFY_REQUIRED';
 
+/**
+ * Gate telefono (create / join / publish).
+ * Default OFF in sviluppo: niente WhatsApp → niente blocco.
+ * Riattiva con PHONE_VERIFY_REQUIRED=true su Vercel quando il canale OTP è pronto.
+ */
+export function isPhoneVerifyRequired(): boolean {
+  const v = process.env.PHONE_VERIFY_REQUIRED?.trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes';
+}
+
 export class PhoneVerifyRequiredError extends Error {
   readonly code = PHONE_VERIFY_REQUIRED_CODE;
 
@@ -16,10 +26,13 @@ export class PhoneVerifyRequiredError extends Error {
 }
 
 /**
- * Gate: solo chi ha phone_verified_at può creare trip o iscriversi.
- * Browse / profilo / composer bozza restano liberi.
+ * Se PHONE_VERIFY_REQUIRED non è true → non blocca (fase sviluppo / senza WhatsApp).
  */
 export async function requirePhoneVerified(userId: string): Promise<void> {
+  if (!isPhoneVerifyRequired()) {
+    return;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('phone_verified_at')

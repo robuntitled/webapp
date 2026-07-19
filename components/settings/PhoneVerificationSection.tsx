@@ -67,7 +67,7 @@ export function PhoneVerificationSection({
     <SettingsSection
       icon={Phone}
       title="Verifica telefono"
-      description="Spunta blu “Verificato” solo con cellulare. Codice WhatsApp quando crei o ti unisci a un viaggio (24 ore; di norma un invio, secondo solo se scaduto senza tentativi)."
+      description="Spunta blu con cellulare (quando la verifica sarà obbligatoria). In sviluppo puoi pubblicare senza: l’obbligo si attiva solo con PHONE_VERIFY_REQUIRED=true e canale WhatsApp/SMS."
     >
       <div className="space-y-5">
         {verified ? (
