@@ -35,15 +35,15 @@ export async function Navbar() {
             href="/dashboard"
             className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            Scopri viaggi
+            Scopri
           </Link>
           {session?.user && (
             <>
               <Link
-                href="/dashboard/crea"
+                href="/dashboard/crea?new=1"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                Componi viaggio
+                Organizza
               </Link>
               <Link
                 href="/dashboard/miei-viaggi"
@@ -66,9 +66,9 @@ export async function Navbar() {
               </Link>
               {session.user && (
                 <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
-                  <Link href="/dashboard/crea">
+                  <Link href="/dashboard/crea?new=1">
                     <Plus className="h-4 w-4" />
-                    Componi
+                    Nuovo Viaggio
                   </Link>
                 </Button>
               )}

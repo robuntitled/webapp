@@ -6,9 +6,9 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LINKS = [
-  { href: '/dashboard', label: 'Scopri viaggi' },
-  { href: '/dashboard/crea', label: 'Componi viaggio', auth: true },
-  { href: '/dashboard/miei-viaggi', label: 'I miei viaggi', auth: true },
+  { href: '/dashboard', label: 'Scopri' },
+  { href: '/dashboard/crea?new=1', label: 'Organizza', auth: true },
+  { href: '/dashboard/miei-viaggi', label: 'I Miei Viaggi', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];
 

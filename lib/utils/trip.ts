@@ -8,6 +8,15 @@ export function isTripStarted(startDate: string): boolean {
   return now >= start;
 }
 
+/** Viaggio concluso (dopo endDate) — usato per hub Organizzo / Passati. */
+export function isTripEnded(endDate: string): boolean {
+  const now = new Date();
+  const end = new Date(endDate);
+  now.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  return now > end;
+}
+
 export function getTripStatus(
   startDate: string,
   endDate: string

@@ -6,7 +6,7 @@ import { getUserProfile } from '@/lib/data/users';
 import { isMeaningfulComposerDraft } from '@/lib/composer/draft-utils';
 
 type CreateTripPageProps = {
-  searchParams: Promise<{ resume?: string }>;
+  searchParams: Promise<{ resume?: string; new?: string }>;
 };
 
 export default async function CreateTripPage({ searchParams }: CreateTripPageProps) {
@@ -17,6 +17,7 @@ export default async function CreateTripPage({ searchParams }: CreateTripPagePro
 
   const params = await searchParams;
   const resume = params.resume === '1' || params.resume === 'true';
+  const forceNew = params.new === '1' || params.new === 'true';
 
   const [profile, plannerProfile, savedDraft] = await Promise.all([
     getUserProfile(session.user.id),
@@ -24,8 +25,9 @@ export default async function CreateTripPage({ searchParams }: CreateTripPagePro
     getComposerDraft(session.user.id),
   ]);
 
+  // Riprendi bozza SOLO da I miei viaggi → Bozze (?resume=1)
   const canResume = Boolean(
-    resume && savedDraft && isMeaningfulComposerDraft(savedDraft.draft)
+    resume && !forceNew && savedDraft && isMeaningfulComposerDraft(savedDraft.draft)
   );
 
   return (
@@ -40,6 +42,7 @@ export default async function CreateTripPage({ searchParams }: CreateTripPagePro
       initialDraft={canResume ? (savedDraft?.draft ?? null) : null}
       initialStep={canResume ? savedDraft!.currentStep : 'landing'}
       resumeDraft={canResume}
+      forceNew={forceNew && !canResume}
     />
   );
 }

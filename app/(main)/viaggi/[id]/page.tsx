@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { fetchComposerItinerary } from '@/lib/data/composer';
 import { fetchTripById } from '@/lib/data/trips';
-import { TripChatPanel } from '@/components/chat/TripChatPanel';
 import { TripExperienceHub } from '@/components/trips/TripExperienceHub';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,7 +51,6 @@ export default async function TripDetailPage({ params }: PageProps) {
   const showInvite = isCreator || userRole === 'owner' || userRole === 'editor';
   const composerItinerary =
     (trip.composerVersion ?? 0) >= 1 ? await fetchComposerItinerary(trip.id) : null;
-  const canChat = !!(session?.user && (isCreator || isParticipant));
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,14 +113,6 @@ export default async function TripDetailPage({ params }: PageProps) {
           </div>
 
           <div className="lg:col-span-5 space-y-6">
-            {session?.user && (
-              <TripChatPanel
-                tripId={trip.id}
-                currentUserId={session.user.id}
-                canAccess={canChat}
-              />
-            )}
-
             <Card className="rounded-2xl border-0 shadow-lg lg:sticky lg:top-24">
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-baseline justify-between pb-4 border-b">

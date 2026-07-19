@@ -46,6 +46,8 @@ type TripComposerProps = {
   initialStep?: ComposerWizardStep;
   /** true solo quando si riprende da I miei viaggi → Bozze */
   resumeDraft?: boolean;
+  /** Nuovo viaggio: non ripristinare localStorage / bozza cloud */
+  forceNew?: boolean;
 };
 
 function mergeDraft(
@@ -65,6 +67,7 @@ export function TripComposer({
   initialDraft,
   initialStep = 'landing',
   resumeDraft = false,
+  forceNew = false,
 }: TripComposerProps = {}) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -78,9 +81,8 @@ export function TripComposer({
   const plannerProfile =
     draft.plannerProfile ?? initialPlannerProfile ?? EMPTY_PLANNER_PROFILE;
 
-  // Restore draft + step after refresh (localStorage), without wiping session work
+  // Resume da Bozze, oppure nuovo viaggio pulito (mai riprendere bozza da Organizza)
   useEffect(() => {
-    // Server already provided a resume draft
     if (resumeDraft && initialDraft?.destination) {
       const merged = mergeDraft(EMPTY_DRAFT, initialDraft, initialPlannerProfile);
       setDraft(merged);
@@ -90,6 +92,15 @@ export function TripComposer({
       return;
     }
 
+    if (forceNew) {
+      clearComposerLocalSession();
+      setDraft(mergeDraft(EMPTY_DRAFT, null, initialPlannerProfile));
+      setStep('landing');
+      setHydrated(true);
+      return;
+    }
+
+    // Refresh pagina mid-flow: ripristina sessione locale
     const local = readComposerLocalSession();
     if (local) {
       setDraft((prev) => ({
@@ -101,7 +112,7 @@ export function TripComposer({
       setStep(local.step);
     }
     setHydrated(true);
-  }, [resumeDraft, initialDraft, initialPlannerProfile, initialStep]);
+  }, [resumeDraft, forceNew, initialDraft, initialPlannerProfile, initialStep]);
 
   const scheduleCloudSave = useCallback(
     (nextDraft: ComposerDraft, nextStep: ComposerWizardStep, profile: PlannerProfile) => {

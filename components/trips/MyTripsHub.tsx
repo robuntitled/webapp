@@ -11,7 +11,7 @@ import { summarizeComposerDraftWithStep } from '@/lib/composer/draft-utils';
 import type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft } from '@/types/composer';
 import type { TripWithRelations } from '@/types/trip';
-import { getTripStatus, isTripStarted } from '@/lib/utils/trip';
+import { getTripStatus, isTripEnded } from '@/lib/utils/trip';
 import {
   BookOpen,
   ChevronRight,
@@ -70,7 +70,7 @@ const SECTIONS: {
   {
     id: 'past',
     label: 'Viaggi passati',
-    description: 'Conclusi o già partiti',
+    description: 'Già conclusi',
     icon: History,
     accent: 'hub-accent-amber',
   },
@@ -227,7 +227,7 @@ function EmptyPanel({
           Inizia un nuovo viaggio: la bozza si salva automaticamente e la ritrovi qui.
         </p>
         <Button asChild className="mt-6 rounded-full">
-          <Link href="/dashboard/crea">Nuovo viaggio</Link>
+          <Link href="/dashboard/crea?new=1">Nuovo Viaggio</Link>
         </Button>
       </div>
     );
@@ -242,7 +242,7 @@ function EmptyPanel({
           Crea il primo, invita la crew e tieni tutto in un unico posto.
         </p>
         <Button asChild className="mt-6 rounded-full">
-          <Link href="/dashboard/crea">Organizza il primo viaggio</Link>
+          <Link href="/dashboard/crea?new=1">Organizza il primo viaggio</Link>
         </Button>
       </div>
     );
@@ -268,7 +268,7 @@ function EmptyPanel({
         Unisciti ai viaggi degli amici dalla dashboard — zero pianificazione.
       </p>
       <Button asChild variant="secondary" className="mt-6 rounded-full">
-        <Link href="/dashboard">Scopri viaggi</Link>
+        <Link href="/dashboard">Scopri</Link>
       </Button>
     </div>
   );
@@ -281,17 +281,18 @@ export function MyTripsHub({
 }: MyTripsHubProps) {
   const hasDraft = Boolean(composerDraft?.draft?.destination?.trim());
   const [draftVisible, setDraftVisible] = useState(hasDraft);
+  // Organizzo / Relax: viaggi non ancora conclusi (anche se già partiti)
   const upcomingCreated = useMemo(
-    () => createdTrips.filter((t) => !isTripStarted(t.startDate)),
+    () => createdTrips.filter((t) => !isTripEnded(t.endDate)),
     [createdTrips]
   );
   const upcomingJoined = useMemo(
-    () => joinedTrips.filter((t) => !isTripStarted(t.startDate)),
+    () => joinedTrips.filter((t) => !isTripEnded(t.endDate)),
     [joinedTrips]
   );
   const pastTrips = useMemo(
     () =>
-      [...createdTrips, ...joinedTrips].filter((t) => isTripStarted(t.startDate)),
+      [...createdTrips, ...joinedTrips].filter((t) => isTripEnded(t.endDate)),
     [createdTrips, joinedTrips]
   );
 
@@ -326,9 +327,9 @@ export function MyTripsHub({
           </p>
         </div>
         <Button asChild size="lg" className="rounded-full shrink-0 gap-2 shadow-lg">
-          <Link href="/dashboard/crea">
+          <Link href="/dashboard/crea?new=1">
             <Plus className="h-4 w-4" />
-            Nuovo viaggio
+            Nuovo Viaggio
           </Link>
         </Button>
       </div>

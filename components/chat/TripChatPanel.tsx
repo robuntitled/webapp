@@ -15,6 +15,8 @@ type TripChatPanelProps = {
   currentUserId: string;
   canAccess: boolean;
   compact?: boolean;
+  /** Layout senza Card, per dock espandibile */
+  dockMode?: boolean;
 };
 
 function formatTime(iso: string): string {
@@ -26,6 +28,7 @@ export function TripChatPanel({
   currentUserId,
   canAccess,
   compact = false,
+  dockMode = false,
 }: TripChatPanelProps) {
   const [messages, setMessages] = useState<TripMessageRow[]>([]);
   const [text, setText] = useState('');
@@ -147,6 +150,90 @@ export function TripChatPanel({
     );
   }
 
+  const messagesBody = (
+    <>
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : messages.length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground py-8">
+            Nessun messaggio — rompi il ghiaccio 👋
+          </p>
+        ) : (
+          messages.map((msg) => {
+            const mine = msg.user_id === currentUserId;
+            const name =
+              (msg.user?.username ? `@${msg.user.username}` : null) ||
+              [msg.user?.first_name, msg.user?.last_name].filter(Boolean).join(' ') ||
+              'Viaggiatore';
+            return (
+              <div
+                key={msg.id}
+                className={`flex gap-2 ${mine ? 'flex-row-reverse' : 'flex-row'}`}
+              >
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarImage src={msg.user?.image ?? ''} />
+                  <AvatarFallback className="text-[10px]">
+                    {getInitialsFromNames(msg.user?.first_name, msg.user?.last_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className={`max-w-[80%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
+                  {!mine && (
+                    <span className="text-[10px] text-muted-foreground mb-0.5 px-1">{name}</span>
+                  )}
+                  <div
+                    className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                      mine
+                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        : 'bg-muted rounded-bl-md'
+                    }`}
+                  >
+                    {msg.body}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-0.5 px-1 tabular-nums">
+                    {formatTime(msg.created_at)}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="shrink-0 border-t p-3 flex gap-2 bg-muted/30">
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Scrivi alla crew..."
+          className="rounded-full bg-background"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void sendMessage();
+            }
+          }}
+          disabled={sending}
+        />
+        <Button
+          type="button"
+          size="icon"
+          className="rounded-full shrink-0"
+          onClick={() => void sendMessage()}
+          disabled={sending || !text.trim()}
+        >
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </div>
+    </>
+  );
+
+  if (dockMode) {
+    return <div className="flex h-full min-h-0 flex-col">{messagesBody}</div>;
+  }
+
   return (
     <Card className={`rounded-2xl border-0 shadow-lg flex flex-col ${compact ? 'h-[420px]' : 'h-[520px]'}`}>
       <CardHeader className="pb-3 border-b shrink-0">
@@ -160,83 +247,7 @@ export function TripChatPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : messages.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">
-              Nessun messaggio — rompi il ghiaccio 👋
-            </p>
-          ) : (
-            messages.map((msg) => {
-              const mine = msg.user_id === currentUserId;
-              const name =
-                (msg.user?.username ? `@${msg.user.username}` : null) ||
-                [msg.user?.first_name, msg.user?.last_name].filter(Boolean).join(' ') ||
-                'Viaggiatore';
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex gap-2 ${mine ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={msg.user?.image ?? ''} />
-                    <AvatarFallback className="text-[10px]">
-                      {getInitialsFromNames(msg.user?.first_name, msg.user?.last_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className={`max-w-[80%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
-                    {!mine && (
-                      <span className="text-[10px] text-muted-foreground mb-0.5 px-1">{name}</span>
-                    )}
-                    <div
-                      className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
-                        mine
-                          ? 'bg-primary text-primary-foreground rounded-br-md'
-                          : 'bg-muted rounded-bl-md'
-                      }`}
-                    >
-                      {msg.body}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground mt-0.5 px-1 tabular-nums">
-                      {formatTime(msg.created_at)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        <div className="shrink-0 border-t p-3 flex gap-2 bg-muted/30">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Scrivi alla crew..."
-            className="rounded-full bg-background"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void sendMessage();
-              }
-            }}
-            disabled={sending}
-          />
-          <Button
-            type="button"
-            size="icon"
-            className="rounded-full shrink-0"
-            onClick={() => void sendMessage()}
-            disabled={sending || !text.trim()}
-          >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        </div>
-      </CardContent>
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">{messagesBody}</CardContent>
     </Card>
   );
 }
