@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Camera } from 'lucide-react';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
 
 export default function LoginPage() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -29,6 +32,8 @@ export default function LoginPage() {
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
   const [pendingVerifyEmail, setPendingVerifyEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -88,6 +93,12 @@ export default function LoginPage() {
         return;
       }
 
+      if (TURNSTILE_SITE_KEY && !turnstileToken) {
+        setError('Completa la verifica anti-bot prima di registrarti.');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('/api/auth/register', {
           method: 'POST',
@@ -100,11 +111,14 @@ export default function LoginPage() {
             privacyConsent: true,
             termsAccepted: true,
             marketingConsent: marketingAccepted,
+            turnstileToken: turnstileToken || undefined,
           }),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
+          setTurnstileToken('');
+          setTurnstileKey((k) => k + 1);
           throw new Error(errorText || 'Qualcosa è andato storto');
         }
 
@@ -331,6 +345,16 @@ export default function LoginPage() {
                 />
               )}
 
+              {isRegisterMode && TURNSTILE_SITE_KEY && (
+                <TurnstileWidget
+                  key={turnstileKey}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onToken={setTurnstileToken}
+                  onExpire={() => setTurnstileToken('')}
+                  onError={() => setTurnstileToken('')}
+                />
+              )}
+
               {info && (
                 <p className="text-sm text-center bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 rounded-lg py-2 px-3">
                   {info}
@@ -368,7 +392,13 @@ export default function LoginPage() {
               {isRegisterMode ? 'Hai già un account?' : 'Non hai un account?'}{' '}
               <button
                 type="button"
-                onClick={() => setIsRegisterMode(!isRegisterMode)}
+                onClick={() => {
+                  setIsRegisterMode(!isRegisterMode);
+                  setError('');
+                  setInfo('');
+                  setTurnstileToken('');
+                  setTurnstileKey((k) => k + 1);
+                }}
                 className="font-medium text-primary hover:underline"
               >
                 {isRegisterMode ? 'Accedi' : 'Registrati'}

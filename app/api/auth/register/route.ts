@@ -9,6 +9,7 @@ import {
 } from '@/lib/privacy/consent';
 import { issueEmailVerification } from '@/lib/auth/email-verification';
 import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
+import { verifyTurnstileToken } from '@/lib/auth/turnstile';
 import { clientIp } from '@/lib/api/request-guard';
 import { ZodError } from 'zod';
 
@@ -24,6 +25,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+
+    const turnstile = await verifyTurnstileToken(
+      typeof body?.turnstileToken === 'string' ? body.turnstileToken : undefined,
+      ip
+    );
+    if (!turnstile.ok) {
+      return new NextResponse(turnstile.error, { status: 400 });
+    }
+
     const { firstName, lastName, email, password, marketingConsent } =
       registerSchema.parse(body);
 
