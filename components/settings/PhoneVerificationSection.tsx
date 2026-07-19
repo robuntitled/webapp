@@ -164,7 +164,7 @@ export function PhoneVerificationSection({
                   disabled={sending || phone.trim().length < 6}
                   onClick={() => void sendCode()}
                 >
-                  {sending ? 'Invio…' : 'Invia codice SMS'}
+                  {sending ? 'Invio…' : 'Invia codice WhatsApp'}
                 </Button>
               ) : (
                 <>
