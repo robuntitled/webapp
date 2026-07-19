@@ -63,6 +63,8 @@ function mergeDraft(
 }
 
 export function TripComposer({
+  profileCity,
+  profileCountry,
   initialPlannerProfile,
   initialDraft,
   initialStep = 'landing',
@@ -267,6 +269,8 @@ export function TripComposer({
                 draft={draft}
                 onChange={patchDraft}
                 onStart={goToCompose}
+                profileCity={profileCity}
+                profileCountry={profileCountry}
               />
             </motion.div>
           )}

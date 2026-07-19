@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -24,6 +24,7 @@ import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupS
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { findDestination } from '@/lib/composer/destinations';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
+import { buildOrganizerOrigin } from '@/lib/composer/origins';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
@@ -39,13 +40,52 @@ type ComposerLandingStepProps = {
   draft: ComposerDraft;
   onChange: (patch: Partial<ComposerDraft>) => void;
   onStart: () => void;
+  profileCity?: string | null;
+  profileCountry?: string | null;
 };
 
-export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandingStepProps) {
+function geoPosition(
+  options: PositionOptions
+): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+export function ComposerLandingStep({
+  draft,
+  onChange,
+  onStart,
+  profileCity,
+  profileCountry,
+}: ComposerLandingStepProps) {
   const [micro, setMicro] = useState(1);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [originCityInput, setOriginCityInput] = useState(draft.organizerOrigin?.city ?? '');
   const titleTouched = useRef(false);
+  const profileOriginApplied = useRef(false);
+
+  useEffect(() => {
+    setOriginCityInput(draft.organizerOrigin?.city ?? '');
+  }, [draft.organizerOrigin?.city]);
+
+  // Prefill da profilo se manca origin
+  useEffect(() => {
+    if (profileOriginApplied.current || draft.organizerOrigin || !profileCity?.trim()) return;
+    profileOriginApplied.current = true;
+    const origin = buildOrganizerOrigin(profileCity, profileCountry ?? undefined);
+    onChange({ organizerOrigin: origin });
+    setOriginCityInput(origin.city);
+  }, [draft.organizerOrigin, profileCity, profileCountry, onChange]);
+
+  const applyOriginCity = (city: string, country?: string) => {
+    const trimmed = city.trim();
+    if (!trimmed) return;
+    const origin = buildOrganizerOrigin(trimmed, country);
+    onChange({ organizerOrigin: origin });
+    setOriginCityInput(origin.city);
+  };
 
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
@@ -88,82 +128,94 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
     else onStart();
   };
 
-  const detectOrigin = async () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      toast.error('Geolocalizzazione non supportata su questo browser');
-      return;
-    }
-
-    if (!window.isSecureContext) {
-      toast.error('La posizione richiede HTTPS');
-      return;
-    }
-
-    // Se l’utente ha già negato, il browser non riprompta: messaggio chiaro
-    try {
-      const status = await navigator.permissions?.query?.({ name: 'geolocation' });
-      if (status?.state === 'denied') {
-        toast.error(
-          'Posizione bloccata nelle impostazioni del browser. Clicca l’icona lucchetto nella barra indirizzi → Posizione → Consenti, poi riprova.',
-          { duration: 8000 }
-        );
-        return;
-      }
-    } catch {
-      // permissions API non ovunque (es. Safari) — continua con getCurrentPosition
-    }
-
-    setGeoLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const res = await fetch(
-            `/api/places/reverse?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}`
-          );
-          const data = (await res.json()) as {
-            place?: { label: string; subtitle?: string };
-            error?: string;
-          };
-          if (!res.ok || !data.place) {
-            toast.error(data.error ?? 'Impossibile risolvere la posizione');
-            return;
-          }
-          const city = data.place.label;
-          const label = data.place.subtitle ? `${city}` : city;
-          onChange({
-            organizerOrigin: {
-              id: `geo-${Date.now()}`,
-              label,
-              city,
-              iata: '',
-              role: 'organizer',
-            },
-          });
-          toast.success(`Partenza da ${label}`);
-        } catch {
-          toast.error('Impossibile risolvere la posizione');
-        } finally {
-          setGeoLoading(false);
-        }
-      },
-      (err) => {
-        setGeoLoading(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          toast.error(
-            'Posizione negata. Consenti l’accesso dalla barra indirizzi (icona lucchetto) e riprova.',
-            { duration: 8000 }
-          );
-          return;
-        }
-        if (err.code === err.TIMEOUT) {
-          toast.error('Timeout posizione — riprova o inserisci la città a mano');
-          return;
-        }
-        toast.error('Posizione non disponibile — inserisci la città a mano');
-      },
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 300_000 }
+  const applyCoords = async (latitude: number, longitude: number, source: 'gps' | 'rete') => {
+    const res = await fetch(
+      `/api/places/reverse?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}`
     );
+    const data = (await res.json()) as {
+      place?: { label: string; subtitle?: string; country?: string };
+      error?: string;
+    };
+    if (!res.ok || !data.place) {
+      throw new Error(data.error ?? 'Impossibile risolvere la posizione');
+    }
+    const origin = buildOrganizerOrigin(data.place.label, data.place.country);
+    onChange({ organizerOrigin: origin });
+    setOriginCityInput(origin.city);
+    toast.success(
+      source === 'gps' ? `Partenza da ${origin.city}` : `Partenza stimata: ${origin.city}`
+    );
+  };
+
+  const fallbackNetworkOrigin = async (): Promise<boolean> => {
+    const res = await fetch('/api/geo/approx');
+    if (!res.ok) return false;
+    const data = (await res.json()) as {
+      city?: string | null;
+      country?: string | null;
+      lat?: number | null;
+      lng?: number | null;
+    };
+
+    if (data.lat != null && data.lng != null) {
+      try {
+        await applyCoords(data.lat, data.lng, 'rete');
+        return true;
+      } catch {
+        // prova con il nome città dell’header
+      }
+    }
+
+    if (data.city?.trim()) {
+      applyOriginCity(data.city, data.country ?? undefined);
+      toast.success(`Partenza stimata: ${data.city.trim()}`);
+      return true;
+    }
+    return false;
+  };
+
+  const detectOrigin = async () => {
+    setGeoLoading(true);
+    try {
+      if (typeof window !== 'undefined' && window.isSecureContext && navigator.geolocation) {
+        try {
+          const status = await navigator.permissions?.query?.({ name: 'geolocation' });
+          if (status?.state !== 'denied') {
+            try {
+              const pos = await geoPosition({
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 600_000,
+              });
+              await applyCoords(pos.coords.latitude, pos.coords.longitude, 'gps');
+              return;
+            } catch (err) {
+              const geoErr = err as GeolocationPositionError;
+              if (geoErr?.code === 1) {
+                // permesso negato → prova rete, poi messaggio
+              } else {
+                // timeout / unavailable → rete
+              }
+            }
+          }
+        } catch {
+          // permissions API assente
+        }
+      }
+
+      const ok = await fallbackNetworkOrigin();
+      if (ok) return;
+
+      toast.error('GPS non disponibile. Scrivi la città nel campo qui sotto (es. Roma).', {
+        duration: 7000,
+      });
+    } catch {
+      toast.error('GPS non disponibile. Scrivi la città nel campo qui sotto (es. Roma).', {
+        duration: 7000,
+      });
+    } finally {
+      setGeoLoading(false);
+    }
   };
 
   const microMeta = MICRO_STEPS[micro - 1];
@@ -307,47 +359,45 @@ export function ComposerLandingStep({ draft, onChange, onStart }: ComposerLandin
                   {draft.organizerOrigin ? (
                     <div className="flex items-center gap-2 text-sm text-white">
                       <MapPin className="h-4 w-4 text-accent shrink-0" />
-                      <span className="truncate">{draft.organizerOrigin.label}</span>
+                      <span className="truncate">
+                        {draft.organizerOrigin.city}
+                        {draft.organizerOrigin.iata
+                          ? ` · ${draft.organizerOrigin.iata}`
+                          : ''}
+                      </span>
                     </div>
                   ) : (
                     <p className="text-sm text-white/45 text-center">
-                      Attiva GPS o inserisci manualmente la città di partenza
+                      Digita la città e premi Invio, oppure usa la posizione
                     </p>
                   )}
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1 rounded-xl composer-field text-white"
-                      onClick={detectOrigin}
-                      disabled={geoLoading}
-                    >
-                      {geoLoading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Navigation className="mr-2 h-4 w-4 text-accent" />
-                      )}
-                      Usa la mia posizione
-                    </Button>
-                    <Input
-                      placeholder="Es. Roma"
-                      className="flex-1 h-11 rounded-xl composer-field text-white"
-                      defaultValue={draft.organizerOrigin?.city ?? ''}
-                      onBlur={(e) => {
-                        const city = e.target.value.trim();
-                        if (!city) return;
-                        onChange({
-                          organizerOrigin: {
-                            id: `manual-${city}`,
-                            label: city,
-                            city,
-                            iata: '',
-                            role: 'organizer',
-                          },
-                        });
-                      }}
-                    />
-                  </div>
+                  <Input
+                    placeholder="Es. Roma, Milano, Napoli…"
+                    className="h-11 rounded-xl composer-field text-white"
+                    value={originCityInput}
+                    onChange={(e) => setOriginCityInput(e.target.value)}
+                    onBlur={() => applyOriginCity(originCityInput)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyOriginCity(originCityInput);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-xl composer-field text-white"
+                    onClick={() => void detectOrigin()}
+                    disabled={geoLoading}
+                  >
+                    {geoLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Navigation className="mr-2 h-4 w-4 text-accent" />
+                    )}
+                    Usa la mia posizione
+                  </Button>
                 </div>
               </div>
             </motion.div>
