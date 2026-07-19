@@ -1,18 +1,11 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { isPhoneVerifyRequired } from '@/lib/flags';
 
 export const PHONE_VERIFY_REQUIRED_CODE = 'PHONE_VERIFY_REQUIRED';
 
-/**
- * Gate telefono (create / join / publish).
- * Default OFF in sviluppo: niente WhatsApp → niente blocco.
- * Riattiva con PHONE_VERIFY_REQUIRED=true su Vercel quando il canale OTP è pronto.
- */
-export function isPhoneVerifyRequired(): boolean {
-  const v = process.env.PHONE_VERIFY_REQUIRED?.trim().toLowerCase();
-  return v === 'true' || v === '1' || v === 'yes';
-}
+export { isPhoneVerifyRequired };
 
 export class PhoneVerifyRequiredError extends Error {
   readonly code = PHONE_VERIFY_REQUIRED_CODE;

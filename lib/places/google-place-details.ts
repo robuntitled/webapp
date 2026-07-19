@@ -58,14 +58,17 @@ export async function getPlaceDetails(placeIdInput: string): Promise<{
       .maybeSingle();
 
     if (data && data.name) {
-      const prev =
-        typeof data.hit_count === 'number' && Number.isFinite(data.hit_count)
-          ? data.hit_count
-          : 0;
-      void supabaseAdmin
-        .from('places_details_cache')
-        .update({ hit_count: prev + 1 })
-        .eq('place_id', shortId);
+      // Probabilistic counter — meno write su cache hit
+      if (Math.random() < 0.1) {
+        const prev =
+          typeof data.hit_count === 'number' && Number.isFinite(data.hit_count)
+            ? data.hit_count
+            : 0;
+        void supabaseAdmin
+          .from('places_details_cache')
+          .update({ hit_count: prev + 1 })
+          .eq('place_id', shortId);
+      }
 
       const photoName =
         typeof data.photo_name === 'string' && data.photo_name

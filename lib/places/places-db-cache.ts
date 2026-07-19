@@ -3,10 +3,12 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { GooglePlaceResult } from '@/lib/places/google-text-search';
 import type { PlaceCategoryId } from '@/lib/places/place-categories';
+import { placesCacheTtlDays } from '@/lib/flags';
 
 /**
- * Cache Places **senza scadenza** e **condivisa tra tutti gli utenti**.
+ * Cache Places condivisa tra tutti gli utenti.
  * Chiave: zona + categoria + query + lingua (non legata a user_id).
+ * TTL configurabile (PLACES_CACHE_TTL_DAYS); stale-while-revalidate oltre TTL.
  */
 export function buildPlacesCacheKey(options: {
   lat: number;
@@ -27,17 +29,31 @@ function roundCoord(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
+export type PlacesCacheHit = {
+  results: GooglePlaceResult[];
+  /** true se oltre TTL: usare subito ma refresh in background */
+  stale: boolean;
+};
+
+function isStale(updatedAt: string | null | undefined): boolean {
+  const ttlDays = placesCacheTtlDays();
+  if (ttlDays <= 0) return false;
+  if (!updatedAt) return true;
+  const ageMs = Date.now() - new Date(updatedAt).getTime();
+  return ageMs > ttlDays * 86_400_000;
+}
+
 /**
- * Legge cache DB. Nessun TTL: se c’è, vale per sempre (per tutti).
- * Fail-open: errori → null (si va su Google).
+ * Legge cache DB. Fail-open: errori → null (si va su Google).
+ * hit_count aggiornato solo ~10% delle volte (meno write su cache hit).
  */
 export async function getPlacesFromDbCache(
   cacheKey: string
-): Promise<GooglePlaceResult[] | null> {
+): Promise<PlacesCacheHit | null> {
   try {
     const { data, error } = await supabaseAdmin
       .from('places_search_cache')
-      .select('results, hit_count')
+      .select('results, hit_count, updated_at')
       .eq('cache_key', cacheKey)
       .maybeSingle();
 
@@ -46,17 +62,22 @@ export async function getPlacesFromDbCache(
     const results = data.results;
     if (!Array.isArray(results) || results.length === 0) return null;
 
-    // Best-effort hit counter
-    const prev =
-      typeof data.hit_count === 'number' && Number.isFinite(data.hit_count)
-        ? data.hit_count
-        : 0;
-    void supabaseAdmin
-      .from('places_search_cache')
-      .update({ hit_count: prev + 1 })
-      .eq('cache_key', cacheKey);
+    // Probabilistic hit counter — evita write DB su ogni cache hit
+    if (Math.random() < 0.1) {
+      const prev =
+        typeof data.hit_count === 'number' && Number.isFinite(data.hit_count)
+          ? data.hit_count
+          : 0;
+      void supabaseAdmin
+        .from('places_search_cache')
+        .update({ hit_count: prev + 1 })
+        .eq('cache_key', cacheKey);
+    }
 
-    return results as GooglePlaceResult[];
+    return {
+      results: results as GooglePlaceResult[],
+      stale: isStale(data.updated_at as string | undefined),
+    };
   } catch {
     return null;
   }

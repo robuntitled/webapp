@@ -6,7 +6,7 @@ import {
   orchestrateDayGeneration,
 } from '@/lib/composer/orchestrator';
 import { shouldUseExternalAi } from '@/lib/ai/config';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const limited = rateLimit(`composer-gen:${session.user.id}`, {
+  const limited = await rateLimitAsync(`composer-gen:${session.user.id}`, {
     limit: 30,
     windowMs: 60 * 60 * 1000,
   });
@@ -34,12 +34,15 @@ export async function POST(request: Request) {
   if (!limited.ok) {
     return NextResponse.json(
       { error: 'Limite generazioni raggiunto, riprova più tardi' },
-      { status: 429 }
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(limited.retryAfterMs / 1000)) },
+      }
     );
   }
 
-  if (shouldUseExternalAi().use) {
-    const aiLimited = rateLimit(`composer-ai:${session.user.id}`, {
+  if ((await shouldUseExternalAi()).use) {
+    const aiLimited = await rateLimitAsync(`composer-ai:${session.user.id}`, {
       limit: 5,
       windowMs: 60 * 60 * 1000,
     });

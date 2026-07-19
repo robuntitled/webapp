@@ -7,8 +7,9 @@ import {
   replyToAssist,
   type AssistRequest,
 } from '@/lib/composer/assist';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 import { plannerProfileSchema } from '@/lib/validations/planner';
+import { logApiMetric } from '@/lib/api/metrics';
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   // Limite messaggi totali (mock + AI)
-  const limited = rateLimit(`composer-assist:${session.user.id}`, {
+  const limited = await rateLimitAsync(`composer-assist:${session.user.id}`, {
     limit: 60,
     windowMs: 60 * 60 * 1000,
   });
@@ -53,6 +54,12 @@ export async function POST(request: Request) {
 
   // FAQ / saluti → mock immediato (0 token Gemini)
   if (isCheapAssistIntent(assistReq.message)) {
+    logApiMetric({
+      service: 'ai',
+      op: 'assist-route',
+      source: 'mock',
+      userId: session.user.id,
+    });
     return NextResponse.json({
       reply: mockAssistReply(assistReq),
       source: 'mock' as const,
@@ -60,11 +67,18 @@ export async function POST(request: Request) {
   }
 
   // Cap chiamate AI/ora per utente (oltre il mock)
-  const aiLimited = rateLimit(`composer-assist-ai:${session.user.id}`, {
+  const aiLimited = await rateLimitAsync(`composer-assist-ai:${session.user.id}`, {
     limit: 25,
     windowMs: 60 * 60 * 1000,
   });
   if (!aiLimited.ok) {
+    logApiMetric({
+      service: 'ai',
+      op: 'assist-route',
+      source: 'mock',
+      userId: session.user.id,
+      extra: { reason: 'user_ai_cap' },
+    });
     return NextResponse.json({
       reply: mockAssistReply(assistReq),
       source: 'mock' as const,

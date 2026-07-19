@@ -51,14 +51,14 @@ describe('getAiConfig openai provider', () => {
     expect(config.jsonMode).toBe(false);
   });
 
-  it('enables external AI for local Ollama without API key', () => {
+  it('enables external AI for local Ollama without API key', async () => {
     process.env.AI_PROVIDER = 'openai';
     process.env.AI_COMPOSER_ENABLED = 'true';
     process.env.AI_BASE_URL = 'http://localhost:11434/v1';
     process.env.AI_MODEL = 'llama3.2:3b';
     delete process.env.AI_API_KEY;
 
-    expect(shouldUseExternalAi().use).toBe(true);
+    expect((await shouldUseExternalAi()).use).toBe(true);
   });
 });
 

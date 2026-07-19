@@ -9,8 +9,8 @@ import {
 import { aiDayPlanGeminiSchema } from '@/lib/composer/ai-day-schema';
 import {
   GeminiQuotaError,
-  getQuotaCooldownRemainingMs,
-  handleGeminiQuotaFailure,
+  getQuotaCooldownRemainingMsAsync,
+  handleGeminiQuotaFailureAsync,
   isGeminiQuotaError,
 } from '@/lib/ai/quota';
 import {
@@ -99,7 +99,7 @@ async function callGeminiOnce<T>(params: {
   if (!response.ok) {
     const message = payload.error?.message ?? `Gemini HTTP ${response.status}`;
     if (isGeminiQuotaError(message) || response.status === 429) {
-      throw handleGeminiQuotaFailure(message);
+      throw await handleGeminiQuotaFailureAsync(message);
     }
     throw new Error(message);
   }
@@ -136,7 +136,7 @@ export async function generateGeminiStructured<T>(params: {
   userPrompt: string;
   maxOutputTokens?: number;
 }): Promise<GeminiStructuredResult<T>> {
-  const cooldownMs = getQuotaCooldownRemainingMs();
+  const cooldownMs = await getQuotaCooldownRemainingMsAsync();
   if (cooldownMs > 0) {
     throw new GeminiQuotaError(
       `Limite gratuito Gemini (~10 req/min). Riprova tra ${Math.ceil(cooldownMs / 1000)}s`,
@@ -187,7 +187,7 @@ export async function generateGeminiStructured<T>(params: {
         lastError = error instanceof Error ? error : new Error(message);
 
         if (isGeminiQuotaError(message)) {
-          throw handleGeminiQuotaFailure(message);
+          throw await handleGeminiQuotaFailureAsync(message);
         }
 
         if (isGeminiModelUnavailableError(message) || isAiTimeoutError(message)) {

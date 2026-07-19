@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { ZodType } from 'zod';
-import { canAffordAiCall, recordAiSpend } from '@/lib/ai/budget';
+import { canAffordAiCallAsync, recordAiSpendAsync } from '@/lib/ai/budget';
 import { getAiConfig, isAiComposerConfigured } from '@/lib/ai/config';
 import { generateGeminiStructured } from '@/lib/ai/gemini';
 import { generateOpenAiCompatibleStructured } from '@/lib/ai/openai-compatible';
@@ -55,7 +55,7 @@ export async function generateStructured<T>(params: {
   }
 
   const estimatedCost = estimateTypicalCallCostUsd(config.provider);
-  if (!canAffordAiCall(estimatedCost, config.monthlyBudgetUsd)) {
+  if (!(await canAffordAiCallAsync(estimatedCost, config.monthlyBudgetUsd))) {
     throw new AiBudgetExceededError();
   }
 
@@ -71,7 +71,7 @@ export async function generateStructured<T>(params: {
     throw new Error(`Risposta AI non valida: ${detail}`);
   }
 
-  const costUsd = recordAiSpend(
+  const costUsd = await recordAiSpendAsync(
     result.usage.inputTokens,
     result.usage.outputTokens,
     config.provider

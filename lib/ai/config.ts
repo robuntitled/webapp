@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getQuotaCooldownRemainingMs } from '@/lib/ai/quota';
+import { getQuotaCooldownRemainingMsAsync } from '@/lib/ai/quota';
 import { canMakeGlobalAiCall } from '@/lib/ai/gemini-global-limit';
 import { DEFAULT_GEMINI_MODEL } from '@/lib/ai/models';
 
@@ -124,7 +124,10 @@ function configuredReason(config: AiConfig): string {
  * Decide se chiamare un LLM esterno per questa richiesta.
  * mock = mai | gemini/openai = sempre (se configurato) | auto = se quota/cache ok
  */
-export function shouldUseExternalAi(): { use: boolean; reason?: string } {
+export async function shouldUseExternalAi(): Promise<{
+  use: boolean;
+  reason?: string;
+}> {
   const config = getAiConfig();
 
   if (config.mode === 'mock') {
@@ -142,7 +145,7 @@ export function shouldUseExternalAi(): { use: boolean; reason?: string } {
     };
   }
 
-  const cooldownMs = getQuotaCooldownRemainingMs();
+  const cooldownMs = await getQuotaCooldownRemainingMsAsync();
   if (cooldownMs > 0) {
     return {
       use: false,
@@ -150,7 +153,7 @@ export function shouldUseExternalAi(): { use: boolean; reason?: string } {
     };
   }
 
-  const global = canMakeGlobalAiCall();
+  const global = await canMakeGlobalAiCall();
   if (!global.ok) {
     return { use: false, reason: 'Limite globale AI raggiunto (6/min)' };
   }
@@ -159,11 +162,11 @@ export function shouldUseExternalAi(): { use: boolean; reason?: string } {
 }
 
 /** @deprecated Usa shouldUseExternalAi() */
-export function shouldUseGemini(): { use: boolean; reason?: string } {
+export async function shouldUseGemini(): Promise<{ use: boolean; reason?: string }> {
   return shouldUseExternalAi();
 }
 
 /** @deprecated Usa isAiComposerConfigured() */
-export function isAiComposerAvailable(): boolean {
-  return shouldUseExternalAi().use;
+export async function isAiComposerAvailable(): Promise<boolean> {
+  return (await shouldUseExternalAi()).use;
 }

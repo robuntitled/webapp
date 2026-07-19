@@ -7,8 +7,8 @@ import {
   DAY_PLAN_JSON_SUFFIX,
 } from '@/lib/ai/prompts';
 import {
-  getQuotaCooldownRemainingMs,
-  handleGeminiQuotaFailure,
+  getQuotaCooldownRemainingMsAsync,
+  handleGeminiQuotaFailureAsync,
   isGeminiQuotaError,
 } from '@/lib/ai/quota';
 
@@ -115,7 +115,7 @@ async function callOpenAiCompatibleOnce<T>(params: {
   if (!response.ok) {
     const message = payload.error?.message ?? `AI HTTP ${response.status}`;
     if (isGeminiQuotaError(message) || response.status === 429) {
-      throw handleGeminiQuotaFailure(message);
+      throw await handleGeminiQuotaFailureAsync(message);
     }
     throw new Error(message);
   }
@@ -147,7 +147,7 @@ export async function generateOpenAiCompatibleStructured<T>(params: {
   userPrompt: string;
   maxOutputTokens?: number;
 }): Promise<OpenAiStructuredResult<T>> {
-  const cooldownMs = getQuotaCooldownRemainingMs();
+  const cooldownMs = await getQuotaCooldownRemainingMsAsync();
   if (cooldownMs > 0) {
     throw new Error(
       `Limite API raggiunto. Riprova tra ${Math.ceil(cooldownMs / 1000)}s`
@@ -177,7 +177,7 @@ export async function generateOpenAiCompatibleStructured<T>(params: {
       lastError = error instanceof Error ? error : new Error(message);
 
       if (isGeminiQuotaError(message)) {
-        throw handleGeminiQuotaFailure(message);
+        throw await handleGeminiQuotaFailureAsync(message);
       }
 
       if (!message.includes('JSON non valido') && !message.includes('risposta vuota')) {

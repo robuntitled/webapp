@@ -1,11 +1,12 @@
 import 'server-only';
 
-import { getCachedValue, setCachedValue } from '@/lib/ai/cache';
+import { getCachedValueAsync, setCachedValueAsync } from '@/lib/ai/cache';
 import { getAiConfig, shouldUseExternalAi } from '@/lib/ai/config';
 import { GeminiQuotaError } from '@/lib/ai/quota';
 import { AiBudgetExceededError, generateStructured } from '@/lib/ai/provider';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
-import { canAffordAiCall } from '@/lib/ai/budget';
+import { canAffordAiCallAsync } from '@/lib/ai/budget';
+import { logApiMetric } from '@/lib/api/metrics';
 import { resolveOrchestratorBudgetMs } from '@/lib/ai/timeouts';
 import { withTimeout } from '@/lib/utils/with-timeout';
 import {
@@ -66,10 +67,12 @@ async function generateDayPlan(
   const config = getAiConfig();
   const cacheKey = buildSharedCacheKey(req, totalDays);
 
-  const cached = getCachedValue<{ suggestedTitle: string; blocks: ComposerGenerateResponse['blocks'] }>(
-    cacheKey
-  );
+  const cached = await getCachedValueAsync<{
+    suggestedTitle: string;
+    blocks: ComposerGenerateResponse['blocks'];
+  }>(cacheKey);
   if (cached) {
+    logApiMetric({ service: 'ai', op: 'generate-day', source: 'cache' });
     return {
       suggestedTitle: cached.suggestedTitle,
       blocks: cached.blocks,
@@ -79,10 +82,15 @@ async function generateDayPlan(
     };
   }
 
-  const geminiDecision = shouldUseExternalAi();
+  const geminiDecision = await shouldUseExternalAi();
 
   if (geminiDecision.use) {
-    if (!canAffordAiCall(estimateTypicalCallCostUsd(config.provider), config.monthlyBudgetUsd)) {
+    if (
+      !(await canAffordAiCallAsync(
+        estimateTypicalCallCostUsd(config.provider),
+        config.monthlyBudgetUsd
+      ))
+    ) {
       warnings.push('Budget AI mensile raggiunto — suggerimenti smart');
     } else {
       try {
@@ -95,11 +103,12 @@ async function generateDayPlan(
 
         const mapped = aiPlanToBlocks(ai.data, req.targetBlockTypes);
 
-        setCachedValue(
+        await setCachedValueAsync(
           cacheKey,
           { suggestedTitle: mapped.suggestedTitle, blocks: mapped.blocks },
           config.cacheTtlMs
         );
+        logApiMetric({ service: 'ai', op: 'generate-day', source: 'network' });
 
         return {
           suggestedTitle: mapped.suggestedTitle,

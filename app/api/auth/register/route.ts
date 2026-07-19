@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { registerSchema } from '@/lib/validations/user';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 import {
   buildMarketingConsentFields,
   buildPrivacyConsentFields,
@@ -16,7 +16,10 @@ import { ZodError } from 'zod';
 export async function POST(request: Request) {
   try {
     const ip = clientIp(request);
-    const { ok, retryAfterMs } = rateLimit(`register:${ip}`, { limit: 5, windowMs: 60_000 });
+    const { ok, retryAfterMs } = await rateLimitAsync(`register:${ip}`, {
+      limit: 5,
+      windowMs: 60_000,
+    });
     if (!ok) {
       return new NextResponse('Troppi tentativi. Riprova tra qualche minuto.', {
         status: 429,

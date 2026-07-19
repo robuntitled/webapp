@@ -6,6 +6,7 @@ import {
   labelForGoogleType,
   type PlaceCategoryId,
 } from '@/lib/places/place-categories';
+import { redisGetJson, redisSetJson } from '@/lib/redis/upstash';
 
 /**
  * Solo Places API (New) — places.googleapis.com/v1
@@ -73,6 +74,10 @@ const inflight = new Map<string, Promise<GooglePlacesSearchResult>>();
 let nearbyBlocked = false;
 let textSearchBlocked = false;
 
+function placesRedisKey(key: string): string {
+  return `places:g:${key}`;
+}
+
 function isBlockedError(status: string, message?: string): boolean {
   const m = (message || '').toLowerCase();
   const s = (status || '').toUpperCase();
@@ -110,6 +115,7 @@ function cacheSet(key: string, result: GooglePlacesSearchResult) {
     if (first) cache.delete(first);
   }
   cache.set(key, { at: Date.now(), result });
+  void redisSetJson(placesRedisKey(key), result, CACHE_TTL_MS);
 }
 
 async function withInflight(
@@ -118,11 +124,26 @@ async function withInflight(
 ): Promise<GooglePlacesSearchResult> {
   const cached = cacheGet(key);
   if (cached) return cached;
+
+  const remote = await redisGetJson<GooglePlacesSearchResult>(placesRedisKey(key));
+  if (remote?.ok && remote.results.length > 0) {
+    cacheSetMemoryOnly(key, remote);
+    return remote;
+  }
+
   const pending = inflight.get(key);
   if (pending) return pending;
   const p = run().finally(() => inflight.delete(key));
   inflight.set(key, p);
   return p;
+}
+
+function cacheSetMemoryOnly(key: string, result: GooglePlacesSearchResult) {
+  if (cache.size >= CACHE_MAX) {
+    const first = cache.keys().next().value;
+    if (first) cache.delete(first);
+  }
+  cache.set(key, { at: Date.now(), result });
 }
 
 function placeTypeLabel(place: PlacesApiPlace): string {

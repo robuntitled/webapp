@@ -1,7 +1,7 @@
 import type { User } from 'next-auth';
 import { CredentialsSignin } from 'next-auth';
 import bcrypt from 'bcryptjs';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 /** Login bloccato: email non ancora verificata. */
@@ -19,7 +19,7 @@ export async function authorizeCredentials(
   const normalized = email.trim().toLowerCase();
   if (!normalized || !password) return null;
 
-  const byEmail = rateLimit(`login:email:${normalized}`, {
+  const byEmail = await rateLimitAsync(`login:email:${normalized}`, {
     limit: 8,
     windowMs: 15 * 60_000,
   });
@@ -27,7 +27,7 @@ export async function authorizeCredentials(
     return null;
   }
 
-  const globalSoft = rateLimit('login:global', {
+  const globalSoft = await rateLimitAsync('login:global', {
     limit: 80,
     windowMs: 15 * 60_000,
   });

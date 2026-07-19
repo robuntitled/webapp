@@ -1,6 +1,11 @@
 import 'server-only';
 
-import { getCachedValue, setCachedValue } from '@/lib/ai/cache';
+import {
+  getCachedValue,
+  getCachedValueAsync,
+  setCachedValue,
+  setCachedValueAsync,
+} from '@/lib/ai/cache';
 
 const QUOTA_COOLDOWN_KEY = 'gemini:quota-until';
 
@@ -40,10 +45,30 @@ export function getQuotaCooldownRemainingMs(): number {
   return Math.max(0, until - Date.now());
 }
 
+export async function getQuotaCooldownRemainingMsAsync(): Promise<number> {
+  const until = await getCachedValueAsync<number>(QUOTA_COOLDOWN_KEY);
+  if (!until) return 0;
+  return Math.max(0, until - Date.now());
+}
+
 export function setQuotaCooldown(errorMessage?: string, fallbackSeconds = 60): number {
   const seconds = parseRetrySecondsFromGeminiError(errorMessage ?? '') ?? fallbackSeconds;
   const retryAfterMs = seconds * 1000;
   setCachedValue(QUOTA_COOLDOWN_KEY, Date.now() + retryAfterMs, retryAfterMs + 10_000);
+  return retryAfterMs;
+}
+
+export async function setQuotaCooldownAsync(
+  errorMessage?: string,
+  fallbackSeconds = 60
+): Promise<number> {
+  const seconds = parseRetrySecondsFromGeminiError(errorMessage ?? '') ?? fallbackSeconds;
+  const retryAfterMs = seconds * 1000;
+  await setCachedValueAsync(
+    QUOTA_COOLDOWN_KEY,
+    Date.now() + retryAfterMs,
+    retryAfterMs + 10_000
+  );
   return retryAfterMs;
 }
 
@@ -54,5 +79,12 @@ export function formatQuotaUserMessage(retryAfterMs: number): string {
 
 export function handleGeminiQuotaFailure(message: string): GeminiQuotaError {
   const retryAfterMs = setQuotaCooldown(message);
+  return new GeminiQuotaError(formatQuotaUserMessage(retryAfterMs), retryAfterMs);
+}
+
+export async function handleGeminiQuotaFailureAsync(
+  message: string
+): Promise<GeminiQuotaError> {
+  const retryAfterMs = await setQuotaCooldownAsync(message);
   return new GeminiQuotaError(formatQuotaUserMessage(retryAfterMs), retryAfterMs);
 }

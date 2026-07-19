@@ -18,6 +18,7 @@ const MIGRATIONS = [
   'supabase/migrations/010_usernames.sql',
   'supabase/migrations/011_phone_verification.sql',
   'supabase/migrations/012_phone_otp_once.sql',
+  'supabase/migrations/013_scale_indexes.sql',
 ];
 
 await withPgClient(async (client) => {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyEmailToken } from '@/lib/auth/email-verification';
 import { getAppBaseUrl } from '@/lib/auth/app-url';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/api/request-guard';
 
 /**
@@ -10,7 +10,10 @@ import { clientIp } from '@/lib/api/request-guard';
  */
 export async function GET(request: Request) {
   const ip = clientIp(request);
-  const limited = rateLimit(`verify-email:ip:${ip}`, { limit: 20, windowMs: 60_000 });
+  const limited = await rateLimitAsync(`verify-email:ip:${ip}`, {
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (!limited.ok) {
     return NextResponse.redirect(
       `${getAppBaseUrl()}/?verify=rate_limit`

@@ -1,7 +1,8 @@
 import 'server-only';
 
-import { canAffordAiCall, recordAiSpend } from '@/lib/ai/budget';
-import { getCachedValue, setCachedValue } from '@/lib/ai/cache';
+import { canAffordAiCallAsync, recordAiSpendAsync } from '@/lib/ai/budget';
+import { getCachedValueAsync, setCachedValueAsync } from '@/lib/ai/cache';
+import { logApiMetric } from '@/lib/api/metrics';
 import { getAiConfig, shouldUseExternalAi } from '@/lib/ai/config';
 import { pickGeminiAnswerText } from '@/lib/ai/json-extract';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
@@ -214,27 +215,38 @@ function buildAssistSystem(context: string, profile?: PlannerProfile | null): st
     .join(' ');
 }
 
-function recordUsage(payload: GeminiAssistResponse, provider: 'gemini' | 'openai') {
+async function recordUsage(
+  payload: GeminiAssistResponse,
+  provider: 'gemini' | 'openai'
+) {
   const input = payload.usageMetadata?.promptTokenCount ?? 0;
   const output = payload.usageMetadata?.candidatesTokenCount ?? 0;
   if (input > 0 || output > 0) {
-    recordAiSpend(input, output, provider);
+    await recordAiSpendAsync(input, output, provider);
   }
 }
 
 async function callAssistAi(req: AssistRequest): Promise<string | null> {
-  const { use } = shouldUseExternalAi();
+  const { use } = await shouldUseExternalAi();
   if (!use) return null;
 
   const config = getAiConfig();
-  if (!canAffordAiCall(estimateTypicalCallCostUsd(config.provider), config.monthlyBudgetUsd)) {
+  if (
+    !(await canAffordAiCallAsync(
+      estimateTypicalCallCostUsd(config.provider),
+      config.monthlyBudgetUsd
+    ))
+  ) {
     return null;
   }
 
   // Cache hit → zero chiamata API
   const cacheKey = assistCacheKey(req);
-  const cached = getCachedValue<string>(cacheKey);
-  if (cached) return cached;
+  const cached = await getCachedValueAsync<string>(cacheKey);
+  if (cached) {
+    logApiMetric({ service: 'ai', op: 'assist', source: 'cache' });
+    return cached;
+  }
 
   const context = summarizeDraft(req.draft, req.step);
   const history = compactHistory(req.history);
@@ -251,7 +263,8 @@ async function callAssistAi(req: AssistRequest): Promise<string | null> {
         withThinkingOff: true,
       });
       if (text) {
-        setCachedValue(cacheKey, text, ASSIST_CACHE_TTL_MS);
+        await setCachedValueAsync(cacheKey, text, ASSIST_CACHE_TTL_MS);
+        logApiMetric({ service: 'ai', op: 'assist', source: 'network' });
         return text;
       }
       // Retry senza thinkingConfig se il modello lo rifiuta
@@ -262,7 +275,10 @@ async function callAssistAi(req: AssistRequest): Promise<string | null> {
         user,
         withThinkingOff: false,
       });
-      if (fallback) setCachedValue(cacheKey, fallback, ASSIST_CACHE_TTL_MS);
+      if (fallback) {
+        await setCachedValueAsync(cacheKey, fallback, ASSIST_CACHE_TTL_MS);
+        logApiMetric({ service: 'ai', op: 'assist', source: 'network' });
+      }
       return fallback;
     }
 
@@ -291,14 +307,17 @@ async function callAssistAi(req: AssistRequest): Promise<string | null> {
       };
       if (!response.ok) return null;
       if (payload.usage) {
-        recordAiSpend(
+        await recordAiSpendAsync(
           payload.usage.prompt_tokens ?? 0,
           payload.usage.completion_tokens ?? 0,
           'openai'
         );
       }
       const text = cleanAssistReply(payload.choices?.[0]?.message?.content?.trim() || '');
-      if (text) setCachedValue(cacheKey, text, ASSIST_CACHE_TTL_MS);
+      if (text) {
+        await setCachedValueAsync(cacheKey, text, ASSIST_CACHE_TTL_MS);
+        logApiMetric({ service: 'ai', op: 'assist', source: 'network' });
+      }
       return text || null;
     }
   } catch {
@@ -347,7 +366,7 @@ async function callGeminiAssist(params: {
       return null;
     }
 
-    recordUsage(payload, 'gemini');
+    await recordUsage(payload, 'gemini');
     const candidate = payload.candidates?.[0];
     const text = cleanAssistReply(pickGeminiAnswerText(candidate?.content?.parts));
     if (!text) return null;
