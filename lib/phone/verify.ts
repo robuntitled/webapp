@@ -1,10 +1,13 @@
 import 'server-only';
 
 import { createHash, randomInt } from 'crypto';
+import { sendWhatsAppOtp, whatsappConfigured } from '@/lib/phone/whatsapp';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const OTP_TTL_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
+
+export type PhoneOtpMode = 'whatsapp' | 'twilio' | 'dev';
 
 function hashOtp(code: string, userId: string): string {
   return createHash('sha256').update(`${userId}:${code}`).digest('hex');
@@ -77,54 +80,18 @@ async function twilioCheck(
     }
   );
 
-  const data = (await res.json().catch(() => ({}))) as { status?: string; message?: string };
+  const data = (await res.json().catch(() => ({}))) as { status?: string };
   if (!res.ok || data.status !== 'approved') {
     return { ok: false, error: 'Codice non valido o scaduto.' };
   }
   return { ok: true };
 }
 
-/**
- * Invia OTP al numero. Con Twilio Verify non salviamo il codice;
- * in dev (senza Twilio) salviamo hash locale e logghiamo il codice.
- */
-export async function sendPhoneOtp(
+async function saveLocalOtp(
   userId: string,
-  e164: string
-): Promise<{ ok: true; mode: 'twilio' | 'dev' } | { ok: false; error: string }> {
-  // Numero già usato da altro account verificato?
-  const { data: taken } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('phone_e164', e164)
-    .not('phone_verified_at', 'is', null)
-    .neq('id', userId)
-    .maybeSingle();
-
-  if (taken) {
-    return { ok: false, error: 'Questo numero è già verificato su un altro account.' };
-  }
-
-  if (twilioConfigured()) {
-    const started = await twilioStart(e164);
-    if (!started.ok) return started;
-
-    await supabaseAdmin
-      .from('users')
-      .update({
-        phone_e164: e164,
-        phone_verified_at: null, // re-verifica in corso
-        phone_otp_hash: null,
-        phone_otp_expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
-        phone_otp_attempts: 0,
-      })
-      .eq('id', userId);
-
-    return { ok: true, mode: 'twilio' };
-  }
-
-  // Dev / fallback: OTP locale
-  const code = String(randomInt(100000, 999999));
+  e164: string,
+  code: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const otpHash = hashOtp(code, userId);
   const expires = new Date(Date.now() + OTP_TTL_MS).toISOString();
 
@@ -143,8 +110,70 @@ export async function sendPhoneOtp(
     console.error('[phone-otp] save failed', error);
     return { ok: false, error: 'Impossibile avviare la verifica.' };
   }
+  return { ok: true };
+}
 
-  console.info('[phone-otp:dev]', { userId, e164, code, expires });
+/**
+ * Priorità canale:
+ * 1) WhatsApp Cloud API (se configurato)
+ * 2) Twilio Verify SMS
+ * 3) Dev: log server
+ */
+export async function sendPhoneOtp(
+  userId: string,
+  e164: string
+): Promise<{ ok: true; mode: PhoneOtpMode } | { ok: false; error: string }> {
+  const { data: taken } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('phone_e164', e164)
+    .not('phone_verified_at', 'is', null)
+    .neq('id', userId)
+    .maybeSingle();
+
+  if (taken) {
+    return { ok: false, error: 'Questo numero è già verificato su un altro account.' };
+  }
+
+  // ── WhatsApp (preferito) ─────────────────────────────────────────────────
+  if (whatsappConfigured()) {
+    const code = String(randomInt(100000, 999999));
+    const saved = await saveLocalOtp(userId, e164, code);
+    if (!saved.ok) return saved;
+
+    const sent = await sendWhatsAppOtp(e164, code);
+    if (!sent.ok) {
+      // Non lasciare un OTP “fantasma” se l’invio fallisce del tutto
+      return { ok: false, error: sent.error };
+    }
+    return { ok: true, mode: 'whatsapp' };
+  }
+
+  // ── Twilio SMS ───────────────────────────────────────────────────────────
+  if (twilioConfigured()) {
+    const started = await twilioStart(e164);
+    if (!started.ok) return started;
+
+    await supabaseAdmin
+      .from('users')
+      .update({
+        phone_e164: e164,
+        phone_verified_at: null,
+        phone_otp_hash: null,
+        phone_otp_expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+        phone_otp_attempts: 0,
+      })
+      .eq('id', userId);
+
+    return { ok: true, mode: 'twilio' };
+  }
+
+  // ── Dev ──────────────────────────────────────────────────────────────────
+  const code = String(randomInt(100000, 999999));
+  const saved = await saveLocalOtp(userId, e164, code);
+  if (!saved.ok) return saved;
+
+  console.info('[phone-otp:dev]', { userId, e164, code });
   return { ok: true, mode: 'dev' };
 }
 
@@ -154,7 +183,7 @@ export async function confirmPhoneOtp(
 ): Promise<{ ok: true; e164: string } | { ok: false; error: string }> {
   const cleaned = code.replace(/\D/g, '');
   if (cleaned.length < 4 || cleaned.length > 8) {
-    return { ok: false, error: 'Inserisci il codice ricevuto via SMS.' };
+    return { ok: false, error: 'Inserisci il codice ricevuto su WhatsApp o SMS.' };
   }
 
   const { data: user, error } = await supabaseAdmin
@@ -169,8 +198,7 @@ export async function confirmPhoneOtp(
     return { ok: false, error: 'Avvia prima l’invio del codice al telefono.' };
   }
 
-  if (user.phone_verified_at && user.phone_otp_hash == null && twilioConfigured()) {
-    // already verified
+  if (user.phone_verified_at) {
     return { ok: true, e164: user.phone_e164 };
   }
 
@@ -179,7 +207,7 @@ export async function confirmPhoneOtp(
     return { ok: false, error: 'Troppi tentativi. Richiedi un nuovo codice.' };
   }
 
-  // Twilio path
+  // Twilio Verify: nessun hash locale
   if (twilioConfigured() && !user.phone_otp_hash) {
     const checked = await twilioCheck(user.phone_e164, cleaned);
     if (!checked.ok) {
@@ -190,12 +218,12 @@ export async function confirmPhoneOtp(
       return checked;
     }
   } else {
-    // Local OTP
+    // WhatsApp / dev: OTP locale
     const exp = user.phone_otp_expires_at
       ? new Date(user.phone_otp_expires_at).getTime()
       : 0;
     if (!exp || exp < Date.now()) {
-      return { ok: false, error: 'Codice scaduto. Richiedi un nuovo SMS.' };
+      return { ok: false, error: 'Codice scaduto. Richiedi un nuovo codice.' };
     }
     const expected = user.phone_otp_hash;
     if (!expected || expected !== hashOtp(cleaned, userId)) {
@@ -207,7 +235,6 @@ export async function confirmPhoneOtp(
     }
   }
 
-  // Race: numero preso nel frattempo
   const { data: taken } = await supabaseAdmin
     .from('users')
     .select('id')
@@ -227,7 +254,6 @@ export async function confirmPhoneOtp(
       phone_otp_hash: null,
       phone_otp_expires_at: null,
       phone_otp_attempts: 0,
-      // allinea anche phone_number leggibile se vuoto
       phone_number: user.phone_e164,
     })
     .eq('id', userId);

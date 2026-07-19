@@ -42,10 +42,12 @@ export function PhoneVerificationSection({
         toast.error(data.error || 'Invio non riuscito');
         return;
       }
-      toast.success(data.message || 'SMS inviato');
+      toast.success(data.message || 'Codice inviato');
       setStep('code');
       if (data.mode === 'dev') {
         toast.message('Modalità dev: codice nei log del server');
+      } else if (data.mode === 'whatsapp') {
+        toast.message('Controlla WhatsApp sul cellulare indicato');
       }
     } catch {
       toast.error('Errore di rete');
@@ -88,7 +90,7 @@ export function PhoneVerificationSection({
     <SettingsSection
       icon={Phone}
       title="Telefono e badge"
-      description="Obbligatorio per creare un viaggio o unirti a uno. Badge “Telefono verificato” visibile agli altri (non vedono il numero)."
+      description="Obbligatorio per creare un viaggio o unirti a uno. Ricevi il codice su WhatsApp (o SMS se configurato). Badge visibile agli altri — non vedono il numero."
     >
       <div className="space-y-5">
         {verified ? (
@@ -140,7 +142,7 @@ export function PhoneVerificationSection({
 
             {step === 'code' && (
               <div className="space-y-2">
-                <Label htmlFor="phone-otp">Codice SMS</Label>
+                <Label htmlFor="phone-otp">Codice da WhatsApp</Label>
                 <Input
                   id="phone-otp"
                   inputMode="numeric"

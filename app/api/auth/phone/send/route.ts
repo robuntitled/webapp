@@ -45,12 +45,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
+  const messages: Record<string, string> = {
+    whatsapp: 'Ti abbiamo inviato un codice su WhatsApp. Aprilo e inseriscilo qui sotto.',
+    twilio: 'Ti abbiamo inviato un SMS con il codice di verifica.',
+    dev: 'Codice generato (dev: vedi log server). Inseriscilo qui sotto.',
+  };
+
   return NextResponse.json({
     ok: true,
     mode: result.mode,
-    message:
-      result.mode === 'dev'
-        ? 'Codice generato (dev: vedi log server). Inseriscilo qui sotto.'
-        : 'Ti abbiamo inviato un SMS con il codice di verifica.',
+    message: messages[result.mode] ?? 'Codice inviato.',
   });
 }
