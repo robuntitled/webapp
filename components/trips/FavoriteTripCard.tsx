@@ -61,7 +61,16 @@ export function FavoriteTripCard({
         toast.success('Ti sei unito al viaggio con successo!');
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Errore imprevisto');
+        const msg = error instanceof Error ? error.message : 'Errore imprevisto';
+        toast.error(msg);
+        if (msg.toLowerCase().includes('telefono')) {
+          toast.message('Verifica il numero in Impostazioni → Sicurezza', {
+            action: {
+              label: 'Vai',
+              onClick: () => router.push('/dashboard/impostazioni'),
+            },
+          });
+        }
       }
     });
   };

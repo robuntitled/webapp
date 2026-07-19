@@ -1,6 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
+import { requirePhoneVerified } from '@/lib/auth/require-phone-verified';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -29,6 +30,8 @@ export async function createTrip(formData: FormData) {
   if (!session?.user?.id) {
     throw new Error('Devi essere loggato per creare un viaggio.');
   }
+
+  await requirePhoneVerified(session.user.id);
 
   let parsed;
   try {

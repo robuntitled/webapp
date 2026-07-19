@@ -158,6 +158,16 @@ export function TripComposer({
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.code === 'PHONE_VERIFY_REQUIRED' || /telefono/i.test(String(data.error ?? ''))) {
+          toast.error(data.error ?? 'Verifica il telefono per pubblicare');
+          toast.message('Impostazioni → Sicurezza → verifica cellulare', {
+            action: {
+              label: 'Verifica',
+              onClick: () => router.push('/dashboard/impostazioni'),
+            },
+          });
+          return;
+        }
         toast.error(data.hint ? `${data.error} — ${data.hint}` : data.error ?? 'Errore pubblicazione');
         return;
       }

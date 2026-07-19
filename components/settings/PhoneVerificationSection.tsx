@@ -88,7 +88,7 @@ export function PhoneVerificationSection({
     <SettingsSection
       icon={Phone}
       title="Telefono e badge"
-      description="Verifica il cellulare per mostrare il badge “Telefono verificato” agli altri viaggiatori."
+      description="Obbligatorio per creare un viaggio o unirti a uno. Badge “Telefono verificato” visibile agli altri (non vedono il numero)."
     >
       <div className="space-y-5">
         {verified ? (

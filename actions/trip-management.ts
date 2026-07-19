@@ -1,6 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
+import { requirePhoneVerified } from '@/lib/auth/require-phone-verified';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 
@@ -31,6 +32,8 @@ export async function joinTrip(tripId: string) {
     throw new Error('Devi essere loggato per unirti a un viaggio.');
   }
   const userId = session.user.id;
+
+  await requirePhoneVerified(userId);
 
   const { data: trip, error: tripError } = await supabaseAdmin
     .from('trips')

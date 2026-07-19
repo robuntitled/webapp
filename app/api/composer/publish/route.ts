@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import {
+  isPhoneVerifyRequiredError,
+  requirePhoneVerified,
+} from '@/lib/auth/require-phone-verified';
 import { publishComposerTrip } from '@/lib/data/composer';
 import { publishComposerSchema } from '@/lib/composer/schemas';
 import { revalidatePath } from 'next/cache';
@@ -21,6 +25,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await requirePhoneVerified(session.user.id);
     const result = await publishComposerTrip(session.user.id, parsed.data);
 
     revalidatePath('/dashboard');
@@ -33,6 +38,16 @@ export async function POST(request: Request) {
       price: result.price,
     });
   } catch (error) {
+    if (isPhoneVerifyRequiredError(error)) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: 'PHONE_VERIFY_REQUIRED',
+          settingsPath: '/dashboard/impostazioni',
+        },
+        { status: 403 }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Pubblicazione fallita';
     const isMigration =
       message.includes('trip_days') ||

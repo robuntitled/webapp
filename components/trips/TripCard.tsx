@@ -94,7 +94,16 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
         toast.success('Sei dentro! Modalità relax attiva 🏖️');
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Errore imprevisto');
+        const msg = error instanceof Error ? error.message : 'Errore imprevisto';
+        toast.error(msg);
+        if (msg.toLowerCase().includes('telefono') || msg.includes('PHONE_VERIFY')) {
+          toast.message('Verifica il numero in Impostazioni → Sicurezza', {
+            action: {
+              label: 'Vai',
+              onClick: () => router.push('/dashboard/impostazioni'),
+            },
+          });
+        }
       }
     });
   };
