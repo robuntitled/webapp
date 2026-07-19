@@ -24,6 +24,7 @@ import {
   CalendarIcon,
   Camera,
   Contact,
+  ExternalLink,
   FileCheck2,
   MapPin,
   Settings,
@@ -36,6 +37,7 @@ import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
 import { MIN_AGE_YEARS } from '@/lib/privacy/constants';
 import { VerifiedBadges } from '@/components/profile/VerifiedBadges';
+import { profilePath } from '@/lib/profile/paths';
 
 function ProfileSection({
   icon: Icon,
@@ -212,6 +214,17 @@ export default function ProfileForm({
             className="mt-2 justify-center sm:justify-start"
             phoneVerified={Boolean(userProfile?.phone_verified_at)}
           />
+          {userProfile && profilePath(userProfile.username, userProfile.id) && (
+            <Button asChild variant="link" size="sm" className="mt-1 h-auto px-0 text-muted-foreground">
+              <Link
+                href={profilePath(userProfile.username, userProfile.id)!}
+                className="inline-flex items-center gap-1"
+              >
+                Vedi profilo pubblico
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          )}
           {avatarFile && (
             <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
               <Button

@@ -28,13 +28,13 @@ export function VerifiedBadges({
       <Badge
         variant="secondary"
         className={cn(
-          'rounded-full border border-sky-400/40 bg-sky-500/20 text-sky-100 font-semibold gap-1',
+          'rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:border-sky-400/40 dark:bg-sky-500/20 dark:text-sky-100 font-semibold gap-1',
           text,
           pad
         )}
         title="Numero verificato — può creare e unirsi a viaggi"
       >
-        <BadgeCheck className="h-3.5 w-3.5 fill-sky-400/30 text-sky-300" />
+        <BadgeCheck className="h-3.5 w-3.5 fill-sky-400/30 text-sky-600 dark:text-sky-300" />
         Verificato
       </Badge>
     </div>

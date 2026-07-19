@@ -49,7 +49,7 @@ export function UserNav({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/dashboard/profilo">Profilo</Link>
+            <Link href="/dashboard/profilo">Modifica profilo</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/impostazioni">Impostazioni</Link>

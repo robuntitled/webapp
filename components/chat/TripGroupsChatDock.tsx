@@ -15,10 +15,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TripChatPanel } from '@/components/chat/TripChatPanel';
+import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
-import { getInitialsFromNames } from '@/lib/utils/user';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
 import { toast } from 'sonner';
 
@@ -391,34 +390,32 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                     </p>
                   ) : (
                     <ul className="divide-y">
-                      {contacts.map((c) => {
-                        const name =
-                          [c.firstName, c.lastName].filter(Boolean).join(' ') ||
-                          (c.username ? `@${c.username}` : 'Viaggiatore');
-                        return (
-                          <li key={c.userId}>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/60"
-                              onClick={() => openTrip(c.sharedTripId)}
-                            >
-                              <Avatar className="h-11 w-11">
-                                <AvatarImage src={c.image ?? ''} />
-                                <AvatarFallback className="text-xs">
-                                  {getInitialsFromNames(c.firstName, c.lastName)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{name}</p>
-                                <p className="truncate text-xs text-muted-foreground">
-                                  Chat in «{c.sharedTripTitle}»
-                                </p>
-                              </div>
-                              <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            </button>
-                          </li>
-                        );
-                      })}
+                      {contacts.map((c) => (
+                        <li key={c.userId} className="flex items-center gap-1 px-2 py-2">
+                          <UserProfileLink
+                            userId={c.userId}
+                            username={c.username}
+                            firstName={c.firstName}
+                            lastName={c.lastName}
+                            image={c.image}
+                            mode="both"
+                            size="md"
+                            className="min-w-0 flex-1 rounded-xl px-2 py-1.5 hover:bg-muted/60"
+                            subtitle={`Profilo · ${c.sharedTripTitle}`}
+                            stopPropagation
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 rounded-full"
+                            title="Apri chat del viaggio"
+                            onClick={() => openTrip(c.sharedTripId)}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </div>

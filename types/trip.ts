@@ -1,5 +1,6 @@
 export type TripCreator = {
   id: string;
+  username?: string | null;
   first_name: string | null;
   last_name: string | null;
   image: string | null;
@@ -11,6 +12,7 @@ export type TripPlanningMode = 'solo' | 'group';
 
 export type TripParticipantUser = {
   id: string;
+  username?: string | null;
   first_name: string | null;
   last_name: string | null;
   image: string | null;

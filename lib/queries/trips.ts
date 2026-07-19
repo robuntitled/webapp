@@ -14,7 +14,7 @@ export const TRIP_LIST_SELECT = `
   planningMode: planning_mode,
   imageUrl: image_url,
   creator_id,
-  creator:users(id, first_name, last_name, image),
+  creator:users(id, username, first_name, last_name, image),
   favorite_trips(user_id),
   trip_participants(user_id, role)
 `;
@@ -31,9 +31,9 @@ export const TRIP_DETAIL_SELECT = `
   composerVersion: composer_version,
   imageUrl: image_url,
   creator_id,
-  creator:users(id, first_name, last_name, image),
+  creator:users(id, username, first_name, last_name, image),
   favorite_trips(user_id),
-  trip_participants(user_id, role, user:users(id, first_name, last_name, image))
+  trip_participants(user_id, role, user:users(id, username, first_name, last_name, image))
 `;
 
 type RawTrip = Omit<TripWithRelations, 'isFavorited'> & {

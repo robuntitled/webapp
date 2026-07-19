@@ -1,13 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { MessageCircle, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getInitialsFromNames } from '@/lib/utils/user';
 import type { TripMessageRow } from '@/lib/data/trip-chat';
 
 type TripChatPanelProps = {
@@ -165,24 +164,33 @@ export function TripChatPanel({
         ) : (
           messages.map((msg) => {
             const mine = msg.user_id === currentUserId;
-            const name =
-              (msg.user?.username ? `@${msg.user.username}` : null) ||
-              [msg.user?.first_name, msg.user?.last_name].filter(Boolean).join(' ') ||
-              'Viaggiatore';
             return (
               <div
                 key={msg.id}
                 className={`flex gap-2 ${mine ? 'flex-row-reverse' : 'flex-row'}`}
               >
-                <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={msg.user?.image ?? ''} />
-                  <AvatarFallback className="text-[10px]">
-                    {getInitialsFromNames(msg.user?.first_name, msg.user?.last_name)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserProfileLink
+                  userId={msg.user_id}
+                  username={msg.user?.username}
+                  firstName={msg.user?.first_name}
+                  lastName={msg.user?.last_name}
+                  image={msg.user?.image}
+                  mode="avatar"
+                  size="sm"
+                  className="shrink-0 self-end"
+                />
                 <div className={`max-w-[80%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
                   {!mine && (
-                    <span className="text-[10px] text-muted-foreground mb-0.5 px-1">{name}</span>
+                    <UserProfileLink
+                      userId={msg.user_id}
+                      username={msg.user?.username}
+                      firstName={msg.user?.first_name}
+                      lastName={msg.user?.last_name}
+                      mode="name"
+                      size="sm"
+                      nameClassName="text-[10px] text-muted-foreground font-normal"
+                      className="mb-0.5 px-1"
+                    />
                   )}
                   <div
                     className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${

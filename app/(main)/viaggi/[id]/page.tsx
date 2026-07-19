@@ -6,7 +6,6 @@ import { fetchComposerItinerary } from '@/lib/data/composer';
 import { fetchTripById } from '@/lib/data/trips';
 import { TripExperienceHub } from '@/components/trips/TripExperienceHub';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,10 +15,10 @@ import { TripDetailActions } from '@/components/trips/TripDetailActions';
 import { TripCrewCard } from '@/components/trips/TripCrewCard';
 import { TripInviteCard } from '@/components/trips/TripInviteCard';
 import { TripRoleBadge } from '@/components/trips/TripRoleBadge';
+import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { resolveUserTripRole } from '@/lib/trips/roles';
 import type { TripParticipantRole } from '@/lib/trips/roles';
 import { formatTripDate, formatAgeRange, getTripStatus } from '@/lib/utils/trip';
-import { getInitialsFromNames } from '@/lib/utils/user';
 import { CakeSlice, CalendarDays, MapPin, Users, ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -136,21 +135,21 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </div>
 
                 {trip.creator && (
-                  <div className="flex items-center gap-3 pt-5 border-t">
-                    <Avatar className="h-11 w-11 ring-2 ring-muted">
-                      <AvatarImage src={trip.creator.image ?? ''} />
-                      <AvatarFallback>
-                        {getInitialsFromNames(trip.creator.first_name, trip.creator.last_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                        Organizzato da
-                      </p>
-                      <p className="font-medium">
-                        {trip.creator.first_name} {trip.creator.last_name}
-                      </p>
-                    </div>
+                  <div className="pt-5 border-t space-y-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      Organizzato da
+                    </p>
+                    <UserProfileLink
+                      userId={trip.creator.id}
+                      username={trip.creator.username}
+                      firstName={trip.creator.first_name}
+                      lastName={trip.creator.last_name}
+                      image={trip.creator.image}
+                      mode="both"
+                      size="md"
+                      className="w-full rounded-xl border bg-muted/20 px-3 py-2.5 hover:bg-muted/40"
+                      subtitle="Vedi profilo pubblico"
+                    />
                   </div>
                 )}
 
