@@ -1,127 +1,402 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Compass, MapPin, Palmtree } from 'lucide-react';
+import {
+  Compass,
+  MapPin,
+  Palmtree,
+  Star,
+  Sparkles,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadges } from '@/components/profile/VerifiedBadges';
-import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
+import { LeaveReviewForm } from '@/components/profile/LeaveReviewForm';
+import { DEFAULT_TRIP_IMAGE, BRAND_IMAGES } from '@/lib/brand/images';
 import { formatTripDate } from '@/lib/utils/trip';
 import { getInitialsFromNames } from '@/lib/utils/user';
-import type { PublicProfile, PublicProfileTrip } from '@/lib/data/public-profile';
+import { profilePath } from '@/lib/profile/paths';
+import type {
+  PublicProfile,
+  PublicProfileReview,
+  PublicProfileTrip,
+} from '@/lib/data/public-profile';
+import { cn } from '@/lib/utils';
 
 type PublicProfileViewProps = {
   profile: PublicProfile;
-  trips: PublicProfileTrip[];
+  organizedTrips: PublicProfileTrip[];
+  joinedTrips: PublicProfileTrip[];
+  reviews: PublicProfileReview[];
   isOwn?: boolean;
+  canReview?: boolean;
 };
 
-export function PublicProfileView({ profile, trips, isOwn }: PublicProfileViewProps) {
+function Stars({ value, size = 'md' }: { value: number; size?: 'sm' | 'md' }) {
+  const cls = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-label={`${value} su 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          className={cn(
+            cls,
+            n <= Math.round(value)
+              ? 'fill-amber-400 text-amber-400'
+              : 'text-white/20'
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+function TripStrip({ trip }: { trip: PublicProfileTrip }) {
+  return (
+    <Link
+      href={`/viaggi/${trip.id}`}
+      className="group relative block overflow-hidden rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      <div className="relative aspect-[16/10] w-full">
+        <Image
+          src={trip.imageUrl || DEFAULT_TRIP_IMAGE}
+          alt=""
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          sizes="(max-width: 640px) 100vw, 320px"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-3.5">
+          <p className="font-display text-base font-semibold text-white line-clamp-1">
+            {trip.title}
+          </p>
+          <p className="mt-0.5 text-xs text-white/70 line-clamp-1">{trip.destination}</p>
+          <p className="mt-1.5 text-[11px] text-white/55">
+            {formatTripDate(trip.startDate)} · {trip.price}€
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function TripSection({
+  title,
+  subtitle,
+  icon,
+  trips,
+  empty,
+}: {
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  trips: PublicProfileTrip[];
+  empty: string;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-white">
+            {icon}
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-white/50">{subtitle}</p>
+        </div>
+        <span className="tabular-nums text-sm text-white/40">{trips.length}</span>
+      </div>
+      {trips.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-white/45">
+          {empty}
+        </p>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {trips.map((trip) => (
+            <li key={trip.id}>
+              <TripStrip trip={trip} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+export function PublicProfileView({
+  profile,
+  organizedTrips,
+  joinedTrips,
+  reviews,
+  isOwn,
+  canReview,
+}: PublicProfileViewProps) {
   const displayName =
     [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
     `@${profile.username}`;
   const place = [profile.city, profile.country].filter(Boolean).join(', ');
+  const heroSrc =
+    organizedTrips[0]?.imageUrl ||
+    joinedTrips[0]?.imageUrl ||
+    BRAND_IMAGES.heroes.dashboard;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 pb-24">
-      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm">
-        <div className="h-28 bg-gradient-to-br from-primary/25 via-accent/20 to-teal-500/15 sm:h-36" />
-        <div className="relative px-5 pb-6 sm:px-8">
-          <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex items-end gap-4">
-              <Avatar className="h-24 w-24 border-4 border-background shadow-md sm:h-28 sm:w-28">
+    <div className="relative min-h-[70vh] overflow-hidden bg-[#0c1520] pb-28 text-white">
+      {/* Full-bleed atmosphere */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[480px] overflow-hidden">
+        <Image
+          src={heroSrc}
+          alt=""
+          fill
+          priority
+          className="object-cover scale-105 blur-[2px]"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-[#0c1520]/85 to-[#0c1520]" />
+        <div
+          className="absolute inset-0 opacity-50"
+          style={{
+            background:
+              'radial-gradient(ellipse 80% 50% at 20% 0%, oklch(0.45 0.1 220 / 0.55), transparent 60%), radial-gradient(ellipse 60% 40% at 90% 20%, oklch(0.62 0.14 45 / 0.4), transparent 55%)',
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto max-w-4xl px-4 pt-10 sm:pt-14">
+        {/* Hero identity */}
+        <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-end gap-4 sm:gap-5">
+            <div className="relative">
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-accent/70 via-teal-400/40 to-primary/50 opacity-80 blur-sm" />
+              <Avatar className="relative h-28 w-28 border-[3px] border-white/20 shadow-2xl sm:h-32 sm:w-32">
                 <AvatarImage src={profile.image ?? ''} alt={displayName} />
-                <AvatarFallback className="text-xl">
+                <AvatarFallback className="bg-primary text-xl text-primary-foreground">
                   {getInitialsFromNames(profile.firstName, profile.lastName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="pb-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                    {displayName}
-                  </h1>
-                  <VerifiedBadges phoneVerified={profile.phoneVerified} />
-                </div>
-                <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                {place ? (
-                  <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    {place}
-                  </p>
-                ) : null}
+              {profile.phoneVerified ? (
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-sky-500 text-white shadow-lg"
+                  title="Telefono verificato"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                </span>
+              ) : null}
+            </div>
+
+            <div className="min-w-0 pb-1">
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                {displayName}
+              </h1>
+              <p className="mt-0.5 text-sm text-white/55">@{profile.username}</p>
+              {place ? (
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-white/65">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
+                  {place}
+                </p>
+              ) : null}
+              <div className="mt-3">
+                <VerifiedBadges
+                  phoneVerified={profile.phoneVerified}
+                  emailVerified={profile.emailVerified}
+                  size="md"
+                  showLabels
+                />
               </div>
             </div>
-            {isOwn ? (
-              <Button asChild variant="outline" size="sm" className="rounded-full shrink-0">
-                <Link href="/dashboard/profilo">Modifica profilo</Link>
-              </Button>
+          </div>
+
+          {isOwn ? (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-full border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white"
+            >
+              <Link href="/dashboard/profilo">Modifica profilo</Link>
+            </Button>
+          ) : null}
+        </header>
+
+        {/* Stats */}
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            {
+              label: 'Valutazione',
+              value:
+                profile.ratingAvg != null
+                  ? profile.ratingAvg.toFixed(1)
+                  : '—',
+              hint:
+                profile.ratingCount > 0
+                  ? `${profile.ratingCount} recensioni`
+                  : 'Nessuna ancora',
+              icon: <Star className="h-3.5 w-3.5 text-amber-400" />,
+            },
+            {
+              label: 'Organizza',
+              value: String(profile.tripsOrganized),
+              hint: 'viaggi creati',
+              icon: <Compass className="h-3.5 w-3.5 text-teal-300" />,
+            },
+            {
+              label: 'Partecipa',
+              value: String(profile.tripsJoined),
+              hint: 'crew join',
+              icon: <Palmtree className="h-3.5 w-3.5 text-accent" />,
+            },
+            {
+              label: 'Trust',
+              value: profile.phoneVerified ? 'OK' : '—',
+              hint: profile.phoneVerified ? 'ID verificato' : 'Da verificare',
+              icon: <Sparkles className="h-3.5 w-3.5 text-sky-300" />,
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 py-3 backdrop-blur-md"
+            >
+              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-white/45">
+                {stat.icon}
+                {stat.label}
+              </p>
+              <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-white">
+                {stat.value}
+              </p>
+              <p className="text-[11px] text-white/40">{stat.hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-12 space-y-12">
+          <TripSection
+            title="Organizza"
+            subtitle="Viaggi aperti creati da questa persona"
+            icon={<Compass className="h-5 w-5 text-teal-300" />}
+            trips={organizedTrips}
+            empty="Nessun viaggio organizzato in programma."
+          />
+
+          <TripSection
+            title="Partecipa"
+            subtitle="Crew a cui si è unita"
+            icon={<Palmtree className="h-5 w-5 text-accent" />}
+            trips={joinedTrips}
+            empty="Nessuna partecipazione pubblica in programma."
+          />
+
+          {/* Reviews */}
+          <section className="space-y-5">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-white">
+                Recensioni
+              </h2>
+              <p className="mt-1 text-sm text-white/50">
+                Feedback da chi ha viaggiato insieme
+              </p>
+              {profile.ratingAvg != null ? (
+                <div className="mt-3 flex items-center gap-2">
+                  <Stars value={profile.ratingAvg} />
+                  <span className="text-sm text-white/70">
+                    {profile.ratingAvg.toFixed(1)} · {profile.ratingCount}{' '}
+                    {profile.ratingCount === 1 ? 'recensione' : 'recensioni'}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            {canReview ? (
+              <div className="rounded-3xl border border-white/12 bg-white/[0.05] p-5 backdrop-blur-md">
+                <LeaveReviewForm
+                  revieweeId={profile.id}
+                  revieweeName={profile.firstName || displayName}
+                />
+              </div>
             ) : null}
-          </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:max-w-md">
-            <div className="rounded-2xl border bg-muted/30 px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                <Compass className="h-3.5 w-3.5" />
-                Organizza
+            {reviews.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-white/45">
+                Ancora nessuna recensione.
               </p>
-              <p className="mt-1 font-display text-2xl font-semibold tabular-nums">
-                {profile.tripsOrganized}
-              </p>
-            </div>
-            <div className="rounded-2xl border bg-muted/30 px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                <Palmtree className="h-3.5 w-3.5" />
-                Partecipa
-              </p>
-              <p className="mt-1 font-display text-2xl font-semibold tabular-nums">
-                {profile.tripsJoined}
-              </p>
-            </div>
-          </div>
+            ) : (
+              <ul className="space-y-3">
+                {reviews.map((review, i) => {
+                  const name =
+                    [review.reviewer.firstName, review.reviewer.lastName]
+                      .filter(Boolean)
+                      .join(' ') ||
+                    (review.reviewer.username
+                      ? `@${review.reviewer.username}`
+                      : 'Viaggiatore');
+                  const href = profilePath(
+                    review.reviewer.username,
+                    review.reviewer.id
+                  );
+                  return (
+                    <li
+                      key={review.id}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm transition-colors hover:bg-white/[0.07]"
+                      style={{
+                        animationDelay: `${i * 40}ms`,
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        {href ? (
+                          <Link href={href} className="shrink-0">
+                            <Avatar className="h-10 w-10 border border-white/15">
+                              <AvatarImage src={review.reviewer.image ?? ''} alt="" />
+                              <AvatarFallback className="text-xs">
+                                {getInitialsFromNames(
+                                  review.reviewer.firstName,
+                                  review.reviewer.lastName
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        ) : (
+                          <Avatar className="h-10 w-10 border border-white/15">
+                            <AvatarImage src={review.reviewer.image ?? ''} alt="" />
+                            <AvatarFallback className="text-xs">?</AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {href ? (
+                              <Link
+                                href={href}
+                                className="text-sm font-medium text-white hover:underline"
+                              >
+                                {name}
+                              </Link>
+                            ) : (
+                              <span className="text-sm font-medium text-white">{name}</span>
+                            )}
+                            <Stars value={review.rating} size="sm" />
+                          </div>
+                          {review.tripTitle ? (
+                            <p className="mt-0.5 text-[11px] text-white/40">
+                              su {review.tripTitle}
+                            </p>
+                          ) : null}
+                          <p className="mt-2 text-sm leading-relaxed text-white/75">
+                            {review.body}
+                          </p>
+                          <p className="mt-2 text-[11px] text-white/35">
+                            {new Date(review.createdAt).toLocaleDateString('it-IT', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </div>
-      </section>
-
-      <section className="mt-10">
-        <div className="mb-4">
-          <h2 className="font-display text-lg font-semibold">Viaggi organizzati</h2>
-          <p className="text-sm text-muted-foreground">
-            Prossimi viaggi aperti — tocca per vedere i dettagli
-          </p>
-        </div>
-
-        {trips.length === 0 ? (
-          <p className="rounded-2xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-            Nessun viaggio pubblico in programma.
-          </p>
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {trips.map((trip) => (
-              <li key={trip.id}>
-                <Link
-                  href={`/viaggi/${trip.id}`}
-                  className="group flex overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-md"
-                >
-                  <div className="relative h-24 w-24 shrink-0 bg-muted sm:h-28 sm:w-28">
-                    <Image
-                      src={trip.imageUrl || DEFAULT_TRIP_IMAGE}
-                      alt=""
-                      fill
-                      className="object-cover transition-transform group-hover:scale-105"
-                      sizes="112px"
-                    />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col justify-center px-3.5 py-3">
-                    <p className="truncate font-medium">{trip.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">{trip.destination}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatTripDate(trip.startDate)} · {trip.price}€
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      </div>
     </div>
   );
 }

@@ -213,6 +213,7 @@ export default function ProfileForm({
           <VerifiedBadges
             className="mt-2 justify-center sm:justify-start"
             phoneVerified={Boolean(userProfile?.phone_verified_at)}
+            emailVerified={Boolean(userProfile?.email_verified_at)}
           />
           {userProfile && profilePath(userProfile.username, userProfile.id) && (
             <Button asChild variant="link" size="sm" className="mt-1 h-auto px-0 text-muted-foreground">

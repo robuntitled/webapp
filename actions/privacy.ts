@@ -147,6 +147,8 @@ export async function deleteUserAccount(confirmation: string) {
   await supabaseAdmin.from('trip_messages').delete().eq('user_id', userId);
   await supabaseAdmin.from('price_watches').delete().eq('created_by', userId);
   await supabaseAdmin.from('favorite_trips').delete().eq('user_id', userId);
+  await supabaseAdmin.from('user_reviews').delete().eq('reviewer_id', userId);
+  await supabaseAdmin.from('user_reviews').delete().eq('reviewee_id', userId);
   await supabaseAdmin.from('trip_participants').delete().eq('user_id', userId);
 
   // 2) Viaggi creati: dipendenti + trip (cascade days/blocks/messages/watches residue)

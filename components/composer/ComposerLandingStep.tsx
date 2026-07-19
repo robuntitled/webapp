@@ -44,14 +44,6 @@ type ComposerLandingStepProps = {
   profileCountry?: string | null;
 };
 
-function geoPosition(
-  options: PositionOptions
-): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, options);
-  });
-}
-
 export function ComposerLandingStep({
   draft,
   onChange,
@@ -128,94 +120,99 @@ export function ComposerLandingStep({
     else onStart();
   };
 
-  const applyCoords = async (latitude: number, longitude: number, source: 'gps' | 'rete') => {
-    const res = await fetch(
-      `/api/places/reverse?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}`
-    );
-    const data = (await res.json()) as {
-      place?: { label: string; subtitle?: string; country?: string };
-      error?: string;
-    };
-    if (!res.ok || !data.place) {
-      throw new Error(data.error ?? 'Impossibile risolvere la posizione');
-    }
-    const origin = buildOrganizerOrigin(data.place.label, data.place.country);
-    onChange({ organizerOrigin: origin });
-    setOriginCityInput(origin.city);
-    toast.success(
-      source === 'gps' ? `Partenza da ${origin.city}` : `Partenza stimata: ${origin.city}`
-    );
-  };
-
-  const fallbackNetworkOrigin = async (): Promise<boolean> => {
-    const res = await fetch('/api/geo/approx');
-    if (!res.ok) return false;
-    const data = (await res.json()) as {
-      city?: string | null;
-      country?: string | null;
-      lat?: number | null;
-      lng?: number | null;
-    };
-
-    if (data.lat != null && data.lng != null) {
-      try {
-        await applyCoords(data.lat, data.lng, 'rete');
-        return true;
-      } catch {
-        // prova con il nome città dell’header
-      }
-    }
-
-    if (data.city?.trim()) {
-      applyOriginCity(data.city, data.country ?? undefined);
-      toast.success(`Partenza stimata: ${data.city.trim()}`);
-      return true;
-    }
-    return false;
-  };
-
-  const detectOrigin = async () => {
-    setGeoLoading(true);
+  /** Come in ba5c42a: reverse Nominatim; prova prima API server (User-Agent valido). */
+  const resolveCoordsToOrigin = async (latitude: number, longitude: number) => {
     try {
-      if (typeof window !== 'undefined' && window.isSecureContext && navigator.geolocation) {
+      const res = await fetch(
+        `/api/places/reverse?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}`
+      );
+      const data = (await res.json()) as {
+        place?: { label: string; country?: string };
+      };
+      if (res.ok && data.place?.label) {
+        return buildOrganizerOrigin(data.place.label, data.place.country);
+      }
+    } catch {
+      // fallback client come ba5c42a
+    }
+
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=it`
+    );
+    const data = (await res.json()) as {
+      address?: { city?: string; town?: string; village?: string; country?: string };
+      display_name?: string;
+    };
+    const city =
+      data.address?.city ?? data.address?.town ?? data.address?.village ?? 'La tua città';
+    const label = data.display_name?.split(',')[0] ?? city;
+    return buildOrganizerOrigin(label, data.address?.country);
+  };
+
+  /**
+   * Flusso GPS come ba5c42a: getCurrentPosition + high accuracy.
+   * Permissions-Policy resta geolocation=(self) (in ba5c42a era =() e andava bloccata).
+   */
+  const detectOrigin = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocalizzazione non supportata');
+      return;
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
         try {
-          const status = await navigator.permissions?.query?.({ name: 'geolocation' });
-          if (status?.state !== 'denied') {
-            try {
-              const pos = await geoPosition({
-                enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 600_000,
-              });
-              await applyCoords(pos.coords.latitude, pos.coords.longitude, 'gps');
-              return;
-            } catch (err) {
-              const geoErr = err as GeolocationPositionError;
-              if (geoErr?.code === 1) {
-                // permesso negato → prova rete, poi messaggio
-              } else {
-                // timeout / unavailable → rete
+          const { latitude, longitude } = pos.coords;
+          const origin = await resolveCoordsToOrigin(latitude, longitude);
+          onChange({ organizerOrigin: origin });
+          setOriginCityInput(origin.city);
+          toast.success(`Partenza da ${origin.city}`);
+        } catch {
+          toast.error('Impossibile risolvere la posizione');
+        } finally {
+          setGeoLoading(false);
+        }
+      },
+      async (err) => {
+        // Fallback rete solo se GPS non disponibile/timeout (non se permesso negato)
+        if (err.code !== err.PERMISSION_DENIED) {
+          try {
+            const res = await fetch('/api/geo/approx');
+            if (res.ok) {
+              const data = (await res.json()) as {
+                city?: string | null;
+                country?: string | null;
+                lat?: number | null;
+                lng?: number | null;
+              };
+              if (data.lat != null && data.lng != null) {
+                const origin = await resolveCoordsToOrigin(data.lat, data.lng);
+                onChange({ organizerOrigin: origin });
+                setOriginCityInput(origin.city);
+                toast.success(`Partenza stimata: ${origin.city}`);
+                setGeoLoading(false);
+                return;
+              }
+              if (data.city?.trim()) {
+                applyOriginCity(data.city, data.country ?? undefined);
+                toast.success(`Partenza stimata: ${data.city.trim()}`);
+                setGeoLoading(false);
+                return;
               }
             }
+          } catch {
+            // ignore
           }
-        } catch {
-          // permissions API assente
         }
-      }
-
-      const ok = await fallbackNetworkOrigin();
-      if (ok) return;
-
-      toast.error('GPS non disponibile. Scrivi la città nel campo qui sotto (es. Roma).', {
-        duration: 7000,
-      });
-    } catch {
-      toast.error('GPS non disponibile. Scrivi la città nel campo qui sotto (es. Roma).', {
-        duration: 7000,
-      });
-    } finally {
-      setGeoLoading(false);
-    }
+        setGeoLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error('Permesso posizione negato');
+        } else {
+          toast.error('Posizione non disponibile — inserisci la città a mano');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
   };
 
   const microMeta = MICRO_STEPS[micro - 1];
@@ -355,24 +352,24 @@ export function ComposerLandingStep({
 
               <div className="space-y-3 max-w-md mx-auto">
                 <p className="text-sm font-medium text-white/80 text-center">Da dove parti?</p>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-3">
-                  {draft.organizerOrigin ? (
-                    <div className="flex items-center gap-2 text-sm text-white">
-                      <MapPin className="h-4 w-4 text-accent shrink-0" />
-                      <span className="truncate">
-                        {draft.organizerOrigin.city}
-                        {draft.organizerOrigin.iata
-                          ? ` · ${draft.organizerOrigin.iata}`
-                          : ''}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-white/45 text-center">
-                      Digita la città e premi Invio, oppure usa la posizione
-                    </p>
-                  )}
+                {/* Layout come ba5c42a: GPS + campo città affiancati */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl composer-field text-white shrink-0"
+                    onClick={detectOrigin}
+                    disabled={geoLoading}
+                  >
+                    {geoLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Navigation className="mr-2 h-4 w-4 text-accent" />
+                    )}
+                    Usa la mia posizione
+                  </Button>
                   <Input
-                    placeholder="Es. Roma, Milano, Napoli…"
+                    placeholder="Oppure digita la città (Invio)"
                     className="h-11 rounded-xl composer-field text-white"
                     value={originCityInput}
                     onChange={(e) => setOriginCityInput(e.target.value)}
@@ -384,21 +381,18 @@ export function ComposerLandingStep({
                       }
                     }}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full rounded-xl composer-field text-white"
-                    onClick={() => void detectOrigin()}
-                    disabled={geoLoading}
-                  >
-                    {geoLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Navigation className="mr-2 h-4 w-4 text-accent" />
-                    )}
-                    Usa la mia posizione
-                  </Button>
                 </div>
+                {draft.organizerOrigin && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-white/70">
+                    <MapPin className="h-4 w-4 text-accent shrink-0" />
+                    <span className="truncate">
+                      {draft.organizerOrigin.city}
+                      {draft.organizerOrigin.iata
+                        ? ` · ${draft.organizerOrigin.iata}`
+                        : ''}
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
