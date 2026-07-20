@@ -21,14 +21,19 @@ const schema = z.object({
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Accedi per cercare hotel.' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Accedi a NomadLink per cercare hotel.', code: 'auth_required' },
+      { status: 401 }
+    );
   }
 
   if (!isLiteApiConfigured()) {
     return NextResponse.json(
       {
-        error: 'LiteAPI non configurata. Aggiungi LITEAPI_KEY in .env.local / Vercel.',
+        error:
+          'LITEAPI_KEY assente su Vercel. Aggiungi la Sandbox Key (Private) e fai Redeploy.',
         configured: false,
+        code: 'missing_key',
       },
       { status: 503 }
     );
@@ -75,9 +80,16 @@ export async function GET(request: Request) {
   } catch (e) {
     if (e instanceof LiteApiError) {
       console.error('[liteapi hotels]', e.status, e.message, e.body);
+      const isAuth = e.status === 401 || /unauthor/i.test(e.message);
       return NextResponse.json(
-        { error: e.message, configured: true },
-        { status: e.status >= 400 && e.status < 600 ? e.status : 502 }
+        {
+          error: isAuth
+            ? 'LiteAPI rifiuta la chiave (unauthorized). Su Vercel usa la Sandbox Key PRIVATA (non Public Key, non Production). Poi Redeploy.'
+            : e.message,
+          configured: true,
+          code: isAuth ? 'liteapi_unauthorized' : 'liteapi_error',
+        },
+        { status: isAuth ? 502 : e.status >= 400 && e.status < 600 ? e.status : 502 }
       );
     }
     console.error('[liteapi hotels]', e);

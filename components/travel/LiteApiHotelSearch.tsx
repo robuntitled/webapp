@@ -80,14 +80,17 @@ export function LiteApiHotelSearch({
         adults: String(adults),
         currency: 'EUR',
       });
-      const res = await fetch(`/api/liteapi/hotels/search?${qs}`);
+      const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {
+        credentials: 'same-origin',
+      });
       const data = (await res.json()) as {
         hotels?: HotelOffer[];
         error?: string;
         count?: number;
+        code?: string;
       };
       if (!res.ok) {
-        toast.error(data.error ?? 'Ricerca fallita');
+        toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
         return;
       }
       setHotels(data.hotels ?? []);
