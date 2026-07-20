@@ -93,9 +93,12 @@ export function LiteApiHotelSearch({
         toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
         return;
       }
-      setHotels(data.hotels ?? []);
-      if (!(data.hotels?.length)) {
+      const list = data.hotels ?? [];
+      setHotels(list);
+      if (!list.length) {
         toast.message('Nessun hotel trovato per queste date');
+      } else {
+        toast.success(`${list.length} hotel con tariffa disponibile`);
       }
     } catch {
       toast.error('Errore di rete');
@@ -112,7 +115,7 @@ export function LiteApiHotelSearch({
           <div>
             <h2 className="font-display text-lg font-semibold">Hotel in-app</h2>
             <p className="text-sm text-muted-foreground">
-              LiteAPI · tariffe live con commissione NomadLink
+              LiteAPI · 1 card = hotel più conveniente (sandbox può avere catalogo ridotto)
             </p>
           </div>
         </div>
