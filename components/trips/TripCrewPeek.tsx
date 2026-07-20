@@ -16,13 +16,19 @@ export function TripCrewPeek({
   creatorId,
   revealed,
 }: TripCrewPeekProps) {
-  // Solo chi si è aggiunto (non l’organizzatore, già sotto “Organizzato da”)
-  const joined = participants.filter((p) => p.user_id !== creatorId);
+  // Chi si è unito (viewer/editor). L’owner/creator resta solo in “Organizzato da”.
+  const joined = participants.filter((p) => {
+    if (creatorId && p.user_id === creatorId) return false;
+    if (p.role === 'owner') return false;
+    return true;
+  });
 
   if (joined.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        Ancora nessuno in crew — sii tra i primi.
+        {revealed
+          ? 'Nessun altro in crew per ora — invita dalla condivisione.'
+          : 'Ancora nessuno in crew — unisciti per scoprire chi arriva.'}
       </p>
     );
   }
