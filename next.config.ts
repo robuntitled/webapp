@@ -47,7 +47,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.pexels.com',
       },
-      // -----------------------------
+      // LiteAPI / Cupid hotel photos
+      {
+        protocol: 'https',
+        hostname: 'static.cupid.travel',
+      },
     ],
   },
 };

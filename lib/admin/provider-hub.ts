@@ -183,6 +183,16 @@ export async function getAdminCostHub(days = 30): Promise<AdminCostHub> {
       consoleUrl: 'https://www.travelpayouts.com/',
       note: 'Monitora conversioni/commissioni nella dashboard Travelpayouts.',
     },
+    {
+      id: 'liteapi',
+      name: 'LiteAPI (Nuitee)',
+      category: 'affiliate',
+      configured: envSet('LITEAPI_KEY', 'LITE_API_KEY'),
+      inApp: 'Hotel in-app + margin su prenotazione',
+      consoleUrl: 'https://dashboard.liteapi.travel/',
+      billingUrl: 'https://docs.liteapi.travel/',
+      note: 'Ricerca/tariffe gratis; ricavo da markup (LITEAPI_MARGIN).',
+    },
   ];
 
   return {
