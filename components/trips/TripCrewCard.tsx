@@ -48,7 +48,7 @@ export function TripCrewCard({
 
         {crew.length === 0 ? (
           <p className="text-sm text-muted-foreground rounded-xl border border-dashed p-4 text-center">
-            Nessuno iscritto ancora — manda il link agli amici
+            Nessuno iscritto ancora — invita dalla condivisione in alto
           </p>
         ) : (
           <ul className="space-y-2">

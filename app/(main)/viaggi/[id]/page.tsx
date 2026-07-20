@@ -9,11 +9,9 @@ import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { TripBookingSection } from '@/components/travel/TripBookingSection';
-import { PriceWatchPanel } from '@/components/trips/PriceWatchPanel';
 import { TripDetailActions } from '@/components/trips/TripDetailActions';
 import { TripCrewCard } from '@/components/trips/TripCrewCard';
-import { TripInviteCard } from '@/components/trips/TripInviteCard';
+import { TripShareBar } from '@/components/trips/TripShareBar';
 import { TripRoleBadge } from '@/components/trips/TripRoleBadge';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { resolveUserTripRole } from '@/lib/trips/roles';
@@ -46,14 +44,12 @@ export default async function TripDetailPage({ params }: PageProps) {
     trip.creator?.id,
     participant?.role as TripParticipantRole | undefined
   );
-  const canManagePrices = userRole === 'owner' || userRole === 'editor';
   const showInvite = isCreator || userRole === 'owner' || userRole === 'editor';
   const composerItinerary =
     (trip.composerVersion ?? 0) >= 1 ? await fetchComposerItinerary(trip.id) : null;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero full-bleed */}
       <div className="relative h-[50vh] min-h-[320px] max-h-[560px] w-full">
         <Image src={imageUrl} alt={trip.title} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/20" />
@@ -70,23 +66,35 @@ export default async function TripDetailPage({ params }: PageProps) {
           </Button>
         </div>
         <div className="absolute bottom-0 left-0 right-0 container mx-auto px-4 pb-10">
-          <Badge
-            variant={status.variant}
-            className="mb-4 bg-white/15 text-white border-white/20 backdrop-blur-sm"
-          >
-            {status.text}
-          </Badge>
-          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold text-white max-w-4xl leading-tight">
-            {trip.title}
-          </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-lg text-white/80">
-            <p className="flex items-center">
-              <MapPin className="mr-2 h-5 w-5 text-accent" />
-              {trip.destination}
-            </p>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Badge
+              variant={status.variant}
+              className="bg-white/15 text-white border-white/20 backdrop-blur-sm"
+            >
+              {status.text}
+            </Badge>
             <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm">
               {trip.planningMode === 'solo' ? '🧳 Solo (aperto al gruppo)' : '🎉 Con gli amici'}
             </Badge>
+          </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold text-white max-w-4xl leading-tight">
+                {trip.title}
+              </h1>
+              <p className="mt-3 flex items-center text-lg text-white/80">
+                <MapPin className="mr-2 h-5 w-5 text-accent shrink-0" />
+                {trip.destination}
+              </p>
+            </div>
+            <div className="shrink-0 flex items-center gap-2">
+              <TripShareBar
+                tripId={trip.id}
+                tripTitle={trip.title}
+                canInvite={showInvite && Boolean(session?.user?.id)}
+                tone="onDark"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -100,15 +108,11 @@ export default async function TripDetailPage({ params }: PageProps) {
               composerItinerary={composerItinerary}
             />
 
-            <PriceWatchPanel tripId={trip.id} canManage={canManagePrices} />
-
             <TripCrewCard
               planningMode={trip.planningMode}
               participants={trip.trip_participants}
               creatorId={trip.creator?.id}
             />
-
-            {showInvite && <TripInviteCard tripId={trip.id} tripTitle={trip.title} />}
           </div>
 
           <div className="lg:col-span-5 space-y-6">
@@ -165,14 +169,6 @@ export default async function TripDetailPage({ params }: PageProps) {
                   isCreator={isCreator}
                   isParticipant={isParticipant}
                   isFavorited={trip.isFavorited}
-                />
-
-                <TripBookingSection
-                  tripId={trip.id}
-                  destination={trip.destination}
-                  startDate={trip.startDate}
-                  endDate={trip.endDate}
-                  maxParticipants={trip.maxParticipants}
                 />
               </CardContent>
             </Card>

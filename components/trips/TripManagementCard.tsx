@@ -13,7 +13,6 @@ import {
   Users,
   ExternalLink,
   Share2,
-  TrendingDown,
 } from 'lucide-react';
 import type { TripWithRelations } from '@/types/trip';
 import { format } from 'date-fns';
@@ -131,7 +130,7 @@ export function TripManagementCard({ trip, variant }: TripManagementCardProps) {
 
           <p className="text-sm text-muted-foreground line-clamp-2">
             {variant === 'organizing'
-              ? 'Tu sei l\'organizzatore — aggiorna il radar prezzi e invita chi non vuole pianificare.'
+              ? 'Tu sei l’organizzatore — apri il viaggio per condividere e gestire la crew.'
               : `${TRIP_ROLE_META[role].emoji} ${TRIP_ROLE_META[role].description}`}
           </p>
 
@@ -147,13 +146,7 @@ export function TripManagementCard({ trip, variant }: TripManagementCardProps) {
               <>
                 <Button type="button" size="sm" variant="secondary" className="rounded-full" onClick={() => void copyInvite()}>
                   <Share2 className="mr-2 h-3.5 w-3.5" />
-                  Invita amici
-                </Button>
-                <Button asChild size="sm" variant="outline" className="rounded-full">
-                  <Link href={`/viaggi/${trip.id}#radar`}>
-                    <TrendingDown className="mr-2 h-3.5 w-3.5" />
-                    Radar prezzi
-                  </Link>
+                  Condividi
                 </Button>
                 <Button asChild size="sm" variant="outline" className="rounded-full">
                   <Link href={`/dashboard/viaggi/${trip.id}/modifica`}>
