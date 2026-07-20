@@ -10,8 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TripDetailActions } from '@/components/trips/TripDetailActions';
-import { TripCrewCard } from '@/components/trips/TripCrewCard';
 import { TripShareBar } from '@/components/trips/TripShareBar';
+import { TripCrewPeek } from '@/components/trips/TripCrewPeek';
 import { TripRoleBadge } from '@/components/trips/TripRoleBadge';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { resolveUserTripRole } from '@/lib/trips/roles';
@@ -107,12 +107,6 @@ export default async function TripDetailPage({ params }: PageProps) {
               description={trip.description}
               composerItinerary={composerItinerary}
             />
-
-            <TripCrewCard
-              planningMode={trip.planningMode}
-              participants={trip.trip_participants}
-              creatorId={trip.creator?.id}
-            />
           </div>
 
           <div className="lg:col-span-5 space-y-6">
@@ -139,20 +133,27 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </div>
 
                 {trip.creator && (
-                  <div className="pt-5 border-t space-y-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Organizzato da
-                    </p>
-                    <UserProfileLink
-                      userId={trip.creator.id}
-                      username={trip.creator.username}
-                      firstName={trip.creator.first_name}
-                      lastName={trip.creator.last_name}
-                      image={trip.creator.image}
-                      mode="both"
-                      size="md"
-                      className="w-full rounded-xl border bg-muted/20 px-3 py-2.5 hover:bg-muted/40"
-                      subtitle="Vedi profilo pubblico"
+                  <div className="pt-5 border-t space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                        Organizzato da
+                      </p>
+                      <UserProfileLink
+                        userId={trip.creator.id}
+                        username={trip.creator.username}
+                        firstName={trip.creator.first_name}
+                        lastName={trip.creator.last_name}
+                        image={trip.creator.image}
+                        mode="both"
+                        size="md"
+                        className="w-full rounded-xl border bg-muted/20 px-3 py-2.5 hover:bg-muted/40"
+                        subtitle="Vedi profilo pubblico"
+                      />
+                    </div>
+                    <TripCrewPeek
+                      participants={trip.trip_participants}
+                      creatorId={trip.creator.id}
+                      revealed={isCreator || isParticipant}
                     />
                   </div>
                 )}
