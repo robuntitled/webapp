@@ -9,6 +9,8 @@ import { getTravelpayoutsConfig } from '@/lib/travelpayouts/config';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { ArrowLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function PrenotaHotelPage() {
   const liteOk = isLiteApiConfigured();
   const config = getTravelpayoutsConfig();
@@ -31,17 +33,14 @@ export default function PrenotaHotelPage() {
         </Button>
         <h1 className="font-display text-3xl font-semibold">Cerca hotel</h1>
         <p className="mt-1 text-muted-foreground">
-          {liteOk
-            ? 'Ricerca e tariffe in-app via LiteAPI (commissione su prenotazione).'
-            : 'Configura LITEAPI_KEY per la ricerca in-app, oppure usa il fallback affiliate.'}
+          LiteAPI in-app · fallback Travelpayouts se serve
         </p>
       </div>
 
-      {liteOk ? (
-        <LiteApiHotelSearch defaultCity="Roma" defaultCountry="IT" />
-      ) : (
+      {!liteOk && (
         <div className="rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-          Aggiungi <code className="text-xs">LITEAPI_KEY</code> (sandbox da{' '}
+          Manca <code className="text-xs">LITEAPI_KEY</code> su Vercel (Production) → Redeploy dopo
+          averla aggiunta. Chiave sandbox da{' '}
           <a
             href="https://dashboard.liteapi.travel/"
             target="_blank"
@@ -50,17 +49,18 @@ export default function PrenotaHotelPage() {
           >
             dashboard.liteapi.travel
           </a>
-          ) in <code className="text-xs">.env.local</code> e su Vercel.
+          .
         </div>
       )}
+
+      {/* Form sempre visibile: la ricerca fallisce con messaggio chiaro se manca la key */}
+      <LiteApiHotelSearch defaultCity="Roma" defaultCountry="IT" />
 
       {!config.isConfigured && !liteOk && <TravelpayoutsSetupNotice />}
 
       {config.isConfigured && (
         <div className="space-y-3">
-          <h2 className="font-display text-lg font-semibold">
-            {liteOk ? 'Fallback affiliate' : 'Motore affiliate'}
-          </h2>
+          <h2 className="font-display text-lg font-semibold">Fallback affiliate</h2>
           <AffiliateSearchCard
             flightUrl={null}
             hotelUrl={hotelUrl}
