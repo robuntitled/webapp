@@ -110,32 +110,36 @@ export default async function TripDetailPage({ params }: PageProps) {
           </div>
 
           <div className="lg:col-span-5 space-y-6">
-            <Card className="rounded-2xl border-0 shadow-lg lg:sticky lg:top-24">
-              <CardContent className="p-6 space-y-5">
-                <div className="flex items-baseline justify-between pb-4 border-b">
-                  <span className="text-muted-foreground text-sm">Prezzo a persona</span>
-                  <span className="text-4xl font-bold text-primary tabular-nums">{trip.price}€</span>
+            <Card className="overflow-hidden rounded-[1.75rem] border border-border/50 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.35)] lg:sticky lg:top-24">
+              <CardContent className="space-y-5 p-6">
+                <div className="flex items-baseline justify-between border-b border-border/40 pb-4">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Prezzo a persona
+                  </span>
+                  <span className="font-display text-4xl font-semibold tabular-nums tracking-tight text-primary">
+                    {trip.price}€
+                  </span>
                 </div>
 
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-3 text-muted-foreground">
-                    <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+                    <CalendarDays className="h-4 w-4 shrink-0 text-accent" />
                     {formatTripDate(trip.startDate)} – {formatTripDate(trip.endDate)}
                   </div>
                   <div className="flex items-center gap-3 text-muted-foreground">
-                    <Users className="h-4 w-4 text-primary shrink-0" />
+                    <Users className="h-4 w-4 shrink-0 text-accent" />
                     {trip.minParticipants}–{trip.maxParticipants} partecipanti
                   </div>
                   <div className="flex items-center gap-3 text-muted-foreground">
-                    <CakeSlice className="h-4 w-4 text-primary shrink-0" />
+                    <CakeSlice className="h-4 w-4 shrink-0 text-accent" />
                     {formatAgeRange(trip.minAge, trip.maxAge)}
                   </div>
                 </div>
 
                 {trip.creator && (
-                  <div className="pt-5 border-t space-y-4">
+                  <div className="space-y-4 border-t border-border/40 pt-5">
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Organizzato da
                       </p>
                       <UserProfileLink
@@ -146,7 +150,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                         image={trip.creator.image}
                         mode="both"
                         size="md"
-                        className="w-full rounded-xl border bg-muted/20 px-3 py-2.5 hover:bg-muted/40"
+                        className="w-full rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5 hover:bg-muted/40"
                         subtitle="Vedi profilo pubblico"
                       />
                     </div>
