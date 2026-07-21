@@ -3,6 +3,7 @@ import { getParticipantCount } from '@/lib/trips/display';
 import type { TripParticipantRole } from '@/lib/trips/roles';
 import type { TripWithRelations } from '@/types/trip';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { polishTripTitle } from '@/lib/composer/title-generator';
 
 export const TRIP_LIST_SELECT = `
   id, title, destination, description, price,
@@ -60,6 +61,7 @@ export function mapTripsWithFavorites(
 
     return {
       ...trip,
+      title: polishTripTitle(trip.title ?? ''),
       myRole: resolvedRole,
       participantCount: getParticipantCount(trip.trip_participants),
       isFavorited: userId

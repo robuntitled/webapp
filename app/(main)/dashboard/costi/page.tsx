@@ -27,7 +27,7 @@ export default async function CostiDashboardPage() {
           <div>
             <p className="text-sm text-muted-foreground">Admin · hub live</p>
             <h1 className="font-display text-3xl font-semibold tracking-tight">
-              Costi & provider
+              Costi e provider
             </h1>
           </div>
           <Link

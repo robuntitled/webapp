@@ -1,5 +1,5 @@
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
-import { generateTripTitle } from '@/lib/composer/title-generator';
+import { generateTripTitle, polishTripTitle } from '@/lib/composer/title-generator';
 
 export function getDraftDestinations(draft: ComposerDraft): DestinationMeta[] {
   if (draft.destinations?.length) return draft.destinations;
@@ -24,7 +24,7 @@ export function syncDestinationFields(
   const labels = destinations.map((d) => d.label);
   const title =
     currentTitle && currentTitle.length > 0
-      ? currentTitle
+      ? polishTripTitle(currentTitle)
       : generateTripTitle(labels, labels.join('-'));
   return {
     destinations,

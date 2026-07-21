@@ -414,7 +414,7 @@ export function ComposerLandingStep({
                     titleTouched.current = true;
                     onChange({ title: e.target.value });
                   }}
-                  placeholder="Es. Viaggio a Sicilia"
+                  placeholder="Es. Viaggio in Sicilia e a Dubai"
                 />
               </div>
 
