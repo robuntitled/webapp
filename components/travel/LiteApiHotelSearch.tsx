@@ -41,26 +41,37 @@ const COUNTRIES = [
 type LiteApiHotelSearchProps = {
   defaultCity?: string;
   defaultCountry?: string;
+  defaultCheckin?: string;
+  defaultCheckout?: string;
+  defaultAdults?: number;
+  /** Layout compatto per sidebar trip */
+  compact?: boolean;
+  className?: string;
 };
 
 export function LiteApiHotelSearch({
   defaultCity = 'Roma',
   defaultCountry = 'IT',
+  defaultCheckin,
+  defaultCheckout,
+  defaultAdults = 2,
+  compact = false,
+  className,
 }: LiteApiHotelSearchProps) {
   const defaults = useMemo(() => {
     const inDate = addDays(new Date(), 21);
     const outDate = addDays(inDate, 4);
     return {
-      checkin: format(inDate, 'yyyy-MM-dd'),
-      checkout: format(outDate, 'yyyy-MM-dd'),
+      checkin: defaultCheckin || format(inDate, 'yyyy-MM-dd'),
+      checkout: defaultCheckout || format(outDate, 'yyyy-MM-dd'),
     };
-  }, []);
+  }, [defaultCheckin, defaultCheckout]);
 
   const [cityName, setCityName] = useState(defaultCity);
   const [countryCode, setCountryCode] = useState(defaultCountry);
   const [checkin, setCheckin] = useState(defaults.checkin);
   const [checkout, setCheckout] = useState(defaults.checkout);
-  const [adults, setAdults] = useState(2);
+  const [adults, setAdults] = useState(defaultAdults);
   const [loading, setLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelOffer[] | null>(null);
 
@@ -108,19 +119,31 @@ export function LiteApiHotelSearch({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <BedDouble className="h-5 w-5 text-accent" />
-          <div>
-            <h2 className="font-display text-lg font-semibold">Hotel in-app</h2>
-            <p className="text-sm text-muted-foreground">
-              LiteAPI · 1 card = hotel più conveniente (sandbox può avere catalogo ridotto)
-            </p>
+    <div className={cn('space-y-4', className)}>
+      <div
+        className={cn(
+          'rounded-2xl border border-border/60 bg-card',
+          compact ? 'p-3.5' : 'rounded-3xl p-5 shadow-sm sm:p-6'
+        )}
+      >
+        {!compact && (
+          <div className="mb-4 flex items-center gap-2">
+            <BedDouble className="h-5 w-5 text-accent" />
+            <div>
+              <h2 className="font-display text-lg font-semibold">Hotel in-app</h2>
+              <p className="text-sm text-muted-foreground">
+                LiteAPI · tariffe live (sandbox può avere catalogo ridotto)
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={cn(
+            'grid gap-3',
+            compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'
+          )}
+        >
           <label className="space-y-1.5 text-sm">
             <span className="text-muted-foreground">Città</span>
             <Input
@@ -195,7 +218,7 @@ export function LiteApiHotelSearch({
       </div>
 
       {hotels && (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className={cn('grid gap-3', compact ? 'grid-cols-1' : 'sm:grid-cols-2')}>
           {hotels.map((h) => (
             <li
               key={`${h.hotelId}-${h.offerId}`}

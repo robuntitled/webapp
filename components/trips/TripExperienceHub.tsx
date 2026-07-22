@@ -45,6 +45,20 @@ function dayPreview(day: ComposerDayRow): string {
   return `${labels.join(' · ')}${extra}`;
 }
 
+function bookHashForType(type: string): string | null {
+  if (type === 'flight') return 'prenota-voli';
+  if (type === 'hotel') return 'prenota-hotel';
+  if (type === 'activity' || type === 'attraction' || type === 'meal') {
+    return 'prenota-attivita';
+  }
+  return null;
+}
+
+function goToBooking(hash: string) {
+  window.location.hash = hash;
+  document.getElementById('prenota')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 export function TripExperienceHub({
   destination,
   description,
@@ -88,7 +102,6 @@ export function TripExperienceHub({
 
   return (
     <section className="overflow-hidden rounded-[1.75rem] border border-border/50 bg-card shadow-[0_20px_50px_-28px_rgba(15,23,42,0.35)]">
-      {/* Header */}
       <div className="flex items-end justify-between gap-4 border-b border-border/40 px-5 py-4 sm:px-6">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -104,7 +117,6 @@ export function TripExperienceHub({
         </div>
       </div>
 
-      {/* Map — always visible */}
       <div className="relative border-b border-border/40">
         <TripMap
           destination={destination}
@@ -144,7 +156,6 @@ export function TripExperienceHub({
         )}
       </div>
 
-      {/* Compact day list */}
       <ul className="divide-y divide-border/50">
         {days.map((day) => {
           const open = openDayId === day.id;
@@ -217,10 +228,11 @@ export function TripExperienceHub({
                           const meta =
                             BLOCK_META[block.block_type as keyof typeof BLOCK_META];
                           const price = blockPrice(block.content);
+                          const bookHash = bookHashForType(block.block_type);
                           return (
                             <li
                               key={block.id}
-                              className="flex items-center justify-between gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-background/80"
+                              className="flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-background/80"
                             >
                               <span className="min-w-0 truncate">
                                 <span className="mr-2 opacity-65">
@@ -228,11 +240,25 @@ export function TripExperienceHub({
                                 </span>
                                 {blockTitle(block.content, block.block_type)}
                               </span>
-                              {price != null && (
-                                <span className="shrink-0 font-display text-xs font-semibold tabular-nums text-primary">
-                                  {price}€
-                                </span>
-                              )}
+                              <span className="flex shrink-0 items-center gap-2">
+                                {price != null && (
+                                  <span className="font-display text-xs font-semibold tabular-nums text-primary">
+                                    {price}€
+                                  </span>
+                                )}
+                                {bookHash && (
+                                  <button
+                                    type="button"
+                                    className="rounded-full border border-border/60 bg-background px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary hover:border-accent/40 hover:bg-accent/5"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      goToBooking(bookHash);
+                                    }}
+                                  >
+                                    Prenota
+                                  </button>
+                                )}
+                              </span>
                             </li>
                           );
                         })}

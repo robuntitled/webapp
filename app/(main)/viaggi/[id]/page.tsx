@@ -5,6 +5,10 @@ import { auth } from '@/auth';
 import { fetchComposerItinerary } from '@/lib/data/composer';
 import { fetchTripById } from '@/lib/data/trips';
 import { TripExperienceHub } from '@/components/trips/TripExperienceHub';
+import {
+  TripBookingCtaStrip,
+  TripBookingPanel,
+} from '@/components/trips/TripBookingPanel';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,6 +104,8 @@ export default async function TripDetailPage({ params }: PageProps) {
       </div>
 
       <div className="container mx-auto px-4 py-10 max-w-6xl -mt-6 relative z-10">
+        <TripBookingCtaStrip className="mb-6" />
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 space-y-8">
             <TripExperienceHub
@@ -177,6 +183,24 @@ export default async function TripDetailPage({ params }: PageProps) {
                 />
               </CardContent>
             </Card>
+
+            <TripBookingPanel
+              tripId={trip.id}
+              destination={trip.destination}
+              startDate={
+                typeof trip.startDate === 'string'
+                  ? trip.startDate.slice(0, 10)
+                  : new Date(trip.startDate).toISOString().slice(0, 10)
+              }
+              endDate={
+                typeof trip.endDate === 'string'
+                  ? trip.endDate.slice(0, 10)
+                  : new Date(trip.endDate).toISOString().slice(0, 10)
+              }
+              adults={Math.min(9, Math.max(1, trip.maxParticipants ?? 2))}
+              isAuthenticated={Boolean(session?.user?.id)}
+              composerItinerary={composerItinerary}
+            />
           </div>
         </div>
       </div>
