@@ -19,7 +19,7 @@ Il flusso target:
 UI (blocco) → Orchestrator server → [AI parallelo + Travel API parallelo] → aggiornamento UI progressivo in 2–5s
 ```
 
-**Regola fondamentale:** l'AI genera solo contenuti creativi e strutturati (attrazioni, itinerari, alternative, copy contestuale). **Mai** voli, hotel o prezzi — quelli arrivano esclusivamente da API travel verificate (fase 1: Travelpayouts; fase 2 opzionale: Duffel).
+**Regola fondamentale:** l'AI genera solo contenuti creativi e strutturati (attrazioni, itinerari, alternative, copy contestuale). **Mai** voli, hotel o prezzi — quelli arrivano esclusivamente da LiteAPI (Nuitee Connect Hotels + Flights).
 
 **Value prop vs ChatGPT:** contesto utente persistente + UI strutturata + dati travel verificati + collaborazione multi-utente.
 

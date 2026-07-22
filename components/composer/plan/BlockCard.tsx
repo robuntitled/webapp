@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  ExternalLink,
   GripVertical,
   Pencil,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import {
 } from '@/lib/composer/blocks';
 import { getBlockSubtitle } from '@/lib/composer/planning';
 import { getTimeSlotEmoji, getTimeSlotLabel } from '@/lib/composer/time-slots';
-import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import type { ComposerBlock } from '@/types/composer';
 
 type BlockCardProps = {
@@ -49,10 +47,6 @@ export function BlockCard({
   const subtitle = getBlockSubtitle(block);
   const timeSlot = String(block.content.timeSlot ?? 'flex');
   const duration = typeof block.content.duration === 'string' ? block.content.duration : null;
-  const affiliateUrl =
-    !hasTravelpayoutsEmbed() && typeof block.content.affiliateUrl === 'string'
-      ? block.content.affiliateUrl
-      : null;
   const altCount = block.alternatives.length;
 
   return (
@@ -146,17 +140,6 @@ export function BlockCard({
         <button type="button" onClick={onEdit} className="composer-icon-btn" aria-label="Modifica">
           <Pencil className="h-3.5 w-3.5" />
         </button>
-        {affiliateUrl && (
-          <a
-            href={affiliateUrl}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="composer-icon-btn ml-auto text-accent hover:bg-accent/15"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        )}
       </div>
     </motion.div>
   );

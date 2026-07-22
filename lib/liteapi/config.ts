@@ -1,6 +1,6 @@
 import 'server-only';
 
-/** LiteAPI / Nuitee Connect — hotel (e in seguito voli) in-app. */
+/** LiteAPI / Nuitee Connect — hotel + voli in-app. */
 export function getLiteApiKey(): string | null {
   const raw = process.env.LITEAPI_KEY || process.env.LITE_API_KEY || '';
   // Vercel a volte salva con virgolette o newline

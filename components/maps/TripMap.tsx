@@ -4,12 +4,9 @@ import dynamic from 'next/dynamic';
 import type { MapPin } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type { DestinationMeta } from '@/types/composer';
+import type { MapCameraTarget, MapPoiClickPayload } from '@/components/maps/ReactGoogleTripMap';
 
-type MapPoiClickPayload = {
-  placeId: string;
-  lat: number;
-  lng: number;
-};
+export type { MapCameraTarget, MapPoiClickPayload };
 
 type TripMapProps = {
   destination: string;
@@ -17,6 +14,7 @@ type TripMapProps = {
   pins: MapPin[];
   activeDayIndex?: number;
   highlightedPinId?: string | null;
+  cameraTarget?: MapCameraTarget | null;
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
   onPoiClick?: (payload: MapPoiClickPayload) => void;
@@ -46,6 +44,7 @@ export function TripMap({
   pins,
   activeDayIndex,
   highlightedPinId,
+  cameraTarget,
   onPinClick,
   onMapClick,
   onPoiClick,
@@ -62,6 +61,7 @@ export function TripMap({
       mapMode={mapMode}
       activeDayIndex={activeDayIndex ?? 1}
       highlightedPinId={highlightedPinId}
+      cameraTarget={cameraTarget}
       onPinClick={onPinClick}
       onMapClick={interactive ? onMapClick : undefined}
       onPoiClick={interactive ? onPoiClick : undefined}

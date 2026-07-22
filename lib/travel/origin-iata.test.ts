@@ -3,7 +3,7 @@ import {
   defaultOriginIata,
   originFromCityLabel,
   resolveOriginIata,
-} from '@/lib/travelpayouts/origin-iata';
+} from '@/lib/travel/origin-iata';
 
 describe('resolveOriginIata', () => {
   it('resolves major Italian cities', () => {
@@ -25,7 +25,7 @@ describe('resolveOriginIata', () => {
 
 describe('originFromCityLabel', () => {
   it('falls back to default IATA when unknown', () => {
-    vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA', 'ROM');
+    vi.stubEnv('NEXT_PUBLIC_DEFAULT_ORIGIN_IATA', 'ROM');
     const result = originFromCityLabel('xyzunknowntown');
     expect(result.iata).toBe('ROM');
     expect(result.city).toBe('xyzunknowntown');
@@ -39,7 +39,7 @@ describe('originFromCityLabel', () => {
 
 describe('defaultOriginIata', () => {
   it('reads env or defaults to ROM', () => {
-    vi.stubEnv('NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA', 'MIL');
+    vi.stubEnv('NEXT_PUBLIC_DEFAULT_ORIGIN_IATA', 'MIL');
     expect(defaultOriginIata()).toBe('MIL');
   });
 });

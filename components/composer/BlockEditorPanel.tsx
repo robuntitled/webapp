@@ -18,7 +18,6 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  ExternalLink,
   X,
   Check,
   ArrowLeft,
@@ -39,7 +38,6 @@ import {
   cascadeTimesAfterBlock,
   findTimeOverlapConflict,
 } from '@/lib/composer/day-time-schedule';
-import { hasTravelpayoutsEmbed } from '@/lib/travelpayouts/public-config';
 import { TIME_SLOTS } from '@/lib/composer/time-slots';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
 import type { ComposerBlock, ComposerDraft } from '@/types/composer';
@@ -110,8 +108,6 @@ export function BlockEditorPanel({
   onCascadeDayTimes,
 }: BlockEditorPanelProps) {
   const [flightLoading, setFlightLoading] = useState(false);
-  const [affiliateUrl, setAffiliateUrl] = useState<string | null>(null);
-  const embedOnly = hasTravelpayoutsEmbed();
   const [showAltForm, setShowAltForm] = useState(false);
   const [altLabel, setAltLabel] = useState('');
   const [altPrice, setAltPrice] = useState('');
@@ -131,44 +127,6 @@ export function BlockEditorPanel({
     { id: string; label: string; subtitle: string; lat: number; lng: number }[]
   >([]);
   const [hotelSearching, setHotelSearching] = useState(false);
-
-  useEffect(() => {
-    if (embedOnly || !open || !block || (block.type !== 'flight' && block.type !== 'hotel')) {
-      setAffiliateUrl(null);
-      return;
-    }
-
-    const existing =
-      typeof block.content.affiliateUrl === 'string' ? block.content.affiliateUrl : null;
-    if (existing) {
-      setAffiliateUrl(existing);
-      return;
-    }
-
-    const params = new URLSearchParams({
-      destination: draft.destination,
-      startDate: draft.startDate,
-      endDate: draft.endDate,
-    });
-    if (draft.organizerOrigin?.iata) {
-      params.set('origin', draft.organizerOrigin.iata);
-    }
-
-    void fetch(`/api/travel/links?${params}`)
-      .then((r) => r.json())
-      .then((data: { flightUrl?: string; hotelUrl?: string }) => {
-        const url = block.type === 'flight' ? data.flightUrl : data.hotelUrl;
-        if (url) {
-          setAffiliateUrl(url);
-          onUpdate(block.id, (b) => ({
-            ...b,
-            content: { ...b.content, affiliateUrl: url },
-          }));
-        }
-      })
-      .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, block?.id, block?.type, draft.destination, draft.startDate, draft.endDate]);
 
   useEffect(() => {
     if (!open || !block) return;
@@ -483,43 +441,33 @@ export function BlockEditorPanel({
       });
       const originIata =
         (block.content.origin as string | undefined) ?? draft.organizerOrigin?.iata;
-      if (originIata) params.set('origin', originIata);
+      if (originIata) params.set('originIata', originIata);
 
-      const response = await fetch(`/api/travel/estimate?${params}`);
+      const response = await fetch(`/api/liteapi/flights/search?${params}`);
       const data = await response.json();
 
-      const quote = data.quote;
-      const updates: Record<string, unknown> = {
-        affiliateUrl: data.affiliateUrl ?? affiliateUrl,
-      };
-
-      if (response.ok && data.found && quote) {
-        Object.assign(updates, {
+      if (response.ok && data.found && data.quote) {
+        const quote = data.quote;
+        patchContent({
           title: `Volo ${quote.origin} → ${quote.destination}`,
           price: quote.price,
           currency: quote.currency,
           airline: quote.airline,
           origin: quote.origin,
           destination: quote.destination,
+          offerId: quote.offerId ?? null,
+          affiliateUrl: null,
         });
-        patchContent(updates);
-        toast.success(`Volo trovato: ${quote.price} ${quote.currency} ✈️`);
+        toast.success(`Volo LiteAPI: ${quote.price} ${quote.currency}`);
         return;
       }
 
-      if (data.affiliateUrl) {
-        patchContent(updates);
-        toast.info(
-          data.message ??
-            'Nessun prezzo in cache — usa il link affiliate per tariffe aggiornate.',
-          { duration: 5000 }
-        );
-        return;
-      }
-
-      toast.warning(data.message ?? 'Configura Travelpayouts per i voli', { duration: 8000 });
+      toast.warning(
+        data.message ?? data.error ?? 'Nessuna tariffa LiteAPI per questa tratta',
+        { duration: 8000 }
+      );
     } catch {
-      toast.error('Errore ricerca volo');
+      toast.error('Errore ricerca volo LiteAPI');
     } finally {
       setFlightLoading(false);
     }
@@ -860,7 +808,7 @@ export function BlockEditorPanel({
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Aggiorna da cache Travelpayouts
+                Aggiorna tariffe LiteAPI
               </Button>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -889,21 +837,10 @@ export function BlockEditorPanel({
                   </select>
                 </div>
               </div>
-              {!embedOnly && Boolean(affiliateUrl || block.content.affiliateUrl) && (
-                <Button
-                  asChild
-                  variant="secondary"
-                  className="w-full rounded-xl bg-white/10 hover:bg-white/15 text-white border-0"
-                >
-                  <a
-                    href={affiliateUrl ?? String(block.content.affiliateUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer sponsored"
-                  >
-                    Apri ricerca voli affiliate
-                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                  </a>
-                </Button>
+              {typeof block.content.offerId === 'string' && block.content.offerId && (
+                <p className="text-[11px] text-white/40">
+                  Offer LiteAPI: {block.content.offerId.slice(0, 24)}…
+                </p>
               )}
             </div>
           )}

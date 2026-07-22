@@ -232,4 +232,4 @@ npm run db:verify-planner
 - **Live:** https://webapp-bice-six-42.vercel.app
 - **Repo:** https://github.com/robuntitled/webapp
 - **Supabase:** dashboard del progetto collegato in `.env.local`
-- **Travelpayouts:** https://app.travelpayouts.com
+- **LiteAPI (Nuitee Connect):** https://dashboard.liteapi.travel/

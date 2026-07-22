@@ -172,26 +172,14 @@ export async function getAdminCostHub(days = 30): Promise<AdminCostHub> {
       consoleUrl: 'https://www.pexels.com/api/',
     },
     {
-      id: 'travelpayouts',
-      name: 'Travelpayouts',
-      category: 'affiliate',
-      configured: envSet(
-        'TRAVELPAYOUTS_API_TOKEN',
-        'NEXT_PUBLIC_TRAVELPAYOUTS_MARKER'
-      ),
-      inApp: 'Affiliate (ricavo, non costo API)',
-      consoleUrl: 'https://www.travelpayouts.com/',
-      note: 'Monitora conversioni/commissioni nella dashboard Travelpayouts.',
-    },
-    {
       id: 'liteapi',
-      name: 'LiteAPI (Nuitee)',
+      name: 'LiteAPI (Nuitee Connect)',
       category: 'affiliate',
       configured: envSet('LITEAPI_KEY', 'LITE_API_KEY'),
-      inApp: 'Hotel in-app + margin su prenotazione',
+      inApp: 'Hotel + voli in-app (search/prebook/book)',
       consoleUrl: 'https://dashboard.liteapi.travel/',
       billingUrl: 'https://docs.liteapi.travel/',
-      note: 'Ricerca/tariffe gratis; ricavo da markup (LITEAPI_MARGIN).',
+      note: 'Unico provider travel. Markup hotel via LITEAPI_MARGIN.',
     },
   ];
 

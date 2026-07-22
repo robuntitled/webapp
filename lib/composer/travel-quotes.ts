@@ -1,11 +1,8 @@
 import 'server-only';
 
-import {
-  buildTripFlightSearchUrl,
-  buildTripHotelSearchUrl,
-} from '@/lib/travelpayouts/flight-search';
-import { fetchCheapestFlightQuote } from '@/lib/travelpayouts/data-api';
-import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
+import { fetchCheapestFlightOffer } from '@/lib/liteapi/flights';
+import { isLiteApiConfigured } from '@/lib/liteapi/config';
+import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import { collectOrigins, uniqueOriginsByIata } from '@/lib/composer/origins';
 import type { ComposerOrigin, ComposerTravelQuotes } from '@/types/composer';
 
@@ -15,58 +12,35 @@ async function fetchFlightQuoteForOrigin(
     destination: string;
     startDate: string;
     endDate: string;
-    tripId?: string;
   }
 ): Promise<ComposerTravelQuotes['flight'] | null> {
-  const subSuffix = origin.role === 'organizer' ? 'org' : `crew_${origin.iata}`;
-  const [flightQuote, flightUrl] = await Promise.all([
-    fetchCheapestFlightQuote({
-      destination: params.destination,
-      startDate: params.startDate,
-      endDate: params.endDate,
+  if (!isLiteApiConfigured()) return null;
+
+  try {
+    const offer = await fetchCheapestFlightOffer({
       originIata: origin.iata,
-    }).catch(() => null),
-    Promise.resolve(
-      buildTripFlightSearchUrl({
-        destination: params.destination,
-        startDate: params.startDate,
-        endDate: params.endDate,
-        originIata: origin.iata,
-        tripId: params.tripId,
-        subId: params.tripId ? `trip_${params.tripId}_${subSuffix}` : `composer_${subSuffix}`,
-      })
-    ),
-  ]);
-
-  if (flightQuote) {
-    return {
-      price: flightQuote.price,
-      currency: flightQuote.currency,
-      origin: flightQuote.origin,
-      destination: flightQuote.destination,
-      airline: flightQuote.airline,
-      affiliateUrl: flightUrl,
-      fromCache: true,
-      originLabel: origin.city,
-      role: origin.role,
-    };
-  }
-
-  if (flightUrl) {
-    return {
-      price: 0,
-      currency: 'EUR',
-      origin: origin.iata,
       destination: params.destination,
-      airline: null,
-      affiliateUrl: flightUrl,
+      departureDate: params.startDate,
+      returnDate: params.endDate,
+      currency: 'EUR',
+    });
+    if (!offer) return null;
+
+    return {
+      price: offer.price,
+      currency: offer.currency,
+      origin: offer.origin,
+      destination: offer.destination,
+      airline: offer.airline,
+      affiliateUrl: null,
       fromCache: false,
       originLabel: origin.city,
       role: origin.role,
+      offerId: offer.offerId,
     };
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
 async function fetchTravelQuotesInternal(params: {
@@ -79,6 +53,13 @@ async function fetchTravelQuotesInternal(params: {
 }): Promise<{ quotes: ComposerTravelQuotes; warnings: string[] }> {
   const warnings: string[] = [];
   const quotes: ComposerTravelQuotes = {};
+
+  if (!isLiteApiConfigured()) {
+    return {
+      quotes,
+      warnings: ['LITEAPI_KEY non configurata — quote voli/hotel saltate'],
+    };
+  }
 
   const origins =
     params.organizerOrigin || params.crewOrigins?.length
@@ -93,30 +74,16 @@ async function fetchTravelQuotesInternal(params: {
           },
         ];
 
-  const [flightResults, hotelUrl] = await Promise.all([
-    Promise.all(origins.map((origin) => fetchFlightQuoteForOrigin(origin, params))),
-    Promise.resolve(
-      buildTripHotelSearchUrl(params.tripId, {
-        destination: params.destination,
-        startDate: params.startDate,
-        endDate: params.endDate,
-      })
-    ),
-  ]);
+  const flightResults = await Promise.all(
+    origins.map((origin) => fetchFlightQuoteForOrigin(origin, params))
+  );
 
   const flights = flightResults.filter((f): f is NonNullable<typeof f> => f != null);
   if (flights.length > 0) {
     quotes.flights = flights;
     quotes.flight = flights.find((f) => f.role === 'organizer') ?? flights[0];
-    if (flights.some((f) => f.price === 0)) {
-      warnings.push('Alcuni prezzi volo non in cache — link affiliate disponibili');
-    }
   } else {
-    warnings.push('Link voli non configurato (TRAVELPAYOUTS_MARKER)');
-  }
-
-  if (hotelUrl) {
-    quotes.hotel = { affiliateUrl: hotelUrl };
+    warnings.push('Nessuna tariffa volo LiteAPI per le partenze indicate');
   }
 
   return { quotes, warnings };
@@ -131,7 +98,7 @@ export async function fetchTravelQuotesForDay(
     organizerOrigin?: ComposerOrigin;
     crewOrigins?: ComposerOrigin[];
   },
-  timeoutMs = 3_500
+  timeoutMs = 8_000
 ): Promise<{ quotes: ComposerTravelQuotes; warnings: string[] }> {
   const fallback = { quotes: {} as ComposerTravelQuotes, warnings: [] as string[] };
 
@@ -141,7 +108,7 @@ export async function fetchTravelQuotesForDay(
       setTimeout(() => {
         resolve({
           quotes: {},
-          warnings: ['Quote travel in timeout — itinerario comunque disponibile'],
+          warnings: ['Quote LiteAPI in timeout — itinerario comunque disponibile'],
         });
       }, timeoutMs);
     }),
@@ -184,19 +151,11 @@ export function applyQuotesToBlocks(
             origin: match.origin,
             destination: match.destination,
             originLabel: match.originLabel,
-            affiliateUrl: match.affiliateUrl ?? null,
+            offerId: match.offerId ?? null,
+            affiliateUrl: null,
           },
         };
       }
-    }
-    if (block.type === 'hotel' && quotes.hotel?.affiliateUrl) {
-      return {
-        ...block,
-        content: {
-          ...block.content,
-          affiliateUrl: quotes.hotel.affiliateUrl,
-        },
-      };
     }
     return block;
   });

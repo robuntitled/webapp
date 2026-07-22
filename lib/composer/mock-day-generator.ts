@@ -4,7 +4,7 @@ import {
   resolveDestinationIntel,
   type DestinationIntel,
 } from '@/lib/composer/destination-intel';
-import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
+import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import type { ComposerBlock, ComposerBlockType, ComposerOrigin } from '@/types/composer';
 
 type MockDayContext = {

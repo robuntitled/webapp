@@ -57,7 +57,7 @@ erDiagram
 | `trip_participants` | Crew + ruoli | enum `participant_role` (owner/editor/viewer) |
 | `composer_drafts` | Bozza composer (1 per utente) | `draft` JSONB, `current_step` |
 | `planner_profiles` | Profilo viaggiatore (AI) | `profile` JSONB |
-| `travel_quotes` | Cache quote voli/hotel | Travelpayouts payload |
+| `travel_quotes` | Cache quote voli/hotel | LiteAPI payload (legacy schema) |
 | `trip_messages` | Chat di gruppo | per `trip_id` |
 | `composer_ai_jobs` | Job AI async | polling status |
 | `places_*_cache` | Cache Google Places | search + details |
@@ -83,7 +83,6 @@ lib/data/                 ← repository (Server Components / API)
 ├── trips.ts              discover, owned, public
 ├── trip-chat.ts          messaggi, read/hide
 ├── trip-invites.ts       inviti crew
-├── price-watches.ts      monitoraggio prezzi
 └── users.ts, public-profile.ts
 
 lib/composer/             ← logica dominio composer (~43 moduli)
@@ -98,8 +97,8 @@ lib/queries/trips.ts      query SQL-oriented per feed viaggi
 lib/maps/                 pins, coordinates, distance, map-view-mode
 lib/places/               Nominatim, Google Places, cache DB
 lib/ai/                   provider astratto (Gemini, OpenAI-compat)
-lib/travelpayouts/        affiliate voli/hotel
-lib/liteapi/              hotel search
+lib/travel/               IATA / origin helpers
+lib/liteapi/              hotel + voli (Nuitee Connect)
 ```
 
 ---
@@ -130,8 +129,7 @@ lib/auth/require-phone-verified.ts   gate publish/join
 | **Composer** | `composer/draft`, `generate`, `publish`, `assist`, `jobs/[id]` | Zod, AI, Supabase |
 | **Places** | `places/search`, `reverse` | Nominatim OSM |
 | | `places/google-search`, `details`, `photo` | Google Places + cache DB |
-| **Travel** | `travel/links`, `estimate`, `watch` | Travelpayouts |
-| **Hotels** | `liteapi/hotels/search` | LiteAPI (Nuitee) |
+| **Travel** | `liteapi/hotels/search`, `liteapi/flights/search` | LiteAPI (Nuitee Connect) |
 | **Chat** | `chat/groups`, `trips/[id]/chat`, `search` | Supabase realtime data |
 | **Planner** | `planner/profile` | Supabase |
 | **Utility** | `weather` | Open-Meteo |
@@ -235,10 +233,10 @@ flowchart LR
 |---------|-------------------|--------|
 | **Discover** | `DashboardClient`, `TripCard`, `TripDiscoverSearchBar` | `/dashboard`, `/cerca` |
 | **I miei viaggi** | `MyTripsHub`, `ComposerDraftCard` | `/miei-viaggi` |
-| **Viaggio pubblico** | `TripExperienceHub`, `TripDetailActions`, `PriceWatchPanel` | `/viaggi/[id]` |
+| **Viaggio pubblico** | `TripExperienceHub`, `TripDetailActions` | `/viaggi/[id]` |
 | **Chat** | `TripGroupsChatDock`, `TripChatPanel` | dock globale |
 | **Profilo** | sezioni profilo, recensioni | `/profilo`, `/u/*` |
-| **Travel booking** | widget Travelpayouts, LiteAPI | `/prenota/*` |
+| **Travel booking** | LiteAPI hotel + voli | composer + `/api/liteapi/*` |
 | **UI kit** | `components/ui/*` (shadcn) | trasversale |
 
 ---
@@ -260,11 +258,10 @@ flowchart TB
 
   subgraph external [Servizi esterni]
     AI[Gemini / OpenAI-compat]
-    TP[Travelpayouts]
     GM[Google Maps / Places]
     NOM[Nominatim OSM]
     PXL[Pexels]
-    LITE[LiteAPI Hotels]
+    LITE[LiteAPI Hotels + Flights]
     METEO[Open-Meteo]
     RES[Resend Email]
     OTP[Twilio / WhatsApp]

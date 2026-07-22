@@ -8,6 +8,7 @@ type FlightPriceEstimateProps = {
   destination: string;
   startDate?: Date;
   endDate?: Date;
+  originIata?: string;
   onSuggestPrice?: (price: number) => void;
 };
 
@@ -20,10 +21,9 @@ type EstimateResponse = {
     airline: string | null;
     origin: string;
     destination: string;
-    expiresAt: string | null;
+    offerId?: string;
   };
   message?: string;
-  disclaimer?: string;
   error?: string;
 };
 
@@ -31,6 +31,7 @@ export function FlightPriceEstimate({
   destination,
   startDate,
   endDate,
+  originIata,
   onSuggestPrice,
 }: FlightPriceEstimateProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'unconfigured' | 'error'>('idle');
@@ -48,8 +49,9 @@ export function FlightPriceEstimate({
         startDate: startDate.toISOString().slice(0, 10),
         endDate: endDate.toISOString().slice(0, 10),
       });
+      if (originIata) params.set('originIata', originIata);
 
-      const response = await fetch(`/api/travel/estimate?${params.toString()}`);
+      const response = await fetch(`/api/liteapi/flights/search?${params.toString()}`);
       const json = (await response.json()) as EstimateResponse;
 
       if (response.status === 503) {
@@ -66,6 +68,9 @@ export function FlightPriceEstimate({
 
       setData(json);
       setState('ready');
+      if (json.found && json.quote?.price && onSuggestPrice) {
+        onSuggestPrice(json.quote.price);
+      }
     } catch {
       setState('error');
       setData({ configured: true, error: 'Impossibile recuperare la stima prezzo' });
@@ -85,89 +90,71 @@ export function FlightPriceEstimate({
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destination, startDate?.toISOString(), endDate?.toISOString()]);
+  }, [destination, startDate?.toISOString(), endDate?.toISOString(), originIata]);
 
   if (!canEstimate) return null;
 
   if (state === 'unconfigured') {
     return (
       <p className="text-xs text-muted-foreground rounded-lg border border-dashed p-3">
-        Per stimare il prezzo volo via API aggiungi{' '}
-        <code className="text-[11px]">TRAVELPAYOUTS_API_TOKEN</code> in `.env.local` (token da{' '}
-        <a
-          href="https://www.travelpayouts.com/developers/api"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          Travelpayouts → API
-        </a>
-        ). Non serve un dominio.
+        Per stimare i voli aggiungi <code className="text-[11px]">LITEAPI_KEY</code> (Nuitee Connect
+        Flights) in `.env.local` / Vercel.
       </p>
     );
   }
 
-  if (state === 'loading') {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground rounded-lg border p-3">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Sto cercando il volo più economico in cache...
-      </div>
-    );
-  }
-
-  if (state === 'error') {
-    return (
-      <div className="text-sm text-destructive rounded-lg border border-destructive/30 p-3 space-y-2">
-        <p>{data?.error ?? 'Errore durante la stima prezzo'}</p>
-        <Button type="button" variant="outline" size="sm" onClick={() => void loadEstimate()}>
-          <RefreshCw className="mr-2 h-3.5 w-3.5" />
-          Riprova
+  return (
+    <div className="rounded-lg border border-dashed p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium flex items-center gap-1.5">
+          <Plane className="h-3.5 w-3.5" />
+          Stima volo (LiteAPI)
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2"
+          onClick={() => void loadEstimate()}
+          disabled={state === 'loading'}
+        >
+          {state === 'loading' ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
         </Button>
       </div>
-    );
-  }
 
-  if (state === 'ready' && data?.found && data.quote) {
-    const { quote, disclaimer } = data;
-    return (
-      <div className="rounded-lg border bg-primary/5 p-3 space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2">
-            <Plane className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium">
-                Volo indicativo: {quote.price} {quote.currency}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {quote.origin} → {quote.destination}
-                {quote.airline ? ` · ${quote.airline}` : ''}
-              </p>
-            </div>
-          </div>
-          {onSuggestPrice && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => onSuggestPrice(Math.round(quote.price))}
-            >
-              Usa come prezzo base
-            </Button>
-          )}
-        </div>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">{disclaimer}</p>
-      </div>
-    );
-  }
+      {state === 'loading' && (
+        <p className="text-xs text-muted-foreground">Ricerca tariffe…</p>
+      )}
 
-  if (state === 'ready' && !data?.found) {
-    return (
-      <p className="text-xs text-muted-foreground rounded-lg border p-3">
-        {data?.message ?? 'Nessuna stima disponibile per questa rotta.'}
-      </p>
-    );
-  }
+      {state === 'ready' && data?.found && data.quote && (
+        <p className="text-sm">
+          da{' '}
+          <span className="font-semibold">
+            {data.quote.price.toLocaleString('it-IT')} {data.quote.currency}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {' '}
+            · {data.quote.origin} → {data.quote.destination}
+            {data.quote.airline ? ` · ${data.quote.airline}` : ''}
+          </span>
+        </p>
+      )}
 
-  return null;
+      {state === 'ready' && !data?.found && (
+        <p className="text-xs text-muted-foreground">
+          {data?.message ?? 'Nessuna tariffa trovata per queste date.'}
+        </p>
+      )}
+
+      {state === 'error' && (
+        <p className="text-xs text-destructive">
+          {data?.error ?? 'Errore ricerca voli LiteAPI'}
+        </p>
+      )}
+    </div>
+  );
 }

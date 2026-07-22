@@ -13,12 +13,10 @@ import { Input } from '@/components/ui/input';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
 import { QuarterHourTimeSelect } from '@/components/composer/plan-v3/QuarterHourTimeSelect';
 import { getDraftDestinations } from '@/lib/composer/draft-destinations';
-import { primaryOriginIata } from '@/lib/composer/origins';
 import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 import {
   Bus,
   Car,
-  ExternalLink,
   Hotel,
   Loader2,
   Plane,
@@ -99,33 +97,6 @@ type AddTravelBlockModalProps = {
   onConfirm: (payload: TravelBlockPayload) => void;
 };
 
-/** Link esterni semplici — niente widget embed (rompeva il modal). */
-function buildSafeFlightLink(draft: ComposerDraft): string | null {
-  const dest = draft.destinationMeta?.label ?? draft.destination;
-  if (!dest?.trim()) return null;
-  const origin = primaryOriginIata(draft) || 'ROM';
-  const marker = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
-  const params = new URLSearchParams({
-    origin_iata: origin,
-    destination_name: dest.trim(),
-  });
-  if (draft.startDate) params.set('depart_date', draft.startDate);
-  if (draft.endDate) params.set('return_date', draft.endDate);
-  if (marker) params.set('marker', marker);
-  return `https://www.aviasales.com/search?${params.toString()}`;
-}
-
-function buildSafeHotelLink(draft: ComposerDraft): string | null {
-  const dest = draft.destinationMeta?.label ?? draft.destination;
-  if (!dest?.trim()) return null;
-  const marker = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER?.trim();
-  const params = new URLSearchParams({ ss: dest.trim() });
-  if (draft.startDate) params.set('checkin', draft.startDate);
-  if (draft.endDate) params.set('checkout', draft.endDate);
-  if (marker) params.set('aid', marker);
-  return `https://www.booking.com/searchresults.html?${params.toString()}`;
-}
-
 export function AddTravelBlockModal({
   open,
   mode,
@@ -165,14 +136,6 @@ export function AddTravelBlockModal({
     const checkOutDate = addDaysIso(checkInDate, n);
     return { checkInDate, checkOutDate, nights: n };
   }, [draft.startDate, nights]);
-
-  const externalLink = useMemo(() => {
-    try {
-      return mode === 'hotel' ? buildSafeHotelLink(draft) : buildSafeFlightLink(draft);
-    } catch {
-      return null;
-    }
-  }, [mode, draft]);
 
   const selectedMode = TRANSPORT_MODES.find((m) => m.id === transportMode)!;
   const showPublicFields = PUBLIC_MODES.includes(transportMode);
@@ -593,21 +556,13 @@ export function AddTravelBlockModal({
               placeholder="Es. 120"
               className="h-11 rounded-xl border-white/10 bg-white/5 text-white"
             />
+            {(mode === 'hotel' || transportMode === 'flight') && (
+              <p className="text-[11px] text-white/40">
+                Tariffe live: usa «Aggiorna tariffe LiteAPI» nel pannello del blocco dopo aver
+                salvato.
+              </p>
+            )}
           </div>
-
-          {externalLink && (mode === 'hotel' || transportMode === 'flight') && (
-            <a
-              href={externalLink}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/80 transition hover:border-accent/40 hover:bg-white/[0.08] hover:text-white"
-            >
-              <ExternalLink className="h-4 w-4 text-accent" />
-              {mode === 'hotel'
-                ? 'Apri ricerca hotel su Booking.com'
-                : 'Apri ricerca voli su Aviasales'}
-            </a>
-          )}
         </div>
 
         <div className="border-t border-white/10 px-5 py-4">

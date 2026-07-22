@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { TripMap } from '@/components/maps/TripMap';
+import type { MapCameraTarget } from '@/components/maps/TripMap';
+import { MapSearchBar } from '@/components/composer/plan-v3/MapSearchBar';
 import { Button } from '@/components/ui/button';
 import type { MapPin } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
+import type { PlaceResult } from '@/lib/places/types';
 import type { ComposerDraft } from '@/types/composer';
 import { Bus, Hotel, Maximize2, Minimize2, Plus, X } from 'lucide-react';
 
@@ -22,6 +25,14 @@ type MapColumnProps = {
   onAddHotel?: () => void;
 };
 
+function zoomForPlace(place: PlaceResult): number {
+  const t = place.placeType?.toLowerCase() ?? '';
+  if (t.includes('country') || t.includes('state')) return 6;
+  if (t.includes('city') || t.includes('town') || t.includes('municipality')) return 12;
+  if (t.includes('suburb') || t.includes('neighbourhood') || t.includes('neighborhood')) return 14;
+  return 15;
+}
+
 /**
  * Una sola istanza mappa: expand/collapse solo CSS/layout.
  * Evita un secondo Dynamic Maps billable load in fullscreen.
@@ -37,8 +48,18 @@ export function MapColumn(props: MapColumnProps) {
     onAddHotel,
   } = props;
   const [expanded, setExpanded] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState<MapCameraTarget | null>(null);
   const stopCount = pins.filter((p) => p.id !== 'destination' && p.blockId).length;
   const hasAddActions = Boolean(onAddActivity || onAddTransport || onAddHotel);
+
+  const handleSearchSelect = useCallback((place: PlaceResult) => {
+    setCameraTarget({
+      lat: place.lat,
+      lng: place.lng,
+      zoom: zoomForPlace(place),
+      nonce: Date.now(),
+    });
+  }, []);
 
   useEffect(() => {
     if (!expanded) return;
@@ -221,6 +242,7 @@ export function MapColumn(props: MapColumnProps) {
           pins={pins}
           activeDayIndex={activeDayIndex}
           highlightedPinId={props.highlightedPinId}
+          cameraTarget={cameraTarget}
           mapMode={mapMode}
           className={
             expanded ? 'h-full w-full' : 'h-full min-h-[280px] rounded-none border-0'
@@ -230,6 +252,21 @@ export function MapColumn(props: MapColumnProps) {
           onMapClick={props.onMapClick}
           onPoiClick={props.onPoiClick}
         />
+
+        <div
+          className={
+            expanded
+              ? 'pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center px-4 pt-4'
+              : 'pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center px-3 pt-3'
+          }
+        >
+          <MapSearchBar
+            biasQuery={draft.destinationMeta?.label ?? draft.destination}
+            onSelect={handleSearchSelect}
+            compact={!expanded}
+            className={expanded ? 'w-full max-w-lg' : 'w-full max-w-sm'}
+          />
+        </div>
 
         {expanded && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center justify-center gap-2 px-4 pb-6">

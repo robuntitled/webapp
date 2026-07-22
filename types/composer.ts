@@ -125,7 +125,10 @@ export type ComposerTravelFlightQuote = {
   origin: string;
   destination: string;
   airline?: string | null;
+  /** @deprecated TP affiliate — non usato; restiamo su LiteAPI */
   affiliateUrl?: string | null;
+  /** LiteAPI offer id (Nuitee Connect Flights) */
+  offerId?: string | null;
   fromCache: boolean;
   originLabel?: string;
   role?: ComposerOrigin['role'];

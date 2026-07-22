@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveDestinationIata } from '@/lib/travelpayouts/iata';
+import { resolveDestinationIata } from '@/lib/travel/iata';
 
 describe('resolveDestinationIata', () => {
   it('resolves italian country names', () => {

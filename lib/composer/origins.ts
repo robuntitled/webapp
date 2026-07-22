@@ -1,4 +1,4 @@
-import { defaultOriginIata, originFromCityLabel } from '@/lib/travelpayouts/origin-iata';
+import { defaultOriginIata, originFromCityLabel } from '@/lib/travel/origin-iata';
 import type { ComposerDraft, ComposerOrigin } from '@/types/composer';
 
 export function createOriginId(): string {

@@ -1,4 +1,4 @@
-import { resolveDestinationIata } from '@/lib/travelpayouts/iata';
+import { resolveDestinationIata } from '@/lib/travel/iata';
 
 /** Aeroporti vicini a città/paesi italiani non coperti dalla mappa principale */
 const ORIGIN_ALIASES: Record<string, string> = {
@@ -65,7 +65,11 @@ export function resolveOriginIata(cityOrLabel: string, country?: string): string
 }
 
 export function defaultOriginIata(): string {
-  return process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA?.trim().toUpperCase() || 'ROM';
+  return (
+    process.env.NEXT_PUBLIC_DEFAULT_ORIGIN_IATA?.trim().toUpperCase() ||
+    process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA?.trim().toUpperCase() ||
+    'ROM'
+  );
 }
 
 export function originFromCityLabel(label: string, country?: string): {

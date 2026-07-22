@@ -32,6 +32,15 @@ export type MapPoiClickPayload = {
   lng: number;
 };
 
+/** Pan imperativo (es. ricerca luoghi) — indipendente dal fit giorno/modalità. */
+export type MapCameraTarget = {
+  lat: number;
+  lng: number;
+  zoom?: number;
+  /** Cambia a ogni selezione per ri-triggerare il pan anche sullo stesso punto. */
+  nonce?: number;
+};
+
 type ReactGoogleTripMapProps = {
   destination: string;
   destinationMeta?: DestinationMeta | null;
@@ -39,6 +48,7 @@ type ReactGoogleTripMapProps = {
   mapMode: MapViewMode;
   activeDayIndex: number;
   highlightedPinId?: string | null;
+  cameraTarget?: MapCameraTarget | null;
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
   /** Click su POI basemap Google (Circo Massimo, musei, …) — non pin itinerario. */
@@ -119,6 +129,32 @@ function MapFitBounds({
     });
     return () => coreLib.event.removeListener(listener);
   }, [map, coreLib, pins, stopPins, mapMode, activeDayIndex, fallbackCenter]);
+
+  return null;
+}
+
+/**
+ * Pan da ricerca luoghi — non interferisce con MapFitBounds (giorno/modalità).
+ */
+function MapCameraController({
+  target,
+}: {
+  target?: MapCameraTarget | null;
+}) {
+  const map = useMap();
+  const lastNonce = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!map || !target) return;
+    const nonce = target.nonce ?? 0;
+    if (lastNonce.current === nonce && target.nonce != null) return;
+    lastNonce.current = nonce;
+
+    map.moveCamera({
+      center: { lat: target.lat, lng: target.lng },
+      zoom: target.zoom ?? 14,
+    });
+  }, [map, target]);
 
   return null;
 }
@@ -257,6 +293,7 @@ function TripMapInner({
   mapMode,
   activeDayIndex,
   highlightedPinId,
+  cameraTarget,
   onPinClick,
   onMapClick,
   onPoiClick,
@@ -308,6 +345,7 @@ function TripMapInner({
           activeDayIndex={activeDayIndex}
           fallbackCenter={center}
         />
+        <MapCameraController target={cameraTarget} />
         {showRoute && routePath.length >= 2 && <RoutePolyline path={routePath} />}
         <TripPins
           pins={pins}

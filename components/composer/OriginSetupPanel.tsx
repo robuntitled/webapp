@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { buildCrewOrigin, buildOrganizerOrigin } from '@/lib/composer/origins';
-import { resolveOriginIata } from '@/lib/travelpayouts/origin-iata';
+import { resolveOriginIata } from '@/lib/travel/origin-iata';
 import type { ComposerDraft, ComposerOrigin } from '@/types/composer';
 import type { PlaceResult } from '@/lib/places/types';
 import { Loader2, MapPin, Plane, Plus, User, Users, X } from 'lucide-react';

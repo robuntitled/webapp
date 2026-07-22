@@ -9,7 +9,7 @@ import { DAY_PLAN_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import { originsSummaryForPrompt } from '@/lib/composer/origins';
 import { buildIntelPromptBlock, resolveDestinationIntel } from '@/lib/composer/destination-intel';
 import { buildPlannerPromptBlock } from '@/lib/composer/planner-prompt';
-import { defaultOriginIata } from '@/lib/travelpayouts/origin-iata';
+import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import type { ComposerBlock, ComposerBlockType, ComposerGenerateRequest } from '@/types/composer';
 
 function specToExtra(spec: AiDayBlockSpec): Record<string, unknown> {
