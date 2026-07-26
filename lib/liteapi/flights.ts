@@ -20,6 +20,18 @@ export type LiteApiFlightOffer = {
   stops: number;
   cabinClass: string | null;
   flightNumber: string | null;
+  /** Ritorno (andata e ritorno) */
+  returnOrigin: string | null;
+  returnDestination: string | null;
+  returnAirline: string | null;
+  returnAirlineCode: string | null;
+  returnAirlineLogo: string | null;
+  returnDepartureAt: string | null;
+  returnArrivalAt: string | null;
+  returnDurationMinutes: number | null;
+  returnStops: number | null;
+  returnFlightNumber: string | null;
+  hasReturn: boolean;
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -485,14 +497,38 @@ function normalizeOfferContext(
   if (!offerId || !priced) return null;
 
   const segments = collectSegments(journey, offer);
-  const outbound = segments.filter((s) => {
+  const outboundSegs = segments.filter((s) => {
     const dir = toStr(s.direction)?.toUpperCase();
-    return !dir || dir === 'OUTBOUND';
+    return dir === 'OUTBOUND';
   });
-  const leg = outbound.length ? outbound : segments;
+  const inboundSegs = segments.filter((s) => {
+    const dir = toStr(s.direction)?.toUpperCase();
+    return dir === 'INBOUND';
+  });
+  // Se manca direction: metà andata / metà ritorno quando ci sono ≥2 segmenti e c'è returnDate nel journey
+  const leg =
+    outboundSegs.length > 0
+      ? outboundSegs
+      : inboundSegs.length > 0 && segments.length > inboundSegs.length
+        ? segments.slice(0, segments.length - inboundSegs.length)
+        : inboundSegs.length === 0 && segments.length >= 2
+          ? segments.slice(0, Math.ceil(segments.length / 2))
+          : segments;
+  const returnLeg =
+    inboundSegs.length > 0
+      ? inboundSegs
+      : segments.length > leg.length
+        ? segments.slice(leg.length)
+        : [];
   const first = leg[0] ?? null;
   const last = leg[leg.length - 1] ?? null;
   const carrier = extractCarrier(offer, journey, leg.length ? leg : segments);
+  const returnCarrier =
+    returnLeg.length > 0
+      ? extractCarrier(offer, journey, returnLeg)
+      : { name: null, code: null, logo: null };
+  const retFirst = returnLeg[0] ?? null;
+  const retLast = returnLeg[returnLeg.length - 1] ?? null;
 
   const origin =
     segmentAirport(first, 'origin') ??
@@ -537,6 +573,19 @@ function normalizeOfferContext(
 
   const fare = asRecord(offer.fare);
 
+  const returnDepartureAt = segmentDateTime(retFirst, 'departure');
+  const returnArrivalAt = segmentDateTime(retLast, 'arrival');
+  const returnFlightObj = asRecord(retFirst?.flight);
+  const returnFlightNumber =
+    (returnCarrier.code && toStr(returnFlightObj?.marketingNumber)
+      ? `${returnCarrier.code}${toStr(returnFlightObj?.marketingNumber)}`
+      : null) ??
+    toStr(retFirst?.flightNumber) ??
+    toStr(retFirst?.marketingFlightNumber) ??
+    null;
+
+  const hasReturn = returnLeg.length > 0 && Boolean(returnDepartureAt || retFirst);
+
   return {
     offerId,
     price: priced.price,
@@ -557,6 +606,23 @@ function normalizeOfferContext(
       toStr(journey?.cabinClass) ??
       null,
     flightNumber,
+    returnOrigin: hasReturn
+      ? segmentAirport(retFirst, 'origin') ?? destination
+      : null,
+    returnDestination: hasReturn
+      ? segmentAirport(retLast, 'destination') ?? origin
+      : null,
+    returnAirline: hasReturn ? returnCarrier.name : null,
+    returnAirlineCode: hasReturn ? returnCarrier.code : null,
+    returnAirlineLogo: hasReturn ? returnCarrier.logo : null,
+    returnDepartureAt: hasReturn ? returnDepartureAt : null,
+    returnArrivalAt: hasReturn ? returnArrivalAt : null,
+    returnDurationMinutes: hasReturn
+      ? parseDurationMinutes(offer, journey, returnLeg, returnDepartureAt, returnArrivalAt)
+      : null,
+    returnStops: hasReturn ? Math.max(0, returnLeg.length - 1) : null,
+    returnFlightNumber: hasReturn ? returnFlightNumber : null,
+    hasReturn,
   };
 }
 

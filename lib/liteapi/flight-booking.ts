@@ -11,6 +11,7 @@ export type FlightContactInput = {
 };
 
 export type FlightPassengerInput = {
+  title: string;
   firstName: string;
   lastName: string;
   birthday: string;
@@ -141,6 +142,7 @@ export async function prebookFlight(params: {
         phoneNumber: params.contact.phoneNumber.replace(/\s+/g, ''),
       },
       passengers: params.passengers.map((p) => ({
+        title: p.title,
         firstName: p.firstName,
         lastName: p.lastName,
         birthday: p.birthday,
@@ -169,12 +171,18 @@ export async function prebookFlight(params: {
   }
 
   const priced = extractPrice(item);
+  const payment = asRecord(item.payment);
+  const publishableKey =
+    toStr(item.publishableKey) ??
+    toStr(payment?.publishableKey) ??
+    toStr(item.stripePublishableKey) ??
+    null;
 
   return {
     prebookId,
     transactionId,
     secretKey,
-    publishableKey: toStr(item.publishableKey),
+    publishableKey,
     price: priced.price,
     currency: priced.currency,
     raw,

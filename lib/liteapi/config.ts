@@ -25,3 +25,25 @@ export function getLiteApiBaseUrl(): string {
     process.env.LITEAPI_BASE_URL?.trim() || 'https://api.liteapi.travel/v3.0'
   );
 }
+
+/** Ambiente payment SDK LiteAPI (`sandbox` | `live`) — deve matchare la API key. */
+export function getLiteApiPaymentEnv(): 'sandbox' | 'live' {
+  const forced = process.env.LITEAPI_PAYMENT_ENV?.trim().toLowerCase();
+  if (forced === 'sandbox' || forced === 'live') return forced;
+  const key = getLiteApiKey() ?? '';
+  if (key.startsWith('sand_') || /sandbox/i.test(key)) return 'sandbox';
+  return 'live';
+}
+
+/**
+ * Publishable key Stripe di LiteAPI (opzionale).
+ * Se assente, il frontend usa il Payment SDK ufficiale (publicKey sandbox/live).
+ */
+export function getLiteApiStripePublishableKey(): string | null {
+  const raw =
+    process.env.LITEAPI_STRIPE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+    '';
+  const key = raw.trim().replace(/^["']|["']$/g, '').trim();
+  return key || null;
+}

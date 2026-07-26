@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { isLiteApiConfigured } from '@/lib/liteapi/config';
+import {
+  getLiteApiPaymentEnv,
+  getLiteApiStripePublishableKey,
+  isLiteApiConfigured,
+} from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { prebookFlight } from '@/lib/liteapi/flight-booking';
 
 const passengerSchema = z.object({
+  title: z.enum(['Mr', 'Mrs', 'Ms', 'Miss', 'Dr']),
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -58,12 +63,16 @@ export async function POST(request: Request) {
 
   try {
     const result = await prebookFlight(parsed.data);
+    const publishableKey =
+      result.publishableKey ?? getLiteApiStripePublishableKey();
     return NextResponse.json({
       ok: true,
       prebookId: result.prebookId,
       transactionId: result.transactionId,
       secretKey: result.secretKey,
-      publishableKey: result.publishableKey,
+      publishableKey,
+      paymentEnv: getLiteApiPaymentEnv(),
+      paymentMode: publishableKey ? 'stripe_elements' : 'liteapi_sdk',
       price: result.price,
       currency: result.currency,
     });

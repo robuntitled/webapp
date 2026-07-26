@@ -101,7 +101,29 @@ export type FlightOfferView = {
   stops?: number;
   cabinClass?: string | null;
   flightNumber?: string | null;
+  returnOrigin?: string | null;
+  returnDestination?: string | null;
+  returnAirline?: string | null;
+  returnAirlineCode?: string | null;
+  returnAirlineLogo?: string | null;
+  returnDepartureAt?: string | null;
+  returnArrivalAt?: string | null;
+  returnDurationMinutes?: number | null;
+  returnStops?: number | null;
+  returnFlightNumber?: string | null;
+  hasReturn?: boolean;
 };
+
+function outboundKey(o: FlightOfferView): string {
+  return [
+    o.origin,
+    o.destination,
+    o.departureAt ?? '',
+    o.arrivalAt ?? '',
+    o.airlineCode ?? '',
+    o.flightNumber ?? '',
+  ].join('|');
+}
 
 type TripType = 'oneway' | 'roundtrip';
 
@@ -228,11 +250,33 @@ export function FlightSearchPanel({
   const [sort, setSort] = useState<FlightSort>('best');
   const [message, setMessage] = useState<string | null>(null);
   const [originsSearched, setOriginsSearched] = useState<string[]>([]);
-
-  const sortedOffers = useMemo(
-    () => (offers ? sortOffers(offers, sort) : null),
-    [offers, sort]
+  /** Andata e ritorno: prima scegli andata, poi ritorno */
+  const [pickStep, setPickStep] = useState<'outbound' | 'return'>('outbound');
+  const [selectedOutboundKey, setSelectedOutboundKey] = useState<string | null>(
+    null
   );
+  const [selectedOutboundOffer, setSelectedOutboundOffer] =
+    useState<FlightOfferView | null>(null);
+
+  const sortedOffers = useMemo(() => {
+    if (!offers) return null;
+    let list = offers;
+    if (tripType === 'roundtrip' && pickStep === 'return' && selectedOutboundKey) {
+      list = offers.filter(
+        (o) => outboundKey(o) === selectedOutboundKey && o.hasReturn
+      );
+    } else if (tripType === 'roundtrip' && pickStep === 'outbound') {
+      // Una riga per firma andata (prezzo minimo tra le combo)
+      const byKey = new Map<string, FlightOfferView>();
+      for (const o of offers) {
+        const key = outboundKey(o);
+        const prev = byKey.get(key);
+        if (!prev || o.price < prev.price) byKey.set(key, o);
+      }
+      list = [...byKey.values()];
+    }
+    return sortOffers(list, sort);
+  }, [offers, pickStep, selectedOutboundKey, sort, tripType]);
 
   const sortLabel =
     SORT_OPTIONS.find((o) => o.id === sort)?.label ?? 'Il migliore';
@@ -311,6 +355,9 @@ export function FlightSearchPanel({
       setOffers(list);
       setOriginsSearched(data.originsSearched ?? []);
       setMessage(list.length ? null : data.message ?? 'Nessuna tariffa trovata');
+      setPickStep('outbound');
+      setSelectedOutboundKey(null);
+      setSelectedOutboundOffer(null);
     } catch {
       toast.error('Errore di rete');
       setOffers(null);
@@ -352,7 +399,12 @@ export function FlightSearchPanel({
               <button
                 key={id}
                 type="button"
-                onClick={() => setTripType(id)}
+                onClick={() => {
+                  setTripType(id);
+                  setPickStep('outbound');
+                  setSelectedOutboundKey(null);
+                  setSelectedOutboundOffer(null);
+                }}
                 className={cn(
                   'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
                   tripType === id
@@ -519,98 +571,220 @@ export function FlightSearchPanel({
         </div>
       )}
 
+      {tripType === 'roundtrip' && offers && offers.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <button
+            type="button"
+            onClick={() => {
+              setPickStep('outbound');
+              setSelectedOutboundKey(null);
+              setSelectedOutboundOffer(null);
+            }}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+              pickStep === 'outbound'
+                ? 'bg-[#0770e3] text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            )}
+          >
+            1. Andata
+          </button>
+          <span className="text-slate-300">→</span>
+          <button
+            type="button"
+            disabled={!selectedOutboundKey}
+            onClick={() => selectedOutboundKey && setPickStep('return')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+              pickStep === 'return'
+                ? 'bg-[#0770e3] text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40'
+            )}
+          >
+            2. Ritorno
+          </button>
+          {selectedOutboundOffer ? (
+            <p className="ml-auto text-xs text-slate-500">
+              Andata {formatTime(selectedOutboundOffer.departureAt)}{' '}
+              {selectedOutboundOffer.origin}→{selectedOutboundOffer.destination}
+            </p>
+          ) : (
+            <p className="ml-auto text-xs text-slate-500">
+              Seleziona prima l’andata, poi il ritorno
+            </p>
+          )}
+        </div>
+      ) : null}
+
       {sortedOffers && sortedOffers.length > 0 && (
         <ul className="space-y-3">
-          {sortedOffers.map((o) => (
-            <li
-              key={o.offerId}
-              className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-[#0770e3]/40 hover:shadow-md"
-            >
-              <div className="grid gap-4 p-4 sm:grid-cols-[200px_1fr_150px] sm:items-center sm:p-5">
-                <AirlineBadge
-                  name={o.airline}
-                  code={o.airlineCode}
-                  logo={o.airlineLogo}
-                  flightNumber={o.flightNumber}
-                />
+          {sortedOffers.map((o) => {
+            const showReturn =
+              tripType === 'roundtrip' && pickStep === 'return' && o.hasReturn;
+            const airlineName = showReturn
+              ? o.returnAirline ?? o.airline
+              : o.airline;
+            const airlineCode = showReturn
+              ? o.returnAirlineCode ?? o.airlineCode
+              : o.airlineCode;
+            const airlineLogo = showReturn
+              ? o.returnAirlineLogo ?? o.airlineLogo
+              : o.airlineLogo;
+            const flightNumber = showReturn
+              ? o.returnFlightNumber ?? o.flightNumber
+              : o.flightNumber;
+            const dep = showReturn ? o.returnDepartureAt : o.departureAt;
+            const arr = showReturn ? o.returnArrivalAt : o.arrivalAt;
+            const from = showReturn ? o.returnOrigin ?? o.destination : o.origin;
+            const to = showReturn ? o.returnDestination ?? o.origin : o.destination;
+            const duration = showReturn
+              ? o.returnDurationMinutes
+              : o.durationMinutes;
+            const stops = showReturn ? o.returnStops ?? 0 : o.stops;
 
-                <div className="flex items-center gap-3 sm:gap-5">
-                  <div className="min-w-[64px] text-center">
-                    <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
-                      {formatTime(o.departureAt)}
-                    </p>
-                    <p className="text-xs font-semibold text-slate-500">{o.origin}</p>
-                  </div>
+            return (
+              <li
+                key={`${o.offerId}-${pickStep}`}
+                className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-[#0770e3]/40 hover:shadow-md"
+              >
+                <div className="border-b border-slate-100 px-4 py-2 sm:px-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0770e3]">
+                    {tripType === 'roundtrip'
+                      ? pickStep === 'outbound'
+                        ? 'Andata'
+                        : 'Ritorno'
+                      : 'Volo'}
+                  </p>
+                </div>
+                <div className="grid gap-4 p-4 sm:grid-cols-[200px_1fr_150px] sm:items-center sm:p-5">
+                  <AirlineBadge
+                    name={airlineName}
+                    code={airlineCode}
+                    logo={airlineLogo}
+                    flightNumber={flightNumber}
+                  />
 
-                  <div className="min-w-[96px] flex-1 px-1">
-                    <p className="mb-1 flex items-center justify-center gap-1 text-[11px] text-slate-500">
-                      <Clock3 className="h-3 w-3" />
-                      {formatDuration(o.durationMinutes)}
-                    </p>
-                    <div className="relative h-px bg-slate-200">
-                      <Plane className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90 text-[#0770e3]" />
+                  <div className="flex items-center gap-3 sm:gap-5">
+                    <div className="min-w-[64px] text-center">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
+                        {formatTime(dep)}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-500">{from}</p>
                     </div>
-                    <p className="mt-1 text-center text-[11px] font-medium text-slate-500">
-                      {stopsLabel(o.stops)}
-                      {o.cabinClass ? ` · ${o.cabinClass}` : ''}
-                    </p>
+
+                    <div className="min-w-[96px] flex-1 px-1">
+                      <p className="mb-1 flex items-center justify-center gap-1 text-[11px] text-slate-500">
+                        <Clock3 className="h-3 w-3" />
+                        {formatDuration(duration)}
+                      </p>
+                      <div className="relative h-px bg-slate-200">
+                        <Plane className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90 text-[#0770e3]" />
+                      </div>
+                      <p className="mt-1 text-center text-[11px] font-medium text-slate-500">
+                        {stopsLabel(stops)}
+                        {o.cabinClass ? ` · ${o.cabinClass}` : ''}
+                      </p>
+                    </div>
+
+                    <div className="min-w-[64px] text-center">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
+                        {formatTime(arr)}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-500">{to}</p>
+                    </div>
                   </div>
 
-                  <div className="min-w-[64px] text-center">
-                    <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
-                      {formatTime(o.arrivalAt)}
-                    </p>
-                    <p className="text-xs font-semibold text-slate-500">
-                      {o.destination}
-                    </p>
-                  </div>
-                </div>
+                  <div className="flex flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                    <div className="text-right">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-[#052e6b]">
+                        {o.price.toLocaleString('it-IT', {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        })}
+                        <span className="ml-1 text-sm font-medium text-slate-500">
+                          {o.currency}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {tripType === 'roundtrip' ? 'andata + ritorno' : 'a persona'}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      className="rounded-xl bg-[#0770e3] px-5 font-semibold hover:bg-[#0558b8]"
+                      onClick={() => {
+                        if (tripType === 'roundtrip' && pickStep === 'outbound') {
+                          if (!o.hasReturn) {
+                            toast.error(
+                              'Questa offerta non ha un ritorno. Prova un altro volo.'
+                            );
+                            return;
+                          }
+                          setSelectedOutboundKey(outboundKey(o));
+                          setSelectedOutboundOffer(o);
+                          setPickStep('return');
+                          toast.message('Andata selezionata', {
+                            description: 'Ora scegli il volo di ritorno',
+                          });
+                          return;
+                        }
 
-                <div className="flex flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
-                  <div className="text-right">
-                    <p className="font-display text-2xl font-semibold tabular-nums text-[#052e6b]">
-                      {o.price.toLocaleString('it-IT', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      })}
-                      <span className="ml-1 text-sm font-medium text-slate-500">
-                        {o.currency}
-                      </span>
-                    </p>
-                    <p className="text-[11px] text-slate-400">a persona</p>
+                        if (tripType === 'roundtrip' && !o.hasReturn) {
+                          toast.error('Seleziona un’offerta con andata e ritorno');
+                          return;
+                        }
+
+                        saveFlightCheckoutDraft({
+                          offerId: o.offerId,
+                          price: o.price,
+                          currency: o.currency,
+                          outbound: {
+                            origin: o.origin,
+                            destination: o.destination,
+                            airline: o.airline,
+                            airlineCode: o.airlineCode,
+                            airlineLogo: o.airlineLogo,
+                            departureAt: o.departureAt,
+                            arrivalAt: o.arrivalAt,
+                            durationMinutes: o.durationMinutes,
+                            stops: o.stops,
+                            cabinClass: o.cabinClass,
+                            flightNumber: o.flightNumber,
+                          },
+                          returnLeg:
+                            tripType === 'roundtrip' && o.hasReturn
+                              ? {
+                                  origin: o.returnOrigin ?? o.destination,
+                                  destination: o.returnDestination ?? o.origin,
+                                  airline: o.returnAirline ?? o.airline,
+                                  airlineCode: o.returnAirlineCode ?? o.airlineCode,
+                                  airlineLogo: o.returnAirlineLogo ?? o.airlineLogo,
+                                  departureAt: o.returnDepartureAt,
+                                  arrivalAt: o.returnArrivalAt,
+                                  durationMinutes: o.returnDurationMinutes,
+                                  stops: o.returnStops,
+                                  flightNumber: o.returnFlightNumber,
+                                  cabinClass: o.cabinClass,
+                                }
+                              : null,
+                          adults,
+                          tripType,
+                          createdAt: Date.now(),
+                        });
+                        router.push('/prenota/voli/checkout');
+                      }}
+                    >
+                      {tripType === 'roundtrip' && pickStep === 'outbound'
+                        ? 'Scegli andata'
+                        : tripType === 'roundtrip'
+                          ? 'Scegli ritorno'
+                          : 'Seleziona'}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    className="rounded-xl bg-[#0770e3] px-5 font-semibold hover:bg-[#0558b8]"
-                    onClick={() => {
-                      saveFlightCheckoutDraft({
-                        offerId: o.offerId,
-                        price: o.price,
-                        currency: o.currency,
-                        origin: o.origin,
-                        destination: o.destination,
-                        airline: o.airline,
-                        airlineCode: o.airlineCode,
-                        airlineLogo: o.airlineLogo,
-                        departureAt: o.departureAt,
-                        arrivalAt: o.arrivalAt,
-                        durationMinutes: o.durationMinutes,
-                        stops: o.stops,
-                        cabinClass: o.cabinClass,
-                        flightNumber: o.flightNumber,
-                        adults,
-                        tripType,
-                        createdAt: Date.now(),
-                      });
-                      router.push('/prenota/voli/checkout');
-                    }}
-                  >
-                    Seleziona
-                  </Button>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

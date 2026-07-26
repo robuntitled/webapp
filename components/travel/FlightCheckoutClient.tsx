@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subYears } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
   ArrowLeft,
+  CalendarDays,
   CheckCircle2,
   CreditCard,
   Loader2,
@@ -20,16 +21,33 @@ import {
   useStripe,
 } from '@stripe/react-stripe-js';
 import { toast } from 'sonner';
+import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { COUNTRY_OPTIONS } from '@/lib/travel/countries';
 import {
   clearFlightCheckoutDraft,
+  clearFlightPaymentPending,
   loadFlightCheckoutDraft,
+  loadFlightPaymentPending,
+  saveFlightPaymentPending,
   type FlightCheckoutDraft,
+  type FlightLegDraft,
 } from '@/lib/travel/flight-checkout-draft';
 import { cn } from '@/lib/utils';
 
 type Step = 'details' | 'payment' | 'done';
+type Title = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr';
+
+const TITLES: Array<{ id: Title; label: string; gender: 'M' | 'F' }> = [
+  { id: 'Mr', label: 'Sig. (Mr)', gender: 'M' },
+  { id: 'Mrs', label: 'Sig.ra (Mrs)', gender: 'F' },
+  { id: 'Ms', label: 'Ms', gender: 'F' },
+  { id: 'Miss', label: 'Sig.na (Miss)', gender: 'F' },
+  { id: 'Dr', label: 'Dr', gender: 'M' },
+];
 
 type VerifyState = {
   price: number | null;
@@ -40,6 +58,7 @@ type VerifyState = {
 };
 
 type PassengerForm = {
+  title: Title;
   firstName: string;
   lastName: string;
   birthday: string;
@@ -61,6 +80,7 @@ type ContactForm = {
 
 function emptyPassenger(): PassengerForm {
   return {
+    title: 'Mr',
     firstName: '',
     lastName: '',
     birthday: '',
@@ -85,6 +105,149 @@ function formatTime(iso?: string | null) {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return '—';
   return format(new Date(t), 'HH:mm');
+}
+
+function DatePickerField({
+  label,
+  value,
+  onChange,
+  fromYear,
+  toYear,
+  disabledAfter,
+  disabledBefore,
+}: {
+  label: string;
+  value: string;
+  onChange: (iso: string) => void;
+  fromYear: number;
+  toYear: number;
+  disabledAfter?: Date;
+  disabledBefore?: Date;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? parseISO(value) : undefined;
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </span>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex h-12 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium transition',
+              'hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0770e3]/25',
+              !value && 'text-slate-400 font-normal'
+            )}
+          >
+            <CalendarDays className="h-4 w-4 shrink-0 text-[#0770e3]" />
+            {selected
+              ? format(selected, 'd MMMM yyyy', { locale: it })
+              : 'Seleziona data'}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-auto overflow-hidden rounded-2xl border-slate-200 p-0 shadow-xl"
+        >
+          <Calendar
+            mode="single"
+            locale={it}
+            captionLayout="dropdown"
+            selected={selected}
+            defaultMonth={selected ?? subYears(new Date(), 30)}
+            startMonth={new Date(fromYear, 0)}
+            endMonth={new Date(toYear, 11)}
+            disabled={[
+              ...(disabledAfter ? [{ after: disabledAfter }] : []),
+              ...(disabledBefore ? [{ before: disabledBefore }] : []),
+            ]}
+            onSelect={(d) => {
+              if (!d) return;
+              onChange(format(d, 'yyyy-MM-dd'));
+              setOpen(false);
+            }}
+            className="p-3"
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function CountrySelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (code: string) => void;
+}) {
+  return (
+    <label className="space-y-1.5 block">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none focus:border-[#0770e3] focus:ring-2 focus:ring-[#0770e3]/20"
+      >
+        {COUNTRY_OPTIONS.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function LegSummary({
+  title,
+  leg,
+}: {
+  title: string;
+  leg: FlightLegDraft;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0770e3]">
+        {title}
+      </p>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div>
+          <p className="font-display text-xl font-semibold tabular-nums">
+            {formatTime(leg.departureAt)}
+          </p>
+          <p className="text-xs font-semibold text-slate-500">{leg.origin}</p>
+        </div>
+        <div className="min-w-0 flex-1 px-2 text-center">
+          <p className="truncate text-[11px] text-slate-500">
+            {leg.airline || leg.airlineCode || 'Volo'}
+            {leg.flightNumber ? ` · ${leg.flightNumber}` : ''}
+          </p>
+          <div className="mx-auto mt-1 h-px w-full max-w-[80px] bg-slate-200" />
+        </div>
+        <div className="text-right">
+          <p className="font-display text-xl font-semibold tabular-nums">
+            {formatTime(leg.arrivalAt)}
+          </p>
+          <p className="text-xs font-semibold text-slate-500">{leg.destination}</p>
+        </div>
+      </div>
+      {leg.departureAt ? (
+        <p className="mt-2 text-[11px] capitalize text-slate-500">
+          {format(parseISO(leg.departureAt.slice(0, 10)), 'EEEE d MMMM', {
+            locale: it,
+          })}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function PaymentStep({ onPaid }: { onPaid: () => Promise<void> }) {
@@ -128,11 +291,7 @@ function PaymentStep({ onPaid }: { onPaid: () => Promise<void> }) {
 
   return (
     <div className="space-y-4">
-      <PaymentElement
-        options={{
-          layout: 'tabs',
-        }}
-      />
+      <PaymentElement options={{ layout: 'tabs' }} />
       <Button
         type="button"
         disabled={!stripe || busy}
@@ -146,9 +305,6 @@ function PaymentStep({ onPaid }: { onPaid: () => Promise<void> }) {
         )}
         Paga e conferma
       </Button>
-      <p className="text-center text-[11px] text-slate-500">
-        Pagamento sicuro. La carta viene addebitata solo a conferma avvenuta.
-      </p>
     </div>
   );
 }
@@ -179,7 +335,9 @@ export function FlightCheckoutClient({
     prebookId: string;
     transactionId: string;
     secretKey: string;
-    publishableKey: string;
+    publishableKey: string | null;
+    paymentEnv: 'sandbox' | 'live';
+    paymentMode: 'stripe_elements' | 'liteapi_sdk';
     price: number | null;
     currency: string | null;
   } | null>(null);
@@ -191,74 +349,164 @@ export function FlightCheckoutClient({
   } | null>(null);
 
   const stripePromise = useMemo(() => {
-    if (!payment?.publishableKey) return null;
+    if (!payment?.publishableKey || payment.paymentMode !== 'stripe_elements') {
+      return null;
+    }
     return loadStripe(payment.publishableKey) as Promise<Stripe | null>;
-  }, [payment?.publishableKey]);
+  }, [payment?.paymentMode, payment?.publishableKey]);
+
+  const finalizeBooking = useCallback(
+    async (prebookId: string, transactionId: string) => {
+      setSubmitting(true);
+      try {
+        const res = await fetch('/api/liteapi/flights/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ prebookId, transactionId }),
+        });
+        const data = (await res.json()) as {
+          error?: string;
+          bookingId?: string | null;
+          bookingRef?: string | null;
+          status?: string | null;
+        };
+        if (!res.ok) {
+          toast.error(data.error ?? 'Conferma prenotazione fallita');
+          return;
+        }
+        setConfirmation({
+          bookingId: data.bookingId ?? null,
+          bookingRef: data.bookingRef ?? null,
+          status: data.status ?? null,
+        });
+        clearFlightCheckoutDraft();
+        clearFlightPaymentPending();
+        setStep('done');
+        toast.success('Prenotazione confermata');
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.search = '';
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch {
+        toast.error('Errore di rete in conferma');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     const d = loadFlightCheckoutDraft();
-    if (!d) {
+    if (d) {
+      setDraft(d);
+      setPassengers(
+        Array.from({ length: Math.max(1, d.adults) }, () => emptyPassenger())
+      );
+    } else {
       setDraft(null);
       setVerifying(false);
-      return;
     }
-    setDraft(d);
-    setPassengers(
-      Array.from({ length: Math.max(1, d.adults) }, () => emptyPassenger())
-    );
-  }, []);
 
-  const runVerify = useCallback(async (offerId: string) => {
-    setVerifying(true);
-    try {
-      const res = await fetch('/api/liteapi/flights/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ offerId }),
-      });
-      const data = (await res.json()) as VerifyState & {
-        error?: string;
-        code?: string;
-      };
-      if (!res.ok) {
-        toast.error(data.error ?? 'Verifica fallita');
-        if (data.code === 'offer_expired') {
-          clearFlightCheckoutDraft();
-          router.push('/prenota/voli');
-        }
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const paid = params.get('paid') === '1';
+      const tid = params.get('tid');
+      const pid = params.get('pid');
+      const pending = loadFlightPaymentPending();
+
+      if (paid && tid && pid) {
+        setStep('payment');
+        setVerifying(false);
+        void finalizeBooking(pid, tid);
         return;
       }
-      setVerify({
-        price: data.price,
-        currency: data.currency,
-        priceChanged: data.priceChanged,
-        previousPrice: data.previousPrice,
-        expiration: data.expiration,
-      });
-      if (data.priceChanged) setAcceptedPriceChange(false);
-    } catch {
-      toast.error('Errore di rete in verifica');
-    } finally {
-      setVerifying(false);
+      if (pending) {
+        setPayment({
+          prebookId: pending.prebookId,
+          transactionId: pending.transactionId,
+          secretKey: pending.secretKey,
+          publishableKey: pending.publishableKey,
+          paymentEnv: pending.paymentEnv,
+          paymentMode: pending.paymentMode,
+          price: pending.price,
+          currency: pending.currency,
+        });
+        setStep('payment');
+        setVerifying(false);
+      }
     }
-  }, [router]);
+  }, [finalizeBooking]);
+
+  const runVerify = useCallback(
+    async (offerId: string) => {
+      setVerifying(true);
+      try {
+        const res = await fetch('/api/liteapi/flights/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ offerId }),
+        });
+        const data = (await res.json()) as VerifyState & {
+          error?: string;
+          code?: string;
+        };
+        if (!res.ok) {
+          toast.error(data.error ?? 'Verifica fallita');
+          if (data.code === 'offer_expired') {
+            clearFlightCheckoutDraft();
+            router.push('/prenota/voli');
+          }
+          return;
+        }
+        setVerify({
+          price: data.price,
+          currency: data.currency,
+          priceChanged: data.priceChanged,
+          previousPrice: data.previousPrice,
+          expiration: data.expiration,
+        });
+        if (data.priceChanged) setAcceptedPriceChange(false);
+      } catch {
+        toast.error('Errore di rete in verifica');
+      } finally {
+        setVerifying(false);
+      }
+    },
+    [router]
+  );
 
   useEffect(() => {
-    if (draft?.offerId) void runVerify(draft.offerId);
-  }, [draft?.offerId, runVerify]);
+    if (draft?.offerId && step === 'details') void runVerify(draft.offerId);
+  }, [draft?.offerId, runVerify, step]);
 
   const displayPrice = verify?.price ?? draft?.price ?? 0;
   const displayCurrency = verify?.currency ?? draft?.currency ?? 'EUR';
 
   const updatePassenger = (idx: number, patch: Partial<PassengerForm>) => {
     setPassengers((prev) =>
-      prev.map((p, i) => (i === idx ? { ...p, ...patch } : p))
+      prev.map((p, i) => {
+        if (i !== idx) return p;
+        const next = { ...p, ...patch };
+        if (patch.title) {
+          const t = TITLES.find((x) => x.id === patch.title);
+          if (t) next.gender = t.gender;
+        }
+        return next;
+      })
     );
   };
 
   const startPrebook = async () => {
     if (!draft) return;
+    if (draft.tripType === 'roundtrip' && !draft.returnLeg) {
+      toast.error('Seleziona anche il volo di ritorno prima del pagamento');
+      router.push('/prenota/voli');
+      return;
+    }
     if (verify?.priceChanged && !acceptedPriceChange) {
       toast.error('Conferma il nuovo prezzo per continuare');
       return;
@@ -275,16 +523,16 @@ export function FlightCheckoutClient({
         return;
       }
     }
-    if (!contact.email || !contact.phoneNumber || !contact.firstName) {
-      toast.error('Completa i dati di contatto');
-      return;
-    }
 
     const contactPayload = {
       ...contact,
       firstName: contact.firstName || passengers[0]?.firstName || '',
       lastName: contact.lastName || passengers[0]?.lastName || '',
     };
+    if (!contactPayload.email || !contactPayload.phoneNumber) {
+      toast.error('Completa email e telefono di contatto');
+      return;
+    }
     if (!contactPayload.firstName || !contactPayload.lastName) {
       toast.error('Completa nome e cognome di contatto');
       return;
@@ -309,6 +557,7 @@ export function FlightCheckoutClient({
         transactionId?: string;
         secretKey?: string;
         publishableKey?: string | null;
+        paymentEnv?: 'sandbox' | 'live';
         price?: number | null;
         currency?: string | null;
       };
@@ -324,24 +573,23 @@ export function FlightCheckoutClient({
         toast.error('Risposta pagamento incompleta');
         return;
       }
-      const pk =
-        data.publishableKey ||
-        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-        '';
-      if (!pk) {
-        toast.error(
-          'Chiave pagamento non disponibile. Contatta il supporto.'
-        );
-        return;
-      }
-      setPayment({
+      const paymentEnv = data.paymentEnv ?? 'sandbox';
+      const paymentMode: 'stripe_elements' | 'liteapi_sdk' = data.publishableKey
+        ? 'stripe_elements'
+        : 'liteapi_sdk';
+      const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,
         secretKey: data.secretKey,
-        publishableKey: pk,
+        publishableKey: data.publishableKey ?? null,
+        paymentEnv,
+        paymentMode,
         price: data.price ?? displayPrice,
         currency: data.currency ?? displayCurrency,
-      });
+        createdAt: Date.now(),
+      };
+      saveFlightPaymentPending(pending);
+      setPayment(pending);
       setStep('payment');
     } catch {
       toast.error('Errore di rete');
@@ -350,47 +598,14 @@ export function FlightCheckoutClient({
     }
   };
 
-  const finalizeBooking = async () => {
-    if (!payment) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/liteapi/flights/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          prebookId: payment.prebookId,
-          transactionId: payment.transactionId,
-        }),
-      });
-      const data = (await res.json()) as {
-        error?: string;
-        bookingId?: string | null;
-        bookingRef?: string | null;
-        status?: string | null;
-      };
-      if (!res.ok) {
-        toast.error(data.error ?? 'Conferma prenotazione fallita');
-        return;
-      }
-      setConfirmation({
-        bookingId: data.bookingId ?? null,
-        bookingRef: data.bookingRef ?? null,
-        status: data.status ?? null,
-      });
-      clearFlightCheckoutDraft();
-      setStep('done');
-      toast.success('Prenotazione confermata');
-    } catch {
-      toast.error('Errore di rete in conferma');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const paymentReturnUrl =
+    typeof window !== 'undefined' && payment
+      ? `${window.location.origin}/prenota/voli/checkout?paid=1&tid=${encodeURIComponent(payment.transactionId)}&pid=${encodeURIComponent(payment.prebookId)}`
+      : '';
 
-  if (!draft && !verifying) {
+  if (!draft && !verifying && !payment && step !== 'done' && !submitting) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
+      <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
         <p className="text-sm text-slate-600">
           Nessuna offerta selezionata. Torna alla ricerca voli.
         </p>
@@ -403,46 +618,38 @@ export function FlightCheckoutClient({
 
   if (step === 'done' && confirmation) {
     return (
-      <div className="mx-auto max-w-lg space-y-6 rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="mx-auto max-w-lg space-y-6 rounded-3xl border border-emerald-200 bg-gradient-to-b from-emerald-50/80 to-white p-6 shadow-sm sm:p-8">
         <div className="flex items-center gap-3 text-emerald-700">
-          <CheckCircle2 className="h-8 w-8" />
+          <CheckCircle2 className="h-9 w-9" />
           <div>
             <h2 className="font-display text-2xl font-semibold">
               Prenotazione confermata
             </h2>
             <p className="text-sm text-emerald-800/80">
-              Salva il codice per il check-in in aeroporto.
+              Conserva il codice per il check-in.
             </p>
           </div>
         </div>
-        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+        <div className="rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-emerald-100">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             Codice prenotazione
           </p>
           <p className="mt-1 font-display text-3xl font-semibold tracking-wide text-slate-900">
             {confirmation.bookingRef || confirmation.bookingId || '—'}
           </p>
-          {confirmation.status ? (
-            <p className="mt-1 text-xs text-slate-500">
-              Stato: {confirmation.status}
-            </p>
-          ) : null}
         </div>
-        {draft ? (
-          <p className="text-sm text-slate-600">
-            {draft.origin} → {draft.destination}
-            {draft.airline ? ` · ${draft.airline}` : ''}
-          </p>
-        ) : null}
-        <Button asChild className="w-full rounded-xl">
+        <Button asChild className="w-full rounded-xl bg-[#0770e3]">
           <Link href="/prenota/voli">Nuova ricerca</Link>
         </Button>
       </div>
     );
   }
 
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-5">
         <Link
           href="/prenota/voli"
@@ -453,240 +660,284 @@ export function FlightCheckoutClient({
         </Link>
 
         {step === 'details' ? (
-          <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div>
-              <h2 className="font-display text-xl font-semibold text-slate-900">
-                Dati passeggeri
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-[#052e6b] to-[#0770e3] px-5 py-4 text-white sm:px-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
+                Passo 1 di 2
+              </p>
+              <h2 className="mt-0.5 font-display text-xl font-semibold">
+                Passeggeri e contatto
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Come sul documento di viaggio. Poi procedi al pagamento.
+              <p className="mt-1 text-sm text-white/75">
+                Dati come sul documento di viaggio, poi pagamento sicuro.
               </p>
             </div>
 
-            {verifying ? (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin text-[#0770e3]" />
-                Verifica disponibilità e prezzo…
-              </div>
-            ) : null}
+            <div className="space-y-6 p-5 sm:p-6">
+              {verifying ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0770e3]" />
+                  Verifica disponibilità e prezzo…
+                </div>
+              ) : null}
 
-            {verify?.priceChanged ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                <p className="font-semibold">Il prezzo è cambiato</p>
-                <p className="mt-1">
-                  {verify.previousPrice != null ? (
-                    <>
-                      <span className="line-through opacity-70">
-                        {formatMoney(verify.previousPrice, displayCurrency)}
-                      </span>
-                      {' → '}
-                    </>
-                  ) : null}
-                  <span className="font-semibold">
-                    {formatMoney(displayPrice, displayCurrency)}
-                  </span>
-                </p>
-                <label className="mt-3 flex items-center gap-2 text-xs font-medium">
-                  <input
-                    type="checkbox"
-                    checked={acceptedPriceChange}
-                    onChange={(e) => setAcceptedPriceChange(e.target.checked)}
-                  />
-                  Accetto il nuovo prezzo e continuo
-                </label>
-              </div>
-            ) : null}
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1.5 sm:col-span-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Email contatto
-                </span>
-                <Input
-                  type="email"
-                  value={contact.email}
-                  onChange={(e) =>
-                    setContact((c) => ({ ...c, email: e.target.value }))
-                  }
-                  className="h-11 rounded-xl"
-                />
-              </label>
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Nome contatto
-                </span>
-                <Input
-                  value={contact.firstName}
-                  onChange={(e) =>
-                    setContact((c) => ({ ...c, firstName: e.target.value }))
-                  }
-                  className="h-11 rounded-xl"
-                />
-              </label>
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Cognome contatto
-                </span>
-                <Input
-                  value={contact.lastName}
-                  onChange={(e) =>
-                    setContact((c) => ({ ...c, lastName: e.target.value }))
-                  }
-                  className="h-11 rounded-xl"
-                />
-              </label>
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Prefisso
-                </span>
-                <Input
-                  value={contact.phoneCountryCode}
-                  onChange={(e) =>
-                    setContact((c) => ({
-                      ...c,
-                      phoneCountryCode: e.target.value,
-                    }))
-                  }
-                  className="h-11 rounded-xl"
-                  placeholder="39"
-                />
-              </label>
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Telefono
-                </span>
-                <Input
-                  value={contact.phoneNumber}
-                  onChange={(e) =>
-                    setContact((c) => ({ ...c, phoneNumber: e.target.value }))
-                  }
-                  className="h-11 rounded-xl"
-                  placeholder="3331234567"
-                />
-              </label>
-            </div>
-
-            {passengers.map((p, idx) => (
-              <div
-                key={idx}
-                className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4"
-              >
-                <p className="text-sm font-semibold text-slate-800">
-                  Passeggero {idx + 1}
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Input
-                    placeholder="Nome"
-                    value={p.firstName}
-                    onChange={(e) =>
-                      updatePassenger(idx, { firstName: e.target.value })
-                    }
-                    className="h-11 rounded-xl bg-white"
-                  />
-                  <Input
-                    placeholder="Cognome"
-                    value={p.lastName}
-                    onChange={(e) =>
-                      updatePassenger(idx, { lastName: e.target.value })
-                    }
-                    className="h-11 rounded-xl bg-white"
-                  />
-                  <label className="space-y-1">
-                    <span className="text-[11px] text-slate-500">Nascita</span>
-                    <Input
-                      type="date"
-                      value={p.birthday}
-                      onChange={(e) =>
-                        updatePassenger(idx, { birthday: e.target.value })
-                      }
-                      className="h-11 rounded-xl bg-white"
+              {verify?.priceChanged ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="font-semibold">Il prezzo è cambiato</p>
+                  <p className="mt-1">
+                    {verify.previousPrice != null ? (
+                      <>
+                        <span className="line-through opacity-70">
+                          {formatMoney(verify.previousPrice, displayCurrency)}
+                        </span>
+                        {' → '}
+                      </>
+                    ) : null}
+                    <span className="font-semibold">
+                      {formatMoney(displayPrice, displayCurrency)}
+                    </span>
+                  </p>
+                  <label className="mt-3 flex items-center gap-2 text-xs font-medium">
+                    <input
+                      type="checkbox"
+                      checked={acceptedPriceChange}
+                      onChange={(e) => setAcceptedPriceChange(e.target.checked)}
                     />
+                    Accetto il nuovo prezzo e continuo
                   </label>
-                  <label className="space-y-1">
-                    <span className="text-[11px] text-slate-500">Genere</span>
-                    <select
-                      value={p.gender}
-                      onChange={(e) =>
-                        updatePassenger(idx, {
-                          gender: e.target.value as 'M' | 'F',
-                        })
-                      }
-                      className="flex h-11 w-full rounded-xl border border-input bg-white px-3 text-sm"
-                    >
-                      <option value="M">Maschio</option>
-                      <option value="F">Femmina</option>
-                    </select>
-                  </label>
-                  <Input
-                    placeholder="Nazionalità (IT)"
-                    value={p.nationality}
-                    maxLength={2}
-                    onChange={(e) =>
-                      updatePassenger(idx, {
-                        nationality: e.target.value.toUpperCase(),
-                      })
-                    }
-                    className="h-11 rounded-xl bg-white"
-                  />
-                  <Input
-                    placeholder="N. documento"
-                    value={p.documentNumber}
-                    onChange={(e) =>
-                      updatePassenger(idx, { documentNumber: e.target.value })
-                    }
-                    className="h-11 rounded-xl bg-white"
-                  />
-                  <Input
-                    placeholder="Paese emissione (IT)"
-                    value={p.documentIssueCountry}
-                    maxLength={2}
-                    onChange={(e) =>
-                      updatePassenger(idx, {
-                        documentIssueCountry: e.target.value.toUpperCase(),
-                      })
-                    }
-                    className="h-11 rounded-xl bg-white"
-                  />
-                  <label className="space-y-1">
-                    <span className="text-[11px] text-slate-500">
-                      Scadenza documento
+                </div>
+              ) : null}
+
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-slate-900">Contatto</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1.5 sm:col-span-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Email
                     </span>
                     <Input
-                      type="date"
-                      value={p.documentExpiry}
+                      type="email"
+                      value={contact.email}
                       onChange={(e) =>
-                        updatePassenger(idx, { documentExpiry: e.target.value })
+                        setContact((c) => ({ ...c, email: e.target.value }))
                       }
-                      className="h-11 rounded-xl bg-white"
+                      className="h-12 rounded-xl"
+                      placeholder="nome@email.com"
+                    />
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Nome
+                    </span>
+                    <Input
+                      value={contact.firstName}
+                      onChange={(e) =>
+                        setContact((c) => ({ ...c, firstName: e.target.value }))
+                      }
+                      className="h-12 rounded-xl"
+                    />
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Cognome
+                    </span>
+                    <Input
+                      value={contact.lastName}
+                      onChange={(e) =>
+                        setContact((c) => ({ ...c, lastName: e.target.value }))
+                      }
+                      className="h-12 rounded-xl"
+                    />
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Prefisso
+                    </span>
+                    <Input
+                      value={contact.phoneCountryCode}
+                      onChange={(e) =>
+                        setContact((c) => ({
+                          ...c,
+                          phoneCountryCode: e.target.value,
+                        }))
+                      }
+                      className="h-12 rounded-xl"
+                      placeholder="39"
+                    />
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Telefono
+                    </span>
+                    <Input
+                      value={contact.phoneNumber}
+                      onChange={(e) =>
+                        setContact((c) => ({ ...c, phoneNumber: e.target.value }))
+                      }
+                      className="h-12 rounded-xl"
+                      placeholder="3331234567"
                     />
                   </label>
                 </div>
-              </div>
-            ))}
+              </section>
 
-            <Button
-              type="button"
-              disabled={verifying || submitting}
-              onClick={() => void startPrebook()}
-              className="h-12 w-full rounded-xl bg-[#0770e3] text-base font-semibold hover:bg-[#0558b8]"
-            >
-              {submitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Continua al pagamento
-            </Button>
+              {passengers.map((p, idx) => (
+                <section
+                  key={idx}
+                  className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Passeggero {idx + 1}
+                    </h3>
+                    <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
+                      Adulto
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <label className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Titolo
+                      </span>
+                      <select
+                        value={p.title}
+                        onChange={(e) =>
+                          updatePassenger(idx, {
+                            title: e.target.value as Title,
+                          })
+                        }
+                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
+                      >
+                        {TITLES.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Nome
+                      </span>
+                      <Input
+                        value={p.firstName}
+                        onChange={(e) =>
+                          updatePassenger(idx, { firstName: e.target.value })
+                        }
+                        className="h-12 rounded-xl bg-white"
+                      />
+                    </label>
+                    <label className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Cognome
+                      </span>
+                      <Input
+                        value={p.lastName}
+                        onChange={(e) =>
+                          updatePassenger(idx, { lastName: e.target.value })
+                        }
+                        className="h-12 rounded-xl bg-white"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <DatePickerField
+                      label="Data di nascita"
+                      value={p.birthday}
+                      onChange={(iso) => updatePassenger(idx, { birthday: iso })}
+                      fromYear={1920}
+                      toYear={new Date().getFullYear() - 12}
+                      disabledAfter={subYears(new Date(), 12)}
+                    />
+                    <CountrySelect
+                      label="Nazionalità"
+                      value={p.nationality}
+                      onChange={(code) =>
+                        updatePassenger(idx, { nationality: code })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Documento
+                      </span>
+                      <select
+                        value={p.documentType}
+                        onChange={(e) =>
+                          updatePassenger(idx, { documentType: e.target.value })
+                        }
+                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
+                      >
+                        <option value="passport">Passaporto</option>
+                        <option value="id_card">Carta d’identità</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Numero documento
+                      </span>
+                      <Input
+                        value={p.documentNumber}
+                        onChange={(e) =>
+                          updatePassenger(idx, {
+                            documentNumber: e.target.value,
+                          })
+                        }
+                        className="h-12 rounded-xl bg-white"
+                      />
+                    </label>
+                    <CountrySelect
+                      label="Paese di emissione"
+                      value={p.documentIssueCountry}
+                      onChange={(code) =>
+                        updatePassenger(idx, { documentIssueCountry: code })
+                      }
+                    />
+                    <DatePickerField
+                      label="Scadenza documento"
+                      value={p.documentExpiry}
+                      onChange={(iso) =>
+                        updatePassenger(idx, { documentExpiry: iso })
+                      }
+                      fromYear={new Date().getFullYear()}
+                      toYear={new Date().getFullYear() + 20}
+                      disabledBefore={today}
+                    />
+                  </div>
+                </section>
+              ))}
+
+              <Button
+                type="button"
+                disabled={verifying || submitting}
+                onClick={() => void startPrebook()}
+                className="h-12 w-full rounded-xl bg-[#0770e3] text-base font-semibold hover:bg-[#0558b8]"
+              >
+                {submitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Continua al pagamento
+              </Button>
+            </div>
           </div>
         ) : null}
 
-        {step === 'payment' && payment && stripePromise ? (
-          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div>
-              <h2 className="font-display text-xl font-semibold text-slate-900">
+        {step === 'payment' && payment ? (
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-[#052e6b] to-[#0770e3] px-5 py-4 text-white sm:px-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
+                Passo 2 di 2
+              </p>
+              <h2 className="mt-0.5 font-display text-xl font-semibold">
                 Pagamento
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-white/75">
                 Totale{' '}
-                <span className="font-semibold text-slate-800">
+                <span className="font-semibold text-white">
                   {formatMoney(
                     payment.price ?? displayPrice,
                     payment.currency ?? displayCurrency
@@ -694,75 +945,67 @@ export function FlightCheckoutClient({
                 </span>
               </p>
             </div>
-            <Elements
-              stripe={stripePromise}
-              options={{
-                clientSecret: payment.secretKey,
-                appearance: {
-                  theme: 'stripe',
-                  variables: {
-                    colorPrimary: '#0770e3',
-                    borderRadius: '12px',
-                  },
-                },
-              }}
-            >
-              <PaymentStep onPaid={finalizeBooking} />
-            </Elements>
-            {submitting ? (
-              <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Conferma prenotazione in corso…
-              </p>
-            ) : null}
+            <div className="space-y-4 p-5 sm:p-6">
+              {payment.paymentMode === 'stripe_elements' &&
+              payment.publishableKey &&
+              stripePromise ? (
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret: payment.secretKey,
+                    appearance: {
+                      theme: 'stripe',
+                      variables: {
+                        colorPrimary: '#0770e3',
+                        borderRadius: '12px',
+                      },
+                    },
+                  }}
+                >
+                  <PaymentStep
+                    onPaid={() =>
+                      finalizeBooking(payment.prebookId, payment.transactionId)
+                    }
+                  />
+                </Elements>
+              ) : paymentReturnUrl ? (
+                <LiteApiPaymentWidget
+                  key={payment.secretKey}
+                  secretKey={payment.secretKey}
+                  paymentEnv={payment.paymentEnv}
+                  returnUrl={paymentReturnUrl}
+                />
+              ) : null}
+              {submitting ? (
+                <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Conferma prenotazione in corso…
+                </p>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>
 
-      {/* Summary sidebar */}
       {draft ? (
-        <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Riepilogo volo
-          </p>
-          <div className="mt-3 flex items-center gap-2">
+        <aside className="h-fit space-y-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+          <div className="flex items-center gap-2">
             <Plane className="h-4 w-4 text-[#0770e3]" />
-            <p className="text-sm font-semibold text-slate-900">
-              {draft.airline || draft.airlineCode || 'Volo'}
-              {draft.flightNumber ? ` · ${draft.flightNumber}` : ''}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Riepilogo
             </p>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="font-display text-2xl font-semibold tabular-nums">
-                {formatTime(draft.departureAt)}
-              </p>
-              <p className="text-xs font-semibold text-slate-500">
-                {draft.origin}
-              </p>
+
+          <LegSummary title="Andata" leg={draft.outbound} />
+          {draft.returnLeg ? (
+            <LegSummary title="Ritorno" leg={draft.returnLeg} />
+          ) : draft.tripType === 'roundtrip' ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Manca il volo di ritorno — torna ai risultati e completalo.
             </div>
-            <div className="h-px flex-1 bg-slate-200" />
-            <div className="text-right">
-              <p className="font-display text-2xl font-semibold tabular-nums">
-                {formatTime(draft.arrivalAt)}
-              </p>
-              <p className="text-xs font-semibold text-slate-500">
-                {draft.destination}
-              </p>
-            </div>
-          </div>
-          {draft.departureAt ? (
-            <p className="mt-3 text-xs text-slate-500">
-              {format(parseISO(draft.departureAt.slice(0, 10)), 'EEEE d MMMM yyyy', {
-                locale: it,
-              })}
-            </p>
           ) : null}
-          <div
-            className={cn(
-              'mt-5 rounded-2xl bg-[#052e6b] px-4 py-3 text-white'
-            )}
-          >
+
+          <div className="rounded-2xl bg-[#052e6b] px-4 py-3 text-white">
             <p className="text-[11px] uppercase tracking-wider text-white/70">
               Totale
             </p>
@@ -770,7 +1013,9 @@ export function FlightCheckoutClient({
               {formatMoney(displayPrice, displayCurrency)}
             </p>
             <p className="text-[11px] text-white/60">
-              {draft.adults} {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
+              {draft.adults}{' '}
+              {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
+              {draft.tripType === 'roundtrip' ? ' · A/R' : ' · solo andata'}
             </p>
           </div>
         </aside>
