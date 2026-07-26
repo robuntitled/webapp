@@ -93,8 +93,6 @@ const CITY_COUNTRY: Record<string, string> = {
   malaga: 'ES',
   ibiza: 'ES',
   palma: 'ES',
-  atene: 'GR',
-  athens: 'GR',
   santorini: 'GR',
   mykonos: 'GR',
 };
