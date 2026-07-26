@@ -1,10 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { addDays, format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
+  ArrowDownWideNarrow,
   ArrowRightLeft,
+  Check,
+  ChevronDown,
   Clock3,
   Loader2,
   Plane,
@@ -15,13 +19,72 @@ import { toast } from 'sonner';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   placeDisplayValue,
   resolvePlaceExact,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
+import { saveFlightCheckoutDraft } from '@/lib/travel/flight-checkout-draft';
 import { cn } from '@/lib/utils';
+
+type FlightSort = 'best' | 'cheapest' | 'fastest' | 'departure';
+
+const SORT_OPTIONS: Array<{ id: FlightSort; label: string }> = [
+  { id: 'best', label: 'Il migliore' },
+  { id: 'cheapest', label: 'Dal più economico' },
+  { id: 'fastest', label: 'Dal più veloce' },
+  { id: 'departure', label: 'Andata: orario di partenza' },
+];
+
+function departureTs(iso?: string | null): number {
+  if (!iso) return Number.POSITIVE_INFINITY;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : Number.POSITIVE_INFINITY;
+}
+
+function bestScore(o: FlightOfferView, minPrice: number, maxPrice: number): number {
+  const priceNorm =
+    maxPrice > minPrice ? (o.price - minPrice) / (maxPrice - minPrice) : 0;
+  const duration = o.durationMinutes ?? 24 * 60;
+  const durationNorm = Math.min(duration / (12 * 60), 1);
+  const stopsNorm = Math.min((o.stops ?? 0) / 2, 1);
+  return priceNorm * 0.5 + durationNorm * 0.35 + stopsNorm * 0.15;
+}
+
+function sortOffers(list: FlightOfferView[], sort: FlightSort): FlightOfferView[] {
+  const copy = [...list];
+  if (sort === 'cheapest') {
+    return copy.sort((a, b) => a.price - b.price);
+  }
+  if (sort === 'fastest') {
+    return copy.sort(
+      (a, b) =>
+        (a.durationMinutes ?? 99999) - (b.durationMinutes ?? 99999) ||
+        a.price - b.price
+    );
+  }
+  if (sort === 'departure') {
+    return copy.sort(
+      (a, b) => departureTs(a.departureAt) - departureTs(b.departureAt) || a.price - b.price
+    );
+  }
+  // best
+  const prices = copy.map((o) => o.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  return copy.sort(
+    (a, b) =>
+      bestScore(a, minPrice, maxPrice) - bestScore(b, minPrice, maxPrice) ||
+      a.price - b.price
+  );
+}
 
 export type FlightOfferView = {
   offerId: string;
@@ -131,6 +194,7 @@ export function FlightSearchPanel({
   autoSearch = true,
   className,
 }: FlightSearchPanelProps) {
+  const router = useRouter();
   const dateDefaults = useMemo(() => {
     const start = defaultStartDate
       ? parseISO(defaultStartDate)
@@ -161,8 +225,17 @@ export function FlightSearchPanel({
   const [adults, setAdults] = useState(defaultAdults);
   const [loading, setLoading] = useState(false);
   const [offers, setOffers] = useState<FlightOfferView[] | null>(null);
+  const [sort, setSort] = useState<FlightSort>('best');
   const [message, setMessage] = useState<string | null>(null);
   const [originsSearched, setOriginsSearched] = useState<string[]>([]);
+
+  const sortedOffers = useMemo(
+    () => (offers ? sortOffers(offers, sort) : null),
+    [offers, sort]
+  );
+
+  const sortLabel =
+    SORT_OPTIONS.find((o) => o.id === sort)?.label ?? 'Il migliore';
 
   const swap = () => {
     setOriginQuery(destinationQuery);
@@ -368,7 +441,7 @@ export function FlightSearchPanel({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-2">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-700">
             {originLabel} → {destLabel}
@@ -391,9 +464,46 @@ export function FlightSearchPanel({
               : null}
           </p>
         </div>
-        {offers && (
-          <p className="text-xs font-medium text-slate-500">{offers.length} offerte</p>
-        )}
+
+        {offers && offers.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-medium text-slate-500">
+              {offers.length} offerte
+            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <ArrowDownWideNarrow className="h-3.5 w-3.5 text-[#0770e3]" />
+                  {sortLabel}
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-[240px] rounded-xl border-slate-700 bg-[#2a2f36] p-1.5 text-white shadow-2xl"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.id}
+                    onClick={() => setSort(opt.id)}
+                    className={cn(
+                      'cursor-pointer rounded-lg px-3 py-2.5 text-sm text-white focus:bg-[#0770e3] focus:text-white',
+                      sort === opt.id && 'bg-white/10'
+                    )}
+                  >
+                    <span className="flex w-4 shrink-0 items-center justify-center">
+                      {sort === opt.id ? <Check className="h-4 w-4" /> : null}
+                    </span>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : null}
       </div>
 
       {loading && !offers && (
@@ -409,9 +519,9 @@ export function FlightSearchPanel({
         </div>
       )}
 
-      {offers && offers.length > 0 && (
+      {sortedOffers && sortedOffers.length > 0 && (
         <ul className="space-y-3">
-          {offers.map((o) => (
+          {sortedOffers.map((o) => (
             <li
               key={o.offerId}
               className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-[#0770e3]/40 hover:shadow-md"
@@ -472,12 +582,28 @@ export function FlightSearchPanel({
                   <Button
                     type="button"
                     className="rounded-xl bg-[#0770e3] px-5 font-semibold hover:bg-[#0558b8]"
-                    onClick={() =>
-                      toast.message('Prenotazione in preparazione', {
-                        description:
-                          'Presto potrai completare la prenotazione del volo direttamente qui.',
-                      })
-                    }
+                    onClick={() => {
+                      saveFlightCheckoutDraft({
+                        offerId: o.offerId,
+                        price: o.price,
+                        currency: o.currency,
+                        origin: o.origin,
+                        destination: o.destination,
+                        airline: o.airline,
+                        airlineCode: o.airlineCode,
+                        airlineLogo: o.airlineLogo,
+                        departureAt: o.departureAt,
+                        arrivalAt: o.arrivalAt,
+                        durationMinutes: o.durationMinutes,
+                        stops: o.stops,
+                        cabinClass: o.cabinClass,
+                        flightNumber: o.flightNumber,
+                        adults,
+                        tripType,
+                        createdAt: Date.now(),
+                      });
+                      router.push('/prenota/voli/checkout');
+                    }}
                   >
                     Seleziona
                   </Button>
