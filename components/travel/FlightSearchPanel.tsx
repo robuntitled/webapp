@@ -267,8 +267,8 @@ export function FlightSearchPanel({
 
   return (
     <div className={cn('space-y-6', className)}>
-      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#052e6b] via-[#0b4db5] to-[#0770e3] p-1 shadow-xl shadow-blue-900/20">
-        <div className="space-y-4 rounded-[1.35rem] bg-white p-4 sm:p-5">
+      <div className="rounded-3xl bg-gradient-to-br from-[#052e6b] via-[#0b4db5] to-[#0770e3] p-1 shadow-xl shadow-blue-900/20">
+        <div className="relative z-10 space-y-4 overflow-visible rounded-[1.35rem] bg-white p-4 sm:p-5">
           <div className="flex flex-wrap gap-2">
             {(
               [

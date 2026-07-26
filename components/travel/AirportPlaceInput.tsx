@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Building2, Globe2, MapPin, Plane } from 'lucide-react';
 import {
   placeDisplayValue,
@@ -27,6 +28,8 @@ function KindIcon({ kind }: { kind: PlaceSuggestion['kind'] }) {
   return <Building2 className="h-4 w-4 text-slate-500" />;
 }
 
+type MenuBox = { top: number; left: number; width: number };
+
 export function AirportPlaceInput({
   label,
   value,
@@ -39,18 +42,56 @@ export function AirportPlaceInput({
 }: AirportPlaceInputProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
+  const [menuBox, setMenuBox] = useState<MenuBox | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const suggestions = useMemo(() => searchPlaceSuggestions(value, 12), [value]);
+  const showList = open && value.trim().length >= 2 && suggestions.length > 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setHighlight(0);
   }, [value]);
 
+  const updateMenuPosition = () => {
+    const el = inputWrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setMenuBox({
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: Math.max(rect.width, 280),
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!showList) {
+      setMenuBox(null);
+      return;
+    }
+    updateMenuPosition();
+    const onReposition = () => updateMenuPosition();
+    window.addEventListener('resize', onReposition);
+    window.addEventListener('scroll', onReposition, true);
+    return () => {
+      window.removeEventListener('resize', onReposition);
+      window.removeEventListener('scroll', onReposition, true);
+    };
+  }, [showList, value, suggestions.length]);
+
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
@@ -62,14 +103,68 @@ export function AirportPlaceInput({
     setOpen(false);
   };
 
-  const showList = open && value.trim().length >= 2 && suggestions.length > 0;
+  const menu =
+    mounted && showList && menuBox
+      ? createPortal(
+          <ul
+            ref={menuRef}
+            id={listId}
+            role="listbox"
+            style={{
+              position: 'fixed',
+              top: menuBox.top,
+              left: menuBox.left,
+              width: menuBox.width,
+              zIndex: 9999,
+            }}
+            className="max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-2xl shadow-slate-900/20"
+          >
+            {suggestions.map((place, idx) => (
+              <li key={place.id} role="option" aria-selected={idx === highlight}>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-start gap-3 px-3 py-2.5 text-left transition',
+                    idx === highlight ? 'bg-[#0770e3]/8' : 'hover:bg-slate-50'
+                  )}
+                  onMouseEnter={() => setHighlight(idx)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(place)}
+                >
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                    <KindIcon kind={place.kind} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-semibold text-slate-900">
+                        {place.kind === 'airport'
+                          ? `${place.label} (${place.code})`
+                          : place.label}
+                      </span>
+                      {place.kind !== 'country' ? (
+                        <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-slate-600">
+                          {place.code}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] text-slate-500">
+                      {place.sublabel}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body
+        )
+      : null;
 
   return (
     <div ref={rootRef} className={cn('relative space-y-1.5', className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         {label}
       </span>
-      <div className="relative">
+      <div ref={inputWrapRef} className="relative">
         <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           value={value}
@@ -118,49 +213,7 @@ export function AirportPlaceInput({
           }}
         />
       </div>
-
-      {showList ? (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-slate-900/10"
-        >
-          {suggestions.map((place, idx) => (
-            <li key={place.id} role="option" aria-selected={idx === highlight}>
-              <button
-                type="button"
-                className={cn(
-                  'flex w-full items-start gap-3 px-3 py-2.5 text-left transition',
-                  idx === highlight ? 'bg-[#0770e3]/8' : 'hover:bg-slate-50'
-                )}
-                onMouseEnter={() => setHighlight(idx)}
-                onClick={() => pick(place)}
-              >
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                  <KindIcon kind={place.kind} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-slate-900">
-                      {place.kind === 'airport'
-                        ? `${place.label} (${place.code})`
-                        : place.label}
-                    </span>
-                    {place.kind !== 'country' ? (
-                      <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-slate-600">
-                        {place.code}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-slate-500">
-                    {place.sublabel}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {menu}
     </div>
   );
 }
