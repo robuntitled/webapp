@@ -1,11 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  loadSearchFormCache,
+  saveSearchFormCache,
+  type SearchCacheKey,
+} from '@/lib/travel/search-form-cache';
 
 type PlaceHit = {
   id: string;
@@ -31,20 +36,54 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   florence: { lat: 43.7696, lng: 11.2558 },
 };
 
+type PlacesFormCache = {
+  city: string;
+  query: string;
+};
+
 type PrenotaPlacesClientProps = {
   category: 'attraction' | 'activity';
   title: string;
 };
 
 export function PrenotaPlacesClient({ category, title }: PrenotaPlacesClientProps) {
-  const [city, setCity] = useState('Roma');
+  const cacheKey: SearchCacheKey =
+    category === 'attraction' ? 'attractions' : 'activities';
+  const [cacheReady, setCacheReady] = useState(false);
+  const [city, setCity] = useState('');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<PlaceHit[] | null>(null);
 
+  useEffect(() => {
+    const cached = loadSearchFormCache<PlacesFormCache>(cacheKey);
+    if (cached) {
+      setCity(cached.city ?? '');
+      setQuery(cached.query ?? '');
+    }
+    setCacheReady(true);
+  }, [cacheKey]);
+
+  useEffect(() => {
+    if (!cacheReady) return;
+    const payload: PlacesFormCache = { city, query };
+    saveSearchFormCache(cacheKey, payload);
+    const onHide = () => saveSearchFormCache(cacheKey, payload);
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, [cacheKey, cacheReady, city, query]);
+
   const search = async () => {
+    if (!city.trim()) {
+      toast.error('Inserisci una città');
+      return;
+    }
     const key = city.trim().toLowerCase();
-    const coords = CITY_COORDS[key] ?? CITY_COORDS.roma;
+    const coords = CITY_COORDS[key];
+    if (!coords) {
+      toast.error('Città non riconosciuta. Prova Roma, Milano, Parigi, Londra…');
+      return;
+    }
     setLoading(true);
     setResults(null);
     try {
@@ -103,7 +142,7 @@ export function PrenotaPlacesClient({ category, title }: PrenotaPlacesClientProp
           <Input
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            placeholder="Roma"
+            placeholder="Città…"
             className="h-11 rounded-xl"
           />
         </label>

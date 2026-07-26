@@ -10,12 +10,12 @@ type TripFlightBookSearchProps = {
   adults?: number;
 };
 
-/** Wrapper trip-page: stessa UI OTA del hub Prenota. */
+/** Wrapper trip-page: stessa UI OTA del hub Prenota. Cache separata; niente auto-search. */
 export function TripFlightBookSearch({
   destination,
   startDate,
   endDate,
-  defaultOriginIata = 'ROM',
+  defaultOriginIata = '',
   adults = 1,
 }: TripFlightBookSearchProps) {
   return (
@@ -25,7 +25,8 @@ export function TripFlightBookSearch({
       defaultStartDate={startDate}
       defaultEndDate={endDate}
       defaultAdults={adults}
-      autoSearch
+      autoSearch={false}
+      cacheKey="trip-flights"
     />
   );
 }

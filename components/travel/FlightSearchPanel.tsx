@@ -32,6 +32,11 @@ import {
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
 import { saveFlightCheckoutDraft } from '@/lib/travel/flight-checkout-draft';
+import {
+  loadSearchFormCache,
+  saveSearchFormCache,
+  type SearchCacheKey,
+} from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
 
 type FlightSort = 'best' | 'cheapest' | 'fastest' | 'departure';
@@ -133,8 +138,23 @@ type FlightSearchPanelProps = {
   defaultStartDate?: string;
   defaultEndDate?: string;
   defaultAdults?: number;
+  /** Default false: niente ricerca automatica */
   autoSearch?: boolean;
+  /** sessionStorage key; null = non salvare */
+  cacheKey?: SearchCacheKey | null;
   className?: string;
+};
+
+type FlightFormCache = {
+  tripType: TripType;
+  originQuery: string;
+  destinationQuery: string;
+  originPlace: PlaceSuggestion | null;
+  destinationPlace: PlaceSuggestion | null;
+  startDate: string;
+  endDate: string;
+  adults: number;
+  sort: FlightSort;
 };
 
 function formatTime(iso?: string | null): string {
@@ -208,42 +228,29 @@ function ensurePlace(query: string, selected: PlaceSuggestion | null): PlaceSugg
 }
 
 export function FlightSearchPanel({
-  defaultOrigin = 'Milano',
-  defaultDestination = 'Londra',
-  defaultStartDate,
-  defaultEndDate,
+  defaultOrigin = '',
+  defaultDestination = '',
+  defaultStartDate = '',
+  defaultEndDate = '',
   defaultAdults = 1,
-  autoSearch = true,
+  autoSearch = false,
+  cacheKey = 'flights',
   className,
 }: FlightSearchPanelProps) {
   const router = useRouter();
-  const dateDefaults = useMemo(() => {
-    const start = defaultStartDate
-      ? parseISO(defaultStartDate)
-      : addDays(new Date(), 21);
-    const end = defaultEndDate ? parseISO(defaultEndDate) : addDays(start, 7);
-    return {
-      startDate: format(start, 'yyyy-MM-dd'),
-      endDate: format(end, 'yyyy-MM-dd'),
-    };
-  }, [defaultStartDate, defaultEndDate]);
-
-  const initialOrigin = resolvePlaceExact(defaultOrigin);
-  const initialDest = resolvePlaceExact(defaultDestination);
+  const [cacheReady, setCacheReady] = useState(cacheKey == null);
 
   const [tripType, setTripType] = useState<TripType>('oneway');
-  const [originQuery, setOriginQuery] = useState(
-    initialOrigin ? placeDisplayValue(initialOrigin) : defaultOrigin
+  const [originQuery, setOriginQuery] = useState(defaultOrigin);
+  const [destinationQuery, setDestinationQuery] = useState(defaultDestination);
+  const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(() =>
+    defaultOrigin ? resolvePlaceExact(defaultOrigin) : null
   );
-  const [destinationQuery, setDestinationQuery] = useState(
-    initialDest ? placeDisplayValue(initialDest) : defaultDestination
-  );
-  const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(initialOrigin);
   const [destinationPlace, setDestinationPlace] = useState<PlaceSuggestion | null>(
-    initialDest
+    () => (defaultDestination ? resolvePlaceExact(defaultDestination) : null)
   );
-  const [startDate, setStartDate] = useState(dateDefaults.startDate);
-  const [endDate, setEndDate] = useState(dateDefaults.endDate);
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
   const [adults, setAdults] = useState(defaultAdults);
   const [loading, setLoading] = useState(false);
   const [offers, setOffers] = useState<FlightOfferView[] | null>(null);
@@ -257,6 +264,57 @@ export function FlightSearchPanel({
   );
   const [selectedOutboundOffer, setSelectedOutboundOffer] =
     useState<FlightOfferView | null>(null);
+
+  useEffect(() => {
+    if (!cacheKey) {
+      setCacheReady(true);
+      return;
+    }
+    const cached = loadSearchFormCache<FlightFormCache>(cacheKey);
+    if (cached) {
+      setTripType(cached.tripType ?? 'oneway');
+      setOriginQuery(cached.originQuery ?? '');
+      setDestinationQuery(cached.destinationQuery ?? '');
+      setOriginPlace(cached.originPlace ?? null);
+      setDestinationPlace(cached.destinationPlace ?? null);
+      setStartDate(cached.startDate ?? '');
+      setEndDate(cached.endDate ?? '');
+      setAdults(cached.adults ?? 1);
+      setSort(cached.sort ?? 'best');
+    }
+    setCacheReady(true);
+  }, [cacheKey]);
+
+  useEffect(() => {
+    if (!cacheKey || !cacheReady) return;
+    const payload: FlightFormCache = {
+      tripType,
+      originQuery,
+      destinationQuery,
+      originPlace,
+      destinationPlace,
+      startDate,
+      endDate,
+      adults,
+      sort,
+    };
+    saveSearchFormCache(cacheKey, payload);
+    const onHide = () => saveSearchFormCache(cacheKey, payload);
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, [
+    adults,
+    cacheKey,
+    cacheReady,
+    destinationPlace,
+    destinationQuery,
+    endDate,
+    originPlace,
+    originQuery,
+    sort,
+    startDate,
+    tripType,
+  ]);
 
   const sortedOffers = useMemo(() => {
     if (!offers) return null;
@@ -288,7 +346,13 @@ export function FlightSearchPanel({
     setDestinationPlace(originPlace);
   };
 
-  const search = useCallback(async () => {
+  const search = useCallback(async (overrides?: {
+    tripType?: TripType;
+    endDate?: string;
+  }) => {
+    const effectiveTripType = overrides?.tripType ?? tripType;
+    const effectiveEndDate = overrides?.endDate ?? endDate;
+
     const origin = ensurePlace(originQuery, originPlace);
     const destination = ensurePlace(destinationQuery, destinationPlace);
 
@@ -298,6 +362,14 @@ export function FlightSearchPanel({
     }
     if (!destination) {
       toast.error('Seleziona la destinazione dall’elenco suggerito');
+      return;
+    }
+    if (!startDate) {
+      toast.error('Seleziona la data di partenza');
+      return;
+    }
+    if (effectiveTripType === 'roundtrip' && !effectiveEndDate) {
+      toast.error('Seleziona la data di ritorno');
       return;
     }
 
@@ -311,11 +383,13 @@ export function FlightSearchPanel({
     try {
       const params = new URLSearchParams({
         startDate,
-        tripType,
+        tripType: effectiveTripType,
         adults: String(Math.min(9, Math.max(1, adults))),
         currency: 'EUR',
       });
-      if (tripType === 'roundtrip') params.set('endDate', endDate);
+      if (effectiveTripType === 'roundtrip') {
+        params.set('endDate', effectiveEndDate);
+      }
 
       if (destination.kind === 'country' && destination.multiAirport) {
         // hub paese: usa primo aeroporto come destinazione città-codice noto via label
@@ -376,14 +450,29 @@ export function FlightSearchPanel({
   ]);
 
   useEffect(() => {
-    if (autoSearch) void search();
+    if (!cacheReady || !autoSearch) return;
+    if (!originQuery.trim() || !destinationQuery.trim() || !startDate) return;
+    void search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cacheReady]);
 
   const originLabel = originPlace ? placeDisplayValue(originPlace) : originQuery;
   const destLabel = destinationPlace
     ? placeDisplayValue(destinationPlace)
     : destinationQuery;
+
+  const dateSummary = (() => {
+    if (!startDate) return 'Date da scegliere';
+    try {
+      const start = format(parseISO(startDate), 'd MMM yyyy', { locale: it });
+      if (tripType === 'roundtrip' && endDate) {
+        return `${start} – ${format(parseISO(endDate), 'd MMM yyyy', { locale: it })}`;
+      }
+      return start;
+    } catch {
+      return 'Date da scegliere';
+    }
+  })();
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -400,10 +489,31 @@ export function FlightSearchPanel({
                 key={id}
                 type="button"
                 onClick={() => {
+                  if (id === tripType) return;
                   setTripType(id);
                   setPickStep('outbound');
                   setSelectedOutboundKey(null);
                   setSelectedOutboundOffer(null);
+
+                  let nextEnd = endDate;
+                  if (id === 'roundtrip' && !endDate && startDate) {
+                    try {
+                      nextEnd = format(
+                        addDays(parseISO(startDate), 7),
+                        'yyyy-MM-dd'
+                      );
+                      setEndDate(nextEnd);
+                    } catch {
+                      nextEnd = endDate;
+                    }
+                  }
+
+                  // Risultati one-way non vanno usati come A/R: ricarica subito
+                  if (offers !== null) {
+                    setOffers(null);
+                    setMessage(null);
+                    void search({ tripType: id, endDate: nextEnd });
+                  }
                 }}
                 className={cn(
                   'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
@@ -502,13 +612,7 @@ export function FlightSearchPanel({
             </span>
           </p>
           <p className="text-xs text-slate-500">
-            {format(parseISO(startDate), 'd MMM yyyy', { locale: it })}
-            {tripType === 'roundtrip' ? (
-              <>
-                {' – '}
-                {format(parseISO(endDate), 'd MMM yyyy', { locale: it })}
-              </>
-            ) : null}
+            {dateSummary}
             {' · '}
             {adults} {adults === 1 ? 'passeggero' : 'passeggeri'}
             {originsSearched.length > 1

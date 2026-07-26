@@ -142,7 +142,7 @@ export async function prebookFlight(params: {
         phoneNumber: params.contact.phoneNumber.replace(/\s+/g, ''),
       },
       passengers: params.passengers.map((p) => ({
-        title: p.title,
+        title: p.title.trim().toUpperCase(),
         firstName: p.firstName,
         lastName: p.lastName,
         birthday: p.birthday,

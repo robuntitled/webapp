@@ -3,12 +3,5 @@
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 
 export function PrenotaFlightsClient() {
-  return (
-    <FlightSearchPanel
-      defaultOrigin="MIL"
-      defaultDestination="Londra"
-      defaultAdults={1}
-      autoSearch
-    />
-  );
+  return <FlightSearchPanel defaultAdults={1} cacheKey="flights" />;
 }

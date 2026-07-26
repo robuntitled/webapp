@@ -10,7 +10,7 @@ import { LiteApiError } from '@/lib/liteapi/client';
 import { prebookFlight } from '@/lib/liteapi/flight-booking';
 
 const passengerSchema = z.object({
-  title: z.enum(['Mr', 'Mrs', 'Ms', 'Miss', 'Dr']),
+  title: z.enum(['MR', 'MRS', 'MS', 'MISS']),
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

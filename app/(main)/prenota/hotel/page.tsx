@@ -12,9 +12,9 @@ export default async function PrenotaHotelPage() {
   return (
     <PrenotaPageShell
       title="Hotel"
-      subtitle="Cerca hotel per città. Prova Roma o altre destinazioni con date tra 2–4 settimane."
+      subtitle="Cerca hotel per città, paese e date. Compila i campi e premi Cerca."
     >
-      <LiteApiHotelSearch defaultCity="Rome" defaultCountry="IT" defaultAdults={1} />
+      <LiteApiHotelSearch defaultAdults={1} cacheKey="hotels" />
     </PrenotaPageShell>
   );
 }

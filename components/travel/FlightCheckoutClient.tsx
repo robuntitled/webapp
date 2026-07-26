@@ -39,14 +39,13 @@ import {
 import { cn } from '@/lib/utils';
 
 type Step = 'details' | 'payment' | 'done';
-type Title = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr';
+type Title = 'MR' | 'MRS' | 'MS' | 'MISS';
 
 const TITLES: Array<{ id: Title; label: string; gender: 'M' | 'F' }> = [
-  { id: 'Mr', label: 'Sig. (Mr)', gender: 'M' },
-  { id: 'Mrs', label: 'Sig.ra (Mrs)', gender: 'F' },
-  { id: 'Ms', label: 'Ms', gender: 'F' },
-  { id: 'Miss', label: 'Sig.na (Miss)', gender: 'F' },
-  { id: 'Dr', label: 'Dr', gender: 'M' },
+  { id: 'MR', label: 'Sig. (Mr)', gender: 'M' },
+  { id: 'MRS', label: 'Sig.ra (Mrs)', gender: 'F' },
+  { id: 'MS', label: 'Ms', gender: 'F' },
+  { id: 'MISS', label: 'Sig.na (Miss)', gender: 'F' },
 ];
 
 type VerifyState = {
@@ -80,7 +79,7 @@ type ContactForm = {
 
 function emptyPassenger(): PassengerForm {
   return {
-    title: 'Mr',
+    title: 'MR',
     firstName: '',
     lastName: '',
     birthday: '',

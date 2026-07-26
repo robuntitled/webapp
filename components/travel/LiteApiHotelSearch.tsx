@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Image from 'next/image';
-import { addDays, format } from 'date-fns';
 import {
   BedDouble,
   Check,
@@ -18,6 +17,11 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  loadSearchFormCache,
+  saveSearchFormCache,
+  type SearchCacheKey,
+} from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
 
 type HotelOffer = {
@@ -60,8 +64,19 @@ type LiteApiHotelSearchProps = {
   defaultCheckin?: string;
   defaultCheckout?: string;
   defaultAdults?: number;
+  /** sessionStorage key; null = non salvare */
+  cacheKey?: SearchCacheKey | null;
   compact?: boolean;
   className?: string;
+};
+
+type HotelFormCache = {
+  cityName: string;
+  countryCode: string;
+  checkin: string;
+  checkout: string;
+  adults: number;
+  filters: Record<FilterKey, boolean>;
 };
 
 function FilterChip({
@@ -90,27 +105,20 @@ function FilterChip({
 }
 
 export function LiteApiHotelSearch({
-  defaultCity = 'Rome',
-  defaultCountry = 'IT',
-  defaultCheckin,
-  defaultCheckout,
+  defaultCity = '',
+  defaultCountry = '',
+  defaultCheckin = '',
+  defaultCheckout = '',
   defaultAdults = 1,
+  cacheKey = 'hotels',
   compact = false,
   className,
 }: LiteApiHotelSearchProps) {
-  const defaults = useMemo(() => {
-    const inDate = addDays(new Date(), 21);
-    const outDate = addDays(inDate, 4);
-    return {
-      checkin: defaultCheckin || format(inDate, 'yyyy-MM-dd'),
-      checkout: defaultCheckout || format(outDate, 'yyyy-MM-dd'),
-    };
-  }, [defaultCheckin, defaultCheckout]);
-
+  const [cacheReady, setCacheReady] = useState(cacheKey == null);
   const [cityName, setCityName] = useState(defaultCity);
   const [countryCode, setCountryCode] = useState(defaultCountry);
-  const [checkin, setCheckin] = useState(defaults.checkin);
-  const [checkout, setCheckout] = useState(defaults.checkout);
+  const [checkin, setCheckin] = useState(defaultCheckin);
+  const [checkout, setCheckout] = useState(defaultCheckout);
   const [adults, setAdults] = useState(defaultAdults);
   const [filters, setFilters] = useState<Record<FilterKey, boolean>>({
     freeCancel: false,
@@ -122,6 +130,39 @@ export function LiteApiHotelSearch({
   const [loading, setLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelOffer[] | null>(null);
 
+  useEffect(() => {
+    if (!cacheKey) {
+      setCacheReady(true);
+      return;
+    }
+    const cached = loadSearchFormCache<HotelFormCache>(cacheKey);
+    if (cached) {
+      setCityName(cached.cityName ?? '');
+      setCountryCode(cached.countryCode ?? '');
+      setCheckin(cached.checkin ?? '');
+      setCheckout(cached.checkout ?? '');
+      setAdults(cached.adults ?? 1);
+      if (cached.filters) setFilters(cached.filters);
+    }
+    setCacheReady(true);
+  }, [cacheKey]);
+
+  useEffect(() => {
+    if (!cacheKey || !cacheReady) return;
+    const payload: HotelFormCache = {
+      cityName,
+      countryCode,
+      checkin,
+      checkout,
+      adults,
+      filters,
+    };
+    saveSearchFormCache(cacheKey, payload);
+    const onHide = () => saveSearchFormCache(cacheKey, payload);
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, [adults, cacheKey, cacheReady, checkin, checkout, cityName, countryCode, filters]);
+
   const toggle = (key: FilterKey) => {
     setFilters((f) => ({ ...f, [key]: !f[key] }));
   };
@@ -129,6 +170,14 @@ export function LiteApiHotelSearch({
   const search = async () => {
     if (!cityName.trim()) {
       toast.error('Inserisci una città');
+      return;
+    }
+    if (!countryCode) {
+      toast.error('Seleziona un paese');
+      return;
+    }
+    if (!checkin || !checkout) {
+      toast.error('Seleziona check-in e check-out');
       return;
     }
     setLoading(true);
@@ -211,6 +260,7 @@ export function LiteApiHotelSearch({
                 onChange={(e) => setCountryCode(e.target.value)}
                 className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium"
               >
+                <option value="">Paese…</option>
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.label}

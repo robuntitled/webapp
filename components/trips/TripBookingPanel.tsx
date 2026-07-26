@@ -10,7 +10,6 @@ import {
   guessCityFromDestination,
   guessCountryCodeFromDestination,
 } from '@/lib/travel/destination-hints';
-import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import type { ComposerDayRow } from '@/lib/data/composer';
 import { BLOCK_META } from '@/lib/composer/blocks';
 import { cn } from '@/lib/utils';
@@ -167,7 +166,6 @@ export function TripBookingPanel({
             destination={destination}
             startDate={startDate}
             endDate={endDate}
-            defaultOriginIata={defaultOriginIata()}
             adults={Math.min(9, Math.max(1, adults))}
           />
         ) : tab === 'hotel' ? (
@@ -177,6 +175,7 @@ export function TripBookingPanel({
             defaultCheckin={startDate}
             defaultCheckout={endDate}
             defaultAdults={1}
+            cacheKey="trip-hotels"
             compact
           />
         ) : (
