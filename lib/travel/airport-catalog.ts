@@ -128,6 +128,66 @@ const COUNTRIES: CountryDef[] = [
     aliases: ['austria', 'at'],
     airports: ['VIE', 'SZG', 'INN'],
   },
+  {
+    code: 'EG',
+    label: 'Egitto',
+    aliases: ['egitto', 'egypt', 'eg', 'cairo'],
+    airports: ['CAI', 'SSH', 'HRG', 'HBE', 'LXR'],
+  },
+  {
+    code: 'GE',
+    label: 'Georgia',
+    aliases: ['georgia', 'ge', 'tbilisi', 'tbilissi'],
+    airports: ['TBS', 'BUS', 'KUT'],
+  },
+  {
+    code: 'MA',
+    label: 'Marocco',
+    aliases: ['marocco', 'morocco', 'ma', 'marrakech'],
+    airports: ['RAK', 'CMN', 'AGA', 'TNG'],
+  },
+  {
+    code: 'HR',
+    label: 'Croazia',
+    aliases: ['croazia', 'croatia', 'hr'],
+    airports: ['ZAG', 'SPU', 'DBV'],
+  },
+  {
+    code: 'CZ',
+    label: 'Repubblica Ceca',
+    aliases: ['repubblica ceca', 'cechia', 'czech', 'czechia', 'praga', 'prague', 'cz'],
+    airports: ['PRG'],
+  },
+  {
+    code: 'ID',
+    label: 'Indonesia',
+    aliases: ['indonesia', 'id', 'bali'],
+    airports: ['DPS'],
+  },
+  {
+    code: 'AU',
+    label: 'Australia',
+    aliases: ['australia', 'au'],
+    airports: ['SYD', 'MEL'],
+  },
+  {
+    code: 'KR',
+    label: 'Corea del Sud',
+    aliases: ['corea', 'corea del sud', 'south korea', 'korea', 'kr', 'seoul'],
+    airports: ['ICN', 'GMP'],
+  },
+  {
+    code: 'SG',
+    label: 'Singapore',
+    aliases: ['singapore', 'sg'],
+    airports: ['SIN'],
+  },
+  {
+    code: 'MT',
+    label: 'Malta',
+    aliases: ['malta', 'mt'],
+    airports: ['MLA'],
+  },
 ];
 
 const AIRPORTS: AirportDef[] = [
@@ -227,6 +287,29 @@ const AIRPORTS: AirportDef[] = [
   { iata: 'GMP', name: 'Gimpo', city: 'Seoul', cityIata: 'SEL', countryCode: 'KR', countryLabel: 'Corea del Sud' },
   { iata: 'SYD', name: 'Kingsford Smith', city: 'Sydney', countryCode: 'AU', countryLabel: 'Australia' },
   { iata: 'MEL', name: 'Tullamarine', city: 'Melbourne', countryCode: 'AU', countryLabel: 'Australia' },
+  // Egitto
+  { iata: 'CAI', name: 'Cairo Intl', city: 'Il Cairo', countryCode: 'EG', countryLabel: 'Egitto', aliases: ['cairo', 'egitto'] },
+  { iata: 'SSH', name: 'Sharm El Sheikh', city: 'Sharm el-Sheikh', countryCode: 'EG', countryLabel: 'Egitto', aliases: ['sharm'] },
+  { iata: 'HRG', name: 'Hurghada', city: 'Hurghada', countryCode: 'EG', countryLabel: 'Egitto' },
+  { iata: 'HBE', name: 'Borg El Arab', city: 'Alessandria', countryCode: 'EG', countryLabel: 'Egitto', aliases: ['alexandria'] },
+  { iata: 'LXR', name: 'Luxor', city: 'Luxor', countryCode: 'EG', countryLabel: 'Egitto' },
+  // Georgia
+  { iata: 'TBS', name: 'Tbilisi Intl', city: 'Tbilisi', countryCode: 'GE', countryLabel: 'Georgia', aliases: ['tbilissi', 'georgia'] },
+  { iata: 'BUS', name: 'Batumi', city: 'Batumi', countryCode: 'GE', countryLabel: 'Georgia' },
+  { iata: 'KUT', name: 'Kopitnari', city: 'Kutaisi', countryCode: 'GE', countryLabel: 'Georgia', aliases: ['kutaisi'] },
+  // Marocco
+  { iata: 'RAK', name: 'Menara', city: 'Marrakech', countryCode: 'MA', countryLabel: 'Marocco', aliases: ['marrakesh'] },
+  { iata: 'CMN', name: 'Mohammed V', city: 'Casablanca', countryCode: 'MA', countryLabel: 'Marocco' },
+  { iata: 'AGA', name: 'Al Massira', city: 'Agadir', countryCode: 'MA', countryLabel: 'Marocco' },
+  { iata: 'TNG', name: 'Ibn Battouta', city: 'Tangeri', countryCode: 'MA', countryLabel: 'Marocco', aliases: ['tangier'] },
+  // Croazia
+  { iata: 'ZAG', name: 'Franjo Tuđman', city: 'Zagabria', countryCode: 'HR', countryLabel: 'Croazia', aliases: ['zagreb'] },
+  { iata: 'SPU', name: 'Split', city: 'Spalato', countryCode: 'HR', countryLabel: 'Croazia', aliases: ['split'] },
+  { iata: 'DBV', name: 'Dubrovnik', city: 'Dubrovnik', countryCode: 'HR', countryLabel: 'Croazia' },
+  // Repubblica Ceca
+  { iata: 'PRG', name: 'Václav Havel', city: 'Praga', countryCode: 'CZ', countryLabel: 'Repubblica Ceca', aliases: ['prague'] },
+  // Malta
+  { iata: 'MLA', name: 'Malta Intl', city: 'Malta', countryCode: 'MT', countryLabel: 'Malta', aliases: ['la valletta'] },
 ];
 
 function normalize(value: string): string {
