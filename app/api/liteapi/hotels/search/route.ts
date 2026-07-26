@@ -131,7 +131,7 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           error: isAuth
-            ? 'LiteAPI rifiuta la chiave (unauthorized). Su Vercel usa la Sandbox Key PRIVATA (non Public Key, non Production). Poi Redeploy.'
+            ? 'Servizio hotel temporaneamente non disponibile. Verifica la chiave API (sandbox privata) e riprova dopo un redeploy.'
             : e.message,
           configured: true,
           code: isAuth ? 'liteapi_unauthorized' : 'liteapi_error',

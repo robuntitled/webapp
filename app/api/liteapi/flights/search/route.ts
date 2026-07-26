@@ -4,12 +4,17 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { searchFlightRates } from '@/lib/liteapi/flights';
+import { resolveDestinationIata } from '@/lib/travel/iata';
+import { resolveOriginIata } from '@/lib/travel/origin-iata';
+import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
 
 const schema = z.object({
   destination: z.string().trim().min(2).max(120),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   originIata: z.string().trim().min(2).max(40).optional(),
+  originCountry: z.string().trim().min(2).max(40).optional(),
+  tripType: z.enum(['oneway', 'roundtrip']).optional().default('roundtrip'),
   adults: z.coerce.number().int().min(1).max(9).optional(),
   currency: z.string().trim().length(3).optional(),
 });
@@ -18,7 +23,7 @@ export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
-      { error: 'Accedi a NomadLink per cercare voli.', code: 'auth_required' },
+      { error: 'Accedi per cercare voli.', code: 'auth_required' },
       { status: 401 }
     );
   }
@@ -26,7 +31,7 @@ export async function GET(request: Request) {
   if (!isLiteApiConfigured()) {
     return NextResponse.json(
       {
-        error: 'LITEAPI_KEY assente. Aggiungi la chiave Nuitee Connect e fai Redeploy.',
+        error: 'Servizio voli non configurato. Contatta il supporto.',
         configured: false,
         code: 'missing_key',
       },
@@ -40,6 +45,8 @@ export async function GET(request: Request) {
     startDate: searchParams.get('startDate'),
     endDate: searchParams.get('endDate') ?? undefined,
     originIata: searchParams.get('originIata') ?? undefined,
+    originCountry: searchParams.get('originCountry') ?? undefined,
+    tripType: searchParams.get('tripType') ?? undefined,
     adults: searchParams.get('adults') ?? undefined,
     currency: searchParams.get('currency') ?? undefined,
   });
@@ -51,12 +58,40 @@ export async function GET(request: Request) {
     );
   }
 
+  const dest = parsed.data.destination.trim();
+  const destIata =
+    (/^[A-Za-z]{3}$/.test(dest)
+      ? dest.toUpperCase()
+      : resolveDestinationIata(dest) ?? resolveOriginIata(dest)) ?? null;
+
+  if (!destIata) {
+    return NextResponse.json({
+      configured: true,
+      found: false,
+      count: 0,
+      quote: null,
+      offers: [],
+      message:
+        'Destinazione non riconosciuta. Prova una città (es. Londra, Parigi, Tokyo) o un codice aeroporto (LHR, CDG, NRT).',
+      code: 'unknown_destination',
+    });
+  }
+
+  let originCountry = parsed.data.originCountry;
+  let originIata = parsed.data.originIata;
+  if (!originCountry && originIata && normalizeCountryCode(originIata)) {
+    originCountry = originIata;
+    originIata = undefined;
+  }
+
   try {
-    const offers = await searchFlightRates({
-      destination: parsed.data.destination,
+    const { offers, destinationIata, originsSearched } = await searchFlightRates({
+      destination: destIata,
       departureDate: parsed.data.startDate,
-      returnDate: parsed.data.endDate,
-      originIata: parsed.data.originIata,
+      returnDate: parsed.data.tripType === 'oneway' ? null : parsed.data.endDate,
+      tripType: parsed.data.tripType,
+      originIata,
+      originCountry,
       adults: parsed.data.adults,
       currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
     });
@@ -65,40 +100,35 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       configured: true,
-      provider: 'liteapi',
       found: Boolean(cheapest),
       count: offers.length,
       quote: cheapest ?? null,
-      offers: offers.slice(0, 20),
+      offers: offers.slice(0, 30),
+      destinationIata,
+      originsSearched,
+      tripType: parsed.data.tripType,
       message: cheapest
         ? undefined
-        : 'Nessuna tariffa trovata. In sandbox prova ROM→LHR o FCO→JFK con date future; chiedi a Nuitee l’abilitazione Flights + provider “Nuitee Air”.',
-      debug: {
-        destination: parsed.data.destination,
-        originIata: parsed.data.originIata ?? null,
-      },
+        : originsSearched.length > 1
+          ? `Nessun volo trovato da ${originsSearched.slice(0, 6).join(', ')}${originsSearched.length > 6 ? '…' : ''} verso ${destinationIata}. Prova altre date.`
+          : `Nessun volo trovato per questa tratta. Prova altre date o aeroporti.`,
     });
   } catch (e) {
     if (e instanceof LiteApiError) {
-      console.error('[liteapi flights]', e.status, e.message, e.body);
+      console.error('[flights]', e.status, e.message, e.body);
       const isAuth = e.status === 401 || /unauthor/i.test(e.message);
-      const bodyMsg =
-        typeof e.body === 'object' && e.body && 'error' in e.body
-          ? JSON.stringify((e.body as { error?: unknown }).error).slice(0, 280)
-          : '';
       return NextResponse.json(
         {
           error: isAuth
-            ? 'LiteAPI rifiuta la chiave. Usa Sandbox/Production Key con prodotto Flights abilitato.'
-            : bodyMsg || e.message,
+            ? 'Servizio voli temporaneamente non disponibile.'
+            : e.message,
           configured: true,
-          code: isAuth ? 'liteapi_unauthorized' : 'liteapi_error',
-          liteapiStatus: e.status,
+          code: isAuth ? 'unauthorized' : 'search_error',
         },
         { status: isAuth ? 502 : e.status >= 400 && e.status < 600 ? e.status : 502 }
       );
     }
-    console.error('[liteapi flights]', e);
+    console.error('[flights]', e);
     return NextResponse.json({ error: 'Errore ricerca voli.' }, { status: 500 });
   }
 }

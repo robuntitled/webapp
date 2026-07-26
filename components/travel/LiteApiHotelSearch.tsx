@@ -408,9 +408,9 @@ export function LiteApiHotelSearch({
                       type="button"
                       className="rounded-xl bg-[#003580] font-semibold hover:bg-[#00275c]"
                       onClick={() =>
-                        toast.message('Checkout LiteAPI in arrivo', {
+                        toast.message('Prenotazione in preparazione', {
                           description:
-                            'Prebook + pagamento Stripe nel prossimo step.',
+                            'Presto potrai completare la prenotazione dell’hotel direttamente qui.',
                         })
                       }
                     >

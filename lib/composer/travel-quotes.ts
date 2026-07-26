@@ -83,7 +83,7 @@ async function fetchTravelQuotesInternal(params: {
     quotes.flights = flights;
     quotes.flight = flights.find((f) => f.role === 'organizer') ?? flights[0];
   } else {
-    warnings.push('Nessuna tariffa volo LiteAPI per le partenze indicate');
+    warnings.push('Nessuna tariffa volo per le partenze indicate');
   }
 
   return { quotes, warnings };
@@ -108,7 +108,7 @@ export async function fetchTravelQuotesForDay(
       setTimeout(() => {
         resolve({
           quotes: {},
-          warnings: ['Quote LiteAPI in timeout — itinerario comunque disponibile'],
+          warnings: ['Ricerca tariffe in timeout — itinerario comunque disponibile'],
         });
       }, timeoutMs);
     }),

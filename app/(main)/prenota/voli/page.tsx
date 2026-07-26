@@ -12,7 +12,7 @@ export default async function PrenotaVoliPage() {
   return (
     <PrenotaPageShell
       title="Voli"
-      subtitle="Ricerca tariffe LiteAPI (Nuitee Connect Flights). In sandbox usa date future e tratte comuni (es. ROM → Londra)."
+      subtitle="Cerca voli da una città, un aeroporto o un intero paese. Destinazione libera: città o codice IATA."
     >
       <PrenotaFlightsClient />
     </PrenotaPageShell>

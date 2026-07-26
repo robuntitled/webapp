@@ -127,7 +127,7 @@ export function TripBookingPanel({
           Voli, hotel e attività
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Tariffe LiteAPI sul contesto di questo viaggio.
+          Tariffe live sul contesto di questo viaggio.
         </p>
       </div>
 
@@ -154,7 +154,7 @@ export function TripBookingPanel({
         {!isAuthenticated ? (
           <div className="space-y-3 rounded-2xl border border-dashed border-border/70 px-4 py-5 text-center">
             <p className="text-sm text-muted-foreground">
-              Accedi per cercare e prenotare con LiteAPI.
+              Accedi per cercare e prenotare.
             </p>
             <Button asChild className="rounded-full">
               <Link href={`/?callbackUrl=${encodeURIComponent(`/viaggi/${tripId}#prenota`)}`}>

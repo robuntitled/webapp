@@ -458,16 +458,16 @@ export function BlockEditorPanel({
           offerId: quote.offerId ?? null,
           affiliateUrl: null,
         });
-        toast.success(`Volo LiteAPI: ${quote.price} ${quote.currency}`);
+        toast.success(`Volo: ${quote.price} ${quote.currency}`);
         return;
       }
 
       toast.warning(
-        data.message ?? data.error ?? 'Nessuna tariffa LiteAPI per questa tratta',
+        data.message ?? data.error ?? 'Nessuna tariffa per questa tratta',
         { duration: 8000 }
       );
     } catch {
-      toast.error('Errore ricerca volo LiteAPI');
+      toast.error('Errore ricerca volo');
     } finally {
       setFlightLoading(false);
     }
@@ -808,7 +808,7 @@ export function BlockEditorPanel({
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Aggiorna tariffe LiteAPI
+                Aggiorna tariffe
               </Button>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -839,7 +839,7 @@ export function BlockEditorPanel({
               </div>
               {typeof block.content.offerId === 'string' && block.content.offerId && (
                 <p className="text-[11px] text-white/40">
-                  Offer LiteAPI: {block.content.offerId.slice(0, 24)}…
+                  Offerta: {block.content.offerId.slice(0, 24)}…
                 </p>
               )}
             </div>

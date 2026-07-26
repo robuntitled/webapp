@@ -558,7 +558,7 @@ export function AddTravelBlockModal({
             />
             {(mode === 'hotel' || transportMode === 'flight') && (
               <p className="text-[11px] text-white/40">
-                Tariffe live: usa «Aggiorna tariffe LiteAPI» nel pannello del blocco dopo aver
+                Tariffe live: usa «Aggiorna tariffe» nel pannello del blocco dopo aver
                 salvato.
               </p>
             )}

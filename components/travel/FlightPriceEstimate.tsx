@@ -97,8 +97,7 @@ export function FlightPriceEstimate({
   if (state === 'unconfigured') {
     return (
       <p className="text-xs text-muted-foreground rounded-lg border border-dashed p-3">
-        Per stimare i voli aggiungi <code className="text-[11px]">LITEAPI_KEY</code> (Nuitee Connect
-        Flights) in `.env.local` / Vercel.
+        Per stimare i voli configura la chiave API voli in `.env.local` / Vercel.
       </p>
     );
   }
@@ -108,7 +107,7 @@ export function FlightPriceEstimate({
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium flex items-center gap-1.5">
           <Plane className="h-3.5 w-3.5" />
-          Stima volo (LiteAPI)
+          Stima volo
         </p>
         <Button
           type="button"
@@ -152,7 +151,7 @@ export function FlightPriceEstimate({
 
       {state === 'error' && (
         <p className="text-xs text-destructive">
-          {data?.error ?? 'Errore ricerca voli LiteAPI'}
+          {data?.error ?? 'Errore ricerca voli'}
         </p>
       )}
     </div>
