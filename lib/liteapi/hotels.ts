@@ -135,6 +135,28 @@ const CITY_ALIASES: Record<string, string> = {
   vienna: 'Vienna',
   praga: 'Prague',
   prague: 'Prague',
+  cairo: 'Cairo',
+  'il cairo': 'Cairo',
+  egitto: 'Cairo',
+  'sharm el sheikh': 'Sharm El Sheikh',
+  sharm: 'Sharm El Sheikh',
+  hurghada: 'Hurghada',
+  tbilisi: 'Tbilisi',
+  tbilissi: 'Tbilisi',
+  georgia: 'Tbilisi',
+  batumi: 'Batumi',
+  marrakech: 'Marrakech',
+  marocco: 'Marrakech',
+  casablanca: 'Casablanca',
+  zagabria: 'Zagreb',
+  zagreb: 'Zagreb',
+  dubrovnik: 'Dubrovnik',
+  istanbul: 'Istanbul',
+  bali: 'Bali',
+  singapore: 'Singapore',
+  seoul: 'Seoul',
+  sydney: 'Sydney',
+  malta: 'Valletta',
 };
 
 function normalizeCityName(city: string): string {
@@ -247,11 +269,11 @@ async function fetchHotelIds(
   const qs = new URLSearchParams({
     countryCode,
     cityName,
-    limit: String(Math.min(100, max)),
+    limit: String(Math.min(100, Math.max(1, max))),
   });
   const res = await liteApiFetch<HotelsListResponse>(`/data/hotels?${qs}`, {
     method: 'GET',
-    timeoutMs: 15_000,
+    timeoutMs: 20_000,
   });
   const ids = (res.data ?? [])
     .map((h) => h.id)
@@ -272,7 +294,8 @@ export async function searchHotelRates(
   const currency = (input.currency ?? 'EUR').toUpperCase();
   const guestNationality = (input.guestNationality ?? 'IT').toUpperCase();
   const margin = input.margin ?? getLiteApiDefaultMargin();
-  const limit = Math.min(60, Math.max(10, input.limit ?? 36));
+  // Più hotel: catalogo fino a 100 ID, rates su più batch
+  const limit = Math.min(100, Math.max(20, input.limit ?? 80));
   const countryCode = input.countryCode.toUpperCase();
   const cityName = normalizeCityName(input.cityName);
 
@@ -304,15 +327,7 @@ export async function searchHotelRates(
     margin,
   };
 
-  if (input.refundableRatesOnly) {
-    baseBody.refundableRatesOnly = true;
-  }
-  if (input.boardTypes?.trim()) {
-    baseBody.boardTypes = input.boardTypes.trim();
-  }
-  if (input.facilityIds?.length) {
-    baseBody.facilities = input.facilityIds;
-  }
+  // Filtri (colazione, refundable, piscina) applicati a valle: non restringere la rates API
 
   let hotelIds: string[] = [];
   try {
@@ -322,18 +337,19 @@ export async function searchHotelRates(
   }
 
   if (hotelIds.length > 0) {
-    // Batch da 25 per non sovraccaricare la rates API
+    const batchSize = 25;
+    const maxBatches = 4; // fino a 100 hotel
     const batches: string[][] = [];
-    for (let i = 0; i < hotelIds.length; i += 25) {
-      batches.push(hotelIds.slice(i, i + 25));
+    for (let i = 0; i < hotelIds.length; i += batchSize) {
+      batches.push(hotelIds.slice(i, i + batchSize));
     }
 
     const parts = await Promise.all(
-      batches.slice(0, 2).map((ids) =>
+      batches.slice(0, maxBatches).map((ids) =>
         liteApiFetch<RatesResponse>('/hotels/rates', {
           method: 'POST',
           body: JSON.stringify({ ...baseBody, hotelIds: ids }),
-          timeoutMs: 25_000,
+          timeoutMs: 30_000,
         })
       )
     );

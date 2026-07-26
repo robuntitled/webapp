@@ -10,7 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 type FlightDateFieldProps = {
-  tripType: 'oneway' | 'roundtrip';
+  /** stay = check-in / check-out (sempre range) */
+  tripType: 'oneway' | 'roundtrip' | 'stay';
   startDate: string;
   endDate: string;
   onStartDateChange: (value: string) => void;
@@ -47,6 +48,9 @@ export function FlightDateField({
     return () => mq.removeEventListener('change', apply);
   }, []);
 
+  const isStay = tripType === 'stay';
+  const isRange = tripType === 'roundtrip' || isStay;
+
   const label =
     tripType === 'oneway'
       ? start
@@ -55,13 +59,17 @@ export function FlightDateField({
       : start && end
         ? `${format(start, 'd MMM', { locale: it })} – ${format(end, 'd MMM yyyy', { locale: it })}`
         : start
-          ? `${format(start, 'd MMM', { locale: it })} – ritorno`
-          : 'Andata – ritorno';
+          ? isStay
+            ? `${format(start, 'd MMM', { locale: it })} – check-out`
+            : `${format(start, 'd MMM', { locale: it })} – ritorno`
+          : isStay
+            ? 'Check-in – check-out'
+            : 'Andata – ritorno';
 
   return (
     <div className={cn('space-y-1.5', className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        {tripType === 'oneway' ? 'Data' : 'Date'}
+        {tripType === 'oneway' ? 'Data' : isStay ? 'Soggiorno' : 'Date'}
       </span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -82,7 +90,11 @@ export function FlightDateField({
                 {label}
               </span>
               <span className="block text-[11px] text-slate-500">
-                {tripType === 'oneway' ? 'Solo andata' : 'Andata e ritorno'}
+                {tripType === 'oneway'
+                  ? 'Solo andata'
+                  : isStay
+                    ? 'Check-in e check-out'
+                    : 'Andata e ritorno'}
               </span>
             </span>
           </button>
@@ -93,12 +105,12 @@ export function FlightDateField({
         >
           <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-4 py-3 text-white">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">
-              Calendario voli
+              {isStay ? 'Calendario soggiorno' : 'Calendario voli'}
             </p>
             <p className="mt-0.5 text-sm font-semibold capitalize">{label}</p>
           </div>
 
-          {tripType === 'oneway' ? (
+          {!isRange ? (
             <Calendar
               mode="single"
               locale={it}
@@ -128,6 +140,8 @@ export function FlightDateField({
                 if (range.to) {
                   onEndDateChange(format(range.to, 'yyyy-MM-dd'));
                   setOpen(false);
+                } else {
+                  onEndDateChange('');
                 }
               }}
               className="p-3"

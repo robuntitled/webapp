@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,6 +16,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { saveHotelOfferDraft } from '@/lib/travel/hotel-offer-draft';
@@ -45,28 +46,15 @@ type HotelOffer = {
   facilities: string[];
 };
 
-const COUNTRIES = [
-  { code: 'IT', label: 'Italia' },
-  { code: 'ES', label: 'Spagna' },
-  { code: 'FR', label: 'Francia' },
-  { code: 'PT', label: 'Portogallo' },
-  { code: 'GR', label: 'Grecia' },
-  { code: 'HR', label: 'Croazia' },
-  { code: 'DE', label: 'Germania' },
-  { code: 'GB', label: 'Regno Unito' },
-  { code: 'US', label: 'USA' },
-  { code: 'TH', label: 'Thailandia' },
-] as const;
-
 type FilterKey = 'freeCancel' | 'breakfast' | 'pool' | 'stars3' | 'stars4';
 
 type LiteApiHotelSearchProps = {
   defaultCity?: string;
+  /** @deprecated paese dedotto dalla città */
   defaultCountry?: string;
   defaultCheckin?: string;
   defaultCheckout?: string;
   defaultAdults?: number;
-  /** sessionStorage key; null = non salvare */
   cacheKey?: SearchCacheKey | null;
   compact?: boolean;
   className?: string;
@@ -74,7 +62,6 @@ type LiteApiHotelSearchProps = {
 
 type HotelFormCache = {
   cityName: string;
-  countryCode: string;
   checkin: string;
   checkout: string;
   adults: number;
@@ -106,9 +93,39 @@ function FilterChip({
   );
 }
 
+function applyHotelFilters(
+  list: HotelOffer[],
+  filters: Record<FilterKey, boolean>
+): HotelOffer[] {
+  let out = list;
+  if (filters.freeCancel) {
+    out = out.filter((h) => h.freeCancellation || h.refundable);
+  }
+  if (filters.breakfast) {
+    out = out.filter((h) => {
+      const board = `${h.boardType ?? ''} ${h.boardName ?? ''}`.toLowerCase();
+      return (
+        board.includes('bb') ||
+        board.includes('breakfast') ||
+        board.includes('colazione') ||
+        board.includes('bed')
+      );
+    });
+  }
+  if (filters.pool) {
+    out = out.filter((h) =>
+      h.facilities.some((f) => /pool|piscina|swim/i.test(f))
+    );
+  }
+  const minStars = filters.stars4 ? 4 : filters.stars3 ? 3 : 0;
+  if (minStars > 0) {
+    out = out.filter((h) => (h.stars ?? 0) >= minStars);
+  }
+  return out;
+}
+
 export function LiteApiHotelSearch({
   defaultCity = '',
-  defaultCountry = '',
   defaultCheckin = '',
   defaultCheckout = '',
   defaultAdults = 1,
@@ -119,7 +136,6 @@ export function LiteApiHotelSearch({
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
   const [cityName, setCityName] = useState(defaultCity);
-  const [countryCode, setCountryCode] = useState(defaultCountry);
   const [checkin, setCheckin] = useState(defaultCheckin);
   const [checkout, setCheckout] = useState(defaultCheckout);
   const [adults, setAdults] = useState(defaultAdults);
@@ -131,17 +147,19 @@ export function LiteApiHotelSearch({
     stars4: false,
   });
   const [loading, setLoading] = useState(false);
-  const [hotels, setHotels] = useState<HotelOffer[] | null>(null);
+  /** Risultati grezzi dalla API (senza filtri) */
+  const [rawHotels, setRawHotels] = useState<HotelOffer[] | null>(null);
 
   useEffect(() => {
     if (!cacheKey) {
       setCacheReady(true);
       return;
     }
-    const cached = loadSearchFormCache<HotelFormCache>(cacheKey);
+    const cached = loadSearchFormCache<HotelFormCache & { countryCode?: string }>(
+      cacheKey
+    );
     if (cached) {
       setCityName(cached.cityName ?? '');
-      setCountryCode(cached.countryCode ?? '');
       setCheckin(cached.checkin ?? '');
       setCheckout(cached.checkout ?? '');
       setAdults(cached.adults ?? 1);
@@ -154,7 +172,6 @@ export function LiteApiHotelSearch({
     if (!cacheKey || !cacheReady) return;
     const payload: HotelFormCache = {
       cityName,
-      countryCode,
       checkin,
       checkout,
       adults,
@@ -164,10 +181,21 @@ export function LiteApiHotelSearch({
     const onHide = () => saveSearchFormCache(cacheKey, payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [adults, cacheKey, cacheReady, checkin, checkout, cityName, countryCode, filters]);
+  }, [adults, cacheKey, cacheReady, checkin, checkout, cityName, filters]);
+
+  const hotels = useMemo(
+    () => (rawHotels ? applyHotelFilters(rawHotels, filters) : null),
+    [filters, rawHotels]
+  );
 
   const toggle = (key: FilterKey) => {
-    setFilters((f) => ({ ...f, [key]: !f[key] }));
+    setFilters((f) => {
+      const next = { ...f, [key]: !f[key] };
+      // stelle mutuamente esclusive
+      if (key === 'stars3' && next.stars3) next.stars4 = false;
+      if (key === 'stars4' && next.stars4) next.stars3 = false;
+      return next;
+    });
   };
 
   const search = async () => {
@@ -175,30 +203,25 @@ export function LiteApiHotelSearch({
       toast.error('Inserisci una città');
       return;
     }
-    if (!countryCode) {
-      toast.error('Seleziona un paese');
-      return;
-    }
     if (!checkin || !checkout) {
       toast.error('Seleziona check-in e check-out');
       return;
     }
+    if (checkout <= checkin) {
+      toast.error('Il check-out deve essere dopo il check-in');
+      return;
+    }
     setLoading(true);
-    setHotels(null);
+    setRawHotels(null);
     try {
       const qs = new URLSearchParams({
         cityName: cityName.trim(),
-        countryCode,
         checkin,
         checkout,
         adults: String(Math.min(9, Math.max(1, adults))),
         currency: 'EUR',
       });
-      if (filters.freeCancel) qs.set('refundableOnly', '1');
-      if (filters.breakfast) qs.set('breakfast', '1');
-      if (filters.pool) qs.set('pool', '1');
-      if (filters.stars4) qs.set('minStars', '4');
-      else if (filters.stars3) qs.set('minStars', '3');
+      // Filtri solo lato client dopo la risposta ampia
 
       const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {
         credentials: 'same-origin',
@@ -206,15 +229,16 @@ export function LiteApiHotelSearch({
       const data = (await res.json()) as {
         hotels?: HotelOffer[];
         error?: string;
+        count?: number;
       };
       if (!res.ok) {
         toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
         return;
       }
       const list = data.hotels ?? [];
-      setHotels(list);
+      setRawHotels(list);
       if (!list.length) {
-        toast.message('Nessun hotel trovato — prova ad allentare i filtri');
+        toast.message('Nessun hotel trovato — prova un’altra città o date');
       }
     } catch {
       toast.error('Errore di rete');
@@ -244,78 +268,66 @@ export function LiteApiHotelSearch({
           <div
             className={cn(
               'grid gap-3',
-              compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-6'
+              compact
+                ? 'grid-cols-1'
+                : 'sm:grid-cols-2 lg:grid-cols-[1.4fr_1.3fr_0.7fr_auto] lg:items-end'
             )}
           >
-            <label className={cn('space-y-1.5', !compact && 'lg:col-span-2')}>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Destinazione
               </span>
               <Input
                 value={cityName}
                 onChange={(e) => setCityName(e.target.value)}
-                placeholder="Roma"
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 font-semibold"
+                placeholder="Città (es. Roma, Parigi…)"
+                className="h-12 rounded-xl border-border bg-muted/40 font-semibold"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') void search();
                 }}
               />
             </label>
+
+            <FlightDateField
+              tripType="stay"
+              startDate={checkin}
+              endDate={checkout}
+              onStartDateChange={setCheckin}
+              onEndDateChange={setCheckout}
+            />
+
             <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Paese
-              </span>
-              <select
-                value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value)}
-                className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium"
-              >
-                <option value="">Paese…</option>
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Check-in
-              </span>
-              <Input
-                type="date"
-                value={checkin}
-                onChange={(e) => setCheckin(e.target.value)}
-                className="h-12 rounded-xl border-slate-200 bg-slate-50"
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Check-out
-              </span>
-              <Input
-                type="date"
-                value={checkout}
-                onChange={(e) => setCheckout(e.target.value)}
-                className="h-12 rounded-xl border-slate-200 bg-slate-50"
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ospiti
               </span>
               <div className="relative">
-                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="number"
                   min={1}
                   max={9}
                   value={adults}
                   onChange={(e) => setAdults(Number(e.target.value) || 1)}
-                  className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-9"
+                  className="h-12 rounded-xl border-border bg-muted/40 pl-9"
                 />
               </div>
             </label>
+
+            <div className="flex items-end">
+              <Button
+                type="button"
+                onClick={() => void search()}
+                disabled={loading}
+                className="h-12 w-full rounded-xl px-5 font-semibold lg:w-auto"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-2 h-4 w-4" />
+                )}
+                Cerca
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -345,44 +357,40 @@ export function LiteApiHotelSearch({
               <Star className="h-3.5 w-3.5" />
               4+ stelle
             </FilterChip>
-            <Button
-              type="button"
-              onClick={() => void search()}
-              disabled={loading}
-              className={cn(
-                'ml-auto h-10 rounded-xl px-5 font-semibold',
-                compact
-                  ? ''
-                  : 'bg-primary hover:bg-primary/90'
-              )}
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="mr-2 h-4 w-4" />
-              )}
-              Cerca hotel
-            </Button>
+            {rawHotels && hotels ? (
+              <span className="ml-auto text-xs text-muted-foreground">
+                {hotels.length === rawHotels.length
+                  ? `${rawHotels.length} hotel`
+                  : `${hotels.length} di ${rawHotels.length}`}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {loading && !hotels && (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-sm text-slate-500">
+      {loading && !rawHotels && (
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card py-16 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          Cerchiamo le migliori tariffe…
+          Cerchiamo più tariffe possibili…
         </div>
       )}
 
-      {hotels && (
+      {hotels && hotels.length === 0 && rawHotels && rawHotels.length > 0 ? (
+        <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          Nessun hotel con questi filtri. Disattivali per vedere tutti i{' '}
+          {rawHotels.length} risultati.
+        </div>
+      ) : null}
+
+      {hotels && hotels.length > 0 ? (
         <ul className={cn('grid gap-4', compact ? 'grid-cols-1' : 'lg:grid-cols-1')}>
           {hotels.map((h) => (
             <li
               key={`${h.hotelId}-${h.offerId}`}
-              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+              className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition hover:border-primary/30 hover:shadow-md"
             >
               <div className={cn('grid', compact ? '' : 'sm:grid-cols-[220px_1fr]')}>
-                <div className="relative aspect-[16/10] bg-slate-100 sm:aspect-auto sm:min-h-[160px]">
+                <div className="relative aspect-[16/10] bg-muted sm:aspect-auto sm:min-h-[160px]">
                   {h.photo ? (
                     <Image
                       src={h.photo}
@@ -393,7 +401,7 @@ export function LiteApiHotelSearch({
                       unoptimized
                     />
                   ) : (
-                    <div className="flex h-full min-h-[140px] items-center justify-center text-slate-300">
+                    <div className="flex h-full min-h-[140px] items-center justify-center text-muted-foreground/40">
                       <BedDouble className="h-10 w-10" />
                     </div>
                   )}
@@ -401,11 +409,11 @@ export function LiteApiHotelSearch({
                 <div className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:p-5">
                   <div className="min-w-0 space-y-2">
                     <div>
-                      <p className="font-display text-lg font-semibold text-slate-900 line-clamp-1">
+                      <p className="line-clamp-1 font-display text-lg font-semibold">
                         {h.name}
                       </p>
                       {(h.city || h.address) && (
-                        <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                           <MapPin className="h-3 w-3 shrink-0" />
                           <span className="line-clamp-1">{h.address || h.city}</span>
                         </p>
@@ -422,11 +430,11 @@ export function LiteApiHotelSearch({
                         </span>
                       ) : null}
                       {h.rating != null ? (
-                        <span className="rounded-md bg-primary px-1.5 py-0.5 font-bold text-white">
+                        <span className="rounded-md bg-primary px-1.5 py-0.5 font-bold text-primary-foreground">
                           {h.rating.toFixed(1)}
                         </span>
                       ) : null}
-                      <span className="text-slate-600">{h.roomName}</span>
+                      <span className="text-muted-foreground">{h.roomName}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {(h.freeCancellation || h.refundable) && (
@@ -436,7 +444,7 @@ export function LiteApiHotelSearch({
                         </span>
                       )}
                       {(h.boardName || h.boardType) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-[11px] font-semibold text-primary">
                           <Coffee className="h-3 w-3" />
                           {h.boardName || h.boardType}
                         </span>
@@ -447,27 +455,27 @@ export function LiteApiHotelSearch({
                         .map((f) => (
                           <span
                             key={f}
-                            className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                            className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
                           >
                             {f}
                           </span>
                         ))}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:w-40 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-border/60 pt-3 sm:w-40 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                     <div className="text-right">
                       <p className="font-display text-2xl font-semibold tabular-nums text-primary">
                         {h.totalAmount.toFixed(0)}
-                        <span className="ml-1 text-sm font-medium text-slate-500">
+                        <span className="ml-1 text-sm font-medium text-muted-foreground">
                           {h.currency}
                         </span>
                       </p>
-                      <p className="text-[11px] text-slate-400">totale soggiorno</p>
+                      <p className="text-[11px] text-muted-foreground">totale soggiorno</p>
                     </div>
                     <div className="flex w-full flex-col gap-2 sm:items-end">
                       <Button
                         type="button"
-                        className="rounded-xl bg-primary font-semibold hover:bg-primary/90"
+                        className="rounded-xl font-semibold"
                         onClick={() => {
                           saveHotelOfferDraft({
                             hotelId: h.hotelId,
@@ -512,7 +520,7 @@ export function LiteApiHotelSearch({
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 }

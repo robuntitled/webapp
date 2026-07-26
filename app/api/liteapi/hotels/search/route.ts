@@ -4,14 +4,17 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { searchHotelRates } from '@/lib/liteapi/hotels';
+import { guessCountryCodeFromDestination } from '@/lib/travel/destination-hints';
 
 const schema = z.object({
   cityName: z.string().trim().min(2).max(80),
+  /** Opzionale: se assente si deduce dalla città */
   countryCode: z
     .string()
     .trim()
     .length(2)
-    .transform((s) => s.toUpperCase()),
+    .transform((s) => s.toUpperCase())
+    .optional(),
   checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   adults: z.coerce.number().int().min(1).max(9).optional(),
@@ -53,9 +56,10 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  const countryRaw = searchParams.get('countryCode');
   const parsed = schema.safeParse({
     cityName: searchParams.get('cityName'),
-    countryCode: searchParams.get('countryCode'),
+    countryCode: countryRaw && countryRaw.length === 2 ? countryRaw : undefined,
     checkin: searchParams.get('checkin'),
     checkout: searchParams.get('checkout'),
     adults: searchParams.get('adults') ?? undefined,
@@ -81,18 +85,21 @@ export async function GET(request: Request) {
     );
   }
 
+  const countryCode =
+    parsed.data.countryCode ??
+    guessCountryCodeFromDestination(parsed.data.cityName);
+
   try {
+    // Ampia ricerca senza filtri API; filtri solo post-process
     let hotels = await searchHotelRates({
       cityName: parsed.data.cityName,
-      countryCode: parsed.data.countryCode,
+      countryCode,
       checkin: parsed.data.checkin,
       checkout: parsed.data.checkout,
       adults: parsed.data.adults,
       currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
       guestNationality: 'IT',
-      refundableRatesOnly: parsed.data.refundableOnly || undefined,
-      boardTypes: parsed.data.breakfast ? 'BB' : undefined,
-      minStars: parsed.data.minStars && parsed.data.minStars > 0 ? parsed.data.minStars : undefined,
+      limit: 100,
     });
 
     if (parsed.data.refundableOnly) {
@@ -122,6 +129,7 @@ export async function GET(request: Request) {
       configured: true,
       provider: 'liteapi',
       count: hotels.length,
+      countryCode,
       hotels,
     });
   } catch (e) {

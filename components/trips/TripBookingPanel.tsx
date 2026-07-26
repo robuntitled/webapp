@@ -6,10 +6,7 @@ import { BedDouble, Plane, Ticket } from 'lucide-react';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
 import { TripFlightBookSearch } from '@/components/trips/TripFlightBookSearch';
 import { Button } from '@/components/ui/button';
-import {
-  guessCityFromDestination,
-  guessCountryCodeFromDestination,
-} from '@/lib/travel/destination-hints';
+import { guessCityFromDestination } from '@/lib/travel/destination-hints';
 import type { ComposerDayRow } from '@/lib/data/composer';
 import { BLOCK_META } from '@/lib/composer/blocks';
 import { cn } from '@/lib/utils';
@@ -60,10 +57,6 @@ export function TripBookingPanel({
   const [tab, setTab] = useState<BookingTab>('hotel');
 
   const city = useMemo(() => guessCityFromDestination(destination), [destination]);
-  const country = useMemo(
-    () => guessCountryCodeFromDestination(destination),
-    [destination]
-  );
 
   const activityStops = useMemo(() => {
     const days = composerItinerary ?? [];
@@ -171,7 +164,6 @@ export function TripBookingPanel({
         ) : tab === 'hotel' ? (
           <LiteApiHotelSearch
             defaultCity={city}
-            defaultCountry={country}
             defaultCheckin={startDate}
             defaultCheckout={endDate}
             defaultAdults={1}
