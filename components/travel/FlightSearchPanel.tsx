@@ -12,9 +12,15 @@ import {
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
+import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { COUNTRY_AIRPORTS } from '@/lib/travel/airports-by-country';
+import {
+  placeDisplayValue,
+  resolvePlaceExact,
+  type PlaceSuggestion,
+} from '@/lib/travel/airport-catalog';
 import { cn } from '@/lib/utils';
 
 export type FlightOfferView = {
@@ -35,7 +41,6 @@ export type FlightOfferView = {
 };
 
 type TripType = 'oneway' | 'roundtrip';
-type OriginMode = 'city' | 'country';
 
 type FlightSearchPanelProps = {
   defaultOrigin?: string;
@@ -85,7 +90,8 @@ function AirlineBadge({
   flightNumber?: string | null;
 }) {
   const label = name || (code ? `Compagnia ${code}` : 'Compagnia aerea');
-  const initials = (code || label).replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || 'FL';
+  const initials =
+    (code || label).replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || 'FL';
 
   return (
     <div className="flex items-center gap-2.5 min-w-0">
@@ -94,7 +100,7 @@ function AirlineBadge({
         <img
           src={logo}
           alt=""
-          className="h-10 w-10 shrink-0 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1"
+          className="h-10 w-10 shrink-0 rounded-xl border border-slate-100 bg-slate-50 object-contain p-1"
         />
       ) : (
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0b3d91] text-xs font-bold text-white">
@@ -109,6 +115,11 @@ function AirlineBadge({
       </div>
     </div>
   );
+}
+
+function ensurePlace(query: string, selected: PlaceSuggestion | null): PlaceSuggestion | null {
+  if (selected) return selected;
+  return resolvePlaceExact(query);
 }
 
 export function FlightSearchPanel({
@@ -131,11 +142,20 @@ export function FlightSearchPanel({
     };
   }, [defaultStartDate, defaultEndDate]);
 
+  const initialOrigin = resolvePlaceExact(defaultOrigin);
+  const initialDest = resolvePlaceExact(defaultDestination);
+
   const [tripType, setTripType] = useState<TripType>('oneway');
-  const [originMode, setOriginMode] = useState<OriginMode>('city');
-  const [origin, setOrigin] = useState(defaultOrigin);
-  const [originCountry, setOriginCountry] = useState('IT');
-  const [destination, setDestination] = useState(defaultDestination);
+  const [originQuery, setOriginQuery] = useState(
+    initialOrigin ? placeDisplayValue(initialOrigin) : defaultOrigin
+  );
+  const [destinationQuery, setDestinationQuery] = useState(
+    initialDest ? placeDisplayValue(initialDest) : defaultDestination
+  );
+  const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(initialOrigin);
+  const [destinationPlace, setDestinationPlace] = useState<PlaceSuggestion | null>(
+    initialDest
+  );
   const [startDate, setStartDate] = useState(dateDefaults.startDate);
   const [endDate, setEndDate] = useState(dateDefaults.endDate);
   const [adults, setAdults] = useState(defaultAdults);
@@ -145,30 +165,53 @@ export function FlightSearchPanel({
   const [originsSearched, setOriginsSearched] = useState<string[]>([]);
 
   const swap = () => {
-    if (originMode === 'country') return;
-    setOrigin(destination);
-    setDestination(origin);
+    setOriginQuery(destinationQuery);
+    setDestinationQuery(originQuery);
+    setOriginPlace(destinationPlace);
+    setDestinationPlace(originPlace);
   };
 
   const search = useCallback(async () => {
-    const originValue = originMode === 'country' ? originCountry : origin.trim();
-    if (!originValue || !destination.trim()) {
-      toast.error('Inserisci partenza e destinazione');
+    const origin = ensurePlace(originQuery, originPlace);
+    const destination = ensurePlace(destinationQuery, destinationPlace);
+
+    if (!origin) {
+      toast.error('Seleziona la partenza dall’elenco suggerito');
       return;
     }
+    if (!destination) {
+      toast.error('Seleziona la destinazione dall’elenco suggerito');
+      return;
+    }
+
+    setOriginPlace(origin);
+    setDestinationPlace(destination);
+    setOriginQuery(placeDisplayValue(origin));
+    setDestinationQuery(placeDisplayValue(destination));
+
     setLoading(true);
     setMessage(null);
     try {
       const params = new URLSearchParams({
-        destination: destination.trim(),
         startDate,
         tripType,
         adults: String(Math.min(9, Math.max(1, adults))),
         currency: 'EUR',
       });
       if (tripType === 'roundtrip') params.set('endDate', endDate);
-      if (originMode === 'country') params.set('originCountry', originCountry);
-      else params.set('originIata', origin.trim());
+
+      if (destination.kind === 'country' && destination.multiAirport) {
+        // hub paese: usa primo aeroporto come destinazione città-codice noto via label
+        params.set('destination', destination.label);
+      } else {
+        params.set('destination', destination.code);
+      }
+
+      if (origin.kind === 'country' && origin.multiAirport) {
+        params.set('originCountry', origin.code);
+      } else {
+        params.set('originIata', origin.code);
+      }
 
       const res = await fetch(`/api/liteapi/flights/search?${params}`, {
         credentials: 'same-origin',
@@ -201,22 +244,31 @@ export function FlightSearchPanel({
     } finally {
       setLoading(false);
     }
-  }, [adults, destination, endDate, origin, originCountry, originMode, startDate, tripType]);
+  }, [
+    adults,
+    destinationPlace,
+    destinationQuery,
+    endDate,
+    originPlace,
+    originQuery,
+    startDate,
+    tripType,
+  ]);
 
   useEffect(() => {
     if (autoSearch) void search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const originLabel =
-    originMode === 'country'
-      ? COUNTRY_AIRPORTS.find((c) => c.code === originCountry)?.label ?? originCountry
-      : origin;
+  const originLabel = originPlace ? placeDisplayValue(originPlace) : originQuery;
+  const destLabel = destinationPlace
+    ? placeDisplayValue(destinationPlace)
+    : destinationQuery;
 
   return (
     <div className={cn('space-y-6', className)}>
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#052e6b] via-[#0b4db5] to-[#0770e3] p-1 shadow-xl shadow-blue-900/20">
-        <div className="rounded-[1.35rem] bg-white p-4 sm:p-5 space-y-4">
+        <div className="space-y-4 rounded-[1.35rem] bg-white p-4 sm:p-5">
           <div className="flex flex-wrap gap-2">
             {(
               [
@@ -240,141 +292,77 @@ export function FlightSearchPanel({
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['city', 'Città / aeroporto'],
-                ['country', 'Intero paese'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setOriginMode(id)}
-                className={cn(
-                  'rounded-full px-3 py-1 text-[11px] font-semibold transition',
-                  originMode === id
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_1fr_1fr_auto] lg:items-end">
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Partenza
-              </span>
-              {originMode === 'country' ? (
-                <select
-                  value={originCountry}
-                  onChange={(e) => setOriginCountry(e.target.value)}
-                  className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-base font-semibold"
-                >
-                  {COUNTRY_AIRPORTS.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.label} ({c.airports.length} aeroporti)
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  placeholder="Milano, FCO o Italia"
-                  className="h-12 rounded-xl border-slate-200 bg-slate-50 text-base font-semibold"
-                />
-              )}
-            </label>
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_1.15fr_auto_auto] lg:items-end">
+            <AirportPlaceInput
+              label="Partenza"
+              value={originQuery}
+              selected={originPlace}
+              onValueChange={setOriginQuery}
+              onClearSelection={() => setOriginPlace(null)}
+              onSelect={setOriginPlace}
+              placeholder="Milano, FCO, Italia…"
+            />
 
             <div className="flex justify-center lg:pb-1">
               <button
                 type="button"
                 onClick={swap}
-                disabled={originMode === 'country'}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#0770e3] shadow-sm transition hover:bg-slate-50 disabled:opacity-40"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#0770e3] shadow-sm transition hover:bg-slate-50"
                 aria-label="Inverti tratta"
               >
                 <ArrowRightLeft className="h-4 w-4" />
               </button>
             </div>
 
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Destinazione
-              </span>
-              <Input
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Qualsiasi città o codice (LHR, BKK…)"
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 text-base font-semibold"
-              />
-            </label>
+            <AirportPlaceInput
+              label="Destinazione"
+              value={destinationQuery}
+              selected={destinationPlace}
+              onValueChange={setDestinationQuery}
+              onClearSelection={() => setDestinationPlace(null)}
+              onSelect={setDestinationPlace}
+              placeholder="Tokyo, Giappone, NRT…"
+            />
+
+            <FlightDateField
+              tripType={tripType}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+            />
 
             <label className="space-y-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Andata
+                Passeggeri
               </span>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="h-12 rounded-xl border-slate-200 bg-slate-50"
-              />
-            </label>
-
-            {tripType === 'roundtrip' ? (
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Ritorno
-                </span>
+              <div className="relative">
+                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-12 rounded-xl border-slate-200 bg-slate-50"
+                  type="number"
+                  min={1}
+                  max={9}
+                  value={adults}
+                  onChange={(e) => setAdults(Number(e.target.value) || 1)}
+                  className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-9"
                 />
-              </label>
-            ) : (
-              <div className="hidden lg:block" />
-            )}
-
-            <div className="grid grid-cols-[1fr_auto] gap-2 lg:contents">
-              <label className="space-y-1.5 lg:col-auto">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Passeggeri
-                </span>
-                <div className="relative">
-                  <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    type="number"
-                    min={1}
-                    max={9}
-                    value={adults}
-                    onChange={(e) => setAdults(Number(e.target.value) || 1)}
-                    className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-9"
-                  />
-                </div>
-              </label>
-
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  onClick={() => void search()}
-                  disabled={loading}
-                  className="h-12 w-full rounded-xl bg-[#0770e3] px-6 text-base font-semibold text-white hover:bg-[#0558b8] lg:w-auto"
-                >
-                  {loading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="mr-2 h-4 w-4" />
-                  )}
-                  Cerca
-                </Button>
               </div>
+            </label>
+
+            <div className="flex items-end">
+              <Button
+                type="button"
+                onClick={() => void search()}
+                disabled={loading}
+                className="h-12 w-full rounded-xl bg-[#0770e3] px-6 text-base font-semibold text-white hover:bg-[#0558b8] lg:w-auto"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-2 h-4 w-4" />
+                )}
+                Cerca
+              </Button>
             </div>
           </div>
         </div>
@@ -383,7 +371,7 @@ export function FlightSearchPanel({
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-700">
-            {originLabel} → {destination}
+            {originLabel} → {destLabel}
             <span className="ml-2 text-xs font-normal text-slate-400">
               {tripType === 'oneway' ? 'Solo andata' : 'Andata e ritorno'}
             </span>

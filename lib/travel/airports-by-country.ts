@@ -13,6 +13,11 @@ export const COUNTRY_AIRPORTS: CountryAirportGroup[] = [
     airports: ['FCO', 'MXP', 'LIN', 'BGY', 'VCE', 'NAP', 'BLQ', 'PSA', 'CTA', 'PMO', 'BRI', 'TRN'],
   },
   {
+    code: 'JP',
+    label: 'Giappone',
+    airports: ['HND', 'NRT', 'KIX', 'ITM', 'NGO', 'FUK', 'CTS', 'OKA'],
+  },
+  {
     code: 'FR',
     label: 'Francia',
     airports: ['CDG', 'ORY', 'NCE', 'LYS', 'MRS', 'TLS'],
@@ -51,6 +56,11 @@ export const COUNTRY_AIRPORTS: CountryAirportGroup[] = [
     code: 'US',
     label: 'Stati Uniti',
     airports: ['JFK', 'EWR', 'LAX', 'ORD', 'MIA', 'SFO', 'BOS'],
+  },
+  {
+    code: 'TH',
+    label: 'Thailandia',
+    airports: ['BKK', 'DMK', 'HKT', 'CNX'],
   },
   {
     code: 'AE',
@@ -92,6 +102,12 @@ const COUNTRY_ALIASES: Record<string, string> = {
   uae: 'AE',
   dubai: 'AE',
   ae: 'AE',
+  giappone: 'JP',
+  japan: 'JP',
+  jp: 'JP',
+  thailandia: 'TH',
+  thailand: 'TH',
+  th: 'TH',
 };
 
 export function normalizeCountryCode(input: string): string | null {

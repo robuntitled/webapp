@@ -192,8 +192,10 @@ export function resolveDestinationIata(destination: string): string | null {
     if (DESTINATION_IATA[part]) return DESTINATION_IATA[part];
   }
 
+  // Solo se la query contiene una chiave nota completa (es. "Tokyo, Giappone"),
+  // mai prefissi parziali tipo "toky" → Tokyo.
   for (const [key, iata] of Object.entries(DESTINATION_IATA)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
+    if (key.length >= 4 && normalized.includes(key)) {
       return iata;
     }
   }
