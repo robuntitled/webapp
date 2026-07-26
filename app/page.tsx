@@ -12,7 +12,7 @@ import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera } from 'lucide-react';
+import { Map, Plane, Users } from 'lucide-react';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
@@ -220,38 +220,50 @@ export default function LoginPage() {
       <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
         {/* Brand panel — visibile su desktop */}
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-end p-12 pb-20">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="mb-6 flex items-center gap-3">
             <Image src="/assets/logo.png" alt="" width={48} height={48} className="rounded-xl" />
             <span className="font-display text-3xl font-semibold text-white">NomadLink</span>
           </div>
-          <h1 className="font-display text-5xl xl:text-6xl font-semibold text-white leading-[1.1] max-w-lg">
-            Il mondo, visto da chi lo vive.
+          <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
+            Viaggia insieme. Organizza meglio.
           </h1>
-          <p className="mt-6 text-lg text-white/75 max-w-md leading-relaxed">
-            Viaggi di gruppo autentici, raccontati attraverso la fotografia di chi li ha vissuti
-            sul posto.
+          <p className="mt-6 max-w-md text-lg leading-relaxed text-white/75">
+            Scopri viaggi di gruppo, crea itinerari con l’AI e prenota i voli nello stesso posto.
           </p>
-          <p className="mt-8 flex items-center gap-2 text-sm text-white/50">
-            <Camera className="h-4 w-4" />
-            Foto originali da ogni angolo del pianeta
-          </p>
+          <ul className="mt-10 max-w-md space-y-3 text-sm text-white/70">
+            <li className="flex items-start gap-3">
+              <Users className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
+              <span>Unisciti a crew aperte o invita i tuoi amici</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <Map className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
+              <span>Componi il giorno per giorno su mappa con l’AI</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <Plane className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
+              <span>Prenota i voli; hotel e luoghi a supporto del viaggio</span>
+            </li>
+          </ul>
         </div>
 
         {/* Form panel */}
         <div className="flex flex-1 items-center justify-center px-4 py-16 lg:py-12">
           <div className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
             <div className="text-center lg:text-left">
-              <div className="flex items-center justify-center lg:justify-start gap-2 mb-4 lg:hidden">
+              <div className="mb-4 flex items-center justify-center gap-2 lg:hidden">
                 <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-lg" />
                 <span className="font-display text-2xl font-semibold">NomadLink</span>
               </div>
+              <p className="mb-3 text-sm leading-relaxed text-muted-foreground lg:hidden">
+                Viaggi di gruppo, itinerari AI e prenotazione voli — in un solo posto.
+              </p>
               <h2 className="font-display text-2xl font-semibold text-foreground">
-                {isRegisterMode ? 'Crea il tuo account' : 'Bentornato'}
+                {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 {isRegisterMode
-                  ? 'Unisciti alla community di viaggiatori'
-                  : 'Accedi per scoprire il tuo prossimo viaggio'}
+                  ? 'Inizia a organizzare o unirti a un viaggio'
+                  : 'Accedi per scoprire, creare e prenotare'}
               </p>
             </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
   BedDouble,
   Check,
@@ -17,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { saveHotelOfferDraft } from '@/lib/travel/hotel-offer-draft';
 import {
   loadSearchFormCache,
   saveSearchFormCache,
@@ -95,8 +97,8 @@ function FilterChip({
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
         active
-          ? 'border-[#003580] bg-[#003580] text-white'
-          : 'border-slate-200 bg-white text-slate-700 hover:border-[#003580]/40'
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground'
       )}
     >
       {children}
@@ -114,6 +116,7 @@ export function LiteApiHotelSearch({
   compact = false,
   className,
 }: LiteApiHotelSearchProps) {
+  const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
   const [cityName, setCityName] = useState(defaultCity);
   const [countryCode, setCountryCode] = useState(defaultCountry);
@@ -222,15 +225,22 @@ export function LiteApiHotelSearch({
 
   return (
     <div className={cn('space-y-5', className)}>
+      {!compact ? (
+        <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Tariffe in tempo reale</span>
+          {' — '}
+          scegli un’offerta e completa ospiti + pagamento in checkout.
+        </div>
+      ) : null}
       <div
         className={cn(
           'overflow-hidden rounded-3xl',
           compact
             ? 'border border-border/60 bg-card p-3.5'
-            : 'bg-gradient-to-br from-[#003580] to-[#0057b8] p-1 shadow-xl shadow-blue-900/15'
+            : 'bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15'
         )}
       >
-        <div className={cn(!compact && 'rounded-[1.35rem] bg-white p-4 sm:p-5')}>
+        <div className={cn(!compact && 'rounded-[1.35rem] bg-card p-4 sm:p-5')}>
           <div
             className={cn(
               'grid gap-3',
@@ -343,7 +353,7 @@ export function LiteApiHotelSearch({
                 'ml-auto h-10 rounded-xl px-5 font-semibold',
                 compact
                   ? ''
-                  : 'bg-[#003580] hover:bg-[#00275c]'
+                  : 'bg-primary hover:bg-primary/90'
               )}
             >
               {loading ? (
@@ -359,7 +369,7 @@ export function LiteApiHotelSearch({
 
       {loading && !hotels && (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-sm text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin text-[#003580]" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
           Cerchiamo le migliori tariffe…
         </div>
       )}
@@ -412,7 +422,7 @@ export function LiteApiHotelSearch({
                         </span>
                       ) : null}
                       {h.rating != null ? (
-                        <span className="rounded-md bg-[#003580] px-1.5 py-0.5 font-bold text-white">
+                        <span className="rounded-md bg-primary px-1.5 py-0.5 font-bold text-white">
                           {h.rating.toFixed(1)}
                         </span>
                       ) : null}
@@ -446,7 +456,7 @@ export function LiteApiHotelSearch({
                   </div>
                   <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:w-40 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                     <div className="text-right">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-[#003580]">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-primary">
                         {h.totalAmount.toFixed(0)}
                         <span className="ml-1 text-sm font-medium text-slate-500">
                           {h.currency}
@@ -454,18 +464,48 @@ export function LiteApiHotelSearch({
                       </p>
                       <p className="text-[11px] text-slate-400">totale soggiorno</p>
                     </div>
-                    <Button
-                      type="button"
-                      className="rounded-xl bg-[#003580] font-semibold hover:bg-[#00275c]"
-                      onClick={() =>
-                        toast.message('Prenotazione in preparazione', {
-                          description:
-                            'Presto potrai completare la prenotazione dell’hotel direttamente qui.',
-                        })
-                      }
-                    >
-                      Vedi offerta
-                    </Button>
+                    <div className="flex w-full flex-col gap-2 sm:items-end">
+                      <Button
+                        type="button"
+                        className="rounded-xl bg-primary font-semibold hover:bg-primary/90"
+                        onClick={() => {
+                          saveHotelOfferDraft({
+                            hotelId: h.hotelId,
+                            name: h.name,
+                            address: h.address,
+                            city: h.city,
+                            photo: h.photo,
+                            stars: h.stars,
+                            rating: h.rating,
+                            roomName: h.roomName,
+                            boardName: h.boardName,
+                            offerId: h.offerId,
+                            totalAmount: h.totalAmount,
+                            currency: h.currency,
+                            freeCancellation: h.freeCancellation || h.refundable,
+                            checkin,
+                            checkout,
+                            adults,
+                            savedAt: Date.now(),
+                          });
+                          router.push('/prenota/hotel/checkout');
+                        }}
+                      >
+                        Prenota
+                      </Button>
+                      {h.address || h.city ? (
+                        <a
+                          className="text-center text-xs font-medium text-primary hover:underline sm:text-right"
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            [h.name, h.address || h.city].filter(Boolean).join(', ')
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Apri mappa
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>

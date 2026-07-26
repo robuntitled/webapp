@@ -23,7 +23,7 @@ type AirportPlaceInputProps = {
 };
 
 function KindIcon({ kind }: { kind: PlaceSuggestion['kind'] }) {
-  if (kind === 'country') return <Globe2 className="h-4 w-4 text-[#0770e3]" />;
+  if (kind === 'country') return <Globe2 className="h-4 w-4 text-primary" />;
   if (kind === 'airport') return <Plane className="h-4 w-4 text-slate-500" />;
   return <Building2 className="h-4 w-4 text-slate-500" />;
 }
@@ -125,7 +125,7 @@ export function AirportPlaceInput({
                   type="button"
                   className={cn(
                     'flex w-full items-start gap-3 px-3 py-2.5 text-left transition',
-                    idx === highlight ? 'bg-[#0770e3]/8' : 'hover:bg-slate-50'
+                    idx === highlight ? 'bg-primary/8' : 'hover:bg-slate-50'
                   )}
                   onMouseEnter={() => setHighlight(idx)}
                   onMouseDown={(e) => e.preventDefault()}
@@ -177,8 +177,8 @@ export function AirportPlaceInput({
           className={cn(
             'flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-base font-semibold text-slate-900 outline-none transition',
             'placeholder:font-normal placeholder:text-slate-400',
-            'focus:border-[#0770e3] focus:bg-white focus:ring-2 focus:ring-[#0770e3]/20',
-            selected ? 'border-[#0770e3]/40' : null
+            'focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20',
+            selected ? 'border-primary/40' : null
           )}
           onFocus={() => setOpen(true)}
           onChange={(e) => {

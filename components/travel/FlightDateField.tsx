@@ -70,11 +70,11 @@ export function FlightDateField({
             className={cn(
               'flex h-12 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left transition',
               'hover:border-slate-300 hover:bg-white',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0770e3]/25 focus-visible:border-[#0770e3]',
-              open && 'border-[#0770e3] bg-white ring-2 ring-[#0770e3]/20'
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',
+              open && 'border-primary bg-white ring-2 ring-primary/20'
             )}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0770e3]/10 text-[#0770e3]">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <CalendarDays className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
@@ -91,7 +91,7 @@ export function FlightDateField({
           align="start"
           className="w-auto overflow-hidden rounded-2xl border-slate-200 p-0 shadow-2xl shadow-slate-900/15"
         >
-          <div className="border-b border-slate-100 bg-gradient-to-r from-[#052e6b] to-[#0770e3] px-4 py-3 text-white">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-4 py-3 text-white">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">
               Calendario voli
             </p>

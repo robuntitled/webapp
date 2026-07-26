@@ -12,7 +12,8 @@ export default async function PrenotaAttivitaPage() {
   return (
     <PrenotaPageShell
       title="Attività"
-      subtitle="Tour ed esperienze nell’area (Google Places). Checkout ticket in arrivo."
+      subtitle="Tour ed esperienze nell’area. Checkout ticket in arrivo; intanto esplora e apri la mappa."
+      badge="Scoperta"
     >
       <PrenotaPlacesClient category="activity" title="Attività" />
     </PrenotaPageShell>

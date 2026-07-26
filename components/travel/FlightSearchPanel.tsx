@@ -476,8 +476,8 @@ export function FlightSearchPanel({
 
   return (
     <div className={cn('space-y-6', className)}>
-      <div className="rounded-3xl bg-gradient-to-br from-[#052e6b] via-[#0b4db5] to-[#0770e3] p-1 shadow-xl shadow-blue-900/20">
-        <div className="relative z-10 space-y-4 overflow-visible rounded-[1.35rem] bg-white p-4 sm:p-5">
+      <div className="rounded-3xl bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/20">
+        <div className="relative z-10 space-y-4 overflow-visible rounded-[1.35rem] bg-card p-4 sm:p-5">
           <div className="flex flex-wrap gap-2">
             {(
               [
@@ -518,7 +518,7 @@ export function FlightSearchPanel({
                 className={cn(
                   'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
                   tripType === id
-                    ? 'bg-[#0770e3] text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 )}
               >
@@ -542,7 +542,7 @@ export function FlightSearchPanel({
               <button
                 type="button"
                 onClick={swap}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#0770e3] shadow-sm transition hover:bg-slate-50"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-primary shadow-sm transition hover:bg-slate-50"
                 aria-label="Inverti tratta"
               >
                 <ArrowRightLeft className="h-4 w-4" />
@@ -589,7 +589,7 @@ export function FlightSearchPanel({
                 type="button"
                 onClick={() => void search()}
                 disabled={loading}
-                className="h-12 w-full rounded-xl bg-[#0770e3] px-6 text-base font-semibold text-white hover:bg-[#0558b8] lg:w-auto"
+                className="h-12 w-full rounded-xl bg-primary px-6 text-base font-semibold text-white hover:bg-primary/90 lg:w-auto"
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -632,7 +632,7 @@ export function FlightSearchPanel({
                   type="button"
                   className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                 >
-                  <ArrowDownWideNarrow className="h-3.5 w-3.5 text-[#0770e3]" />
+                  <ArrowDownWideNarrow className="h-3.5 w-3.5 text-primary" />
                   {sortLabel}
                   <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 </button>
@@ -646,7 +646,7 @@ export function FlightSearchPanel({
                     key={opt.id}
                     onClick={() => setSort(opt.id)}
                     className={cn(
-                      'cursor-pointer rounded-lg px-3 py-2.5 text-sm text-white focus:bg-[#0770e3] focus:text-white',
+                      'cursor-pointer rounded-lg px-3 py-2.5 text-sm text-white focus:bg-primary focus:text-white',
                       sort === opt.id && 'bg-white/10'
                     )}
                   >
@@ -664,7 +664,7 @@ export function FlightSearchPanel({
 
       {loading && !offers && (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-sm text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin text-[#0770e3]" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
           Cerchiamo i voli migliori…
         </div>
       )}
@@ -687,7 +687,7 @@ export function FlightSearchPanel({
             className={cn(
               'rounded-full px-3 py-1.5 text-xs font-semibold transition',
               pickStep === 'outbound'
-                ? 'bg-[#0770e3] text-white'
+                ? 'bg-primary text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             )}
           >
@@ -701,7 +701,7 @@ export function FlightSearchPanel({
             className={cn(
               'rounded-full px-3 py-1.5 text-xs font-semibold transition',
               pickStep === 'return'
-                ? 'bg-[#0770e3] text-white'
+                ? 'bg-primary text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40'
             )}
           >
@@ -749,10 +749,10 @@ export function FlightSearchPanel({
             return (
               <li
                 key={`${o.offerId}-${pickStep}`}
-                className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-[#0770e3]/40 hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-primary/40 hover:shadow-md"
               >
                 <div className="border-b border-slate-100 px-4 py-2 sm:px-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0770e3]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
                     {tripType === 'roundtrip'
                       ? pickStep === 'outbound'
                         ? 'Andata'
@@ -782,7 +782,7 @@ export function FlightSearchPanel({
                         {formatDuration(duration)}
                       </p>
                       <div className="relative h-px bg-slate-200">
-                        <Plane className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90 text-[#0770e3]" />
+                        <Plane className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90 text-primary" />
                       </div>
                       <p className="mt-1 text-center text-[11px] font-medium text-slate-500">
                         {stopsLabel(stops)}
@@ -800,7 +800,7 @@ export function FlightSearchPanel({
 
                   <div className="flex flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                     <div className="text-right">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-[#052e6b]">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-primary">
                         {o.price.toLocaleString('it-IT', {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 2,
@@ -815,7 +815,7 @@ export function FlightSearchPanel({
                     </div>
                     <Button
                       type="button"
-                      className="rounded-xl bg-[#0770e3] px-5 font-semibold hover:bg-[#0558b8]"
+                      className="rounded-xl bg-primary px-5 font-semibold hover:bg-primary/90"
                       onClick={() => {
                         if (tripType === 'roundtrip' && pickStep === 'outbound') {
                           if (!o.hasReturn) {

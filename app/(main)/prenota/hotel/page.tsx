@@ -12,7 +12,8 @@ export default async function PrenotaHotelPage() {
   return (
     <PrenotaPageShell
       title="Hotel"
-      subtitle="Cerca hotel per città, paese e date. Compila i campi e premi Cerca."
+      subtitle="Confronta tariffe per città e date, poi completa ospiti e pagamento."
+      badge="Prenotabile"
     >
       <LiteApiHotelSearch defaultAdults={1} cacheKey="hotels" />
     </PrenotaPageShell>

@@ -92,9 +92,13 @@ function emptyPassenger(): PassengerForm {
   };
 }
 
+function roundMoney(amount: number) {
+  return Math.round(amount * 100) / 100;
+}
+
 function formatMoney(amount: number, currency: string) {
-  return `${amount.toLocaleString('it-IT', {
-    minimumFractionDigits: 0,
+  return `${roundMoney(amount).toLocaleString('it-IT', {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} ${currency}`;
 }
@@ -137,11 +141,11 @@ function DatePickerField({
             type="button"
             className={cn(
               'flex h-12 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium transition',
-              'hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0770e3]/25',
+              'hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
               !value && 'text-slate-400 font-normal'
             )}
           >
-            <CalendarDays className="h-4 w-4 shrink-0 text-[#0770e3]" />
+            <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
             {selected
               ? format(selected, 'd MMMM yyyy', { locale: it })
               : 'Seleziona data'}
@@ -193,7 +197,7 @@ function CountrySelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none focus:border-[#0770e3] focus:ring-2 focus:ring-[#0770e3]/20"
+        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
       >
         {COUNTRY_OPTIONS.map((c) => (
           <option key={c.code} value={c.code}>
@@ -214,7 +218,7 @@ function LegSummary({
 }) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0770e3]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
         {title}
       </p>
       <div className="mt-2 flex items-center justify-between gap-2">
@@ -295,7 +299,7 @@ function PaymentStep({ onPaid }: { onPaid: () => Promise<void> }) {
         type="button"
         disabled={!stripe || busy}
         onClick={() => void pay()}
-        className="h-12 w-full rounded-xl bg-[#0770e3] text-base font-semibold hover:bg-[#0558b8]"
+        className="h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
       >
         {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -462,10 +466,11 @@ export function FlightCheckoutClient({
           return;
         }
         setVerify({
-          price: data.price,
+          price: data.price != null ? roundMoney(data.price) : null,
           currency: data.currency,
           priceChanged: data.priceChanged,
-          previousPrice: data.previousPrice,
+          previousPrice:
+            data.previousPrice != null ? roundMoney(data.previousPrice) : null,
           expiration: data.expiration,
         });
         if (data.priceChanged) setAcceptedPriceChange(false);
@@ -482,8 +487,12 @@ export function FlightCheckoutClient({
     if (draft?.offerId && step === 'details') void runVerify(draft.offerId);
   }, [draft?.offerId, runVerify, step]);
 
-  const displayPrice = verify?.price ?? draft?.price ?? 0;
-  const displayCurrency = verify?.currency ?? draft?.currency ?? 'EUR';
+  // Una sola fonte: dopo prebook usa il prezzo pagabile, altrimenti verify/draft
+  const displayPrice = roundMoney(
+    payment?.price ?? verify?.price ?? draft?.price ?? 0
+  );
+  const displayCurrency =
+    payment?.currency ?? verify?.currency ?? draft?.currency ?? 'EUR';
 
   const updatePassenger = (idx: number, patch: Partial<PassengerForm>) => {
     setPassengers((prev) =>
@@ -583,7 +592,7 @@ export function FlightCheckoutClient({
         publishableKey: data.publishableKey ?? null,
         paymentEnv,
         paymentMode,
-        price: data.price ?? displayPrice,
+        price: roundMoney(data.price ?? displayPrice),
         currency: data.currency ?? displayCurrency,
         createdAt: Date.now(),
       };
@@ -637,7 +646,7 @@ export function FlightCheckoutClient({
             {confirmation.bookingRef || confirmation.bookingId || '—'}
           </p>
         </div>
-        <Button asChild className="w-full rounded-xl bg-[#0770e3]">
+        <Button asChild className="w-full rounded-xl bg-primary">
           <Link href="/prenota/voli">Nuova ricerca</Link>
         </Button>
       </div>
@@ -652,7 +661,7 @@ export function FlightCheckoutClient({
       <div className="space-y-5">
         <Link
           href="/prenota/voli"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-[#0770e3]"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
           Torna ai risultati
@@ -660,7 +669,7 @@ export function FlightCheckoutClient({
 
         {step === 'details' ? (
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-[#052e6b] to-[#0770e3] px-5 py-4 text-white sm:px-6">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-5 py-4 text-white sm:px-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
                 Passo 1 di 2
               </p>
@@ -675,7 +684,7 @@ export function FlightCheckoutClient({
             <div className="space-y-6 p-5 sm:p-6">
               {verifying ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin text-[#0770e3]" />
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   Verifica disponibilità e prezzo…
                 </div>
               ) : null}
@@ -914,7 +923,7 @@ export function FlightCheckoutClient({
                 type="button"
                 disabled={verifying || submitting}
                 onClick={() => void startPrebook()}
-                className="h-12 w-full rounded-xl bg-[#0770e3] text-base font-semibold hover:bg-[#0558b8]"
+                className="h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
               >
                 {submitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -927,7 +936,7 @@ export function FlightCheckoutClient({
 
         {step === 'payment' && payment ? (
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-[#052e6b] to-[#0770e3] px-5 py-4 text-white sm:px-6">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-5 py-4 text-white sm:px-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
                 Passo 2 di 2
               </p>
@@ -937,10 +946,7 @@ export function FlightCheckoutClient({
               <p className="mt-1 text-sm text-white/75">
                 Totale{' '}
                 <span className="font-semibold text-white">
-                  {formatMoney(
-                    payment.price ?? displayPrice,
-                    payment.currency ?? displayCurrency
-                  )}
+                  {formatMoney(displayPrice, displayCurrency)}
                 </span>
               </p>
             </div>
@@ -955,7 +961,7 @@ export function FlightCheckoutClient({
                     appearance: {
                       theme: 'stripe',
                       variables: {
-                        colorPrimary: '#0770e3',
+                        colorPrimary: '#365f73',
                         borderRadius: '12px',
                       },
                     },
@@ -989,7 +995,7 @@ export function FlightCheckoutClient({
       {draft ? (
         <aside className="h-fit space-y-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
           <div className="flex items-center gap-2">
-            <Plane className="h-4 w-4 text-[#0770e3]" />
+            <Plane className="h-4 w-4 text-primary" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
               Riepilogo
             </p>
@@ -1004,7 +1010,7 @@ export function FlightCheckoutClient({
             </div>
           ) : null}
 
-          <div className="rounded-2xl bg-[#052e6b] px-4 py-3 text-white">
+          <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
             <p className="text-[11px] uppercase tracking-wider text-white/70">
               Totale
             </p>

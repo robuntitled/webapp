@@ -12,7 +12,8 @@ export default async function PrenotaVoliPage() {
   return (
     <PrenotaPageShell
       title="Voli"
-      subtitle="Cerca voli da una città, un aeroporto o un intero paese. Destinazione libera: città o codice IATA."
+      subtitle="Cerca da città, aeroporto o paese. Destinazione libera — poi verifica, paga e conferma."
+      badge="Prenotabile"
     >
       <PrenotaFlightsClient />
     </PrenotaPageShell>

@@ -12,7 +12,8 @@ export default async function PrenotaAttrazioniPage() {
   return (
     <PrenotaPageShell
       title="Attrazioni"
-      subtitle="Scopri luoghi e punti di interesse (Google Places). La prenotazione ticket partner arriverà dopo."
+      subtitle="Esplora punti di interesse con foto e mappe. I ticket partner arriveranno dopo."
+      badge="Scoperta"
     >
       <PrenotaPlacesClient category="attraction" title="Attrazioni" />
     </PrenotaPageShell>
