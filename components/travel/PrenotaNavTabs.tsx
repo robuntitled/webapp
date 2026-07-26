@@ -25,8 +25,8 @@ export function PrenotaNavTabs() {
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition',
               active
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'border-border/60 text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground'
+                ? 'border-[#0770e3]/30 bg-[#0770e3]/10 text-[#0558b8]'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-[#0770e3]/30 hover:text-slate-900'
             )}
           >
             <Icon className="h-3.5 w-3.5" />

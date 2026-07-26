@@ -1,9 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { addDays, format } from 'date-fns';
-import { BedDouble, Loader2, MapPin, Search, Star } from 'lucide-react';
+import {
+  BedDouble,
+  Check,
+  Coffee,
+  Loader2,
+  MapPin,
+  Search,
+  Star,
+  Users,
+  Waves,
+  XCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,10 +30,13 @@ type HotelOffer = {
   rating: number | null;
   roomName: string;
   boardName: string | null;
+  boardType: string | null;
   offerId: string;
   totalAmount: number;
   currency: string;
-  commissionAmount: number | null;
+  freeCancellation: boolean;
+  refundable: boolean;
+  facilities: string[];
 };
 
 const COUNTRIES = [
@@ -38,23 +52,49 @@ const COUNTRIES = [
   { code: 'TH', label: 'Thailandia' },
 ] as const;
 
+type FilterKey = 'freeCancel' | 'breakfast' | 'pool' | 'stars3' | 'stars4';
+
 type LiteApiHotelSearchProps = {
   defaultCity?: string;
   defaultCountry?: string;
   defaultCheckin?: string;
   defaultCheckout?: string;
   defaultAdults?: number;
-  /** Layout compatto per sidebar trip */
   compact?: boolean;
   className?: string;
 };
 
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+        active
+          ? 'border-[#003580] bg-[#003580] text-white'
+          : 'border-slate-200 bg-white text-slate-700 hover:border-[#003580]/40'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function LiteApiHotelSearch({
-  defaultCity = 'Roma',
+  defaultCity = 'Rome',
   defaultCountry = 'IT',
   defaultCheckin,
   defaultCheckout,
-  defaultAdults = 2,
+  defaultAdults = 1,
   compact = false,
   className,
 }: LiteApiHotelSearchProps) {
@@ -72,8 +112,19 @@ export function LiteApiHotelSearch({
   const [checkin, setCheckin] = useState(defaults.checkin);
   const [checkout, setCheckout] = useState(defaults.checkout);
   const [adults, setAdults] = useState(defaultAdults);
+  const [filters, setFilters] = useState<Record<FilterKey, boolean>>({
+    freeCancel: false,
+    breakfast: false,
+    pool: false,
+    stars3: false,
+    stars4: false,
+  });
   const [loading, setLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelOffer[] | null>(null);
+
+  const toggle = (key: FilterKey) => {
+    setFilters((f) => ({ ...f, [key]: !f[key] }));
+  };
 
   const search = async () => {
     if (!cityName.trim()) {
@@ -88,17 +139,21 @@ export function LiteApiHotelSearch({
         countryCode,
         checkin,
         checkout,
-        adults: String(adults),
+        adults: String(Math.min(9, Math.max(1, adults))),
         currency: 'EUR',
       });
+      if (filters.freeCancel) qs.set('refundableOnly', '1');
+      if (filters.breakfast) qs.set('breakfast', '1');
+      if (filters.pool) qs.set('pool', '1');
+      if (filters.stars4) qs.set('minStars', '4');
+      else if (filters.stars3) qs.set('minStars', '3');
+
       const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {
         credentials: 'same-origin',
       });
       const data = (await res.json()) as {
         hotels?: HotelOffer[];
         error?: string;
-        count?: number;
-        code?: string;
       };
       if (!res.ok) {
         toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
@@ -107,9 +162,7 @@ export function LiteApiHotelSearch({
       const list = data.hotels ?? [];
       setHotels(list);
       if (!list.length) {
-        toast.message('Nessun hotel trovato per queste date');
-      } else {
-        toast.success(`${list.length} hotel con tariffa disponibile`);
+        toast.message('Nessun hotel trovato — prova ad allentare i filtri');
       }
     } catch {
       toast.error('Errore di rete');
@@ -119,92 +172,129 @@ export function LiteApiHotelSearch({
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-5', className)}>
       <div
         className={cn(
-          'rounded-2xl border border-border/60 bg-card',
-          compact ? 'p-3.5' : 'rounded-3xl p-5 shadow-sm sm:p-6'
+          'overflow-hidden rounded-3xl',
+          compact
+            ? 'border border-border/60 bg-card p-3.5'
+            : 'bg-gradient-to-br from-[#003580] to-[#0057b8] p-1 shadow-xl shadow-blue-900/15'
         )}
       >
-        {!compact && (
-          <div className="mb-4 flex items-center gap-2">
-            <BedDouble className="h-5 w-5 text-accent" />
-            <div>
-              <h2 className="font-display text-lg font-semibold">Hotel in-app</h2>
-              <p className="text-sm text-muted-foreground">
-                LiteAPI · tariffe live (sandbox può avere catalogo ridotto)
-              </p>
-            </div>
+        <div className={cn(!compact && 'rounded-[1.35rem] bg-white p-4 sm:p-5')}>
+          <div
+            className={cn(
+              'grid gap-3',
+              compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-6'
+            )}
+          >
+            <label className={cn('space-y-1.5', !compact && 'lg:col-span-2')}>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Destinazione
+              </span>
+              <Input
+                value={cityName}
+                onChange={(e) => setCityName(e.target.value)}
+                placeholder="Roma"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 font-semibold"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void search();
+                }}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Paese
+              </span>
+              <select
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium"
+              >
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Check-in
+              </span>
+              <Input
+                type="date"
+                value={checkin}
+                onChange={(e) => setCheckin(e.target.value)}
+                className="h-12 rounded-xl border-slate-200 bg-slate-50"
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Check-out
+              </span>
+              <Input
+                type="date"
+                value={checkout}
+                onChange={(e) => setCheckout(e.target.value)}
+                className="h-12 rounded-xl border-slate-200 bg-slate-50"
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Ospiti
+              </span>
+              <div className="relative">
+                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  type="number"
+                  min={1}
+                  max={9}
+                  value={adults}
+                  onChange={(e) => setAdults(Number(e.target.value) || 1)}
+                  className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-9"
+                />
+              </div>
+            </label>
           </div>
-        )}
 
-        <div
-          className={cn(
-            'grid gap-3',
-            compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'
-          )}
-        >
-          <label className="space-y-1.5 text-sm">
-            <span className="text-muted-foreground">Città</span>
-            <Input
-              value={cityName}
-              onChange={(e) => setCityName(e.target.value)}
-              placeholder="Roma"
-              className="h-11 rounded-xl"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void search();
-              }}
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="text-muted-foreground">Paese</span>
-            <select
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <FilterChip
+              active={filters.freeCancel}
+              onClick={() => toggle('freeCancel')}
             >
-              {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="text-muted-foreground">Adulti</span>
-            <Input
-              type="number"
-              min={1}
-              max={9}
-              value={adults}
-              onChange={(e) => setAdults(Number(e.target.value) || 1)}
-              className="h-11 rounded-xl"
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="text-muted-foreground">Check-in</span>
-            <Input
-              type="date"
-              value={checkin}
-              onChange={(e) => setCheckin(e.target.value)}
-              className="h-11 rounded-xl"
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="text-muted-foreground">Check-out</span>
-            <Input
-              type="date"
-              value={checkout}
-              onChange={(e) => setCheckout(e.target.value)}
-              className="h-11 rounded-xl"
-            />
-          </label>
-          <div className="flex items-end">
+              <XCircle className="h-3.5 w-3.5" />
+              Cancellazione gratis
+            </FilterChip>
+            <FilterChip
+              active={filters.breakfast}
+              onClick={() => toggle('breakfast')}
+            >
+              <Coffee className="h-3.5 w-3.5" />
+              Colazione inclusa
+            </FilterChip>
+            <FilterChip active={filters.pool} onClick={() => toggle('pool')}>
+              <Waves className="h-3.5 w-3.5" />
+              Piscina
+            </FilterChip>
+            <FilterChip active={filters.stars3} onClick={() => toggle('stars3')}>
+              <Star className="h-3.5 w-3.5" />
+              3+ stelle
+            </FilterChip>
+            <FilterChip active={filters.stars4} onClick={() => toggle('stars4')}>
+              <Star className="h-3.5 w-3.5" />
+              4+ stelle
+            </FilterChip>
             <Button
               type="button"
-              className="h-11 w-full rounded-xl"
               onClick={() => void search()}
               disabled={loading}
+              className={cn(
+                'ml-auto h-10 rounded-xl px-5 font-semibold',
+                compact
+                  ? ''
+                  : 'bg-[#003580] hover:bg-[#00275c]'
+              )}
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -217,80 +307,117 @@ export function LiteApiHotelSearch({
         </div>
       </div>
 
+      {loading && !hotels && (
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-sm text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin text-[#003580]" />
+          Cerchiamo le migliori tariffe…
+        </div>
+      )}
+
       {hotels && (
-        <ul className={cn('grid gap-3', compact ? 'grid-cols-1' : 'sm:grid-cols-2')}>
+        <ul className={cn('grid gap-4', compact ? 'grid-cols-1' : 'lg:grid-cols-1')}>
           {hotels.map((h) => (
             <li
               key={`${h.hotelId}-${h.offerId}`}
-              className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-shadow hover:shadow-md"
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
             >
-              <div className="relative aspect-[16/10] bg-muted">
-                {h.photo ? (
-                  <Image
-                    src={h.photo}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, 400px"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    <BedDouble className="h-8 w-8 opacity-40" />
-                  </div>
-                )}
-                <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2.5 py-1 text-sm font-semibold text-white tabular-nums">
-                  {h.totalAmount.toFixed(0)} {h.currency}
+              <div className={cn('grid', compact ? '' : 'sm:grid-cols-[220px_1fr]')}>
+                <div className="relative aspect-[16/10] bg-slate-100 sm:aspect-auto sm:min-h-[160px]">
+                  {h.photo ? (
+                    <Image
+                      src={h.photo}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="220px"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full min-h-[140px] items-center justify-center text-slate-300">
+                      <BedDouble className="h-10 w-10" />
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="space-y-1.5 p-3.5">
-                <p className="font-display font-semibold leading-snug line-clamp-1">
-                  {h.name}
-                </p>
-                {(h.city || h.address) && (
-                  <p className="flex items-start gap-1 text-xs text-muted-foreground line-clamp-1">
-                    <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                    {h.address || h.city}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {h.stars != null && h.stars > 0 ? (
-                    <span className="inline-flex items-center gap-0.5">
-                      {Array.from({ length: Math.min(5, Math.round(h.stars)) }).map(
-                        (_, i) => (
-                          <Star
-                            key={i}
-                            className={cn('h-3 w-3 fill-amber-400 text-amber-400')}
-                          />
-                        )
+                <div className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:p-5">
+                  <div className="min-w-0 space-y-2">
+                    <div>
+                      <p className="font-display text-lg font-semibold text-slate-900 line-clamp-1">
+                        {h.name}
+                      </p>
+                      {(h.city || h.address) && (
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="line-clamp-1">{h.address || h.city}</span>
+                        </p>
                       )}
-                    </span>
-                  ) : null}
-                  {h.rating != null ? <span>★ {h.rating.toFixed(1)}</span> : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {h.stars != null && h.stars > 0 ? (
+                        <span className="inline-flex items-center gap-0.5 text-amber-500">
+                          {Array.from({
+                            length: Math.min(5, Math.round(h.stars)),
+                          }).map((_, i) => (
+                            <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                          ))}
+                        </span>
+                      ) : null}
+                      {h.rating != null ? (
+                        <span className="rounded-md bg-[#003580] px-1.5 py-0.5 font-bold text-white">
+                          {h.rating.toFixed(1)}
+                        </span>
+                      ) : null}
+                      <span className="text-slate-600">{h.roomName}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(h.freeCancellation || h.refundable) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                          <Check className="h-3 w-3" />
+                          Cancellazione gratis
+                        </span>
+                      )}
+                      {(h.boardName || h.boardType) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                          <Coffee className="h-3 w-3" />
+                          {h.boardName || h.boardType}
+                        </span>
+                      )}
+                      {h.facilities
+                        .filter((f) => /pool|piscina|wifi|spa|parking|park/i.test(f))
+                        .slice(0, 3)
+                        .map((f) => (
+                          <span
+                            key={f}
+                            className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                          >
+                            {f}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:w-40 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                    <div className="text-right">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-[#003580]">
+                        {h.totalAmount.toFixed(0)}
+                        <span className="ml-1 text-sm font-medium text-slate-500">
+                          {h.currency}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-slate-400">totale soggiorno</p>
+                    </div>
+                    <Button
+                      type="button"
+                      className="rounded-xl bg-[#003580] font-semibold hover:bg-[#00275c]"
+                      onClick={() =>
+                        toast.message('Checkout LiteAPI in arrivo', {
+                          description:
+                            'Prebook + pagamento Stripe nel prossimo step.',
+                        })
+                      }
+                    >
+                      Vedi offerta
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm text-foreground/80 line-clamp-1">{h.roomName}</p>
-                {h.boardName ? (
-                  <p className="text-xs text-muted-foreground">{h.boardName}</p>
-                ) : null}
-                {h.commissionAmount != null ? (
-                  <p className="text-[11px] text-teal-700 dark:text-teal-300">
-                    Stima commissione: {h.commissionAmount.toFixed(2)} {h.currency}
-                  </p>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full rounded-full"
-                  onClick={() =>
-                    toast.message('Checkout LiteAPI in arrivo', {
-                      description:
-                        'Ricerca attiva. Il prebook + pagamento Stripe arriva nel prossimo step.',
-                    })
-                  }
-                >
-                  Seleziona camera
-                </Button>
               </div>
             </li>
           ))}

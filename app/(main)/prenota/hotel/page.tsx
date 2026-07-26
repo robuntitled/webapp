@@ -14,7 +14,7 @@ export default async function PrenotaHotelPage() {
       title="Hotel"
       subtitle="Tariffe hotel in-app via LiteAPI. Il catalogo sandbox può essere limitato: prova Roma/IT con date tra 2–4 settimane."
     >
-      <LiteApiHotelSearch defaultCity="Rome" defaultCountry="IT" />
+      <LiteApiHotelSearch defaultCity="Rome" defaultCountry="IT" defaultAdults={1} />
     </PrenotaPageShell>
   );
 }

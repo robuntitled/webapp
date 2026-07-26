@@ -15,11 +15,15 @@ export type LiteHotelOffer = {
   reviewCount: number | null;
   roomName: string;
   boardName: string | null;
+  boardType: string | null;
   offerId: string;
   rateId: string;
   totalAmount: number;
   currency: string;
   commissionAmount: number | null;
+  refundable: boolean;
+  freeCancellation: boolean;
+  facilities: string[];
 };
 
 export type HotelSearchInput = {
@@ -33,6 +37,13 @@ export type HotelSearchInput = {
   /** Override markup % (default da env). */
   margin?: number;
   limit?: number;
+  /** Solo tariffe rimborsabili / cancellazione gratuita */
+  refundableRatesOnly?: boolean;
+  /** Es. BB = bed & breakfast */
+  boardTypes?: string;
+  /** Facility IDs LiteAPI (es. piscina) */
+  facilityIds?: number[];
+  minStars?: number;
 };
 
 type RawRateTotal = { amount?: number | string; currency?: string };
@@ -42,6 +53,13 @@ type RawRate = {
   rateId?: string;
   name?: string;
   boardName?: string;
+  boardType?: string;
+  boardCode?: string;
+  refundable?: boolean;
+  cancellationPolicies?: {
+    refundableTag?: string;
+    cancelPolicyInfos?: Array<{ cancelTime?: string; amount?: number }>;
+  };
   retailRate?: { total?: RawRateTotal[] };
   commission?: RawCommission[];
 };
@@ -66,7 +84,10 @@ type RawHotelMeta = {
   city_name?: string;
   rating?: number;
   stars?: number;
+  star_rating?: number;
   review_count?: number;
+  hotelFacilities?: Array<{ name?: string; facilityId?: number } | string>;
+  facilities?: Array<{ name?: string; facilityId?: number } | string>;
 };
 
 type RatesResponse = {
@@ -130,6 +151,23 @@ function toNum(v: unknown): number | null {
   return null;
 }
 
+function facilityNames(meta?: RawHotelMeta): string[] {
+  const raw = meta?.hotelFacilities ?? meta?.facilities ?? [];
+  return raw
+    .map((f) => (typeof f === 'string' ? f : f?.name))
+    .filter((n): n is string => Boolean(n && n.trim()))
+    .map((n) => n.trim());
+}
+
+function isRefundableRate(rate: RawRate): boolean {
+  if (rate.refundable === true) return true;
+  const tag = rate.cancellationPolicies?.refundableTag?.toLowerCase() ?? '';
+  if (tag.includes('refundable') || tag.includes('free')) return true;
+  const infos = rate.cancellationPolicies?.cancelPolicyInfos ?? [];
+  if (infos.some((i) => i.amount === 0)) return true;
+  return false;
+}
+
 function parseOffers(
   res: RatesResponse,
   fallbackCity: string,
@@ -159,6 +197,9 @@ function parseOffers(
       const amount = toNum(total?.amount);
       if (amount == null) continue;
 
+      const refundable = isRefundableRate(rate);
+      const boardType = rate.boardType ?? rate.boardCode ?? null;
+
       const offer: LiteHotelOffer = {
         hotelId,
         name: meta?.name?.trim() || `Hotel ${hotelId}`,
@@ -166,17 +207,26 @@ function parseOffers(
         city: meta?.city_name ?? fallbackCity,
         countryCode: meta?.country_code ?? fallbackCountry,
         photo: meta?.thumbnail || meta?.main_photo || null,
-        stars: typeof meta?.stars === 'number' ? meta.stars : null,
+        stars:
+          typeof meta?.stars === 'number'
+            ? meta.stars
+            : typeof meta?.star_rating === 'number'
+              ? meta.star_rating
+              : null,
         rating: typeof meta?.rating === 'number' ? meta.rating : null,
         reviewCount:
           typeof meta?.review_count === 'number' ? meta.review_count : null,
         roomName: rate.name?.trim() || 'Camera',
         boardName: rate.boardName ?? null,
+        boardType,
         offerId,
         rateId: rate.rateId,
         totalAmount: amount,
         currency: (total?.currency || currency).toUpperCase(),
         commissionAmount: toNum(rate.commission?.[0]?.amount),
+        refundable,
+        freeCancellation: refundable,
+        facilities: facilityNames(meta),
       };
 
       const prev = bestByHotel.get(hotelId);
@@ -241,17 +291,28 @@ export async function searchHotelRates(
     console.warn('[liteapi hotels] date nel passato → shift a', checkin, checkout);
   }
 
-  const baseBody = {
+  const baseBody: Record<string, unknown> = {
     checkin,
     checkout,
     currency,
     guestNationality,
-    occupancies: [{ rooms: 1, adults }],
+    occupancies: [{ rooms: 1, adults, children: [] as number[] }],
     timeout: 12,
     roomMapping: true,
     includeHotelData: true,
+    maxRatesPerHotel: 1,
     margin,
   };
+
+  if (input.refundableRatesOnly) {
+    baseBody.refundableRatesOnly = true;
+  }
+  if (input.boardTypes?.trim()) {
+    baseBody.boardTypes = input.boardTypes.trim();
+  }
+  if (input.facilityIds?.length) {
+    baseBody.facilities = input.facilityIds;
+  }
 
   let hotelIds: string[] = [];
   try {

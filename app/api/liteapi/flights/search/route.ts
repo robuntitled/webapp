@@ -9,12 +9,7 @@ const schema = z.object({
   destination: z.string().trim().min(2).max(120),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  originIata: z
-    .string()
-    .trim()
-    .length(3)
-    .transform((s) => s.toUpperCase())
-    .optional(),
+  originIata: z.string().trim().min(2).max(40).optional(),
   adults: z.coerce.number().int().min(1).max(9).optional(),
   currency: z.string().trim().length(3).optional(),
 });
@@ -73,17 +68,8 @@ export async function GET(request: Request) {
       provider: 'liteapi',
       found: Boolean(cheapest),
       count: offers.length,
-      quote: cheapest
-        ? {
-            price: cheapest.price,
-            currency: cheapest.currency,
-            airline: cheapest.airline,
-            origin: cheapest.origin,
-            destination: cheapest.destination,
-            offerId: cheapest.offerId,
-          }
-        : null,
-      offers: offers.slice(0, 12),
+      quote: cheapest ?? null,
+      offers: offers.slice(0, 20),
       message: cheapest
         ? undefined
         : 'Nessuna tariffa trovata. In sandbox prova ROM→LHR o FCO→JFK con date future; chiedi a Nuitee l’abilitazione Flights + provider “Nuitee Air”.',

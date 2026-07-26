@@ -16,6 +16,19 @@ const schema = z.object({
   checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   adults: z.coerce.number().int().min(1).max(9).optional(),
   currency: z.string().trim().length(3).optional(),
+  refundableOnly: z
+    .enum(['0', '1', 'true', 'false'])
+    .optional()
+    .transform((v) => v === '1' || v === 'true'),
+  breakfast: z
+    .enum(['0', '1', 'true', 'false'])
+    .optional()
+    .transform((v) => v === '1' || v === 'true'),
+  minStars: z.coerce.number().int().min(0).max(5).optional(),
+  pool: z
+    .enum(['0', '1', 'true', 'false'])
+    .optional()
+    .transform((v) => v === '1' || v === 'true'),
 });
 
 export async function GET(request: Request) {
@@ -47,6 +60,10 @@ export async function GET(request: Request) {
     checkout: searchParams.get('checkout'),
     adults: searchParams.get('adults') ?? undefined,
     currency: searchParams.get('currency') ?? undefined,
+    refundableOnly: searchParams.get('refundableOnly') ?? undefined,
+    breakfast: searchParams.get('breakfast') ?? undefined,
+    minStars: searchParams.get('minStars') ?? undefined,
+    pool: searchParams.get('pool') ?? undefined,
   });
 
   if (!parsed.success) {
@@ -65,11 +82,41 @@ export async function GET(request: Request) {
   }
 
   try {
-    const hotels = await searchHotelRates({
-      ...parsed.data,
+    let hotels = await searchHotelRates({
+      cityName: parsed.data.cityName,
+      countryCode: parsed.data.countryCode,
+      checkin: parsed.data.checkin,
+      checkout: parsed.data.checkout,
+      adults: parsed.data.adults,
       currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
       guestNationality: 'IT',
+      refundableRatesOnly: parsed.data.refundableOnly || undefined,
+      boardTypes: parsed.data.breakfast ? 'BB' : undefined,
+      minStars: parsed.data.minStars && parsed.data.minStars > 0 ? parsed.data.minStars : undefined,
     });
+
+    if (parsed.data.refundableOnly) {
+      hotels = hotels.filter((h) => h.freeCancellation || h.refundable);
+    }
+    if (parsed.data.breakfast) {
+      hotels = hotels.filter((h) => {
+        const board = `${h.boardType ?? ''} ${h.boardName ?? ''}`.toLowerCase();
+        return (
+          board.includes('bb') ||
+          board.includes('breakfast') ||
+          board.includes('colazione') ||
+          board.includes('bed')
+        );
+      });
+    }
+    if (parsed.data.minStars && parsed.data.minStars > 0) {
+      hotels = hotels.filter((h) => (h.stars ?? 0) >= parsed.data.minStars!);
+    }
+    if (parsed.data.pool) {
+      hotels = hotels.filter((h) =>
+        h.facilities.some((f) => /pool|piscina|swim/i.test(f))
+      );
+    }
 
     return NextResponse.json({
       configured: true,

@@ -176,7 +176,7 @@ export function TripBookingPanel({
             defaultCountry={country}
             defaultCheckin={startDate}
             defaultCheckout={endDate}
-            defaultAdults={Math.min(9, Math.max(1, adults))}
+            defaultAdults={1}
             compact
           />
         ) : (
