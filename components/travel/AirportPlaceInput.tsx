@@ -7,6 +7,7 @@ import {
   placeDisplayValue,
   resolvePlaceExact,
   searchPlaceSuggestions,
+  type PlaceKind,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,10 @@ type AirportPlaceInputProps = {
   onClearSelection?: () => void;
   placeholder?: string;
   className?: string;
+  /** Default: tutti. Per hotel: città + paese */
+  kinds?: PlaceKind[];
+  /** Se false, in selezione mostra solo il nome città (senza codice IATA) */
+  showAirportCode?: boolean;
 };
 
 function KindIcon({ kind }: { kind: PlaceSuggestion['kind'] }) {
@@ -39,6 +44,8 @@ export function AirportPlaceInput({
   onClearSelection,
   placeholder = 'Città, aeroporto o paese',
   className,
+  kinds,
+  showAirportCode = true,
 }: AirportPlaceInputProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -49,7 +56,11 @@ export function AirportPlaceInput({
   const [menuBox, setMenuBox] = useState<MenuBox | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const suggestions = useMemo(() => searchPlaceSuggestions(value, 12), [value]);
+  const suggestions = useMemo(() => {
+    const all = searchPlaceSuggestions(value, kinds?.length ? 24 : 12);
+    if (!kinds?.length) return all.slice(0, 12);
+    return all.filter((p) => kinds.includes(p.kind)).slice(0, 12);
+  }, [kinds, value]);
   const showList = open && value.trim().length >= 2 && suggestions.length > 0;
 
   useEffect(() => {
@@ -97,9 +108,14 @@ export function AirportPlaceInput({
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
+  const displayFor = (place: PlaceSuggestion) => {
+    if (!showAirportCode && place.kind === 'airport') return place.label;
+    return placeDisplayValue(place);
+  };
+
   const pick = (place: PlaceSuggestion) => {
     onSelect(place);
-    onValueChange(placeDisplayValue(place));
+    onValueChange(displayFor(place));
     setOpen(false);
   };
 
@@ -137,13 +153,17 @@ export function AirportPlaceInput({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-semibold text-slate-900">
-                        {place.kind === 'airport'
+                        {place.kind === 'airport' && showAirportCode
                           ? `${place.label} (${place.code})`
                           : place.label}
                       </span>
-                      {place.kind !== 'country' ? (
+                      {place.kind !== 'country' && showAirportCode ? (
                         <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-slate-600">
                           {place.code}
+                        </span>
+                      ) : place.kind === 'city' ? (
+                        <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-slate-600">
+                          {place.countryCode}
                         </span>
                       ) : null}
                     </span>

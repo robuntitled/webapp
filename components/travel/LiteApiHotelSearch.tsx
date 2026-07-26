@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
+  ArrowDownWideNarrow,
   BedDouble,
   Check,
+  ChevronDown,
   Coffee,
   Loader2,
   MapPin,
@@ -16,9 +19,21 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import {
+  airportsInCountry,
+  resolvePlaceExact,
+  type PlaceSuggestion,
+} from '@/lib/travel/airport-catalog';
 import { saveHotelOfferDraft } from '@/lib/travel/hotel-offer-draft';
 import {
   loadSearchFormCache,
@@ -26,6 +41,19 @@ import {
   type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
+
+const HotelsResultsMap = dynamic(
+  () =>
+    import('@/components/travel/HotelsResultsMap').then((m) => m.HotelsResultsMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
+        Caricamento mappa…
+      </div>
+    ),
+  }
+);
 
 type HotelOffer = {
   hotelId: string;
@@ -44,7 +72,18 @@ type HotelOffer = {
   freeCancellation: boolean;
   refundable: boolean;
   facilities: string[];
+  lat?: number | null;
+  lng?: number | null;
 };
+
+type HotelSort = 'cheapest' | 'rated' | 'stars' | 'name';
+
+const SORT_OPTIONS: Array<{ id: HotelSort; label: string }> = [
+  { id: 'cheapest', label: 'Dal più economico' },
+  { id: 'rated', label: 'I più valutati' },
+  { id: 'stars', label: 'Più stelle' },
+  { id: 'name', label: 'Nome A–Z' },
+];
 
 type FilterKey = 'freeCancel' | 'breakfast' | 'pool' | 'stars3' | 'stars4';
 
@@ -124,6 +163,20 @@ function applyHotelFilters(
   return out;
 }
 
+function sortHotels(list: HotelOffer[], sort: HotelSort): HotelOffer[] {
+  const copy = [...list];
+  if (sort === 'cheapest') {
+    copy.sort((a, b) => a.totalAmount - b.totalAmount);
+  } else if (sort === 'rated') {
+    copy.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
+  } else if (sort === 'stars') {
+    copy.sort((a, b) => (b.stars ?? -1) - (a.stars ?? -1));
+  } else {
+    copy.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  }
+  return copy;
+}
+
 export function LiteApiHotelSearch({
   defaultCity = '',
   defaultCheckin = '',
@@ -136,6 +189,9 @@ export function LiteApiHotelSearch({
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
   const [cityName, setCityName] = useState(defaultCity);
+  const [cityPlace, setCityPlace] = useState<PlaceSuggestion | null>(() =>
+    defaultCity ? resolvePlaceExact(defaultCity) : null
+  );
   const [checkin, setCheckin] = useState(defaultCheckin);
   const [checkout, setCheckout] = useState(defaultCheckout);
   const [adults, setAdults] = useState(defaultAdults);
@@ -149,6 +205,8 @@ export function LiteApiHotelSearch({
   const [loading, setLoading] = useState(false);
   /** Risultati grezzi dalla API (senza filtri) */
   const [rawHotels, setRawHotels] = useState<HotelOffer[] | null>(null);
+  const [sort, setSort] = useState<HotelSort>('cheapest');
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cacheKey) {
@@ -159,7 +217,9 @@ export function LiteApiHotelSearch({
       cacheKey
     );
     if (cached) {
-      setCityName(cached.cityName ?? '');
+      const city = cached.cityName ?? '';
+      setCityName(city);
+      setCityPlace(city ? resolvePlaceExact(city) : null);
       setCheckin(cached.checkin ?? '');
       setCheckout(cached.checkout ?? '');
       setAdults(cached.adults ?? 1);
@@ -183,10 +243,31 @@ export function LiteApiHotelSearch({
     return () => window.removeEventListener('pagehide', onHide);
   }, [adults, cacheKey, cacheReady, checkin, checkout, cityName, filters]);
 
-  const hotels = useMemo(
-    () => (rawHotels ? applyHotelFilters(rawHotels, filters) : null),
-    [filters, rawHotels]
+  const hotels = useMemo(() => {
+    if (!rawHotels) return null;
+    return sortHotels(applyHotelFilters(rawHotels, filters), sort);
+  }, [filters, rawHotels, sort]);
+
+  const mapPins = useMemo(
+    () =>
+      (hotels ?? [])
+        .filter(
+          (h): h is HotelOffer & { lat: number; lng: number } =>
+            typeof h.lat === 'number' && typeof h.lng === 'number'
+        )
+        .map((h) => ({
+          id: h.hotelId,
+          name: h.name,
+          lat: h.lat,
+          lng: h.lng,
+          price: h.totalAmount,
+          currency: h.currency,
+        })),
+    [hotels]
   );
+
+  const sortLabel =
+    SORT_OPTIONS.find((o) => o.id === sort)?.label ?? 'Dal più economico';
 
   const toggle = (key: FilterKey) => {
     setFilters((f) => {
@@ -213,6 +294,7 @@ export function LiteApiHotelSearch({
     }
     setLoading(true);
     setRawHotels(null);
+    setHighlightedId(null);
     try {
       const qs = new URLSearchParams({
         cityName: cityName.trim(),
@@ -273,20 +355,26 @@ export function LiteApiHotelSearch({
                 : 'sm:grid-cols-2 lg:grid-cols-[1.4fr_1.3fr_0.7fr_auto] lg:items-end'
             )}
           >
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Destinazione
-              </span>
-              <Input
-                value={cityName}
-                onChange={(e) => setCityName(e.target.value)}
-                placeholder="Città (es. Roma, Parigi…)"
-                className="h-12 rounded-xl border-border bg-muted/40 font-semibold"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void search();
-                }}
-              />
-            </label>
+            <AirportPlaceInput
+              label="Destinazione"
+              value={cityName}
+              selected={cityPlace}
+              onValueChange={setCityName}
+              onClearSelection={() => setCityPlace(null)}
+              onSelect={(place) => {
+                setCityPlace(place);
+                if (place.kind === 'country') {
+                  // Paese → città principale del catalogo (LiteAPI cerca per city)
+                  const hub = airportsInCountry(place.code)[0]?.label;
+                  setCityName(hub || place.label);
+                } else {
+                  setCityName(place.label);
+                }
+              }}
+              placeholder="Città o paese…"
+              kinds={['city', 'country']}
+              showAirportCode={false}
+            />
 
             <FlightDateField
               tripType="stay"
@@ -383,143 +471,191 @@ export function LiteApiHotelSearch({
       ) : null}
 
       {hotels && hotels.length > 0 ? (
-        <ul className={cn('grid gap-4', compact ? 'grid-cols-1' : 'lg:grid-cols-1')}>
-          {hotels.map((h) => (
-            <li
-              key={`${h.hotelId}-${h.offerId}`}
-              className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition hover:border-primary/30 hover:shadow-md"
-            >
-              <div className={cn('grid', compact ? '' : 'sm:grid-cols-[220px_1fr]')}>
-                <div className="relative aspect-[16/10] bg-muted sm:aspect-auto sm:min-h-[160px]">
-                  {h.photo ? (
-                    <Image
-                      src={h.photo}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="220px"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-full min-h-[140px] items-center justify-center text-muted-foreground/40">
-                      <BedDouble className="h-10 w-10" />
-                    </div>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              {hotels.length} hotel
+              {mapPins.length > 0 ? ` · ${mapPins.length} sulla mappa` : null}
+            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-semibold text-foreground shadow-sm transition hover:border-primary/30"
+                >
+                  <ArrowDownWideNarrow className="h-3.5 w-3.5 text-primary" />
+                  {sortLabel}
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[220px] rounded-xl p-1.5">
+                {SORT_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.id}
+                    onClick={() => setSort(opt.id)}
+                    className={cn(
+                      'cursor-pointer rounded-lg px-3 py-2.5 text-sm',
+                      sort === opt.id && 'bg-primary/10 text-primary'
+                    )}
+                  >
+                    <span className="flex w-4 shrink-0 items-center justify-center">
+                      {sort === opt.id ? <Check className="h-4 w-4" /> : null}
+                    </span>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div
+            className={cn(
+              'grid gap-4',
+              !compact && mapPins.length > 0 && 'lg:grid-cols-[1fr_minmax(300px,38%)]'
+            )}
+          >
+            <ul className="grid gap-4">
+              {hotels.map((h) => (
+                <li
+                  key={`${h.hotelId}-${h.offerId}`}
+                  id={`hotel-${h.hotelId}`}
+                  className={cn(
+                    'overflow-hidden rounded-2xl border bg-card shadow-sm transition hover:border-primary/30 hover:shadow-md',
+                    highlightedId === h.hotelId
+                      ? 'border-primary ring-2 ring-primary/20'
+                      : 'border-border/70'
                   )}
-                </div>
-                <div className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:p-5">
-                  <div className="min-w-0 space-y-2">
-                    <div>
-                      <p className="line-clamp-1 font-display text-lg font-semibold">
-                        {h.name}
-                      </p>
-                      {(h.city || h.address) && (
-                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="line-clamp-1">{h.address || h.city}</span>
-                        </p>
+                  onMouseEnter={() => setHighlightedId(h.hotelId)}
+                >
+                  <div className={cn('grid', compact ? '' : 'sm:grid-cols-[200px_1fr]')}>
+                    <div className="relative aspect-[16/10] bg-muted sm:aspect-auto sm:min-h-[150px]">
+                      {h.photo ? (
+                        <Image
+                          src={h.photo}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="200px"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="flex h-full min-h-[140px] items-center justify-center text-muted-foreground/40">
+                          <BedDouble className="h-10 w-10" />
+                        </div>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      {h.stars != null && h.stars > 0 ? (
-                        <span className="inline-flex items-center gap-0.5 text-amber-500">
-                          {Array.from({
-                            length: Math.min(5, Math.round(h.stars)),
-                          }).map((_, i) => (
-                            <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                          ))}
-                        </span>
-                      ) : null}
-                      {h.rating != null ? (
-                        <span className="rounded-md bg-primary px-1.5 py-0.5 font-bold text-primary-foreground">
-                          {h.rating.toFixed(1)}
-                        </span>
-                      ) : null}
-                      <span className="text-muted-foreground">{h.roomName}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(h.freeCancellation || h.refundable) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                          <Check className="h-3 w-3" />
-                          Cancellazione gratis
-                        </span>
-                      )}
-                      {(h.boardName || h.boardType) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                          <Coffee className="h-3 w-3" />
-                          {h.boardName || h.boardType}
-                        </span>
-                      )}
-                      {h.facilities
-                        .filter((f) => /pool|piscina|wifi|spa|parking|park/i.test(f))
-                        .slice(0, 3)
-                        .map((f) => (
-                          <span
-                            key={f}
-                            className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
-                          >
-                            {f}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-border/60 pt-3 sm:w-40 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
-                    <div className="text-right">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-primary">
-                        {h.totalAmount.toFixed(0)}
-                        <span className="ml-1 text-sm font-medium text-muted-foreground">
-                          {h.currency}
-                        </span>
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">totale soggiorno</p>
-                    </div>
-                    <div className="flex w-full flex-col gap-2 sm:items-end">
-                      <Button
-                        type="button"
-                        className="rounded-xl font-semibold"
-                        onClick={() => {
-                          saveHotelOfferDraft({
-                            hotelId: h.hotelId,
-                            name: h.name,
-                            address: h.address,
-                            city: h.city,
-                            photo: h.photo,
-                            stars: h.stars,
-                            rating: h.rating,
-                            roomName: h.roomName,
-                            boardName: h.boardName,
-                            offerId: h.offerId,
-                            totalAmount: h.totalAmount,
-                            currency: h.currency,
-                            freeCancellation: h.freeCancellation || h.refundable,
-                            checkin,
-                            checkout,
-                            adults,
-                            savedAt: Date.now(),
-                          });
-                          router.push('/prenota/hotel/checkout');
-                        }}
-                      >
-                        Prenota
-                      </Button>
-                      {h.address || h.city ? (
-                        <a
-                          className="text-center text-xs font-medium text-primary hover:underline sm:text-right"
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                            [h.name, h.address || h.city].filter(Boolean).join(', ')
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                    <div className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:p-5">
+                      <div className="min-w-0 space-y-2">
+                        <div>
+                          <p className="line-clamp-1 font-display text-lg font-semibold">
+                            {h.name}
+                          </p>
+                          {(h.city || h.address) && (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="line-clamp-1">
+                                {h.address || h.city}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          {h.stars != null && h.stars > 0 ? (
+                            <span className="inline-flex items-center gap-0.5 text-amber-500">
+                              {Array.from({
+                                length: Math.min(5, Math.round(h.stars)),
+                              }).map((_, i) => (
+                                <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                              ))}
+                            </span>
+                          ) : null}
+                          {h.rating != null ? (
+                            <span className="rounded-md bg-primary px-1.5 py-0.5 font-bold text-primary-foreground">
+                              {h.rating.toFixed(1)}
+                            </span>
+                          ) : null}
+                          <span className="text-muted-foreground">{h.roomName}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(h.freeCancellation || h.refundable) && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                              <Check className="h-3 w-3" />
+                              Cancellazione gratis
+                            </span>
+                          )}
+                          {(h.boardName || h.boardType) && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                              <Coffee className="h-3 w-3" />
+                              {h.boardName || h.boardType}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-border/60 pt-3 sm:w-36 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                        <div className="text-right">
+                          <p className="font-display text-2xl font-semibold tabular-nums text-primary">
+                            {h.totalAmount.toFixed(0)}
+                            <span className="ml-1 text-sm font-medium text-muted-foreground">
+                              {h.currency}
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            totale soggiorno
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          className="rounded-xl font-semibold"
+                          onClick={() => {
+                            saveHotelOfferDraft({
+                              hotelId: h.hotelId,
+                              name: h.name,
+                              address: h.address,
+                              city: h.city,
+                              photo: h.photo,
+                              stars: h.stars,
+                              rating: h.rating,
+                              roomName: h.roomName,
+                              boardName: h.boardName,
+                              offerId: h.offerId,
+                              totalAmount: h.totalAmount,
+                              currency: h.currency,
+                              freeCancellation:
+                                h.freeCancellation || h.refundable,
+                              checkin,
+                              checkout,
+                              adults,
+                              savedAt: Date.now(),
+                            });
+                            router.push('/prenota/hotel/checkout');
+                          }}
                         >
-                          Apri mappa
-                        </a>
-                      ) : null}
+                          Prenota
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </li>
+              ))}
+            </ul>
+
+            {!compact && mapPins.length > 0 ? (
+              <div className="lg:sticky lg:top-24 lg:self-start">
+                <HotelsResultsMap
+                  pins={mapPins}
+                  highlightedId={highlightedId}
+                  onPinClick={(id) => {
+                    setHighlightedId(id);
+                    document
+                      .getElementById(`hotel-${id}`)
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  className="h-[min(70vh,640px)] min-h-[320px]"
+                />
               </div>
-            </li>
-          ))}
-        </ul>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </div>
   );

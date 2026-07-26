@@ -24,6 +24,8 @@ export type LiteHotelOffer = {
   refundable: boolean;
   freeCancellation: boolean;
   facilities: string[];
+  lat: number | null;
+  lng: number | null;
 };
 
 export type HotelSearchInput = {
@@ -82,12 +84,20 @@ type RawHotelMeta = {
   address?: string;
   country_code?: string;
   city_name?: string;
+  city?: string;
   rating?: number;
   stars?: number;
   star_rating?: number;
+  starRating?: number;
   review_count?: number;
+  reviewCount?: number;
   hotelFacilities?: Array<{ name?: string; facilityId?: number } | string>;
   facilities?: Array<{ name?: string; facilityId?: number } | string>;
+  location?: { latitude?: number | string; longitude?: number | string; lat?: number | string; lng?: number | string };
+  latitude?: number | string;
+  longitude?: number | string;
+  lat?: number | string;
+  lng?: number | string;
 };
 
 type RatesResponse = {
@@ -96,7 +106,15 @@ type RatesResponse = {
 };
 
 type HotelsListResponse = {
-  data?: Array<{ id?: string; name?: string }>;
+  data?: Array<{
+    id?: string;
+    name?: string;
+    location?: RawHotelMeta['location'];
+    latitude?: number | string;
+    longitude?: number | string;
+    lat?: number | string;
+    lng?: number | string;
+  }>;
 };
 
 /** LiteAPI catalogo città spesso in inglese. */
@@ -181,6 +199,31 @@ function facilityNames(meta?: RawHotelMeta): string[] {
     .map((n) => n.trim());
 }
 
+function hotelCoords(meta?: RawHotelMeta): { lat: number | null; lng: number | null } {
+  if (!meta) return { lat: null, lng: null };
+  const loc = meta.location;
+  const lat =
+    toNum(loc?.latitude) ??
+    toNum(loc?.lat) ??
+    toNum(meta.latitude) ??
+    toNum(meta.lat);
+  const lng =
+    toNum(loc?.longitude) ??
+    toNum(loc?.lng) ??
+    toNum(meta.longitude) ??
+    toNum(meta.lng);
+  if (
+    lat == null ||
+    lng == null ||
+    Math.abs(lat) > 90 ||
+    Math.abs(lng) > 180 ||
+    (lat === 0 && lng === 0)
+  ) {
+    return { lat: null, lng: null };
+  }
+  return { lat, lng };
+}
+
 function isRefundableRate(rate: RawRate): boolean {
   if (rate.refundable === true) return true;
   const tag = rate.cancellationPolicies?.refundableTag?.toLowerCase() ?? '';
@@ -194,7 +237,8 @@ function parseOffers(
   res: RatesResponse,
   fallbackCity: string,
   fallbackCountry: string,
-  currency: string
+  currency: string,
+  coordsFallback?: Map<string, { lat: number; lng: number }>
 ): LiteHotelOffer[] {
   const metaById = new Map(
     (res.hotels ?? [])
@@ -221,12 +265,18 @@ function parseOffers(
 
       const refundable = isRefundableRate(rate);
       const boardType = rate.boardType ?? rate.boardCode ?? null;
+      const fromMeta = hotelCoords(meta);
+      const fromCatalog = coordsFallback?.get(hotelId);
+      const coords = {
+        lat: fromMeta.lat ?? fromCatalog?.lat ?? null,
+        lng: fromMeta.lng ?? fromCatalog?.lng ?? null,
+      };
 
       const offer: LiteHotelOffer = {
         hotelId,
         name: meta?.name?.trim() || `Hotel ${hotelId}`,
         address: meta?.address ?? null,
-        city: meta?.city_name ?? fallbackCity,
+        city: meta?.city_name ?? meta?.city ?? fallbackCity,
         countryCode: meta?.country_code ?? fallbackCountry,
         photo: meta?.thumbnail || meta?.main_photo || null,
         stars:
@@ -234,10 +284,16 @@ function parseOffers(
             ? meta.stars
             : typeof meta?.star_rating === 'number'
               ? meta.star_rating
-              : null,
+              : typeof meta?.starRating === 'number'
+                ? meta.starRating
+                : null,
         rating: typeof meta?.rating === 'number' ? meta.rating : null,
         reviewCount:
-          typeof meta?.review_count === 'number' ? meta.review_count : null,
+          typeof meta?.review_count === 'number'
+            ? meta.review_count
+            : typeof meta?.reviewCount === 'number'
+              ? meta.reviewCount
+              : null,
         roomName: rate.name?.trim() || 'Camera',
         boardName: rate.boardName ?? null,
         boardType,
@@ -249,6 +305,8 @@ function parseOffers(
         refundable,
         freeCancellation: refundable,
         facilities: facilityNames(meta),
+        lat: coords.lat,
+        lng: coords.lng,
       };
 
       const prev = bestByHotel.get(hotelId);
@@ -261,11 +319,11 @@ function parseOffers(
   return [...bestByHotel.values()].sort((a, b) => a.totalAmount - b.totalAmount);
 }
 
-async function fetchHotelIds(
+async function fetchHotelCatalog(
   countryCode: string,
   cityName: string,
   max: number
-): Promise<string[]> {
+): Promise<{ ids: string[]; coordsById: Map<string, { lat: number; lng: number }> }> {
   const qs = new URLSearchParams({
     countryCode,
     cityName,
@@ -275,10 +333,17 @@ async function fetchHotelIds(
     method: 'GET',
     timeoutMs: 20_000,
   });
-  const ids = (res.data ?? [])
-    .map((h) => h.id)
-    .filter((id): id is string => Boolean(id));
-  return [...new Set(ids)].slice(0, max);
+  const coordsById = new Map<string, { lat: number; lng: number }>();
+  const ids: string[] = [];
+  for (const h of res.data ?? []) {
+    if (!h.id) continue;
+    ids.push(h.id);
+    const coords = hotelCoords(h);
+    if (coords.lat != null && coords.lng != null) {
+      coordsById.set(h.id, { lat: coords.lat, lng: coords.lng });
+    }
+  }
+  return { ids: [...new Set(ids)].slice(0, max), coordsById };
 }
 
 /**
@@ -330,8 +395,11 @@ export async function searchHotelRates(
   // Filtri (colazione, refundable, piscina) applicati a valle: non restringere la rates API
 
   let hotelIds: string[] = [];
+  let coordsById = new Map<string, { lat: number; lng: number }>();
   try {
-    hotelIds = await fetchHotelIds(countryCode, cityName, limit);
+    const catalog = await fetchHotelCatalog(countryCode, cityName, limit);
+    hotelIds = catalog.ids;
+    coordsById = catalog.coordsById;
   } catch (e) {
     console.warn('[liteapi] /data/hotels failed, fallback city rates', e);
   }
@@ -358,7 +426,13 @@ export async function searchHotelRates(
       data: parts.flatMap((p) => p.data ?? []),
       hotels: parts.flatMap((p) => p.hotels ?? []),
     };
-    const offers = parseOffers(merged, cityName, countryCode, currency);
+    const offers = parseOffers(
+      merged,
+      cityName,
+      countryCode,
+      currency,
+      coordsById
+    );
     if (offers.length > 0) return offers.slice(0, limit);
   }
 
