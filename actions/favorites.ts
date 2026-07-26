@@ -38,4 +38,5 @@ export async function toggleFavorite(tripId: string) {
 
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/preferiti');
+  revalidatePath(`/viaggi/${tripId}`);
 }

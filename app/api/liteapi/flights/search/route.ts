@@ -86,19 +86,28 @@ export async function GET(request: Request) {
       offers: offers.slice(0, 12),
       message: cheapest
         ? undefined
-        : 'Nessuna tariffa LiteAPI per questa tratta (verifica IATA destinazione e che Flights sia abilitato sulla chiave).',
+        : 'Nessuna tariffa trovata. In sandbox prova ROM→LHR o FCO→JFK con date future; chiedi a Nuitee l’abilitazione Flights + provider “Nuitee Air”.',
+      debug: {
+        destination: parsed.data.destination,
+        originIata: parsed.data.originIata ?? null,
+      },
     });
   } catch (e) {
     if (e instanceof LiteApiError) {
       console.error('[liteapi flights]', e.status, e.message, e.body);
       const isAuth = e.status === 401 || /unauthor/i.test(e.message);
+      const bodyMsg =
+        typeof e.body === 'object' && e.body && 'error' in e.body
+          ? JSON.stringify((e.body as { error?: unknown }).error).slice(0, 280)
+          : '';
       return NextResponse.json(
         {
           error: isAuth
             ? 'LiteAPI rifiuta la chiave. Usa Sandbox/Production Key con prodotto Flights abilitato.'
-            : e.message,
+            : bodyMsg || e.message,
           configured: true,
           code: isAuth ? 'liteapi_unauthorized' : 'liteapi_error',
+          liteapiStatus: e.status,
         },
         { status: isAuth ? 502 : e.status >= 400 && e.status < 600 ? e.status : 502 }
       );

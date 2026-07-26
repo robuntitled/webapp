@@ -226,9 +226,24 @@ export async function searchHotelRates(
   const countryCode = input.countryCode.toUpperCase();
   const cityName = normalizeCityName(input.cityName);
 
+  // Evita richieste con date nel passato (sandbox/prod spesso rispondono vuoto)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let checkin = input.checkin;
+  let checkout = input.checkout;
+  if (new Date(checkin) < today) {
+    const inD = new Date(today);
+    inD.setDate(inD.getDate() + 21);
+    const outD = new Date(inD);
+    outD.setDate(outD.getDate() + 4);
+    checkin = inD.toISOString().slice(0, 10);
+    checkout = outD.toISOString().slice(0, 10);
+    console.warn('[liteapi hotels] date nel passato → shift a', checkin, checkout);
+  }
+
   const baseBody = {
-    checkin: input.checkin,
-    checkout: input.checkout,
+    checkin,
+    checkout,
     currency,
     guestNationality,
     occupancies: [{ rooms: 1, adults }],

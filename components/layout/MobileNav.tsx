@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 const LINKS = [
   { href: '/dashboard', label: 'Scopri' },
   { href: '/dashboard/crea?new=1', label: 'Organizza', auth: true },
+  { href: '/prenota/voli', label: 'Prenota · Voli', auth: true },
+  { href: '/prenota/hotel', label: 'Prenota · Hotel', auth: true },
+  { href: '/prenota/attrazioni', label: 'Prenota · Attrazioni', auth: true },
+  { href: '/prenota/attivita', label: 'Prenota · Attività', auth: true },
   { href: '/dashboard/miei-viaggi', label: 'I Miei Viaggi', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];

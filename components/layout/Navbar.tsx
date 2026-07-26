@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { auth } from '@/auth';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { PrenotaNavMenu } from '@/components/layout/PrenotaNavMenu';
 import { Button } from '@/components/ui/button';
 import { Heart, Plus } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
@@ -45,6 +46,7 @@ export async function Navbar() {
               >
                 Organizza
               </Link>
+              <PrenotaNavMenu />
               <Link
                 href="/dashboard/miei-viaggi"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

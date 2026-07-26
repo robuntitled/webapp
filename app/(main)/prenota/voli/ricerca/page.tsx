@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function PrenotaVoliRicercaRedirect() {
-  redirect('/dashboard');
+  redirect('/prenota/voli');
 }

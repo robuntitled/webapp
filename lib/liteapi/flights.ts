@@ -15,80 +15,158 @@ export type LiteApiFlightOffer = {
   arrivalAt?: string | null;
 };
 
-type RawOffer = {
-  offerId?: string;
-  id?: string;
-  price?: number | { total?: number; amount?: number; currency?: string };
-  totalAmount?: number;
-  currency?: string;
-  validatingAirline?: string;
-  airline?: string;
-  carrier?: string;
-  origin?: string;
-  destination?: string;
-  departureAt?: string;
-  arrivalAt?: string;
-};
+type UnknownRecord = Record<string, unknown>;
 
-type RatesResponse = {
-  data?: {
-    journeys?: Array<{
-      offers?: RawOffer[];
-      origin?: string;
-      destination?: string;
-    }>;
-    offers?: RawOffer[];
-  };
-  journeys?: Array<{ offers?: RawOffer[] }>;
-  offers?: RawOffer[];
-};
+function asRecord(v: unknown): UnknownRecord | null {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as UnknownRecord) : null;
+}
 
-function extractPrice(offer: RawOffer): { price: number; currency: string } | null {
-  if (typeof offer.price === 'number' && offer.price > 0) {
-    return { price: offer.price, currency: offer.currency ?? 'EUR' };
-  }
-  if (offer.price && typeof offer.price === 'object') {
-    const amount = offer.price.total ?? offer.price.amount;
-    if (typeof amount === 'number' && amount > 0) {
-      return {
-        price: amount,
-        currency: offer.price.currency ?? offer.currency ?? 'EUR',
-      };
-    }
-  }
-  if (typeof offer.totalAmount === 'number' && offer.totalAmount > 0) {
-    return { price: offer.totalAmount, currency: offer.currency ?? 'EUR' };
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+function toNum(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return v;
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
   }
   return null;
 }
 
-function flattenOffers(raw: RatesResponse): RawOffer[] {
-  const out: RawOffer[] = [];
-  const journeys = raw.data?.journeys ?? raw.journeys ?? [];
-  for (const j of journeys) {
-    for (const o of j.offers ?? []) out.push(o);
+/** Estrae prezzo da forme LiteAPI comuni (pricing.display.total, price.total, …). */
+function extractPrice(offer: UnknownRecord): { price: number; currency: string } | null {
+  const pricing = asRecord(offer.pricing);
+  const display = asRecord(pricing?.display);
+  const fromDisplay = toNum(display?.total);
+  if (fromDisplay != null) {
+    return {
+      price: fromDisplay,
+      currency: String(display?.currency ?? pricing?.currency ?? offer.currency ?? 'EUR'),
+    };
   }
-  for (const o of raw.data?.offers ?? raw.offers ?? []) out.push(o);
+
+  const priceObj = asRecord(offer.price);
+  if (priceObj) {
+    const amount = toNum(priceObj.total) ?? toNum(priceObj.amount) ?? toNum(priceObj.value);
+    if (amount != null) {
+      return {
+        price: amount,
+        currency: String(priceObj.currency ?? offer.currency ?? 'EUR'),
+      };
+    }
+  }
+
+  const direct = toNum(offer.price) ?? toNum(offer.totalAmount) ?? toNum(offer.total);
+  if (direct != null) {
+    return { price: direct, currency: String(offer.currency ?? 'EUR') };
+  }
+
+  return null;
+}
+
+function extractOfferId(offer: UnknownRecord): string | null {
+  const id = offer.offerId ?? offer.id ?? offer.offer_id;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
+
+function extractAirline(offer: UnknownRecord): string | null {
+  const carriers = asRecord(offer.carriers);
+  const marketing = asRecord(offer.marketingCarrier) ?? asRecord(offer.validatingCarrier);
+  const raw =
+    offer.validatingAirline ??
+    offer.airline ??
+    offer.carrier ??
+    marketing?.name ??
+    marketing?.code ??
+    carriers?.marketingName ??
+    carriers?.marketingCode;
+  return typeof raw === 'string' && raw ? raw : null;
+}
+
+/** Raccoglie oggetti "offer-like" da qualsiasi forma di risposta rates. */
+function collectOfferNodes(raw: unknown): UnknownRecord[] {
+  const out: UnknownRecord[] = [];
+  const seen = new Set<unknown>();
+
+  const visit = (node: unknown, depth: number) => {
+    if (depth > 8 || node == null) return;
+    if (seen.has(node)) return;
+    if (typeof node !== 'object') return;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, depth + 1);
+      return;
+    }
+
+    const rec = node as UnknownRecord;
+    if (extractOfferId(rec) && (rec.pricing != null || rec.price != null || rec.totalAmount != null)) {
+      out.push(rec);
+    }
+
+    for (const key of [
+      'data',
+      'journeys',
+      'offers',
+      'results',
+      'items',
+      'flights',
+      'itineraries',
+    ]) {
+      if (rec[key] != null) visit(rec[key], depth + 1);
+    }
+  };
+
+  visit(raw, 0);
   return out;
 }
 
 function normalizeOffer(
-  offer: RawOffer,
+  offer: UnknownRecord,
   fallback: { origin: string; destination: string }
 ): LiteApiFlightOffer | null {
-  const offerId = offer.offerId ?? offer.id;
+  const offerId = extractOfferId(offer);
   const priced = extractPrice(offer);
   if (!offerId || !priced) return null;
+
+  const legs = asArray(offer.legs);
+  const firstLeg = asRecord(legs[0]);
+  const lastLeg = asRecord(legs[legs.length - 1] ?? legs[0]);
+
+  const origin = String(
+    offer.origin ?? firstLeg?.origin ?? fallback.origin
+  ).toUpperCase();
+  const destination = String(
+    offer.destination ?? lastLeg?.destination ?? fallback.destination
+  ).toUpperCase();
+
   return {
     offerId,
     price: priced.price,
     currency: priced.currency.toUpperCase(),
-    origin: (offer.origin ?? fallback.origin).toUpperCase(),
-    destination: (offer.destination ?? fallback.destination).toUpperCase(),
-    airline: offer.validatingAirline ?? offer.airline ?? offer.carrier ?? null,
-    departureAt: offer.departureAt ?? null,
-    arrivalAt: offer.arrivalAt ?? null,
+    origin,
+    destination,
+    airline: extractAirline(offer),
+    departureAt:
+      typeof offer.departureAt === 'string'
+        ? offer.departureAt
+        : typeof firstLeg?.departureAt === 'string'
+          ? firstLeg.departureAt
+          : null,
+    arrivalAt:
+      typeof offer.arrivalAt === 'string'
+        ? offer.arrivalAt
+        : typeof lastLeg?.arrivalAt === 'string'
+          ? lastLeg.arrivalAt
+          : null,
   };
+}
+
+function resolveIataOrPassThrough(destination: string): string | null {
+  const trimmed = destination.trim();
+  if (/^[A-Za-z]{3}$/.test(trimmed)) return trimmed.toUpperCase();
+  return resolveDestinationIata(trimmed)?.toUpperCase() ?? null;
 }
 
 /**
@@ -104,38 +182,67 @@ export async function searchFlightRates(params: {
   currency?: string;
 }): Promise<LiteApiFlightOffer[]> {
   const origin = (params.originIata?.trim() || defaultOriginIata()).toUpperCase();
-  const destinationIata =
-    resolveDestinationIata(params.destination)?.toUpperCase() ?? null;
+  const destinationIata = resolveIataOrPassThrough(params.destination);
 
   if (!destinationIata) {
+    console.warn('[liteapi flights] destinazione senza IATA:', params.destination);
     return [];
   }
 
-  const legs: Array<{ origin: string; destination: string; date: string }> = [
-    { origin, destination: destinationIata, date: params.departureDate },
+  const legs: Array<{
+    origin: string;
+    destination: string;
+    date: string;
+    direction?: 'OUTBOUND' | 'INBOUND';
+  }> = [
+    {
+      origin,
+      destination: destinationIata,
+      date: params.departureDate,
+      direction: 'OUTBOUND',
+    },
   ];
-  if (params.returnDate) {
+  if (params.returnDate && params.returnDate !== params.departureDate) {
     legs.push({
       origin: destinationIata,
       destination: origin,
       date: params.returnDate,
+      direction: 'INBOUND',
     });
   }
 
-  const raw = await liteApiFetch<RatesResponse>('/flights/rates', {
+  const body = {
+    legs,
+    adults: params.adults ?? 1,
+    children: 0,
+    infants: 0,
+    currency: (params.currency ?? 'EUR').toUpperCase(),
+    country: 'IT',
+    cabinClass: 'ECONOMY',
+  };
+
+  const raw = await liteApiFetch<unknown>('/flights/rates', {
     method: 'POST',
-    body: JSON.stringify({
-      legs,
-      adults: params.adults ?? 1,
-      currency: (params.currency ?? 'EUR').toUpperCase(),
-    }),
-    timeoutMs: 25_000,
+    body: JSON.stringify(body),
+    timeoutMs: 30_000,
   });
 
-  const offers = flattenOffers(raw)
+  const nodes = collectOfferNodes(raw);
+  const offers = nodes
     .map((o) => normalizeOffer(o, { origin, destination: destinationIata }))
     .filter((o): o is LiteApiFlightOffer => o != null)
     .sort((a, b) => a.price - b.price);
+
+  if (offers.length === 0) {
+    const topKeys =
+      raw && typeof raw === 'object' ? Object.keys(raw as object).slice(0, 12) : [];
+    console.warn('[liteapi flights] 0 offerte parsate', {
+      origin,
+      destinationIata,
+      topKeys,
+      nodeCount: nodes.length,
+    });
+  }
 
   return offers;
 }
