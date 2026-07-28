@@ -1,6 +1,7 @@
 import 'server-only';
 
 import {
+  getViatorAcceptLanguage,
   getViatorApiKey,
   getViatorBaseUrl,
   getViatorCampaign,
@@ -43,7 +44,7 @@ export async function viatorFetch<T = unknown>(
       headers: {
         Accept: 'application/json;version=2.0',
         'Content-Type': 'application/json',
-        'Accept-Language': 'it-IT',
+        'Accept-Language': getViatorAcceptLanguage(),
         'exp-api-key': key,
         ...(rest.headers ?? {}),
       },
@@ -59,12 +60,22 @@ export async function viatorFetch<T = unknown>(
     }
 
     if (!res.ok) {
-      const errObj = json as { message?: string; errorMessage?: string } | null;
-      throw new ViatorError(
-        errObj?.message || errObj?.errorMessage || `Viator ${res.status}`,
-        res.status,
-        json
-      );
+      const errObj = json as {
+        message?: string;
+        errorMessage?: string;
+        code?: string;
+        raw?: string;
+        errors?: Array<{ message?: string; errorMessage?: string }>;
+      } | null;
+      const detail =
+        errObj?.message ||
+        errObj?.errorMessage ||
+        errObj?.errors?.[0]?.message ||
+        errObj?.errors?.[0]?.errorMessage ||
+        errObj?.raw ||
+        `Viator HTTP ${res.status}`;
+      console.error('[viator]', res.status, path, detail);
+      throw new ViatorError(detail, res.status, json);
     }
 
     return json as T;
@@ -73,6 +84,7 @@ export async function viatorFetch<T = unknown>(
     if (e instanceof Error && e.name === 'AbortError') {
       throw new ViatorError('Timeout Viator', 504);
     }
+    console.error('[viator]', path, e);
     throw new ViatorError(e instanceof Error ? e.message : 'Errore Viator', 502);
   } finally {
     clearTimeout(timer);

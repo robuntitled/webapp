@@ -86,7 +86,12 @@ export async function searchAffiliateActivities(params: {
       collected.push(...viatorSettled.value);
     } else {
       providers.viator = 'error';
-      warnings.push('Viator non disponibile al momento');
+      const reason =
+        viatorSettled.reason instanceof Error
+          ? viatorSettled.reason.message
+          : 'errore sconosciuto';
+      console.error('[activities/viator]', reason);
+      warnings.push(`Viator non disponibile: ${reason}`);
     }
   }
 

@@ -21,3 +21,8 @@ export function getViatorCampaign(): string | undefined {
   const c = process.env.VIATOR_CAMPAIGN?.trim();
   return c || undefined;
 }
+
+/** Viator: `it` / `it-CH` (non `it-IT`). Override: VIATOR_ACCEPT_LANGUAGE */
+export function getViatorAcceptLanguage(): string {
+  return process.env.VIATOR_ACCEPT_LANGUAGE?.trim() || 'it';
+}

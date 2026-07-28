@@ -90,12 +90,14 @@ export async function searchAttractions(params: {
         ? []
         : ['Nessuna attrazione trovata con i filtri selezionati'],
     };
-  } catch {
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : 'errore sconosciuto';
+    console.error('[attractions]', detail);
     return {
       results: [],
       destinationName: null,
       provider: 'error',
-      warnings: ['Viator non disponibile al momento'],
+      warnings: [`Viator non disponibile: ${detail}`],
     };
   }
 }
