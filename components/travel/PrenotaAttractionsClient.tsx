@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  ExternalLink,
   Landmark,
   Loader2,
   MapPin,
@@ -13,6 +12,11 @@ import {
   Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AffiliateBookingDialog,
+  type AffiliateOfferPreview,
+} from '@/components/travel/AffiliateBookingDialog';
+import { ViatorDestinationWidget } from '@/components/travel/AffiliateDestinationWidgets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,6 +69,7 @@ export function PrenotaAttractionsClient() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<AttractionHit[] | null>(null);
   const [destinationName, setDestinationName] = useState<string | null>(null);
+  const [selected, setSelected] = useState<AffiliateOfferPreview | null>(null);
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('attractions');
@@ -304,11 +309,23 @@ export function PrenotaAttractionsClient() {
       {results && (
         <ul className="grid gap-3 sm:grid-cols-2">
           {results.map((r) => (
-            <li
-              key={r.id}
-              className="overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/30 hover:shadow-md"
-            >
-              <div className="grid grid-cols-[112px_1fr]">
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() =>
+                  setSelected({
+                    id: r.id,
+                    provider: 'viator',
+                    title: r.name,
+                    description: r.description,
+                    imageUrl: r.imageUrl,
+                    rating: r.rating,
+                    ratingCount: r.ratingCount,
+                    bookingUrl: r.bookingUrl,
+                  })
+                }
+                className="grid w-full grid-cols-[112px_1fr] overflow-hidden rounded-2xl border border-border/60 bg-card text-left transition hover:border-primary/30 hover:shadow-md"
+              >
                 <div className="relative aspect-square bg-muted">
                   {r.imageUrl ? (
                     <Image
@@ -368,33 +385,58 @@ export function PrenotaAttractionsClient() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       {r.lat != null && r.lng != null ? (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <span
+                          role="link"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(
+                              `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`,
+                              '_blank',
+                              'noopener,noreferrer'
+                            );
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.stopPropagation();
+                              window.open(
+                                `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`,
+                                '_blank',
+                                'noopener,noreferrer'
+                              );
+                            }
+                          }}
                           className="text-muted-foreground hover:text-foreground"
                           aria-label="Mappa"
                         >
                           <MapPin className="h-4 w-4" />
-                        </a>
+                        </span>
                       ) : null}
-                      <a
-                        href={r.bookingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer sponsored"
-                        className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-                      >
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
                         Apri
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      {city.trim() ? (
+        <div className="border-t border-border/50 pt-4">
+          <ViatorDestinationWidget searchTerm={city.trim()} />
+        </div>
+      ) : null}
+
+      <AffiliateBookingDialog
+        offer={selected}
+        open={Boolean(selected)}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+      />
     </div>
   );
 }

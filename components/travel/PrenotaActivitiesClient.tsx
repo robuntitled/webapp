@@ -2,8 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { ExternalLink, Loader2, Search, Star, Ticket } from 'lucide-react';
+import { Loader2, Search, Star, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AffiliateBookingDialog,
+  type AffiliateOfferPreview,
+} from '@/components/travel/AffiliateBookingDialog';
+import {
+  GygDestinationWidget,
+  ViatorDestinationWidget,
+} from '@/components/travel/AffiliateDestinationWidgets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,18 +21,8 @@ import {
 } from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
 
-type ActivityHit = {
-  id: string;
-  provider: 'viator' | 'getyourguide';
-  title: string;
-  description?: string | null;
-  imageUrl?: string | null;
-  priceFrom?: number | null;
-  currency?: string | null;
-  rating?: number | null;
-  ratingCount?: number | null;
+type ActivityHit = AffiliateOfferPreview & {
   durationMinutes?: number | null;
-  bookingUrl: string;
 };
 
 type FormCache = { city: string; query: string };
@@ -65,6 +63,7 @@ export function PrenotaActivitiesClient() {
   const [providerFilter, setProviderFilter] = useState<'all' | 'viator' | 'getyourguide'>(
     'all'
   );
+  const [selected, setSelected] = useState<ActivityHit | null>(null);
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('activities');
@@ -129,13 +128,17 @@ export function PrenotaActivitiesClient() {
     }
   };
 
+  const widgetCity = city.trim();
+  const showWidgetHint =
+    !process.env.NEXT_PUBLIC_VIATOR_PARTNER_ID && !process.env.NEXT_PUBLIC_GYG_PARTNER_ID;
+
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Affiliate</span>
         {' — '}
-        tour prenotabili su Viator e GetYourGuide. Il pagamento avviene sul sito partner;
-        NomadLink riceve una commissione sulla prenotazione.
+        apri un risultato per la scheda in-app. Il pagamento resta su Viator/GetYourGuide
+        (commissione NomadLink).
       </div>
 
       <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
@@ -239,11 +242,12 @@ export function PrenotaActivitiesClient() {
             const price = formatPrice(r.priceFrom, r.currency);
             const duration = formatDuration(r.durationMinutes);
             return (
-              <li
-                key={r.id}
-                className="overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/30 hover:shadow-md"
-              >
-                <div className="grid grid-cols-[112px_1fr]">
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(r)}
+                  className="grid w-full grid-cols-[112px_1fr] overflow-hidden rounded-2xl border border-border/60 bg-card text-left transition hover:border-primary/30 hover:shadow-md"
+                >
                   <div className="relative aspect-square bg-muted">
                     {r.imageUrl ? (
                       <Image
@@ -298,23 +302,41 @@ export function PrenotaActivitiesClient() {
                           </p>
                         ) : null}
                       </div>
-                      <a
-                        href={r.bookingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer sponsored"
-                        className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-                      >
-                        Prenota
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <span className="inline-flex shrink-0 items-center rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
+                        Apri
+                      </span>
                     </div>
                   </div>
-                </div>
+                </button>
               </li>
             );
           })}
         </ul>
       )}
+
+      {widgetCity ? (
+        <div className="space-y-4 border-t border-border/50 pt-4">
+          <p className="text-sm font-medium text-foreground">Widget partner · {widgetCity}</p>
+          <ViatorDestinationWidget searchTerm={widgetCity} />
+          <GygDestinationWidget query={`${widgetCity}, Italia`} />
+          {showWidgetHint ? (
+            <p className="text-xs text-muted-foreground">
+              Per i widget embed: aggiungi su Vercel{' '}
+              <code className="rounded bg-muted px-1">NEXT_PUBLIC_VIATOR_PARTNER_ID</code>,{' '}
+              <code className="rounded bg-muted px-1">NEXT_PUBLIC_VIATOR_WIDGET_REF</code> e{' '}
+              <code className="rounded bg-muted px-1">NEXT_PUBLIC_GYG_PARTNER_ID</code>.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <AffiliateBookingDialog
+        offer={selected}
+        open={Boolean(selected)}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+      />
     </div>
   );
 }
