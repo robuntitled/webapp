@@ -18,16 +18,33 @@ export class ViatorError extends Error {
   }
 }
 
-export async function viatorFetch<T = unknown>(
-  path: string,
-  init?: RequestInit & { timeoutMs?: number }
-): Promise<T> {
-  const key = getViatorApiKey();
-  if (!key) {
-    throw new ViatorError('VIATOR_API_KEY non configurata', 503);
-  }
+const SANDBOX_BASE = 'https://api.sandbox.viator.com/partner';
+const LIVE_BASE = 'https://api.viator.com/partner';
 
-  const { timeoutMs = 20_000, ...rest } = init ?? {};
+function parseErrorDetail(json: unknown, status: number): string {
+  const errObj = json as {
+    message?: string;
+    errorMessage?: string;
+    raw?: string;
+    errors?: Array<{ message?: string; errorMessage?: string }>;
+  } | null;
+  return (
+    errObj?.message ||
+    errObj?.errorMessage ||
+    errObj?.errors?.[0]?.message ||
+    errObj?.errors?.[0]?.errorMessage ||
+    errObj?.raw ||
+    `Viator HTTP ${status}`
+  );
+}
+
+async function viatorFetchOnce<T>(
+  baseUrl: string,
+  path: string,
+  key: string,
+  init: RequestInit & { timeoutMs?: number }
+): Promise<{ ok: true; data: T } | { ok: false; status: number; detail: string; body: unknown }> {
+  const { timeoutMs = 20_000, ...rest } = init;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -36,7 +53,7 @@ export async function viatorFetch<T = unknown>(
     const qs = campaign
       ? `${path.includes('?') ? '&' : '?'}campaign-value=${encodeURIComponent(campaign)}`
       : '';
-    const url = `${getViatorBaseUrl()}${path.startsWith('/') ? path : `/${path}`}${qs}`;
+    const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}${qs}`;
 
     const res = await fetch(url, {
       ...rest,
@@ -60,43 +77,65 @@ export async function viatorFetch<T = unknown>(
     }
 
     if (!res.ok) {
-      const errObj = json as {
-        message?: string;
-        errorMessage?: string;
-        code?: string;
-        raw?: string;
-        errors?: Array<{ message?: string; errorMessage?: string }>;
-      } | null;
-      const detail =
-        errObj?.message ||
-        errObj?.errorMessage ||
-        errObj?.errors?.[0]?.message ||
-        errObj?.errors?.[0]?.errorMessage ||
-        errObj?.raw ||
-        `Viator HTTP ${res.status}`;
-      console.error('[viator]', res.status, path, detail);
-      if (
-        /invalid api key/i.test(detail) &&
-        !getViatorBaseUrl().includes('sandbox')
-      ) {
-        throw new ViatorError(
-          'Invalid API Key — se la key è Sandbox, su Vercel imposta VIATOR_BASE_URL=https://api.sandbox.viator.com/partner e ridistribuisci. Oppure genera una Production key nel dashboard Viator.',
-          res.status,
-          json
-        );
-      }
-      throw new ViatorError(detail, res.status, json);
+      return {
+        ok: false,
+        status: res.status,
+        detail: parseErrorDetail(json, res.status),
+        body: json,
+      };
     }
 
-    return json as T;
+    return { ok: true, data: json as T };
   } catch (e) {
-    if (e instanceof ViatorError) throw e;
     if (e instanceof Error && e.name === 'AbortError') {
-      throw new ViatorError('Timeout Viator', 504);
+      return { ok: false, status: 504, detail: 'Timeout Viator', body: null };
     }
-    console.error('[viator]', path, e);
-    throw new ViatorError(e instanceof Error ? e.message : 'Errore Viator', 502);
+    return {
+      ok: false,
+      status: 502,
+      detail: e instanceof Error ? e.message : 'Errore Viator',
+      body: null,
+    };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Chiama Viator. Se la key fallisce su live (tipico: account nuovo = solo sandbox),
+ * riprova automaticamente su api.sandbox.viator.com.
+ */
+export async function viatorFetch<T = unknown>(
+  path: string,
+  init?: RequestInit & { timeoutMs?: number }
+): Promise<T> {
+  const key = getViatorApiKey();
+  if (!key) {
+    throw new ViatorError('VIATOR_API_KEY non configurata', 503);
+  }
+
+  const configured = getViatorBaseUrl();
+  const primary = configured;
+  const canFallback =
+    !configured.includes('sandbox') &&
+    (configured === LIVE_BASE || !process.env.VIATOR_BASE_URL);
+
+  const first = await viatorFetchOnce<T>(primary, path, key, init ?? {});
+  if (first.ok) return first.data;
+
+  const invalidKey = /invalid api key/i.test(first.detail);
+  if (canFallback && invalidKey) {
+    console.warn('[viator] Invalid API Key su live → retry sandbox', path);
+    const second = await viatorFetchOnce<T>(SANDBOX_BASE, path, key, init ?? {});
+    if (second.ok) return second.data;
+    console.error('[viator]', second.status, path, second.detail, '(sandbox)');
+    throw new ViatorError(
+      `${second.detail} (provato live + sandbox). Controlla che VIATOR_API_KEY sia la chiave Affiliate API completa, senza spazi/virgolette, e che l’account sia verificato.`,
+      second.status,
+      second.body
+    );
+  }
+
+  console.error('[viator]', first.status, path, first.detail);
+  throw new ViatorError(first.detail, first.status, first.body);
 }
