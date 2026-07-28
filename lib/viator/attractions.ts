@@ -127,7 +127,7 @@ export async function searchViatorAttractions(params: {
 
   const city = params.city.trim();
   const query = params.query?.trim() ?? '';
-  const limit = Math.min(Math.max(params.limit ?? 40, 1), 50);
+  const limit = Math.min(Math.max(params.limit ?? 30, 1), 30);
   if (!city) return { results: [], destinationName: null };
 
   const dest = await resolveViatorDestinationId(city);

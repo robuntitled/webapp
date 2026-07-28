@@ -73,7 +73,7 @@ export async function searchAttractions(params: {
     const { results, destinationName } = await searchViatorAttractions({
       city: params.city,
       query: params.query,
-      limit: 50,
+      limit: 30,
     });
 
     const filtered = applyFilters(results, {
