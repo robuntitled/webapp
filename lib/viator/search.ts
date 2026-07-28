@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { ActivityOffer } from '@/lib/activities/types';
+import { cleanAffiliateDescription } from '@/lib/travel/affiliate-ui';
 import { viatorFetch } from '@/lib/viator/client';
 import { isViatorConfigured } from '@/lib/viator/config';
 import { resolveViatorDestinationId } from '@/lib/viator/destinations';
@@ -65,7 +66,7 @@ function mapProduct(p: ViatorProduct): ActivityOffer | null {
     id: `viator:${code}`,
     provider: 'viator',
     title,
-    description: p.description?.slice(0, 280) ?? null,
+    description: cleanAffiliateDescription(p.description),
     imageUrl: pickImage(p),
     priceFrom: p.pricing?.summary?.fromPrice ?? null,
     currency: p.pricing?.currency ?? 'EUR',

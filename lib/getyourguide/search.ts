@@ -3,6 +3,7 @@ import 'server-only';
 import type { ActivityOffer } from '@/lib/activities/types';
 import { gygFetch } from '@/lib/getyourguide/client';
 import { isGygConfigured } from '@/lib/getyourguide/config';
+import { cleanAffiliateDescription } from '@/lib/travel/affiliate-ui';
 
 /** Thumbnail list size — see GYG image formats wiki */
 const GYG_IMAGE_FORMAT = '53';
@@ -11,6 +12,7 @@ type GygTour = {
   tour_id?: number | string;
   title?: string;
   abstract?: string;
+  description?: string;
   overall_rating?: number;
   number_of_ratings?: number;
   url?: string;
@@ -73,7 +75,7 @@ function mapTour(t: GygTour): ActivityOffer | null {
     id: `gyg:${id}`,
     provider: 'getyourguide',
     title,
-    description: t.abstract?.slice(0, 280) ?? null,
+    description: cleanAffiliateDescription(t.abstract || t.description),
     imageUrl: resolvePicture(pic?.ssl_url || pic?.url),
     priceFrom: amount,
     currency,

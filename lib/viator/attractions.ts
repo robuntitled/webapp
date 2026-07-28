@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { AttractionHit } from '@/lib/attractions/types';
+import { cleanAffiliateDescription } from '@/lib/travel/affiliate-ui';
 import { viatorFetch } from '@/lib/viator/client';
 import { isViatorConfigured } from '@/lib/viator/config';
 import { resolveViatorDestinationId } from '@/lib/viator/destinations';
@@ -95,17 +96,31 @@ function mapAttraction(a: ViatorAttraction): AttractionHit | null {
     a.attractionUrl?.trim() ||
     `https://www.viator.com/attractions/-/d0-a${id}`;
 
+  const address = formatAddress(a.address);
+  const description =
+    cleanAffiliateDescription(a.description) ||
+    cleanAffiliateDescription(
+      a.openingHours ? `Orari: ${a.openingHours}` : null
+    ) ||
+    (address
+      ? cleanAffiliateDescription(
+          `${address}${a.productCount ? ` · ${a.productCount} esperienze collegate` : ''}`
+        )
+      : a.productCount
+        ? `${a.productCount} esperienze collegate su Viator`
+        : null);
+
   return {
     id: `viator-attr:${id}`,
     provider: 'viator',
     name,
-    description: a.description?.slice(0, 280) ?? null,
+    description,
     imageUrl: pickImageUrl(a.images),
     rating: a.reviews?.combinedAverageRating ?? null,
     ratingCount: a.reviews?.totalReviews ?? null,
     productCount: a.productCount ?? 0,
     freeAttraction: Boolean(a.freeAttraction),
-    address: formatAddress(a.address),
+    address,
     lat: a.center?.latitude ?? null,
     lng: a.center?.longitude ?? null,
     bookingUrl,

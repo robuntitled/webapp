@@ -1,20 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { addDays, format } from 'date-fns';
-import { ExternalLink, Landmark, Loader2, Search, Star, Ticket } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { FlightDateField } from '@/components/travel/FlightDateField';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  PrenotaAffiliateResultCard,
+  type PrenotaAffiliateCardItem,
+} from '@/components/travel/PrenotaAffiliateResultCard';
+import {
+  PrenotaAffiliateSearchBar,
+  type AffiliateProviderFilter,
+  type AffiliateSortKey,
+} from '@/components/travel/PrenotaAffiliateSearchBar';
+import {
+  defaultAffiliateDates,
+  sortAffiliateByKey,
+} from '@/lib/travel/affiliate-ui';
 import {
   loadSearchFormCache,
   saveSearchFormCache,
 } from '@/lib/travel/search-form-cache';
-import { cn } from '@/lib/utils';
 
 type AttractionHit = {
   id: string;
@@ -29,42 +35,30 @@ type AttractionHit = {
   bookingUrl: string;
 };
 
-type SortKey = 'default' | 'rating';
-
 type FormCache = {
   city: string;
   query: string;
   startDate: string;
   endDate: string;
-  withTours: boolean;
-  freeOnly: boolean;
+  providerFilter: AffiliateProviderFilter;
   minRating: number;
-  sort: SortKey;
+  sort: AffiliateSortKey;
 };
 
-function defaultDates() {
-  const start = addDays(new Date(), 7);
-  const end = addDays(start, 3);
-  return {
-    startDate: format(start, 'yyyy-MM-dd'),
-    endDate: format(end, 'yyyy-MM-dd'),
-  };
-}
-
 export function PrenotaAttractionsClient() {
-  const defaults = defaultDates();
+  const defaults = defaultAffiliateDates();
   const [cacheReady, setCacheReady] = useState(false);
   const [city, setCity] = useState('');
   const [query, setQuery] = useState('');
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [endDate, setEndDate] = useState(defaults.endDate);
-  const [withTours, setWithTours] = useState(false);
-  const [freeOnly, setFreeOnly] = useState(false);
-  const [minRating, setMinRating] = useState(0);
-  const [sort, setSort] = useState<SortKey>('default');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<AttractionHit[] | null>(null);
   const [destinationName, setDestinationName] = useState<string | null>(null);
+  const [providerFilter, setProviderFilter] =
+    useState<AffiliateProviderFilter>('all');
+  const [minRating, setMinRating] = useState(0);
+  const [sort, setSort] = useState<AffiliateSortKey>('default');
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('attractions');
@@ -73,10 +67,9 @@ export function PrenotaAttractionsClient() {
       setQuery(cached.query ?? '');
       if (cached.startDate) setStartDate(cached.startDate);
       if (cached.endDate) setEndDate(cached.endDate);
-      setWithTours(Boolean(cached.withTours));
-      setFreeOnly(Boolean(cached.freeOnly));
+      if (cached.providerFilter) setProviderFilter(cached.providerFilter);
       setMinRating(cached.minRating ?? 0);
-      setSort(cached.sort === 'rating' ? 'rating' : 'default');
+      if (cached.sort) setSort(cached.sort);
     }
     setCacheReady(true);
   }, []);
@@ -88,8 +81,7 @@ export function PrenotaAttractionsClient() {
       query,
       startDate,
       endDate,
-      withTours,
-      freeOnly,
+      providerFilter,
       minRating,
       sort,
     };
@@ -97,23 +89,33 @@ export function PrenotaAttractionsClient() {
     const onHide = () => saveSearchFormCache('attractions', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [cacheReady, city, query, startDate, endDate, withTours, freeOnly, minRating, sort]);
+  }, [cacheReady, city, query, startDate, endDate, providerFilter, minRating, sort]);
 
-  const search = async (
-    filterOverride?: Partial<Pick<FormCache, 'withTours' | 'freeOnly' | 'minRating' | 'sort'>>
-  ) => {
+  const visible = useMemo(() => {
+    if (!results) return null;
+    // Attrazioni = solo Viator; filtro GYG → lista vuota
+    let list =
+      providerFilter === 'getyourguide'
+        ? []
+        : providerFilter === 'viator' || providerFilter === 'all'
+          ? [...results]
+          : [...results];
+    if (minRating > 0) {
+      list = list.filter((r) => (r.rating ?? 0) >= minRating);
+    }
+    // Attrazioni non hanno priceFrom → sort prezzo lascia ordine, rating funziona
+    return sortAffiliateByKey(
+      list.map((r) => ({ ...r, priceFrom: null as number | null })),
+      sort
+    );
+  }, [results, providerFilter, minRating, sort]);
+
+  const search = async () => {
     const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
       return;
     }
-
-    const filters = {
-      withTours: filterOverride?.withTours ?? withTours,
-      freeOnly: filterOverride?.freeOnly ?? freeOnly,
-      minRating: filterOverride?.minRating ?? minRating,
-      sort: filterOverride?.sort ?? sort,
-    };
 
     setLoading(true);
     setResults(null);
@@ -125,10 +127,8 @@ export function PrenotaAttractionsClient() {
         body: JSON.stringify({
           city: cityLabel,
           query: query.trim(),
-          withTours: filters.withTours,
-          freeOnly: filters.freeOnly,
-          minRating: filters.minRating,
-          sort: filters.sort === 'rating' ? 'rating' : 'default',
+          minRating: 0,
+          sort: sort === 'rating' ? 'rating' : 'default',
         }),
       });
       const data = (await res.json()) as {
@@ -151,16 +151,25 @@ export function PrenotaAttractionsClient() {
     }
   };
 
-  const toggleWithTours = () => {
-    const next = !withTours;
-    setWithTours(next);
-    if (city.trim()) void search({ withTours: next });
-  };
-  const toggleFreeOnly = () => {
-    const next = !freeOnly;
-    setFreeOnly(next);
-    if (city.trim()) void search({ freeOnly: next });
-  };
+  const cards: PrenotaAffiliateCardItem[] | null =
+    visible?.map((r) => ({
+      id: r.id,
+      title: r.name,
+      description: r.description,
+      imageUrl: r.imageUrl,
+      provider: 'viator' as const,
+      rating: r.rating,
+      ratingCount: r.ratingCount,
+      metaRight: [
+        r.freeAttraction ? 'Ingresso libero' : null,
+        r.productCount > 0 ? `${r.productCount} esperienze` : null,
+        r.address,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      bookingUrl: r.bookingUrl,
+      ctaLabel: 'Apri',
+    })) ?? null;
 
   return (
     <div className="space-y-5">
@@ -174,121 +183,33 @@ export function PrenotaAttractionsClient() {
         .
       </div>
 
-      <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
-        <div className="space-y-3 rounded-[1.35rem] bg-card p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_auto]">
-            <label className="space-y-1.5 text-sm">
-              <Label>Città</Label>
-              <Input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Città o destinazione…"
-                className="h-11 rounded-xl"
-              />
-            </label>
-            <label className="space-y-1.5 text-sm">
-              <Label>Cerca (opzionale)</Label>
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Colosseo, museo…"
-                className="h-11 rounded-xl"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void search();
-                }}
-              />
-            </label>
-            <FlightDateField
-              tripType="activity"
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-            />
-            <div className="flex items-end">
-              <Button
-                type="button"
-                className="h-11 w-full rounded-xl sm:w-auto"
-                onClick={() => void search()}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="mr-2 h-4 w-4" />
-                )}
-                Cerca
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
-            <button
-              type="button"
-              onClick={toggleWithTours}
-              className={cn(
-                'rounded-full border px-3 py-1 text-xs font-medium transition',
-                withTours
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Con esperienze
-            </button>
-            <button
-              type="button"
-              onClick={toggleFreeOnly}
-              className={cn(
-                'rounded-full border px-3 py-1 text-xs font-medium transition',
-                freeOnly
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Ingresso libero
-            </button>
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              Min. stelle
-              <select
-                value={minRating}
-                onChange={(e) => {
-                  const next = Number(e.target.value);
-                  setMinRating(next);
-                  if (city.trim()) void search({ minRating: next });
-                }}
-                className="h-7 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
-              >
-                <option value={0}>Tutte</option>
-                <option value={3}>3+</option>
-                <option value={4}>4+</option>
-                <option value={4.5}>4.5+</option>
-              </select>
-            </label>
-            <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-              Ordina
-              <select
-                value={sort}
-                onChange={(e) => {
-                  const next = e.target.value as SortKey;
-                  setSort(next);
-                  if (city.trim()) void search({ sort: next });
-                }}
-                className="h-7 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
-              >
-                <option value="default">Consigliate</option>
-                <option value="rating">Valutazione</option>
-              </select>
-            </label>
-          </div>
-        </div>
-      </div>
+      <PrenotaAffiliateSearchBar
+        city={city}
+        query={query}
+        startDate={startDate}
+        endDate={endDate}
+        onCityChange={setCity}
+        onQueryChange={setQuery}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        onSearch={() => void search()}
+        loading={loading}
+        queryPlaceholder="Colosseo, museo, landmark…"
+        providerFilter={providerFilter}
+        onProviderFilterChange={setProviderFilter}
+        minRating={minRating}
+        onMinRatingChange={setMinRating}
+        sort={sort}
+        onSortChange={setSort}
+        showFilters
+      />
 
       {destinationName && results && (
         <p className="text-xs text-muted-foreground">
           Destinazione Viator:{' '}
           <span className="font-medium text-foreground">{destinationName}</span>
           {' · '}
-          {results.length} attrazioni
+          {cards?.length ?? 0} risultati
         </p>
       )}
 
@@ -299,83 +220,11 @@ export function PrenotaAttractionsClient() {
         </div>
       )}
 
-      {results && (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {results.map((r) => (
-            <li
-              key={r.id}
-              className="overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/30 hover:shadow-md"
-            >
-              <div className="grid grid-cols-[112px_1fr]">
-                <div className="relative aspect-square bg-muted">
-                  {r.imageUrl ? (
-                    <Image
-                      src={r.imageUrl}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="112px"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-muted-foreground/40">
-                      <Landmark className="h-8 w-8" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex min-w-0 flex-col justify-between gap-2 p-3">
-                  <div className="min-w-0">
-                    <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                        Viator
-                      </span>
-                      {r.freeAttraction ? (
-                        <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                          Libero
-                        </span>
-                      ) : null}
-                      {r.productCount > 0 ? (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                          <Ticket className="h-3 w-3" />
-                          {r.productCount} esperienze
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="line-clamp-2 font-display text-sm font-semibold leading-snug">
-                      {r.name}
-                    </p>
-                    {r.address ? (
-                      <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
-                        {r.address}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-end justify-between gap-2">
-                    <div>
-                      {r.rating != null ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium">
-                          <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                          {r.rating.toFixed(1)}
-                          {r.ratingCount != null ? (
-                            <span className="text-muted-foreground">({r.ratingCount})</span>
-                          ) : null}
-                        </span>
-                      ) : (
-                        <span />
-                      )}
-                    </div>
-                    <a
-                      href={r.bookingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer sponsored"
-                      className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-                    >
-                      Apri
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              </div>
+      {cards && (
+        <ul className="grid gap-3.5 lg:grid-cols-2">
+          {cards.map((item) => (
+            <li key={item.id}>
+              <PrenotaAffiliateResultCard item={item} />
             </li>
           ))}
         </ul>
