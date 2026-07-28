@@ -75,6 +75,16 @@ export async function viatorFetch<T = unknown>(
         errObj?.raw ||
         `Viator HTTP ${res.status}`;
       console.error('[viator]', res.status, path, detail);
+      if (
+        /invalid api key/i.test(detail) &&
+        !getViatorBaseUrl().includes('sandbox')
+      ) {
+        throw new ViatorError(
+          'Invalid API Key — se la key è Sandbox, su Vercel imposta VIATOR_BASE_URL=https://api.sandbox.viator.com/partner e ridistribuisci. Oppure genera una Production key nel dashboard Viator.',
+          res.status,
+          json
+        );
+      }
       throw new ViatorError(detail, res.status, json);
     }
 

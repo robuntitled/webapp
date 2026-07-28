@@ -8,8 +8,15 @@ export function getViatorBaseUrl(): string {
   );
 }
 
+/** Strip quotes/BOM/spaces — paste da Vercel spesso include virgolette. */
 export function getViatorApiKey(): string | null {
-  const key = process.env.VIATOR_API_KEY?.trim();
+  const raw = process.env.VIATOR_API_KEY;
+  if (!raw) return null;
+  const key = raw
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .trim();
   return key || null;
 }
 
@@ -25,4 +32,8 @@ export function getViatorCampaign(): string | undefined {
 /** Viator: `it` / `it-CH` (non `it-IT`). Override: VIATOR_ACCEPT_LANGUAGE */
 export function getViatorAcceptLanguage(): string {
   return process.env.VIATOR_ACCEPT_LANGUAGE?.trim() || 'it';
+}
+
+export function isViatorSandbox(): boolean {
+  return getViatorBaseUrl().includes('sandbox');
 }
