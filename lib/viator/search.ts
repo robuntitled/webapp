@@ -82,6 +82,8 @@ function mapProduct(p: ViatorProduct): ActivityOffer | null {
 export async function searchViatorActivities(params: {
   city: string;
   query?: string;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
 }): Promise<ActivityOffer[]> {
   if (!isViatorConfigured()) return [];
@@ -100,24 +102,26 @@ export async function searchViatorActivities(params: {
     // continua senza filtro destinazione
   }
 
+  const productFiltering: Record<string, unknown> = {
+    includeAutomaticTranslations: true,
+  };
+  if (destinationId) productFiltering.destination = destinationId;
+  if (params.startDate && params.endDate) {
+    productFiltering.dateRange = {
+      from: params.startDate,
+      to: params.endDate,
+    };
+  }
+
   const body: Record<string, unknown> = {
-    searchTerm: query || city,
+    searchTerm: destinationId ? query || city : searchTerm,
     searchTypes: [
       { searchType: 'PRODUCTS', pagination: { start: 1, count: limit } },
     ],
     productSorting: { sort: 'DEFAULT' },
+    productFiltering,
     currency: 'EUR',
   };
-
-  if (destinationId) {
-    body.productFiltering = {
-      destination: destinationId,
-      includeAutomaticTranslations: true,
-    };
-  } else {
-    body.productFiltering = { includeAutomaticTranslations: true };
-    body.searchTerm = searchTerm;
-  }
 
   const data = await viatorFetch<FreetextResponse>('/search/freetext', {
     method: 'POST',

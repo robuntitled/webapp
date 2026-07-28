@@ -51,9 +51,13 @@ function sortOffers(offers: ActivityOffer[]): ActivityOffer[] {
 export async function searchAffiliateActivities(params: {
   city: string;
   query?: string;
+  startDate?: string;
+  endDate?: string;
 }): Promise<ActivitySearchResult> {
   const city = params.city.trim();
   const query = params.query?.trim() || undefined;
+  const startDate = params.startDate?.trim() || undefined;
+  const endDate = params.endDate?.trim() || undefined;
   const warnings: string[] = [];
   const providers: ActivitySearchResult['providers'] = {
     viator: isViatorConfigured() ? 'ok' : 'skipped',
@@ -72,10 +76,10 @@ export async function searchAffiliateActivities(params: {
 
   const [viatorSettled, gygSettled] = await Promise.allSettled([
     providers.viator === 'ok'
-      ? searchViatorActivities({ city, query, limit: 24 })
+      ? searchViatorActivities({ city, query, startDate, endDate, limit: 24 })
       : Promise.resolve([] as ActivityOffer[]),
     providers.getyourguide === 'ok'
-      ? searchGygActivities({ city, query, limit: 24 })
+      ? searchGygActivities({ city, query, startDate, endDate, limit: 24 })
       : Promise.resolve([] as ActivityOffer[]),
   ]);
 

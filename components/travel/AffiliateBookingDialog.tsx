@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { ExternalLink, Loader2, Star, Ticket } from 'lucide-react';
+import { ExternalLink, Star, Ticket } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import {
+  GygDestinationWidget,
+  ViatorDestinationWidget,
+} from '@/components/travel/AffiliateDestinationWidgets';
 import { cn } from '@/lib/utils';
 
 export type AffiliateOfferPreview = {
@@ -30,6 +33,10 @@ type Props = {
   offer: AffiliateOfferPreview | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Città corrente (per widget correlati) */
+  city?: string;
+  startDate?: string;
+  endDate?: string;
 };
 
 function formatPrice(amount: number | null | undefined, currency: string | null | undefined) {
@@ -46,54 +53,45 @@ function formatPrice(amount: number | null | undefined, currency: string | null 
 }
 
 /**
- * Scheda attività in-app: anteprima + iframe partner (se il sito lo consente).
- * Checkout resta sul dominio Viator/GYG (affiliate).
+ * Scheda in-app: dettaglio + widget partner.
+ * Viator/GYG bloccano iframe sul checkout → niente schermo bianco; CTA esterna chiara.
  */
-export function AffiliateBookingDialog({ offer, open, onOpenChange }: Props) {
-  const [iframeBlocked, setIframeBlocked] = useState(false);
-  const [iframeLoading, setIframeLoading] = useState(true);
-
-  useEffect(() => {
-    if (!open || !offer) return;
-    setIframeBlocked(false);
-    setIframeLoading(true);
-    // Molti siti partner bloccano iframe (X-Frame-Options). Timeout → fallback CTA.
-    const t = window.setTimeout(() => {
-      setIframeLoading((loading) => {
-        if (loading) setIframeBlocked(true);
-        return false;
-      });
-    }, 4500);
-    return () => window.clearTimeout(t);
-  }, [open, offer?.id, offer?.bookingUrl]);
-
+export function AffiliateBookingDialog({
+  offer,
+  open,
+  onOpenChange,
+  city,
+  startDate,
+  endDate,
+}: Props) {
   if (!offer) return null;
 
   const price = formatPrice(offer.priceFrom, offer.currency);
   const providerLabel = offer.provider === 'viator' ? 'Viator' : 'GetYourGuide';
+  const widgetTerm = offer.title || city || '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+      <DialogContent className="flex max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogHeader className="shrink-0 space-y-2 border-b border-border/60 px-4 py-3 text-left sm:px-5">
           <div className="flex gap-3">
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
               {offer.imageUrl ? (
                 <Image
                   src={offer.imageUrl}
                   alt=""
                   fill
                   className="object-cover"
-                  sizes="64px"
+                  sizes="80px"
                   unoptimized
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground/40">
-                  <Ticket className="h-6 w-6" />
+                  <Ticket className="h-7 w-7" />
                 </div>
               )}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pr-6">
               <p
                 className={cn(
                   'mb-1 inline-block rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase',
@@ -104,7 +102,7 @@ export function AffiliateBookingDialog({ offer, open, onOpenChange }: Props) {
               >
                 {providerLabel}
               </p>
-              <DialogTitle className="line-clamp-2 text-base leading-snug">
+              <DialogTitle className="line-clamp-3 text-base leading-snug">
                 {offer.title}
               </DialogTitle>
               <DialogDescription className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -119,60 +117,50 @@ export function AffiliateBookingDialog({ offer, open, onOpenChange }: Props) {
               </DialogDescription>
             </div>
           </div>
-          {offer.description ? (
-            <p className="line-clamp-2 text-xs text-muted-foreground">{offer.description}</p>
-          ) : null}
         </DialogHeader>
 
-        <div className="relative min-h-[min(55vh,420px)] flex-1 bg-muted/30">
-          {!iframeBlocked ? (
-            <>
-              {iframeLoading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  Carico prenotazione {providerLabel}…
-                </div>
-              ) : null}
-              <iframe
-                title={`Prenota su ${providerLabel}`}
-                src={offer.bookingUrl}
-                className="h-[min(55vh,420px)] w-full border-0"
-                onLoad={() => {
-                  setIframeLoading(false);
-                  setIframeBlocked(false);
-                }}
-                // sandbox permissive enough for partner checkout UI
-                referrerPolicy="no-referrer-when-downgrade"
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+          {offer.description ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">{offer.description}</p>
+          ) : null}
+
+          <div className="rounded-2xl border border-border/60 bg-card p-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Esperienze correlate · widget {providerLabel}
+            </p>
+            {offer.provider === 'viator' ? (
+              <ViatorDestinationWidget
+                searchTerm={widgetTerm}
+                startDate={startDate}
+                endDate={endDate}
               />
-            </>
-          ) : (
-            <div className="flex h-[min(55vh,420px)] flex-col items-center justify-center gap-3 px-6 text-center">
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {providerLabel} non consente l’embed in pagina. Apri la prenotazione nel loro sito
-                sicuro — resti tracciato come affiliate NomadLink.
+            ) : (
+              <GygDestinationWidget
+                query={city ? `${widgetTerm}, ${city}` : widgetTerm}
+              />
+            )}
+            {!process.env.NEXT_PUBLIC_VIATOR_PARTNER_ID &&
+            offer.provider === 'viator' ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Configura NEXT_PUBLIC_VIATOR_PARTNER_ID e WIDGET_REF per il widget in scheda.
               </p>
-              <Button asChild className="rounded-xl">
-                <a
-                  href={offer.bookingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer sponsored"
-                >
-                  Continua su {providerLabel}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          )}
+            ) : null}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Il checkout sicuro è su {providerLabel} (accesso Affiliate). Con Basic Access non è
+            possibile incorporare il pagamento dentro NomadLink.
+          </p>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/60 px-4 py-3 sm:px-5">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-[11px] text-muted-foreground">
             Pagamento e ticket gestiti da {providerLabel}.
           </p>
-          <Button asChild variant="outline" size="sm" className="rounded-lg">
+          <Button asChild className="rounded-xl">
             <a href={offer.bookingUrl} target="_blank" rel="noopener noreferrer sponsored">
-              Apri in nuova scheda
-              <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+              Prenota su {providerLabel}
+              <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>
         </div>

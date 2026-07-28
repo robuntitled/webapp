@@ -28,11 +28,18 @@ function loadScriptOnce(src: string, id: string): Promise<void> {
 
 type ViatorWidgetProps = {
   searchTerm: string;
+  startDate?: string;
+  endDate?: string;
   className?: string;
 };
 
 /** Widget destinazione Viator (richiede NEXT_PUBLIC_VIATOR_PARTNER_ID + WIDGET_REF). */
-export function ViatorDestinationWidget({ searchTerm, className }: ViatorWidgetProps) {
+export function ViatorDestinationWidget({
+  searchTerm,
+  startDate,
+  endDate,
+  className,
+}: ViatorWidgetProps) {
   const partnerId = process.env.NEXT_PUBLIC_VIATOR_PARTNER_ID?.trim();
   const widgetRef = process.env.NEXT_PUBLIC_VIATOR_WIDGET_REF?.trim();
   const mountRef = useRef<HTMLDivElement>(null);
@@ -45,7 +52,6 @@ export function ViatorDestinationWidget({ searchTerm, className }: ViatorWidgetP
       try {
         await loadScriptOnce(VIATOR_SCRIPT, 'viator-partner-widget');
         if (cancelled || !mountRef.current) return;
-        // Re-trigger widget init on term change by remounting children
         mountRef.current.replaceChildren();
         const el = document.createElement('div');
         el.setAttribute('data-vi-partner-id', partnerId);
@@ -53,8 +59,9 @@ export function ViatorDestinationWidget({ searchTerm, className }: ViatorWidgetP
         el.setAttribute('data-vi-search-term', searchTerm.trim());
         el.setAttribute('data-vi-currency', 'EUR');
         el.setAttribute('data-vi-language', 'IT');
+        if (startDate) el.setAttribute('data-vi-travel-date-from', startDate);
+        if (endDate) el.setAttribute('data-vi-travel-date-to', endDate);
         mountRef.current.appendChild(el);
-        // Some builds expose a refresh helper
         const w = window as unknown as { viatorWidget?: { refresh?: () => void } };
         w.viatorWidget?.refresh?.();
       } catch {
@@ -64,7 +71,7 @@ export function ViatorDestinationWidget({ searchTerm, className }: ViatorWidgetP
     return () => {
       cancelled = true;
     };
-  }, [partnerId, widgetRef, searchTerm, uid]);
+  }, [partnerId, widgetRef, searchTerm, startDate, endDate, uid]);
 
   if (!partnerId || !widgetRef) return null;
 

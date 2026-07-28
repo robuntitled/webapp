@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { addDays, format } from 'date-fns';
 import { Loader2, Search, Star, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -12,6 +13,7 @@ import {
   GygDestinationWidget,
   ViatorDestinationWidget,
 } from '@/components/travel/AffiliateDestinationWidgets';
+import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,9 +27,18 @@ type ActivityHit = AffiliateOfferPreview & {
   durationMinutes?: number | null;
 };
 
-type FormCache = { city: string; query: string };
+type FormCache = { city: string; query: string; startDate: string; endDate: string };
 
 const CITY_SHORTCUTS = ['Roma', 'Milano', 'Firenze', 'Barcellona', 'Parigi', 'Londra'] as const;
+
+function defaultDates() {
+  const start = addDays(new Date(), 7);
+  const end = addDays(start, 3);
+  return {
+    startDate: format(start, 'yyyy-MM-dd'),
+    endDate: format(end, 'yyyy-MM-dd'),
+  };
+}
 
 function formatPrice(amount: number | null | undefined, currency: string | null | undefined) {
   if (amount == null || Number.isNaN(amount)) return null;
@@ -55,9 +66,12 @@ function providerLabel(p: ActivityHit['provider']) {
 }
 
 export function PrenotaActivitiesClient() {
+  const defaults = defaultDates();
   const [cacheReady, setCacheReady] = useState(false);
   const [city, setCity] = useState('');
   const [query, setQuery] = useState('');
+  const [startDate, setStartDate] = useState(defaults.startDate);
+  const [endDate, setEndDate] = useState(defaults.endDate);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ActivityHit[] | null>(null);
   const [providerFilter, setProviderFilter] = useState<'all' | 'viator' | 'getyourguide'>(
@@ -70,18 +84,20 @@ export function PrenotaActivitiesClient() {
     if (cached) {
       setCity(cached.city ?? '');
       setQuery(cached.query ?? '');
+      if (cached.startDate) setStartDate(cached.startDate);
+      if (cached.endDate) setEndDate(cached.endDate);
     }
     setCacheReady(true);
   }, []);
 
   useEffect(() => {
     if (!cacheReady) return;
-    const payload: FormCache = { city, query };
+    const payload: FormCache = { city, query, startDate, endDate };
     saveSearchFormCache('activities', payload);
     const onHide = () => saveSearchFormCache('activities', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [cacheReady, city, query]);
+  }, [cacheReady, city, query, startDate, endDate]);
 
   const visible = useMemo(() => {
     if (!results) return null;
@@ -95,6 +111,10 @@ export function PrenotaActivitiesClient() {
       toast.error('Inserisci una città');
       return;
     }
+    if (!startDate || !endDate) {
+      toast.error('Seleziona le date');
+      return;
+    }
     if (cityOverride) setCity(cityOverride);
 
     setLoading(true);
@@ -104,7 +124,12 @@ export function PrenotaActivitiesClient() {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city: cityLabel, query: query.trim() }),
+        body: JSON.stringify({
+          city: cityLabel,
+          query: query.trim(),
+          startDate,
+          endDate,
+        }),
       });
       const data = (await res.json()) as {
         results?: ActivityHit[];
@@ -137,13 +162,12 @@ export function PrenotaActivitiesClient() {
       <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Affiliate</span>
         {' — '}
-        apri un risultato per la scheda in-app. Il pagamento resta su Viator/GetYourGuide
-        (commissione NomadLink).
+        apri un risultato per dettagli e offerte correlate. Il pagamento è su Viator/GetYourGuide.
       </div>
 
       <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
         <div className="space-y-3 rounded-[1.35rem] bg-card p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_auto]">
             <label className="space-y-1.5 text-sm">
               <Label>Città</Label>
               <Input
@@ -158,13 +182,20 @@ export function PrenotaActivitiesClient() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Tour, snorkeling, museo…"
+                placeholder="Tour, snorkeling…"
                 className="h-11 rounded-xl"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') void search();
                 }}
               />
             </label>
+            <FlightDateField
+              tripType="stay"
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+            />
             <div className="flex items-end">
               <Button
                 type="button"
@@ -317,14 +348,15 @@ export function PrenotaActivitiesClient() {
       {widgetCity ? (
         <div className="space-y-4 border-t border-border/50 pt-4">
           <p className="text-sm font-medium text-foreground">Widget partner · {widgetCity}</p>
-          <ViatorDestinationWidget searchTerm={widgetCity} />
+          <ViatorDestinationWidget
+            searchTerm={widgetCity}
+            startDate={startDate}
+            endDate={endDate}
+          />
           <GygDestinationWidget query={`${widgetCity}, Italia`} />
           {showWidgetHint ? (
             <p className="text-xs text-muted-foreground">
-              Per i widget embed: aggiungi su Vercel{' '}
-              <code className="rounded bg-muted px-1">NEXT_PUBLIC_VIATOR_PARTNER_ID</code>,{' '}
-              <code className="rounded bg-muted px-1">NEXT_PUBLIC_VIATOR_WIDGET_REF</code> e{' '}
-              <code className="rounded bg-muted px-1">NEXT_PUBLIC_GYG_PARTNER_ID</code>.
+              Per i widget: NEXT_PUBLIC_VIATOR_PARTNER_ID, WIDGET_REF e GYG_PARTNER_ID su Vercel.
             </p>
           ) : null}
         </div>
@@ -336,6 +368,9 @@ export function PrenotaActivitiesClient() {
         onOpenChange={(open) => {
           if (!open) setSelected(null);
         }}
+        city={widgetCity}
+        startDate={startDate}
+        endDate={endDate}
       />
     </div>
   );

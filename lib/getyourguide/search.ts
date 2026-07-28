@@ -87,6 +87,8 @@ function mapTour(t: GygTour): ActivityOffer | null {
 export async function searchGygActivities(params: {
   city: string;
   query?: string;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
 }): Promise<ActivityOffer[]> {
   if (!isGygConfigured()) return [];
@@ -104,6 +106,12 @@ export async function searchGygActivities(params: {
     limit: String(limit),
     offset: '0',
   });
+  if (params.startDate) {
+    qs.append('date[]', `${params.startDate}T00:00:00`);
+  }
+  if (params.endDate) {
+    qs.append('date[]', `${params.endDate}T23:59:59`);
+  }
 
   const data = await gygFetch<GygToursResponse>(`/tours?${qs.toString()}`, {
     timeoutMs: 18_000,

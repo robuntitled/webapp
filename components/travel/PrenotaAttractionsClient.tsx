@@ -3,20 +3,15 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  Landmark,
-  Loader2,
-  MapPin,
-  Search,
-  Star,
-  Ticket,
-} from 'lucide-react';
+import { addDays, format } from 'date-fns';
+import { Landmark, Loader2, Search, Star, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AffiliateBookingDialog,
   type AffiliateOfferPreview,
 } from '@/components/travel/AffiliateBookingDialog';
 import { ViatorDestinationWidget } from '@/components/travel/AffiliateDestinationWidgets';
+import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,14 +31,14 @@ type AttractionHit = {
   productCount: number;
   freeAttraction: boolean;
   address?: string | null;
-  lat?: number | null;
-  lng?: number | null;
   bookingUrl: string;
 };
 
 type FormCache = {
   city: string;
   query: string;
+  startDate: string;
+  endDate: string;
   withTours: boolean;
   freeOnly: boolean;
   minRating: number;
@@ -58,10 +53,22 @@ const SORT_OPTIONS = [
   { value: 'name', label: 'Nome A–Z' },
 ] as const;
 
+function defaultDates() {
+  const start = addDays(new Date(), 7);
+  const end = addDays(start, 3);
+  return {
+    startDate: format(start, 'yyyy-MM-dd'),
+    endDate: format(end, 'yyyy-MM-dd'),
+  };
+}
+
 export function PrenotaAttractionsClient() {
+  const defaults = defaultDates();
   const [cacheReady, setCacheReady] = useState(false);
   const [city, setCity] = useState('');
   const [query, setQuery] = useState('');
+  const [startDate, setStartDate] = useState(defaults.startDate);
+  const [endDate, setEndDate] = useState(defaults.endDate);
   const [withTours, setWithTours] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
   const [minRating, setMinRating] = useState(0);
@@ -76,6 +83,8 @@ export function PrenotaAttractionsClient() {
     if (cached) {
       setCity(cached.city ?? '');
       setQuery(cached.query ?? '');
+      if (cached.startDate) setStartDate(cached.startDate);
+      if (cached.endDate) setEndDate(cached.endDate);
       setWithTours(Boolean(cached.withTours));
       setFreeOnly(Boolean(cached.freeOnly));
       setMinRating(cached.minRating ?? 0);
@@ -86,12 +95,21 @@ export function PrenotaAttractionsClient() {
 
   useEffect(() => {
     if (!cacheReady) return;
-    const payload: FormCache = { city, query, withTours, freeOnly, minRating, sort };
+    const payload: FormCache = {
+      city,
+      query,
+      startDate,
+      endDate,
+      withTours,
+      freeOnly,
+      minRating,
+      sort,
+    };
     saveSearchFormCache('attractions', payload);
     const onHide = () => saveSearchFormCache('attractions', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [cacheReady, city, query, withTours, freeOnly, minRating, sort]);
+  }, [cacheReady, city, query, startDate, endDate, withTours, freeOnly, minRating, sort]);
 
   const search = async (
     cityOverride?: string,
@@ -171,7 +189,7 @@ export function PrenotaAttractionsClient() {
 
       <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
         <div className="space-y-3 rounded-[1.35rem] bg-card p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_auto]">
             <label className="space-y-1.5 text-sm">
               <Label>Città</Label>
               <Input
@@ -193,6 +211,13 @@ export function PrenotaAttractionsClient() {
                 }}
               />
             </label>
+            <FlightDateField
+              tripType="stay"
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+            />
             <div className="flex items-end">
               <Button
                 type="button"
@@ -383,39 +408,9 @@ export function PrenotaAttractionsClient() {
                         <span />
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {r.lat != null && r.lng != null ? (
-                        <span
-                          role="link"
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(
-                              `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`,
-                              '_blank',
-                              'noopener,noreferrer'
-                            );
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.stopPropagation();
-                              window.open(
-                                `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`,
-                                '_blank',
-                                'noopener,noreferrer'
-                              );
-                            }
-                          }}
-                          className="text-muted-foreground hover:text-foreground"
-                          aria-label="Mappa"
-                        >
-                          <MapPin className="h-4 w-4" />
-                        </span>
-                      ) : null}
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
-                        Apri
-                      </span>
-                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
+                      Apri
+                    </span>
                   </div>
                 </div>
               </button>
@@ -426,7 +421,11 @@ export function PrenotaAttractionsClient() {
 
       {city.trim() ? (
         <div className="border-t border-border/50 pt-4">
-          <ViatorDestinationWidget searchTerm={city.trim()} />
+          <ViatorDestinationWidget
+            searchTerm={city.trim()}
+            startDate={startDate}
+            endDate={endDate}
+          />
         </div>
       ) : null}
 
@@ -436,6 +435,9 @@ export function PrenotaAttractionsClient() {
         onOpenChange={(open) => {
           if (!open) setSelected(null);
         }}
+        city={city.trim()}
+        startDate={startDate}
+        endDate={endDate}
       />
     </div>
   );

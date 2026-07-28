@@ -6,6 +6,14 @@ import { guardPaidApi } from '@/lib/api/request-guard';
 const schema = z.object({
   city: z.string().trim().min(2).max(80),
   query: z.string().trim().max(120).optional().default(''),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -26,6 +34,8 @@ export async function POST(request: Request) {
     const { results, providers, warnings } = await searchAffiliateActivities({
       city: parsed.data.city,
       query: parsed.data.query || undefined,
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
     });
     return NextResponse.json({ results, providers, warnings });
   } catch (e) {
