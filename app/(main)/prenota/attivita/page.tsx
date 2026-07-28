@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
+import { PrenotaActivitiesClient } from '@/components/travel/PrenotaActivitiesClient';
 import { PrenotaPageShell } from '@/components/travel/PrenotaPageShell';
-import { PrenotaPlacesClient } from '@/components/travel/PrenotaPlacesClient';
 import { redirect } from 'next/navigation';
 
 export default async function PrenotaAttivitaPage() {
@@ -12,10 +12,10 @@ export default async function PrenotaAttivitaPage() {
   return (
     <PrenotaPageShell
       title="Attività"
-      subtitle="Tour ed esperienze nell’area. Checkout ticket in arrivo; intanto esplora e apri la mappa."
-      badge="Scoperta"
+      subtitle="Tour ed esperienze prenotabili via Viator e GetYourGuide. Checkout sul sito partner."
+      badge="Affiliate"
     >
-      <PrenotaPlacesClient category="activity" title="Attività" />
+      <PrenotaActivitiesClient />
     </PrenotaPageShell>
   );
 }

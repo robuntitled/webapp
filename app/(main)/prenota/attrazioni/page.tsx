@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import { auth } from '@/auth';
+import { PrenotaAttractionsClient } from '@/components/travel/PrenotaAttractionsClient';
 import { PrenotaPageShell } from '@/components/travel/PrenotaPageShell';
-import { PrenotaPlacesClient } from '@/components/travel/PrenotaPlacesClient';
 import { redirect } from 'next/navigation';
+
+/** Catalogo partner: non indicizzare (policy Viator unique content). */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function PrenotaAttrazioniPage() {
   const session = await auth();
@@ -12,10 +18,10 @@ export default async function PrenotaAttrazioniPage() {
   return (
     <PrenotaPageShell
       title="Attrazioni"
-      subtitle="Esplora punti di interesse con foto e mappe. I ticket partner arriveranno dopo."
-      badge="Scoperta"
+      subtitle="Monumenti e punti di interesse. Apri su Viator per tour e biglietti collegati."
+      badge="Affiliate"
     >
-      <PrenotaPlacesClient category="attraction" title="Attrazioni" />
+      <PrenotaAttractionsClient />
     </PrenotaPageShell>
   );
 }

@@ -52,6 +52,28 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'static.cupid.travel',
       },
+      // Viator / Tripadvisor CDN
+      {
+        protocol: 'https',
+        hostname: 'media.tacdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'hare-media-cdn.tripadvisor.com',
+      },
+      // GetYourGuide images
+      {
+        protocol: 'https',
+        hostname: 'cdn.getyourguide.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.getyourguide.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img-getyourguide-com.partner.gygtest.com',
+      },
     ],
   },
 };
