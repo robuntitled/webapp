@@ -9,7 +9,7 @@ const schema = z.object({
   withTours: z.boolean().optional().default(false),
   freeOnly: z.boolean().optional().default(false),
   minRating: z.number().min(0).max(5).optional().default(0),
-  sort: z.enum(['rating', 'tours', 'name', 'default']).optional().default('rating'),
+  sort: z.enum(['rating', 'default']).optional().default('default'),
 });
 
 export async function POST(request: Request) {

@@ -10,8 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 type FlightDateFieldProps = {
-  /** stay = check-in / check-out (sempre range) */
-  tripType: 'oneway' | 'roundtrip' | 'stay';
+  /** stay = hotel check-in/out · activity = periodo esperienze · voli = oneway/roundtrip */
+  tripType: 'oneway' | 'roundtrip' | 'stay' | 'activity';
   startDate: string;
   endDate: string;
   onStartDateChange: (value: string) => void;
@@ -49,7 +49,8 @@ export function FlightDateField({
   }, []);
 
   const isStay = tripType === 'stay';
-  const isRange = tripType === 'roundtrip' || isStay;
+  const isActivity = tripType === 'activity';
+  const isRange = tripType === 'roundtrip' || isStay || isActivity;
 
   const label =
     tripType === 'oneway'
@@ -61,15 +62,39 @@ export function FlightDateField({
         : start
           ? isStay
             ? `${format(start, 'd MMM', { locale: it })} – check-out`
-            : `${format(start, 'd MMM', { locale: it })} – ritorno`
+            : isActivity
+              ? `${format(start, 'd MMM', { locale: it })} – fine`
+              : `${format(start, 'd MMM', { locale: it })} – ritorno`
           : isStay
             ? 'Check-in – check-out'
-            : 'Andata – ritorno';
+            : isActivity
+              ? 'Dal – al'
+              : 'Andata – ritorno';
+
+  const fieldTitle = tripType === 'oneway' ? 'Data' : isStay ? 'Soggiorno' : 'Date';
+  const fieldHint =
+    tripType === 'oneway'
+      ? 'Solo andata'
+      : isStay
+        ? 'Check-in e check-out'
+        : isActivity
+          ? 'Periodo esperienze'
+          : 'Andata e ritorno';
+  const calendarTitle = isStay
+    ? 'Calendario soggiorno'
+    : isActivity
+      ? 'Calendario esperienze'
+      : 'Calendario voli';
+
+  /** Niente evidenziazione “oggi” (underline / accent) */
+  const todayClassNames = {
+    today: 'bg-transparent text-foreground rounded-md',
+  };
 
   return (
     <div className={cn('space-y-1.5', className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        {tripType === 'oneway' ? 'Data' : isStay ? 'Soggiorno' : 'Date'}
+        {fieldTitle}
       </span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -89,13 +114,7 @@ export function FlightDateField({
               <span className="block truncate text-sm font-semibold capitalize text-slate-900">
                 {label}
               </span>
-              <span className="block text-[11px] text-slate-500">
-                {tripType === 'oneway'
-                  ? 'Solo andata'
-                  : isStay
-                    ? 'Check-in e check-out'
-                    : 'Andata e ritorno'}
-              </span>
+              <span className="block text-[11px] text-slate-500">{fieldHint}</span>
             </span>
           </button>
         </PopoverTrigger>
@@ -105,7 +124,7 @@ export function FlightDateField({
         >
           <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-4 py-3 text-white">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">
-              {isStay ? 'Calendario soggiorno' : 'Calendario voli'}
+              {calendarTitle}
             </p>
             <p className="mt-0.5 text-sm font-semibold capitalize">{label}</p>
           </div>
@@ -123,6 +142,7 @@ export function FlightDateField({
                 setOpen(false);
               }}
               className="p-3"
+              classNames={todayClassNames}
             />
           ) : (
             <Calendar
@@ -145,6 +165,7 @@ export function FlightDateField({
                 }
               }}
               className="p-3"
+              classNames={todayClassNames}
             />
           )}
         </PopoverContent>

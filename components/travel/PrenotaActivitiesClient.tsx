@@ -3,16 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { addDays, format } from 'date-fns';
-import { Loader2, Search, Star, Ticket } from 'lucide-react';
+import { ExternalLink, Loader2, Search, Star, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  AffiliateBookingDialog,
-  type AffiliateOfferPreview,
-} from '@/components/travel/AffiliateBookingDialog';
-import {
-  GygDestinationWidget,
-  ViatorDestinationWidget,
-} from '@/components/travel/AffiliateDestinationWidgets';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,13 +15,23 @@ import {
 } from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
 
-type ActivityHit = AffiliateOfferPreview & {
+type ActivityHit = {
+  id: string;
+  provider: 'viator' | 'getyourguide';
+  title: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  priceFrom?: number | null;
+  currency?: string | null;
+  rating?: number | null;
+  ratingCount?: number | null;
   durationMinutes?: number | null;
+  bookingUrl: string;
 };
 
 type FormCache = { city: string; query: string; startDate: string; endDate: string };
 
-const CITY_SHORTCUTS = ['Roma', 'Milano', 'Firenze', 'Barcellona', 'Parigi', 'Londra'] as const;
+type SortKey = 'default' | 'price_asc' | 'price_desc' | 'rating';
 
 function defaultDates() {
   const start = addDays(new Date(), 7);
@@ -77,7 +79,7 @@ export function PrenotaActivitiesClient() {
   const [providerFilter, setProviderFilter] = useState<'all' | 'viator' | 'getyourguide'>(
     'all'
   );
-  const [selected, setSelected] = useState<ActivityHit | null>(null);
+  const [sort, setSort] = useState<SortKey>('default');
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('activities');
@@ -101,12 +103,26 @@ export function PrenotaActivitiesClient() {
 
   const visible = useMemo(() => {
     if (!results) return null;
-    if (providerFilter === 'all') return results;
-    return results.filter((r) => r.provider === providerFilter);
-  }, [results, providerFilter]);
+    let list =
+      providerFilter === 'all'
+        ? [...results]
+        : results.filter((r) => r.provider === providerFilter);
+    if (sort === 'price_asc') {
+      list.sort(
+        (a, b) =>
+          (a.priceFrom ?? Number.POSITIVE_INFINITY) -
+          (b.priceFrom ?? Number.POSITIVE_INFINITY)
+      );
+    } else if (sort === 'price_desc') {
+      list.sort((a, b) => (b.priceFrom ?? -1) - (a.priceFrom ?? -1));
+    } else if (sort === 'rating') {
+      list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    }
+    return list;
+  }, [results, providerFilter, sort]);
 
-  const search = async (cityOverride?: string) => {
-    const cityLabel = (cityOverride ?? city).trim();
+  const search = async () => {
+    const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
       return;
@@ -115,7 +131,6 @@ export function PrenotaActivitiesClient() {
       toast.error('Seleziona le date');
       return;
     }
-    if (cityOverride) setCity(cityOverride);
 
     setLoading(true);
     setResults(null);
@@ -153,16 +168,12 @@ export function PrenotaActivitiesClient() {
     }
   };
 
-  const widgetCity = city.trim();
-  const showWidgetHint =
-    !process.env.NEXT_PUBLIC_VIATOR_PARTNER_ID && !process.env.NEXT_PUBLIC_GYG_PARTNER_ID;
-
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Affiliate</span>
         {' — '}
-        apri un risultato per dettagli e offerte correlate. Il pagamento è su Viator/GetYourGuide.
+        tour prenotabili via Viator e GetYourGuide. Prenota sul sito partner.
       </div>
 
       <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
@@ -190,7 +201,7 @@ export function PrenotaActivitiesClient() {
               />
             </label>
             <FlightDateField
-              tripType="stay"
+              tripType="activity"
               startDate={startDate}
               endDate={endDate}
               onStartDateChange={setStartDate}
@@ -211,22 +222,6 @@ export function PrenotaActivitiesClient() {
                 Cerca
               </Button>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {CITY_SHORTCUTS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => void search(c)}
-                className={cn(
-                  'rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition',
-                  'hover:border-primary/30 hover:text-foreground',
-                  city === c && 'border-primary/40 bg-primary/5 text-primary'
-                )}
-              >
-                {c}
-              </button>
-            ))}
           </div>
         </div>
       </div>
@@ -254,9 +249,19 @@ export function PrenotaActivitiesClient() {
               {label}
             </button>
           ))}
-          <span className="ml-auto text-xs text-muted-foreground">
-            {visible?.length ?? 0} attività
-          </span>
+          <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+            Ordina
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="h-7 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
+            >
+              <option value="default">Consigliate</option>
+              <option value="price_asc">Prezzo ↑</option>
+              <option value="price_desc">Prezzo ↓</option>
+              <option value="rating">Valutazione</option>
+            </select>
+          </label>
         </div>
       )}
 
@@ -273,12 +278,11 @@ export function PrenotaActivitiesClient() {
             const price = formatPrice(r.priceFrom, r.currency);
             const duration = formatDuration(r.durationMinutes);
             return (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelected(r)}
-                  className="grid w-full grid-cols-[112px_1fr] overflow-hidden rounded-2xl border border-border/60 bg-card text-left transition hover:border-primary/30 hover:shadow-md"
-                >
+              <li
+                key={r.id}
+                className="overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/30 hover:shadow-md"
+              >
+                <div className="grid grid-cols-[112px_1fr]">
                   <div className="relative aspect-square bg-muted">
                     {r.imageUrl ? (
                       <Image
@@ -333,45 +337,23 @@ export function PrenotaActivitiesClient() {
                           </p>
                         ) : null}
                       </div>
-                      <span className="inline-flex shrink-0 items-center rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
-                        Apri
-                      </span>
+                      <a
+                        href={r.bookingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer sponsored"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                      >
+                        Prenota
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
                   </div>
-                </button>
+                </div>
               </li>
             );
           })}
         </ul>
       )}
-
-      {widgetCity ? (
-        <div className="space-y-4 border-t border-border/50 pt-4">
-          <p className="text-sm font-medium text-foreground">Widget partner · {widgetCity}</p>
-          <ViatorDestinationWidget
-            searchTerm={widgetCity}
-            startDate={startDate}
-            endDate={endDate}
-          />
-          <GygDestinationWidget query={`${widgetCity}, Italia`} />
-          {showWidgetHint ? (
-            <p className="text-xs text-muted-foreground">
-              Per i widget: NEXT_PUBLIC_VIATOR_PARTNER_ID, WIDGET_REF e GYG_PARTNER_ID su Vercel.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <AffiliateBookingDialog
-        offer={selected}
-        open={Boolean(selected)}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
-        city={widgetCity}
-        startDate={startDate}
-        endDate={endDate}
-      />
     </div>
   );
 }

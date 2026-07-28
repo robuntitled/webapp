@@ -32,22 +32,19 @@ function applyFilters(
 
 function sortAttractions(
   results: AttractionHit[],
-  sort: 'rating' | 'tours' | 'name' | 'default'
+  sort: 'rating' | 'default'
 ): AttractionHit[] {
   const list = [...results];
-  if (sort === 'name') {
-    return list.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  if (sort === 'rating') {
+    return list.sort((a, b) => {
+      const ra = a.rating ?? 0;
+      const rb = b.rating ?? 0;
+      if (rb !== ra) return rb - ra;
+      return b.productCount - a.productCount;
+    });
   }
-  if (sort === 'tours') {
-    return list.sort((a, b) => b.productCount - a.productCount);
-  }
-  // rating + default
-  return list.sort((a, b) => {
-    const ra = a.rating ?? 0;
-    const rb = b.rating ?? 0;
-    if (rb !== ra) return rb - ra;
-    return b.productCount - a.productCount;
-  });
+  // Consigliate: API order, soft by tour count as soft signal
+  return list.sort((a, b) => b.productCount - a.productCount);
 }
 
 export async function searchAttractions(params: {
@@ -56,7 +53,7 @@ export async function searchAttractions(params: {
   withTours?: boolean;
   freeOnly?: boolean;
   minRating?: number;
-  sort?: 'rating' | 'tours' | 'name' | 'default';
+  sort?: 'rating' | 'default';
 }): Promise<AttractionSearchResult> {
   if (!isViatorConfigured()) {
     return {
@@ -83,7 +80,7 @@ export async function searchAttractions(params: {
     });
 
     return {
-      results: sortAttractions(filtered, params.sort ?? 'rating').slice(0, 48),
+      results: sortAttractions(filtered, params.sort ?? 'default').slice(0, 48),
       destinationName,
       provider: 'ok',
       warnings: filtered.length

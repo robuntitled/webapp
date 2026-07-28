@@ -4,13 +4,8 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { addDays, format } from 'date-fns';
-import { Landmark, Loader2, Search, Star, Ticket } from 'lucide-react';
+import { ExternalLink, Landmark, Loader2, Search, Star, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  AffiliateBookingDialog,
-  type AffiliateOfferPreview,
-} from '@/components/travel/AffiliateBookingDialog';
-import { ViatorDestinationWidget } from '@/components/travel/AffiliateDestinationWidgets';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +29,8 @@ type AttractionHit = {
   bookingUrl: string;
 };
 
+type SortKey = 'default' | 'rating';
+
 type FormCache = {
   city: string;
   query: string;
@@ -42,16 +39,8 @@ type FormCache = {
   withTours: boolean;
   freeOnly: boolean;
   minRating: number;
-  sort: 'rating' | 'tours' | 'name' | 'default';
+  sort: SortKey;
 };
-
-const CITY_SHORTCUTS = ['Roma', 'Milano', 'Firenze', 'Barcellona', 'Parigi', 'Londra'] as const;
-
-const SORT_OPTIONS = [
-  { value: 'rating', label: 'Più votate' },
-  { value: 'tours', label: 'Più tour' },
-  { value: 'name', label: 'Nome A–Z' },
-] as const;
 
 function defaultDates() {
   const start = addDays(new Date(), 7);
@@ -72,11 +61,10 @@ export function PrenotaAttractionsClient() {
   const [withTours, setWithTours] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
   const [minRating, setMinRating] = useState(0);
-  const [sort, setSort] = useState<'rating' | 'tours' | 'name' | 'default'>('rating');
+  const [sort, setSort] = useState<SortKey>('default');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<AttractionHit[] | null>(null);
   const [destinationName, setDestinationName] = useState<string | null>(null);
-  const [selected, setSelected] = useState<AffiliateOfferPreview | null>(null);
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('attractions');
@@ -88,7 +76,7 @@ export function PrenotaAttractionsClient() {
       setWithTours(Boolean(cached.withTours));
       setFreeOnly(Boolean(cached.freeOnly));
       setMinRating(cached.minRating ?? 0);
-      setSort(cached.sort ?? 'rating');
+      setSort(cached.sort === 'rating' ? 'rating' : 'default');
     }
     setCacheReady(true);
   }, []);
@@ -112,17 +100,13 @@ export function PrenotaAttractionsClient() {
   }, [cacheReady, city, query, startDate, endDate, withTours, freeOnly, minRating, sort]);
 
   const search = async (
-    cityOverride?: string,
-    filterOverride?: Partial<
-      Pick<FormCache, 'withTours' | 'freeOnly' | 'minRating' | 'sort'>
-    >
+    filterOverride?: Partial<Pick<FormCache, 'withTours' | 'freeOnly' | 'minRating' | 'sort'>>
   ) => {
-    const cityLabel = (cityOverride ?? city).trim();
+    const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
       return;
     }
-    if (cityOverride) setCity(cityOverride);
 
     const filters = {
       withTours: filterOverride?.withTours ?? withTours,
@@ -141,7 +125,10 @@ export function PrenotaAttractionsClient() {
         body: JSON.stringify({
           city: cityLabel,
           query: query.trim(),
-          ...filters,
+          withTours: filters.withTours,
+          freeOnly: filters.freeOnly,
+          minRating: filters.minRating,
+          sort: filters.sort === 'rating' ? 'rating' : 'default',
         }),
       });
       const data = (await res.json()) as {
@@ -167,12 +154,12 @@ export function PrenotaAttractionsClient() {
   const toggleWithTours = () => {
     const next = !withTours;
     setWithTours(next);
-    if (city.trim()) void search(undefined, { withTours: next });
+    if (city.trim()) void search({ withTours: next });
   };
   const toggleFreeOnly = () => {
     const next = !freeOnly;
     setFreeOnly(next);
-    if (city.trim()) void search(undefined, { freeOnly: next });
+    if (city.trim()) void search({ freeOnly: next });
   };
 
   return (
@@ -180,7 +167,7 @@ export function PrenotaAttractionsClient() {
       <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Attrazioni</span>
         {' — '}
-        monumenti e punti di interesse da Viator. Per tour prenotabili usa{' '}
+        punti di interesse da Viator. Per tour prenotabili usa{' '}
         <Link href="/prenota/attivita" className="font-medium text-primary hover:underline">
           Attività
         </Link>
@@ -212,7 +199,7 @@ export function PrenotaAttractionsClient() {
               />
             </label>
             <FlightDateField
-              tripType="stay"
+              tripType="activity"
               startDate={startDate}
               endDate={endDate}
               onStartDateChange={setStartDate}
@@ -246,7 +233,7 @@ export function PrenotaAttractionsClient() {
                   : 'border-border text-muted-foreground hover:text-foreground'
               )}
             >
-              Con tour
+              Con esperienze
             </button>
             <button
               type="button"
@@ -267,7 +254,7 @@ export function PrenotaAttractionsClient() {
                 onChange={(e) => {
                   const next = Number(e.target.value);
                   setMinRating(next);
-                  if (city.trim()) void search(undefined, { minRating: next });
+                  if (city.trim()) void search({ minRating: next });
                 }}
                 className="h-7 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
               >
@@ -277,48 +264,29 @@ export function PrenotaAttractionsClient() {
                 <option value={4.5}>4.5+</option>
               </select>
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
               Ordina
               <select
                 value={sort}
                 onChange={(e) => {
-                  const next = e.target.value as FormCache['sort'];
+                  const next = e.target.value as SortKey;
                   setSort(next);
-                  if (city.trim()) void search(undefined, { sort: next });
+                  if (city.trim()) void search({ sort: next });
                 }}
                 className="h-7 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
               >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <option value="default">Consigliate</option>
+                <option value="rating">Valutazione</option>
               </select>
             </label>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {CITY_SHORTCUTS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => void search(c)}
-                className={cn(
-                  'rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition',
-                  'hover:border-primary/30 hover:text-foreground',
-                  city === c && 'border-primary/40 bg-primary/5 text-primary'
-                )}
-              >
-                {c}
-              </button>
-            ))}
           </div>
         </div>
       </div>
 
       {destinationName && results && (
         <p className="text-xs text-muted-foreground">
-          Destinazione Viator: <span className="font-medium text-foreground">{destinationName}</span>
+          Destinazione Viator:{' '}
+          <span className="font-medium text-foreground">{destinationName}</span>
           {' · '}
           {results.length} attrazioni
         </p>
@@ -334,23 +302,11 @@ export function PrenotaAttractionsClient() {
       {results && (
         <ul className="grid gap-3 sm:grid-cols-2">
           {results.map((r) => (
-            <li key={r.id}>
-              <button
-                type="button"
-                onClick={() =>
-                  setSelected({
-                    id: r.id,
-                    provider: 'viator',
-                    title: r.name,
-                    description: r.description,
-                    imageUrl: r.imageUrl,
-                    rating: r.rating,
-                    ratingCount: r.ratingCount,
-                    bookingUrl: r.bookingUrl,
-                  })
-                }
-                className="grid w-full grid-cols-[112px_1fr] overflow-hidden rounded-2xl border border-border/60 bg-card text-left transition hover:border-primary/30 hover:shadow-md"
-              >
+            <li
+              key={r.id}
+              className="overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:border-primary/30 hover:shadow-md"
+            >
+              <div className="grid grid-cols-[112px_1fr]">
                 <div className="relative aspect-square bg-muted">
                   {r.imageUrl ? (
                     <Image
@@ -381,7 +337,7 @@ export function PrenotaAttractionsClient() {
                       {r.productCount > 0 ? (
                         <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
                           <Ticket className="h-3 w-3" />
-                          {r.productCount} tour
+                          {r.productCount} esperienze
                         </span>
                       ) : null}
                     </div>
@@ -408,37 +364,22 @@ export function PrenotaAttractionsClient() {
                         <span />
                       )}
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
+                    <a
+                      href={r.bookingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                    >
                       Apri
-                    </span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
                   </div>
                 </div>
-              </button>
+              </div>
             </li>
           ))}
         </ul>
       )}
-
-      {city.trim() ? (
-        <div className="border-t border-border/50 pt-4">
-          <ViatorDestinationWidget
-            searchTerm={city.trim()}
-            startDate={startDate}
-            endDate={endDate}
-          />
-        </div>
-      ) : null}
-
-      <AffiliateBookingDialog
-        offer={selected}
-        open={Boolean(selected)}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
-        city={city.trim()}
-        startDate={startDate}
-        endDate={endDate}
-      />
     </div>
   );
 }
