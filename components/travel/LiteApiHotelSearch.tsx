@@ -331,13 +331,6 @@ export function LiteApiHotelSearch({
 
   return (
     <div className={cn('space-y-5', className)}>
-      {!compact ? (
-        <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Tariffe in tempo reale</span>
-          {' — '}
-          scegli un’offerta e completa ospiti + pagamento in checkout.
-        </div>
-      ) : null}
       <div
         className={cn(
           'overflow-hidden rounded-3xl',

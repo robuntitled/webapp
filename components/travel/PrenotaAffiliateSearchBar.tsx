@@ -4,7 +4,7 @@ import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type AffiliateSortKey = 'default' | 'price_asc' | 'price_desc' | 'rating';
@@ -15,10 +15,14 @@ export type PrenotaAffiliateSearchBarProps = {
   query: string;
   startDate: string;
   endDate: string;
+  adults: number;
+  children?: number;
   onCityChange: (v: string) => void;
   onQueryChange: (v: string) => void;
   onStartDateChange: (v: string) => void;
   onEndDateChange: (v: string) => void;
+  onAdultsChange: (v: number) => void;
+  onChildrenChange?: (v: number) => void;
   onSearch: () => void;
   loading: boolean;
   queryPlaceholder: string;
@@ -37,10 +41,14 @@ export function PrenotaAffiliateSearchBar({
   query,
   startDate,
   endDate,
+  adults,
+  children = 0,
   onCityChange,
   onQueryChange,
   onStartDateChange,
   onEndDateChange,
+  onAdultsChange,
+  onChildrenChange,
   onSearch,
   loading,
   queryPlaceholder,
@@ -55,7 +63,7 @@ export function PrenotaAffiliateSearchBar({
   return (
     <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
       <div className="space-y-3 rounded-[1.35rem] bg-card p-4 sm:p-5">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_0.7fr_auto]">
           <label className="space-y-1.5 text-sm">
             <Label>Città</Label>
             <Input
@@ -84,6 +92,38 @@ export function PrenotaAffiliateSearchBar({
             onStartDateChange={onStartDateChange}
             onEndDateChange={onEndDateChange}
           />
+          <label className="space-y-1.5 text-sm">
+            <Label>Persone</Label>
+            <div className="relative">
+              <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <select
+                value={adults}
+                onChange={(e) => onAdultsChange(Number(e.target.value))}
+                className="h-11 w-full appearance-none rounded-xl border border-input bg-background pl-9 pr-3 text-sm font-medium"
+                aria-label="Numero adulti"
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? 'adulto' : 'adulti'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {onChildrenChange ? (
+              <select
+                value={children}
+                onChange={(e) => onChildrenChange(Number(e.target.value))}
+                className="mt-1.5 h-9 w-full rounded-lg border border-input bg-background px-2 text-xs"
+                aria-label="Numero bambini"
+              >
+                {Array.from({ length: 9 }, (_, i) => i).map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? 'Nessun bambino' : `${n} bambin${n === 1 ? 'o' : 'i'}`}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </label>
           <div className="flex items-end">
             <Button
               type="button"

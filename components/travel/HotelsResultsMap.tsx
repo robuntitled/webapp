@@ -20,11 +20,15 @@ export type HotelMapPin = {
   currency?: string;
 };
 
+/** Alias generico (hotel / attività / attrazioni) */
+export type ResultsMapPin = HotelMapPin;
+
 type HotelsResultsMapProps = {
   pins: HotelMapPin[];
   highlightedId?: string | null;
   onPinClick?: (id: string) => void;
   className?: string;
+  emptyLabel?: string;
 };
 
 const CARTO_URL =
@@ -73,13 +77,14 @@ export function HotelsResultsMap({
   highlightedId,
   onPinClick,
   className,
+  emptyLabel = 'Coordinate non disponibili per questa ricerca',
 }: HotelsResultsMapProps) {
   if (pins.length === 0) {
     return (
       <div
         className={`flex items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 text-sm text-muted-foreground ${className ?? ''}`}
       >
-        Coordinate hotel non disponibili per questa ricerca
+        {emptyLabel}
       </div>
     );
   }

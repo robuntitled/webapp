@@ -17,6 +17,10 @@ type GygTour = {
   number_of_ratings?: number;
   url?: string;
   pictures?: Array<{ url?: string; ssl_url?: string }>;
+  coordinates?: { lat?: number; long?: number; lng?: number };
+  locations?: Array<{
+    coordinates?: { lat?: number; long?: number; lng?: number };
+  }>;
   price?: {
     values?: { amount?: number; currency?: string };
     starting_price?: { amount?: number; currency?: string };
@@ -25,6 +29,27 @@ type GygTour = {
   };
   durations?: Array<{ duration?: number; unit?: string }>;
 };
+
+function tourCoords(t: GygTour): { lat: number | null; lng: number | null } {
+  const c = t.coordinates ?? t.locations?.[0]?.coordinates;
+  const lat = typeof c?.lat === 'number' ? c.lat : null;
+  const lng =
+    typeof c?.long === 'number'
+      ? c.long
+      : typeof c?.lng === 'number'
+        ? c.lng
+        : null;
+  if (
+    lat == null ||
+    lng == null ||
+    Math.abs(lat) > 90 ||
+    Math.abs(lng) > 180 ||
+    (lat === 0 && lng === 0)
+  ) {
+    return { lat: null, lng: null };
+  }
+  return { lat, lng };
+}
 
 type GygToursResponse = {
   data?: { tours?: GygTour[] };
@@ -70,6 +95,7 @@ function mapTour(t: GygTour): ActivityOffer | null {
 
   const pic = t.pictures?.[0];
   const { amount, currency } = extractPrice(t);
+  const { lat, lng } = tourCoords(t);
 
   return {
     id: `gyg:${id}`,
@@ -82,6 +108,8 @@ function mapTour(t: GygTour): ActivityOffer | null {
     rating: t.overall_rating ?? null,
     ratingCount: t.number_of_ratings ?? null,
     durationMinutes: durationMinutes(t),
+    lat,
+    lng,
     bookingUrl,
   };
 }

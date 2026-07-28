@@ -1,7 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -13,6 +13,7 @@ import {
   type AffiliateProviderFilter,
   type AffiliateSortKey,
 } from '@/components/travel/PrenotaAffiliateSearchBar';
+import { withAffiliateBookingPrefs } from '@/lib/travel/affiliate-deeplink';
 import {
   defaultAffiliateDates,
   sortAffiliateByKey,
@@ -21,6 +22,13 @@ import {
   loadSearchFormCache,
   saveSearchFormCache,
 } from '@/lib/travel/search-form-cache';
+import { cn } from '@/lib/utils';
+
+const HotelsResultsMap = dynamic(
+  () =>
+    import('@/components/travel/HotelsResultsMap').then((m) => m.HotelsResultsMap),
+  { ssr: false }
+);
 
 type AttractionHit = {
   id: string;
@@ -32,6 +40,8 @@ type AttractionHit = {
   productCount: number;
   freeAttraction: boolean;
   address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   bookingUrl: string;
 };
 
@@ -40,6 +50,8 @@ type FormCache = {
   query: string;
   startDate: string;
   endDate: string;
+  adults: number;
+  children: number;
   providerFilter: AffiliateProviderFilter;
   minRating: number;
   sort: AffiliateSortKey;
@@ -52,6 +64,8 @@ export function PrenotaAttractionsClient() {
   const [query, setQuery] = useState('');
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [endDate, setEndDate] = useState(defaults.endDate);
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<AttractionHit[] | null>(null);
   const [destinationName, setDestinationName] = useState<string | null>(null);
@@ -59,6 +73,7 @@ export function PrenotaAttractionsClient() {
     useState<AffiliateProviderFilter>('all');
   const [minRating, setMinRating] = useState(0);
   const [sort, setSort] = useState<AffiliateSortKey>('default');
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('attractions');
@@ -67,6 +82,8 @@ export function PrenotaAttractionsClient() {
       setQuery(cached.query ?? '');
       if (cached.startDate) setStartDate(cached.startDate);
       if (cached.endDate) setEndDate(cached.endDate);
+      if (cached.adults) setAdults(cached.adults);
+      setChildren(cached.children ?? 0);
       if (cached.providerFilter) setProviderFilter(cached.providerFilter);
       setMinRating(cached.minRating ?? 0);
       if (cached.sort) setSort(cached.sort);
@@ -81,6 +98,8 @@ export function PrenotaAttractionsClient() {
       query,
       startDate,
       endDate,
+      adults,
+      children,
       providerFilter,
       minRating,
       sort,
@@ -89,11 +108,21 @@ export function PrenotaAttractionsClient() {
     const onHide = () => saveSearchFormCache('attractions', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [cacheReady, city, query, startDate, endDate, providerFilter, minRating, sort]);
+  }, [
+    cacheReady,
+    city,
+    query,
+    startDate,
+    endDate,
+    adults,
+    children,
+    providerFilter,
+    minRating,
+    sort,
+  ]);
 
   const visible = useMemo(() => {
     if (!results) return null;
-    // Attrazioni = solo Viator; filtro GYG → lista vuota
     let list =
       providerFilter === 'getyourguide'
         ? []
@@ -103,12 +132,26 @@ export function PrenotaAttractionsClient() {
     if (minRating > 0) {
       list = list.filter((r) => (r.rating ?? 0) >= minRating);
     }
-    // Attrazioni non hanno priceFrom → sort prezzo lascia ordine, rating funziona
     return sortAffiliateByKey(
       list.map((r) => ({ ...r, priceFrom: null as number | null })),
       sort
     );
   }, [results, providerFilter, minRating, sort]);
+
+  const bookingPrefs = useMemo(
+    () => ({ startDate, endDate, adults, children }),
+    [startDate, endDate, adults, children]
+  );
+
+  const mapPins = useMemo(() => {
+    if (!visible) return [];
+    const pins: { id: string; name: string; lat: number; lng: number }[] = [];
+    for (const r of visible) {
+      if (typeof r.lat !== 'number' || typeof r.lng !== 'number') continue;
+      pins.push({ id: r.id, name: r.name, lat: r.lat, lng: r.lng });
+    }
+    return pins;
+  }, [visible]);
 
   const search = async () => {
     const cityLabel = city.trim();
@@ -119,6 +162,7 @@ export function PrenotaAttractionsClient() {
 
     setLoading(true);
     setResults(null);
+    setHighlightedId(null);
     try {
       const res = await fetch('/api/attractions/search', {
         method: 'POST',
@@ -167,31 +211,25 @@ export function PrenotaAttractionsClient() {
       ]
         .filter(Boolean)
         .join(' · '),
-      bookingUrl: r.bookingUrl,
+      bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
       ctaLabel: 'Apri',
     })) ?? null;
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">Attrazioni</span>
-        {' — '}
-        punti di interesse da Viator. Per tour prenotabili usa{' '}
-        <Link href="/prenota/attivita" className="font-medium text-primary hover:underline">
-          Attività
-        </Link>
-        .
-      </div>
-
       <PrenotaAffiliateSearchBar
         city={city}
         query={query}
         startDate={startDate}
         endDate={endDate}
+        adults={adults}
+        children={children}
         onCityChange={setCity}
         onQueryChange={setQuery}
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
+        onAdultsChange={setAdults}
+        onChildrenChange={setChildren}
         onSearch={() => void search()}
         loading={loading}
         queryPlaceholder="Colosseo, museo, landmark…"
@@ -221,13 +259,44 @@ export function PrenotaAttractionsClient() {
       )}
 
       {cards && (
-        <ul className="grid gap-3.5 lg:grid-cols-2">
-          {cards.map((item) => (
-            <li key={item.id}>
-              <PrenotaAffiliateResultCard item={item} />
-            </li>
-          ))}
-        </ul>
+        <div
+          className={cn(
+            'grid gap-4',
+            mapPins.length > 0 && 'lg:grid-cols-[1fr_minmax(300px,38%)]'
+          )}
+        >
+          <ul className="grid gap-3.5">
+            {cards.map((item) => (
+              <li
+                key={item.id}
+                id={`attraction-${item.id}`}
+                onMouseEnter={() => setHighlightedId(item.id)}
+                className={cn(
+                  'rounded-2xl transition',
+                  highlightedId === item.id && 'ring-2 ring-primary/35'
+                )}
+              >
+                <PrenotaAffiliateResultCard item={item} />
+              </li>
+            ))}
+          </ul>
+          {mapPins.length > 0 ? (
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <HotelsResultsMap
+                pins={mapPins}
+                highlightedId={highlightedId}
+                onPinClick={(id) => {
+                  setHighlightedId(id);
+                  document
+                    .getElementById(`attraction-${id}`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                emptyLabel="Coordinate attrazioni non disponibili"
+                className="h-[min(70vh,640px)] min-h-[320px]"
+              />
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

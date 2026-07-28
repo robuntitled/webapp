@@ -11,6 +11,8 @@ export type ActivityOffer = {
   rating?: number | null;
   ratingCount?: number | null;
   durationMinutes?: number | null;
+  lat?: number | null;
+  lng?: number | null;
   /** Deep-link affiliate: checkout sul sito partner */
   bookingUrl: string;
 };
