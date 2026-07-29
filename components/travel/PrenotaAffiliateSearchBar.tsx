@@ -6,7 +6,6 @@ import { FlightDateField } from '@/components/travel/FlightDateField';
 import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
 import {
-  airportsInCountry,
   resolvePlaceExact,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
@@ -76,16 +75,13 @@ export function PrenotaAffiliateSearchBar({
             onClearSelection={() => setCityPlace(null)}
             onSelect={(place) => {
               setCityPlace(place);
-              if (place.kind === 'country') {
-                const hub = airportsInCountry(place.code)[0]?.label;
-                onCityChange(hub || place.label);
-              } else {
-                onCityChange(place.label);
-              }
+              // Usa il nome scelto (anche cittadine/paesi da Nominatim), senza forzare hub aeroportuale
+              onCityChange(place.label);
             }}
             placeholder="Città o paese…"
             kinds={['city', 'country']}
             showAirportCode={false}
+            placesFallback
           />
           <FlightDateField
             tripType="activity"

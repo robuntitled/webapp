@@ -30,7 +30,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  airportsInCountry,
   resolvePlaceExact,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
@@ -101,6 +100,7 @@ type LiteApiHotelSearchProps = {
 
 type HotelFormCache = {
   cityName: string;
+  countryCode?: string;
   checkin: string;
   checkout: string;
   adults: number;
@@ -128,6 +128,12 @@ function ensureCheckoutAfterCheckin(checkin: string, checkout: string) {
     }
   }
   return checkout;
+}
+
+function placeCountryCode(place: PlaceSuggestion | null): string | null {
+  const cc = place?.countryCode?.trim().toUpperCase();
+  if (!cc || cc.length !== 2 || cc === 'XX') return null;
+  return cc;
 }
 
 function FilterChip({
@@ -214,6 +220,9 @@ export function LiteApiHotelSearch({
   const [cityPlace, setCityPlace] = useState<PlaceSuggestion | null>(() =>
     defaultCity ? resolvePlaceExact(defaultCity) : null
   );
+  const [countryCode, setCountryCode] = useState<string | null>(() =>
+    placeCountryCode(defaultCity ? resolvePlaceExact(defaultCity) : null)
+  );
   const [checkin, setCheckin] = useState(
     defaultCheckin || hotelDefaults.checkin
   );
@@ -251,6 +260,15 @@ export function LiteApiHotelSearch({
       const city = cached.cityName ?? '';
       setCityName(city);
       setCityPlace(city ? resolvePlaceExact(city) : null);
+      const fromCache =
+        cached.countryCode?.trim().toUpperCase().length === 2 &&
+        cached.countryCode.toUpperCase() !== 'XX'
+          ? cached.countryCode.toUpperCase()
+          : null;
+      setCountryCode(
+        fromCache ||
+          placeCountryCode(city ? resolvePlaceExact(city) : null)
+      );
       const nextIn = cached.checkin || hotelDefaults.checkin;
       const nextOut = ensureCheckoutAfterCheckin(
         nextIn,
@@ -264,7 +282,6 @@ export function LiteApiHotelSearch({
       if (cached.filters) setFilters(cached.filters);
     }
     setCacheReady(true);
-    // hotelDefaults is stable per mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey]);
 
@@ -272,6 +289,7 @@ export function LiteApiHotelSearch({
     if (!cacheKey || !cacheReady) return;
     const payload: HotelFormCache = {
       cityName,
+      countryCode: countryCode ?? undefined,
       checkin,
       checkout,
       adults,
@@ -292,6 +310,7 @@ export function LiteApiHotelSearch({
     childAges,
     childrenCount,
     cityName,
+    countryCode,
     filters,
   ]);
 
@@ -389,6 +408,9 @@ export function LiteApiHotelSearch({
       const ages = childAges.slice(0, childrenCount);
       if (ages.length) qs.set('childrenAges', ages.join(','));
       if (refundableOnly) qs.set('refundableOnly', '1');
+      if (countryCode && countryCode.length === 2) {
+        qs.set('countryCode', countryCode);
+      }
 
       const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {
         credentials: 'same-origin',
@@ -449,21 +471,23 @@ export function LiteApiHotelSearch({
               label="Destinazione"
               value={cityName}
               selected={cityPlace}
-              onValueChange={setCityName}
-              onClearSelection={() => setCityPlace(null)}
+              onValueChange={(v) => {
+                setCityName(v);
+                setCountryCode(null);
+              }}
+              onClearSelection={() => {
+                setCityPlace(null);
+                setCountryCode(null);
+              }}
               onSelect={(place) => {
                 setCityPlace(place);
-                if (place.kind === 'country') {
-                  // Paese → città principale del catalogo (LiteAPI cerca per city)
-                  const hub = airportsInCountry(place.code)[0]?.label;
-                  setCityName(hub || place.label);
-                } else {
-                  setCityName(place.label);
-                }
+                setCityName(place.label);
+                setCountryCode(placeCountryCode(place));
               }}
               placeholder="Città o paese…"
               kinds={['city', 'country']}
               showAirportCode={false}
+              placesFallback
             />
 
             <FlightDateField

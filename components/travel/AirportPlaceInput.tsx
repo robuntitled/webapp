@@ -1,8 +1,15 @@
 'use client';
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
-import { Building2, Globe2, MapPin, Plane } from 'lucide-react';
+import { Building2, Globe2, Loader2, MapPin, Plane } from 'lucide-react';
 import {
   placeDisplayValue,
   resolvePlaceExact,
@@ -10,6 +17,7 @@ import {
   type PlaceKind,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
+import type { PlaceResult } from '@/lib/places/types';
 import { cn } from '@/lib/utils';
 
 type AirportPlaceInputProps = {
@@ -25,6 +33,11 @@ type AirportPlaceInputProps = {
   kinds?: PlaceKind[];
   /** Se false, in selezione mostra solo il nome città (senza codice IATA) */
   showAirportCode?: boolean;
+  /**
+   * Se true, integra suggerimenti Nominatim (cittadine / paesi piccoli)
+   * oltre al catalogo aeroporti.
+   */
+  placesFallback?: boolean;
 };
 
 function KindIcon({ kind }: { kind: PlaceSuggestion['kind'] }) {
@@ -33,7 +46,32 @@ function KindIcon({ kind }: { kind: PlaceSuggestion['kind'] }) {
   return <Building2 className="h-4 w-4 text-slate-500" />;
 }
 
+function placeResultToSuggestion(p: PlaceResult): PlaceSuggestion {
+  const type = (p.placeType || '').toLowerCase();
+  const isCountry =
+    type === 'country' || type === 'state' || type === 'nation';
+  const cc = (p.countryCode || 'XX').toUpperCase();
+  return {
+    id: `osm:${p.id}`,
+    kind: isCountry ? 'country' : 'city',
+    label: p.label,
+    sublabel: p.subtitle || p.country || '',
+    code: isCountry ? cc : cc,
+    countryCode: cc,
+    countryLabel: p.country || p.subtitle || cc,
+  };
+}
+
 type MenuBox = { top: number; left: number; width: number };
+
+function useDebounced(value: string, ms: number) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = window.setTimeout(() => setV(value), ms);
+    return () => window.clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
 
 export function AirportPlaceInput({
   label,
@@ -46,6 +84,7 @@ export function AirportPlaceInput({
   className,
   kinds,
   showAirportCode = true,
+  placesFallback = false,
 }: AirportPlaceInputProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -55,13 +94,76 @@ export function AirportPlaceInput({
   const [highlight, setHighlight] = useState(0);
   const [menuBox, setMenuBox] = useState<MenuBox | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [remote, setRemote] = useState<PlaceSuggestion[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+  const debounced = useDebounced(value.trim(), 320);
+
+  const catalogSuggestions = useMemo(() => {
+    const all = searchPlaceSuggestions(value, kinds?.length ? 24 : 12);
+    if (!kinds?.length) return all.slice(0, 8);
+    return all.filter((p) => kinds.includes(p.kind)).slice(0, 8);
+  }, [kinds, value]);
+
+  useEffect(() => {
+    if (!placesFallback) {
+      setRemote([]);
+      setRemoteLoading(false);
+      return;
+    }
+    if (debounced.length < 2) {
+      setRemote([]);
+      setRemoteLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRemoteLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/places/search?q=${encodeURIComponent(debounced)}`,
+          { credentials: 'same-origin' }
+        );
+        const data = (await res.json()) as {
+          results?: PlaceResult[];
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setRemote([]);
+          return;
+        }
+        const mapped = (data.results ?? [])
+          .map(placeResultToSuggestion)
+          .filter((p) => !kinds?.length || kinds.includes(p.kind));
+        setRemote(mapped);
+      } catch {
+        if (!cancelled) setRemote([]);
+      } finally {
+        if (!cancelled) setRemoteLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced, placesFallback, kinds]);
 
   const suggestions = useMemo(() => {
-    const all = searchPlaceSuggestions(value, kinds?.length ? 24 : 12);
-    if (!kinds?.length) return all.slice(0, 12);
-    return all.filter((p) => kinds.includes(p.kind)).slice(0, 12);
-  }, [kinds, value]);
-  const showList = open && value.trim().length >= 2 && suggestions.length > 0;
+    const seen = new Set<string>();
+    const out: PlaceSuggestion[] = [];
+    const push = (p: PlaceSuggestion) => {
+      const key = `${p.kind}:${p.label.toLowerCase()}:${p.countryCode}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(p);
+    };
+    for (const p of catalogSuggestions) push(p);
+    for (const p of remote) push(p);
+    return out.slice(0, 14);
+  }, [catalogSuggestions, remote]);
+
+  const showList =
+    open &&
+    value.trim().length >= 2 &&
+    (suggestions.length > 0 || remoteLoading);
 
   useEffect(() => {
     setMounted(true);
@@ -69,7 +171,7 @@ export function AirportPlaceInput({
 
   useEffect(() => {
     setHighlight(0);
-  }, [value]);
+  }, [value, suggestions.length]);
 
   const updateMenuPosition = () => {
     const el = inputWrapRef.current;
@@ -95,7 +197,7 @@ export function AirportPlaceInput({
       window.removeEventListener('resize', onReposition);
       window.removeEventListener('scroll', onReposition, true);
     };
-  }, [showList, value, suggestions.length]);
+  }, [showList, value, suggestions.length, remoteLoading]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -135,6 +237,12 @@ export function AirportPlaceInput({
             }}
             className="max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-2xl shadow-slate-900/20"
           >
+            {remoteLoading && suggestions.length === 0 ? (
+              <li className="flex items-center gap-2 px-3 py-3 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Cerco luoghi…
+              </li>
+            ) : null}
             {suggestions.map((place, idx) => (
               <li key={place.id} role="option" aria-selected={idx === highlight}>
                 <button
@@ -161,7 +269,7 @@ export function AirportPlaceInput({
                         <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-slate-600">
                           {place.code}
                         </span>
-                      ) : place.kind === 'city' ? (
+                      ) : place.countryCode && place.countryCode !== 'XX' ? (
                         <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-slate-600">
                           {place.countryCode}
                         </span>
@@ -174,6 +282,12 @@ export function AirportPlaceInput({
                 </button>
               </li>
             ))}
+            {remoteLoading && suggestions.length > 0 ? (
+              <li className="flex items-center gap-2 border-t border-slate-100 px-3 py-2 text-[11px] text-slate-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Altri risultati…
+              </li>
+            ) : null}
           </ul>,
           document.body
         )
@@ -207,7 +321,7 @@ export function AirportPlaceInput({
             setOpen(true);
           }}
           onKeyDown={(e) => {
-            if (!showList) {
+            if (!showList || suggestions.length === 0) {
               if (e.key === 'Enter') {
                 const exact = resolvePlaceExact(value);
                 if (exact) {

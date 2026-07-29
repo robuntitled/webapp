@@ -4,11 +4,12 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { searchHotelRates } from '@/lib/liteapi/hotels';
+import { searchPlaces } from '@/lib/places/nominatim';
 import { guessCountryCodeFromDestination } from '@/lib/travel/destination-hints';
 
 const schema = z.object({
   cityName: z.string().trim().min(2).max(80),
-  /** Opzionale: se assente si deduce dalla città */
+  /** Opzionale: se assente si deduce da Nominatim / hint */
   countryCode: z
     .string()
     .trim()
@@ -47,6 +48,19 @@ const schema = z.object({
     .transform((v) => v === '1' || v === 'true'),
 });
 
+async function resolveCountryCode(cityName: string): Promise<string> {
+  try {
+    const hits = await searchPlaces(cityName, 5);
+    for (const hit of hits) {
+      const cc = hit.countryCode?.trim().toUpperCase();
+      if (cc && cc.length === 2) return cc;
+    }
+  } catch (e) {
+    console.warn('[liteapi hotels] nominatim country resolve failed', e);
+  }
+  return guessCountryCodeFromDestination(cityName);
+}
+
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -72,7 +86,10 @@ export async function GET(request: Request) {
   const countryRaw = searchParams.get('countryCode');
   const parsed = schema.safeParse({
     cityName: searchParams.get('cityName'),
-    countryCode: countryRaw && countryRaw.length === 2 ? countryRaw : undefined,
+    countryCode:
+      countryRaw && countryRaw.length === 2 && countryRaw.toUpperCase() !== 'XX'
+        ? countryRaw
+        : undefined,
     checkin: searchParams.get('checkin'),
     checkout: searchParams.get('checkout'),
     adults: searchParams.get('adults') ?? undefined,
@@ -101,7 +118,7 @@ export async function GET(request: Request) {
 
   const countryCode =
     parsed.data.countryCode ??
-    guessCountryCodeFromDestination(parsed.data.cityName);
+    (await resolveCountryCode(parsed.data.cityName));
 
   try {
     // Ampia ricerca; se chiesto, LiteAPI restituisce solo tariffe RFN
