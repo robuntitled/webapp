@@ -5,7 +5,6 @@ import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   airportsInCountry,
   resolvePlaceExact,
@@ -17,20 +16,17 @@ export type AffiliateSortKey = 'default' | 'price_asc' | 'price_desc' | 'rating'
 
 export type PrenotaAffiliateSearchBarProps = {
   city: string;
-  query: string;
   startDate: string;
   endDate: string;
   adults: number;
   children?: number;
   onCityChange: (v: string) => void;
-  onQueryChange: (v: string) => void;
   onStartDateChange: (v: string) => void;
   onEndDateChange: (v: string) => void;
   onAdultsChange: (v: number) => void;
   onChildrenChange?: (v: number) => void;
   onSearch: () => void;
   loading: boolean;
-  queryPlaceholder: string;
   minRating: number;
   onMinRatingChange: (v: number) => void;
   sort: AffiliateSortKey;
@@ -40,20 +36,17 @@ export type PrenotaAffiliateSearchBarProps = {
 
 export function PrenotaAffiliateSearchBar({
   city,
-  query,
   startDate,
   endDate,
   adults,
   children = 0,
   onCityChange,
-  onQueryChange,
   onStartDateChange,
   onEndDateChange,
   onAdultsChange,
   onChildrenChange,
   onSearch,
   loading,
-  queryPlaceholder,
   minRating,
   onMinRatingChange,
   sort,
@@ -71,7 +64,7 @@ export function PrenotaAffiliateSearchBar({
   return (
     <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10">
       <div className="rounded-[0.95rem] bg-card px-3 py-3 sm:px-3.5 sm:py-3">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.05fr_1.15fr_0.95fr_auto] lg:items-end">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1fr_auto] lg:items-end">
           <AirportPlaceInput
             label="Città"
             value={city}
@@ -94,20 +87,6 @@ export function PrenotaAffiliateSearchBar({
             kinds={['city', 'country']}
             showAirportCode={false}
           />
-          <label className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Cerca
-            </span>
-            <Input
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              placeholder={queryPlaceholder}
-              className="h-12 rounded-xl border-slate-200 bg-slate-50"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onSearch();
-              }}
-            />
-          </label>
           <FlightDateField
             tripType="activity"
             startDate={startDate}

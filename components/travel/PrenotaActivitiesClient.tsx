@@ -41,7 +41,6 @@ type ActivityHit = {
 
 type FormCache = {
   city: string;
-  query: string;
   startDate: string;
   endDate: string;
   adults: number;
@@ -70,7 +69,6 @@ export function PrenotaActivitiesClient() {
   const defaults = defaultAffiliateDates();
   const [cacheReady, setCacheReady] = useState(false);
   const [city, setCity] = useState('');
-  const [query, setQuery] = useState('');
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [endDate, setEndDate] = useState(defaults.endDate);
   const [adults, setAdults] = useState(2);
@@ -88,7 +86,6 @@ export function PrenotaActivitiesClient() {
     const cached = loadSearchFormCache<FormCache>('activities');
     if (cached) {
       setCity(cached.city ?? '');
-      setQuery(cached.query ?? '');
       if (cached.startDate) setStartDate(cached.startDate);
       if (cached.endDate) setEndDate(cached.endDate);
       if (cached.adults) setAdults(cached.adults);
@@ -103,7 +100,6 @@ export function PrenotaActivitiesClient() {
     if (!cacheReady) return;
     const payload: FormCache = {
       city,
-      query,
       startDate,
       endDate,
       adults,
@@ -115,7 +111,7 @@ export function PrenotaActivitiesClient() {
     const onHide = () => saveSearchFormCache('activities', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [cacheReady, city, query, startDate, endDate, adults, children, minRating, sort]);
+  }, [cacheReady, city, startDate, endDate, adults, children, minRating, sort]);
 
   const visible = useMemo(() => {
     if (!results) return null;
@@ -143,7 +139,6 @@ export function PrenotaActivitiesClient() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         city: cityLabel,
-        query: query.trim(),
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         start,
@@ -241,20 +236,17 @@ export function PrenotaActivitiesClient() {
     <div className="space-y-4">
       <PrenotaAffiliateSearchBar
         city={city}
-        query={query}
         startDate={startDate}
         endDate={endDate}
         adults={adults}
         children={children}
         onCityChange={setCity}
-        onQueryChange={setQuery}
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
         onAdultsChange={setAdults}
         onChildrenChange={setChildren}
         onSearch={() => void fetchPage(1, false)}
         loading={loading}
-        queryPlaceholder="Tour, snorkeling, museo…"
         minRating={minRating}
         onMinRatingChange={setMinRating}
         sort={sort}
