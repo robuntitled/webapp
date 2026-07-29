@@ -228,10 +228,23 @@ function hotelCoords(meta?: RawHotelMeta): { lat: number | null; lng: number | n
 
 function isRefundableRate(rate: RawRate): boolean {
   if (rate.refundable === true) return true;
-  const tag = rate.cancellationPolicies?.refundableTag?.toLowerCase() ?? '';
+  // LiteAPI: refundableTag = "RFN" | "NRFN" (non usare includes('rfn') → matcha anche NRFN)
+  const tag = (rate.cancellationPolicies?.refundableTag ?? '')
+    .toLowerCase()
+    .trim();
+  if (tag === 'rfn' || tag === 'refundable') return true;
+  if (
+    tag === 'nrfn' ||
+    tag === 'non-refundable' ||
+    tag === 'nonrefundable' ||
+    tag.includes('non-ref')
+  ) {
+    return false;
+  }
   if (tag.includes('refundable') || tag.includes('free')) return true;
   const infos = rate.cancellationPolicies?.cancelPolicyInfos ?? [];
-  if (infos.some((i) => i.amount === 0)) return true;
+  // Solo se c’è una finestra con penale 0 e non è esplicitamente NRFN
+  if (tag === '' && infos.some((i) => i.amount === 0)) return true;
   return false;
 }
 
@@ -258,12 +271,34 @@ function parseOffers(
     for (const room of row.roomTypes ?? []) {
       const offerId = room.offerId;
       if (!offerId) continue;
-      const rate = room.rates?.[0];
-      if (!rate?.rateId) continue;
+      const rates = (room.rates ?? []).filter((r) => r?.rateId);
+      if (!rates.length) continue;
 
-      const total = rate.retailRate?.total?.[0];
-      const amount = toNum(total?.amount);
-      if (amount == null) continue;
+      // Preferisci tariffa rimborsabile (RFN); altrimenti la prima con prezzo
+      let chosen = rates[0]!;
+      let chosenAmount = toNum(chosen.retailRate?.total?.[0]?.amount);
+      for (const rate of rates) {
+        const amount = toNum(rate.retailRate?.total?.[0]?.amount);
+        if (amount == null) continue;
+        const ref = isRefundableRate(rate);
+        const chosenRef = isRefundableRate(chosen);
+        if (chosenAmount == null) {
+          chosen = rate;
+          chosenAmount = amount;
+          continue;
+        }
+        // Preferisci RFN; a parità di refundable, prendi la più economica
+        if (ref && !chosenRef) {
+          chosen = rate;
+          chosenAmount = amount;
+        } else if (ref === chosenRef && amount < chosenAmount) {
+          chosen = rate;
+          chosenAmount = amount;
+        }
+      }
+      const rate = chosen;
+      if (!rate?.rateId || chosenAmount == null) continue;
+      const amount = chosenAmount;
 
       const refundable = isRefundableRate(rate);
       const boardType = rate.boardType ?? rate.boardCode ?? null;
@@ -302,7 +337,9 @@ function parseOffers(
         offerId,
         rateId: rate.rateId,
         totalAmount: amount,
-        currency: (total?.currency || currency).toUpperCase(),
+        currency: (
+          rate.retailRate?.total?.[0]?.currency || currency
+        ).toUpperCase(),
         commissionAmount: toNum(rate.commission?.[0]?.amount),
         refundable,
         freeCancellation: refundable,
@@ -312,7 +349,13 @@ function parseOffers(
       };
 
       const prev = bestByHotel.get(hotelId);
-      if (!prev || offer.totalAmount < prev.totalAmount) {
+      // Preferisci offerta RFN; a parità prezzo più basso
+      if (
+        !prev ||
+        (offer.refundable && !prev.refundable) ||
+        (offer.refundable === prev.refundable &&
+          offer.totalAmount < prev.totalAmount)
+      ) {
         bestByHotel.set(hotelId, offer);
       }
     }
@@ -393,11 +436,15 @@ export async function searchHotelRates(
     timeout: 12,
     roomMapping: true,
     includeHotelData: true,
-    maxRatesPerHotel: 1,
+    // Più tariffe per hotel → possiamo preferire RFN quando c’è
+    maxRatesPerHotel: input.refundableRatesOnly ? 3 : 2,
     margin,
   };
+  if (input.refundableRatesOnly) {
+    baseBody.refundableRatesOnly = true;
+  }
 
-  // Filtri (colazione, refundable, piscina) applicati a valle: non restringere la rates API
+  // Filtri colazione/piscina restano post-process lato API route
 
   let hotelIds: string[] = [];
   let coordsById = new Map<string, { lat: number; lng: number }>();

@@ -104,7 +104,7 @@ export async function GET(request: Request) {
     guessCountryCodeFromDestination(parsed.data.cityName);
 
   try {
-    // Ampia ricerca senza filtri API; filtri solo post-process
+    // Ampia ricerca; se chiesto, LiteAPI restituisce solo tariffe RFN
     let hotels = await searchHotelRates({
       cityName: parsed.data.cityName,
       countryCode,
@@ -115,6 +115,7 @@ export async function GET(request: Request) {
       currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
       guestNationality: 'IT',
       limit: 100,
+      refundableRatesOnly: Boolean(parsed.data.refundableOnly),
     });
 
     if (parsed.data.refundableOnly) {

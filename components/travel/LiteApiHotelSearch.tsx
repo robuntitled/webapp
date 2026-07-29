@@ -160,9 +160,7 @@ function applyHotelFilters(
   filters: Record<FilterKey, boolean>
 ): HotelOffer[] {
   let out = list;
-  if (filters.freeCancel) {
-    out = out.filter((h) => h.freeCancellation || h.refundable);
-  }
+  // freeCancel: gestito via LiteAPI refundableRatesOnly in search (non filtro locale)
   if (filters.breakfast) {
     out = out.filter((h) => {
       const board = `${h.boardType ?? ''} ${h.boardName ?? ''}`.toLowerCase();
@@ -363,7 +361,7 @@ export function LiteApiHotelSearch({
     });
   };
 
-  const search = async () => {
+  const search = async (opts?: { refundableOnly?: boolean }) => {
     if (!cityName.trim()) {
       toast.error('Inserisci una città');
       return;
@@ -376,6 +374,7 @@ export function LiteApiHotelSearch({
       toast.error('Il check-out deve essere dopo il check-in');
       return;
     }
+    const refundableOnly = opts?.refundableOnly ?? filters.freeCancel;
     setLoading(true);
     setRawHotels(null);
     setHighlightedId(null);
@@ -389,7 +388,7 @@ export function LiteApiHotelSearch({
       });
       const ages = childAges.slice(0, childrenCount);
       if (ages.length) qs.set('childrenAges', ages.join(','));
-      // Filtri solo lato client dopo la risposta ampia
+      if (refundableOnly) qs.set('refundableOnly', '1');
 
       const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {
         credentials: 'same-origin',
@@ -406,7 +405,11 @@ export function LiteApiHotelSearch({
       const list = data.hotels ?? [];
       setRawHotels(list);
       if (!list.length) {
-        toast.message('Nessun hotel trovato — prova un’altra città o date');
+        toast.message(
+          refundableOnly
+            ? 'Nessuna tariffa con cancellazione gratis — prova altre date o togli il filtro'
+            : 'Nessun hotel trovato — prova un’altra città o date'
+        );
       }
     } catch {
       toast.error('Errore di rete');
@@ -414,6 +417,14 @@ export function LiteApiHotelSearch({
       setLoading(false);
     }
   };
+
+  // Cancellazione gratis: rioserca su LiteAPI (refundableRatesOnly), non solo filtro locale
+  useEffect(() => {
+    if (!rawHotels) return;
+    if (!cityName.trim() || !checkin || !checkout) return;
+    void search({ refundableOnly: filters.freeCancel });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al toggle freeCancel
+  }, [filters.freeCancel]);
 
   return (
     <div className={cn('space-y-4', className)}>
