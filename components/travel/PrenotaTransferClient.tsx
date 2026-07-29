@@ -1,8 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { addDays, format } from 'date-fns';
-import { ExternalLink, Loader2, Search } from 'lucide-react';
+import {
+  AlertCircle,
+  Car,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Search,
+  Timer,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
@@ -19,6 +27,7 @@ import {
   loadSearchFormCache,
   saveSearchFormCache,
 } from '@/lib/travel/search-form-cache';
+import { cn } from '@/lib/utils';
 
 type FormCache = {
   from: string;
@@ -29,7 +38,115 @@ type FormCache = {
   children: number;
 };
 
+type TransferOfferHit = {
+  transportType: string;
+  labelIt: string;
+  priceLabel: string;
+  priceFloat: number;
+  bookNow?: string;
+  duration?: number;
+  distance?: number;
+};
+
+type QuotesResponse = {
+  offers?: TransferOfferHit[];
+  from?: { label: string; lat: number; lng: number };
+  to?: { label: string; lat: number; lng: number };
+  distance?: number;
+  duration?: number;
+  success?: boolean;
+  error?: string;
+  code?: string;
+  configured?: boolean;
+};
+
 const DEFAULT_TIME = '10:00';
+
+function formatDuration(mins: number | undefined): string | null {
+  if (mins == null || mins <= 0) return null;
+  if (mins < 60) return `${Math.round(mins)} min`;
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function formatDistance(km: number | undefined): string | null {
+  if (km == null || km <= 0) return null;
+  return `${Math.round(km)} km`;
+}
+
+function TransferOfferCard({
+  offer,
+  onBook,
+}: {
+  offer: TransferOfferHit;
+  onBook: () => void;
+}) {
+  const duration = formatDuration(offer.duration);
+  const distance = formatDistance(offer.distance);
+  const instant = Boolean(offer.bookNow);
+
+  return (
+    <article className="group overflow-hidden rounded-2xl border border-border/50 bg-card shadow-[0_1px_0_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_16px_40px_-28px_rgba(15,23,42,0.45)]">
+      <div className="grid sm:grid-cols-[120px_1fr]">
+        <div className="relative flex min-h-[120px] items-center justify-center bg-muted/60 sm:min-h-[148px]">
+          <Car className="h-10 w-10 text-muted-foreground/40 transition group-hover:text-primary/50" />
+          {instant ? (
+            <span className="absolute left-2.5 top-2.5 rounded-md bg-emerald-950/75 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 backdrop-blur-sm">
+              Prenota ora
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between gap-3 p-3.5 sm:p-4">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+              {duration ? (
+                <span className="inline-flex items-center gap-1">
+                  <Timer className="h-3 w-3" />
+                  {duration}
+                </span>
+              ) : null}
+              {duration && distance ? <span aria-hidden>·</span> : null}
+              {distance ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {distance}
+                </span>
+              ) : null}
+            </div>
+            <h3 className="font-display text-[15px] font-semibold leading-snug tracking-tight text-foreground sm:text-base">
+              {offer.labelIt}
+            </h3>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              Prezzo fisso · autista privato
+            </p>
+          </div>
+
+          <div className="flex items-end justify-between gap-3 border-t border-border/40 pt-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tracking-tight text-foreground">
+                {offer.priceLabel}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Pagamento su GetTransfer
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0 rounded-xl px-3 font-semibold"
+              onClick={onBook}
+            >
+              Continua prenotazione
+              <ExternalLink className="ml-1.5 h-3.5 w-3.5 opacity-90" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export function PrenotaTransferClient() {
   const [cacheReady, setCacheReady] = useState(false);
@@ -43,9 +160,18 @@ export function PrenotaTransferClient() {
   const [pickupTime, setPickupTime] = useState(DEFAULT_TIME);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [offers, setOffers] = useState<TransferOfferHit[] | null>(null);
+  const [routeMeta, setRouteMeta] = useState<{
+    from?: string;
+    to?: string;
+    distance?: number;
+    duration?: number;
+  } | null>(null);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
 
   const affiliateReady = isGetTransferAffiliateConfigured();
+  const pax = adults + children;
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('transfer');
@@ -78,7 +204,27 @@ export function PrenotaTransferClient() {
     return () => window.removeEventListener('pagehide', onHide);
   }, [cacheReady, from, to, pickupDate, pickupTime, adults, children]);
 
-  function handleSearch() {
+  const openAffiliateHandoff = () => {
+    const fromLabel = from.trim();
+    const toLabel = to.trim();
+    const { url, hasAffiliateTracking } = buildGetTransferAffiliateHandoff({
+      from: fromLabel,
+      to: toLabel,
+      pickupDate,
+      pickupTime,
+      adults,
+      children,
+    });
+    window.open(url, '_blank', 'noopener,noreferrer');
+    if (!hasAffiliateTracking) {
+      toast.message('Apertura GetTransfer', {
+        description:
+          'Tracking affiliate non attivo: configura NEXT_PUBLIC_TRAVELPAYOUTS_MARKER in .env.local.',
+      });
+    }
+  };
+
+  const handleSearch = async () => {
     const fromLabel = from.trim();
     const toLabel = to.trim();
     if (!fromLabel || !toLabel) {
@@ -90,25 +236,71 @@ export function PrenotaTransferClient() {
       return;
     }
 
-    setSubmitting(true);
-    const { url, hasAffiliateTracking } = buildGetTransferAffiliateHandoff({
-      from: fromLabel,
-      to: toLabel,
-      pickupDate,
-      pickupTime,
-      adults,
-      children,
-    });
+    setLoading(true);
+    setOffers(null);
+    setRouteMeta(null);
+    setApiUnavailable(false);
 
-    window.open(url, '_blank', 'noopener,noreferrer');
-    if (!hasAffiliateTracking) {
-      toast.message('Apertura GetTransfer', {
-        description:
-          'Tracking affiliate non attivo: configura NEXT_PUBLIC_TRAVELPAYOUTS_MARKER in .env.local.',
+    try {
+      const res = await fetch('/api/gettransfer/quotes', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromLabel,
+          toLabel,
+          date: pickupDate,
+          time: pickupTime,
+          pax,
+        }),
       });
+
+      const data = (await res.json()) as QuotesResponse;
+
+      if (res.status === 503 && data.code === 'missing_token') {
+        setApiUnavailable(true);
+        toast.message('API GetTransfer non attiva', {
+          description: 'Usa il fallback su GetTransfer o richiedi il token a Travelpayouts.',
+          duration: 8000,
+        });
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
+        return;
+      }
+
+      const list = data.offers ?? [];
+      setOffers(list);
+      setRouteMeta({
+        from: data.from?.label ?? fromLabel,
+        to: data.to?.label ?? toLabel,
+        distance: data.distance,
+        duration: data.duration,
+      });
+
+      if (!list.length) {
+        toast.message('Nessuna offerta per questo tragitto', {
+          description: 'Prova date diverse o apri GetTransfer per richiedere un preventivo.',
+        });
+      }
+    } catch {
+      toast.error('Errore di rete');
+    } finally {
+      setLoading(false);
     }
-    setSubmitting(false);
-  }
+  };
+
+  const routeSummary = useMemo(() => {
+    if (!routeMeta) return null;
+    const parts = [
+      routeMeta.from && routeMeta.to ? `${routeMeta.from} → ${routeMeta.to}` : null,
+      formatDistance(routeMeta.distance),
+      formatDuration(routeMeta.duration),
+    ].filter(Boolean);
+    return parts.join(' · ');
+  }, [routeMeta]);
 
   return (
     <div className="space-y-4">
@@ -182,10 +374,10 @@ export function PrenotaTransferClient() {
               <Button
                 type="button"
                 className="h-12 w-full rounded-xl px-5 font-semibold lg:w-auto"
-                onClick={handleSearch}
-                disabled={submitting}
+                onClick={() => void handleSearch()}
+                disabled={loading}
               >
-                {submitting ? (
+                {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="mr-2 h-4 w-4" />
@@ -205,18 +397,107 @@ export function PrenotaTransferClient() {
               ) : null}
             </p>
             <p className="ml-auto text-[11px] text-muted-foreground">
-              Confronta offerte da autisti locali · 150+ paesi
+              Ricerca su NomadLink · pagamento GetTransfer
             </p>
           </div>
         </div>
       </div>
 
+      {apiUnavailable ? (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
+          <div className="flex gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">
+                API GetTransfer non configurata
+              </p>
+              <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
+                <li>
+                  Scrivi a{' '}
+                  <a
+                    href="mailto:support@travelpayouts.com?subject=GetTransfer%20API%20access%20token"
+                    className="font-medium text-foreground underline-offset-2 hover:underline"
+                  >
+                    support@travelpayouts.com
+                  </a>{' '}
+                  per ottenere il token X-ACCESS-TOKEN
+                </li>
+                <li>
+                  Aggiungi <code className="text-xs">GETTRANSFER_ACCESS_TOKEN</code> in
+                  .env.local (solo server)
+                </li>
+                <li>
+                  Per test usa <code className="text-xs">GETTRANSFER_ENV=sandbox</code>{' '}
+                  (gtrbox.org)
+                </li>
+              </ol>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-1 rounded-lg"
+                onClick={openAffiliateHandoff}
+              >
+                Apri GetTransfer
+                <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {loading && !offers ? (
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/20 py-12 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Ricerca transfer in corso…
+        </div>
+      ) : null}
+
+      {offers && offers.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{offers.length}</span>{' '}
+              {offers.length === 1 ? 'classe disponibile' : 'classi disponibili'}
+              {routeSummary ? (
+                <span className="ml-1 hidden sm:inline">· {routeSummary}</span>
+              ) : null}
+            </p>
+          </div>
+          <div className={cn('grid gap-3', 'sm:grid-cols-1 lg:grid-cols-2')}>
+            {offers.map((offer) => (
+              <TransferOfferCard
+                key={offer.transportType}
+                offer={offer}
+                onBook={openAffiliateHandoff}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {offers && offers.length === 0 && !loading ? (
+        <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+          <p>Nessuna tariffa disponibile per questo tragitto.</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 rounded-lg"
+            onClick={openAffiliateHandoff}
+          >
+            Richiedi preventivo su GetTransfer
+            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ) : null}
+
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
         <p>
-          Riceverai proposte con foto del veicolo e prezzo fisso prima del pagamento.
-          La prenotazione si completa su{' '}
-          <span className="font-medium text-foreground">GetTransfer</span> in una
-          nuova scheda
+          Confronti prezzi e classi veicolo su NomadLink. La prenotazione e il pagamento si
+          completano su{' '}
+          <span className="font-medium text-foreground">GetTransfer</span> in una nuova
+          scheda
           <ExternalLink className="ml-0.5 inline h-3.5 w-3.5 align-text-bottom opacity-70" />
           .
         </p>

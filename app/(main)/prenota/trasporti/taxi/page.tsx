@@ -18,8 +18,8 @@ export default async function PrenotaTrasportiTaxiPage() {
   return (
     <PrenotaPageShell
       title="Taxi"
-      subtitle="Transfer privati e taxi aeroporto. Confronta offerte su GetTransfer."
-      badge="Affiliate"
+      subtitle="Transfer privati e taxi aeroporto. Ricerca su NomadLink · pagamento GetTransfer."
+      badge="GetTransfer"
     >
       <PrenotaTransportSubnav />
       <PrenotaTransferClient />
