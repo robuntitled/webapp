@@ -891,9 +891,20 @@
     }
   }
 
-  .trip-map-marker {
+  .trip-map-marker,
+  .hotel-map-marker {
     background: transparent !important;
     border: none !important;
+  }
+
+  .leaflet-container {
+    background: #e8eef2;
+    font: inherit;
+  }
+
+  .leaflet-tile-container img {
+    /* Riduce flash grigio durante pan/zoom */
+    max-width: none !important;
   }
 
   .leaflet-popup-content-wrapper {
@@ -901,28 +912,8 @@
     font-size: 13px;
   }
 
-  /* Card risultato nel popup mappa (hotel / attività / attrazioni) */
-  .nl-map-popup .leaflet-popup-content-wrapper {
-    padding: 0;
-    overflow: hidden;
-    border-radius: 14px;
-    box-shadow: 0 12px 40px -12px rgba(15, 23, 42, 0.45);
-  }
-  .nl-map-popup .leaflet-popup-content {
-    margin: 0;
-    min-width: 260px;
-    width: 260px !important;
-  }
-  .nl-map-popup .leaflet-popup-close-button {
-    z-index: 2;
-    color: #0f172a !important;
-    width: 24px !important;
-    height: 24px !important;
-    font-size: 18px !important;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 999px;
-    top: 6px !important;
-    right: 6px !important;
+  .nl-map-float-card {
+    -webkit-font-smoothing: antialiased;
   }
   .text-gradient-hero {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/80;
