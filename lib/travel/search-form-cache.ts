@@ -10,6 +10,7 @@ export type SearchCacheKey =
   | 'hotels'
   | 'attractions'
   | 'activities'
+  | 'transfer'
   | 'trip-flights'
   | 'trip-hotels';
 
