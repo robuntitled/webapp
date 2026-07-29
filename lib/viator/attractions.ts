@@ -40,6 +40,8 @@ type AttractionsSearchResponse = {
   totalCount?: number;
 };
 
+export const ATTRACTIONS_PAGE_SIZE = 30;
+
 type FreetextAttractions = {
   attractions?: {
     results?: Array<{
@@ -130,31 +132,67 @@ function mapAttraction(a: ViatorAttraction): AttractionHit | null {
 /**
  * Attrazioni Viator per destinazione (+ filtro testo opzionale via freetext).
  * Non usa viatorUniqueContent (no-index / certificazione partner).
+ * `start` = indice 1-based Viator (1, 31, 61…).
  */
 export async function searchViatorAttractions(params: {
   city: string;
   query?: string;
+  start?: number;
   limit?: number;
-}): Promise<{ results: AttractionHit[]; destinationName: string | null }> {
+}): Promise<{
+  results: AttractionHit[];
+  destinationName: string | null;
+  totalCount: number | null;
+  nextStart: number | null;
+  hasMore: boolean;
+}> {
   if (!isViatorConfigured()) {
-    return { results: [], destinationName: null };
+    return {
+      results: [],
+      destinationName: null,
+      totalCount: null,
+      nextStart: null,
+      hasMore: false,
+    };
   }
 
   const city = params.city.trim();
   const query = params.query?.trim() ?? '';
-  const limit = Math.min(Math.max(params.limit ?? 30, 1), 30);
-  if (!city) return { results: [], destinationName: null };
+  const pageSize = Math.min(
+    Math.max(params.limit ?? ATTRACTIONS_PAGE_SIZE, 1),
+    30
+  );
+  const start = Math.max(1, params.start ?? 1);
+  if (!city) {
+    return {
+      results: [],
+      destinationName: null,
+      totalCount: null,
+      nextStart: null,
+      hasMore: false,
+    };
+  }
+
+  const emptyPage = {
+    results: [] as AttractionHit[],
+    destinationName: null as string | null,
+    totalCount: null as number | null,
+    nextStart: null as number | null,
+    hasMore: false,
+  };
 
   const dest = await resolveViatorDestinationId(city);
   if (!dest) {
-    // Fallback: solo freetext ATTRACTIONS
-    if (!query && !city) return { results: [], destinationName: null };
+    if (!query && !city) return emptyPage;
     const ft = await viatorFetch<FreetextAttractions>('/search/freetext', {
       method: 'POST',
       body: JSON.stringify({
         searchTerm: query || city,
         searchTypes: [
-          { searchType: 'ATTRACTIONS', pagination: { start: 1, count: limit } },
+          {
+            searchType: 'ATTRACTIONS',
+            pagination: { start, count: pageSize },
+          },
         ],
         currency: 'EUR',
       }),
@@ -171,9 +209,16 @@ export async function searchViatorAttractions(params: {
           reviews: r.reviews,
         })
       ) ?? [];
+    const results = mapped.filter((x): x is AttractionHit => x != null);
+    const nextStart = start + pageSize;
+    const hasMore =
+      results.length >= pageSize && nextStart <= 30 * 5;
     return {
-      results: mapped.filter((x): x is AttractionHit => x != null),
+      results,
       destinationName: null,
+      totalCount: null,
+      nextStart: hasMore ? nextStart : null,
+      hasMore,
     };
   }
 
@@ -183,7 +228,7 @@ export async function searchViatorAttractions(params: {
     body: JSON.stringify({
       destinationId: Number(dest.id),
       sorting: { sort: 'DEFAULT' },
-      pagination: { start: 1, count: limit },
+      pagination: { start, count: pageSize },
     }),
     timeoutMs: 18_000,
   });
@@ -191,8 +236,10 @@ export async function searchViatorAttractions(params: {
   let results = (data.attractions ?? [])
     .map(mapAttraction)
     .filter((x): x is AttractionHit => x != null);
+  const totalCount =
+    typeof data.totalCount === 'number' ? data.totalCount : null;
 
-  // Affina con query testo (client-side sul set destinazione; se pochi match prova freetext)
+  // Affina con query testo (solo sulla pagina corrente; freetext se pochi match)
   if (query) {
     const q = query.toLowerCase();
     const filtered = results.filter(
@@ -201,7 +248,7 @@ export async function searchViatorAttractions(params: {
         (r.description?.toLowerCase().includes(q) ?? false) ||
         (r.address?.toLowerCase().includes(q) ?? false)
     );
-    if (filtered.length >= 3) {
+    if (filtered.length >= 3 || start > 1) {
       results = filtered;
     } else {
       const ft = await viatorFetch<FreetextAttractions>('/search/freetext', {
@@ -211,7 +258,7 @@ export async function searchViatorAttractions(params: {
           searchTypes: [
             {
               searchType: 'ATTRACTIONS',
-              pagination: { start: 1, count: limit },
+              pagination: { start, count: pageSize },
             },
           ],
           currency: 'EUR',
@@ -230,12 +277,29 @@ export async function searchViatorAttractions(params: {
           })
         ) ?? [];
       const merged = new Map<string, AttractionHit>();
-      for (const hit of [...filtered, ...fromFt.filter((x): x is AttractionHit => x != null)]) {
+      for (const hit of [
+        ...filtered,
+        ...fromFt.filter((x): x is AttractionHit => x != null),
+      ]) {
         merged.set(hit.id, hit);
       }
       results = [...merged.values()];
     }
   }
 
-  return { results, destinationName: dest.name };
+  const nextStart = start + pageSize;
+  const hasMore =
+    results.length > 0 &&
+    (totalCount != null
+      ? nextStart <= totalCount
+      : results.length >= pageSize) &&
+    nextStart <= 30 * 5;
+
+  return {
+    results,
+    destinationName: dest.name,
+    totalCount,
+    nextStart: hasMore ? nextStart : null,
+    hasMore,
+  };
 }

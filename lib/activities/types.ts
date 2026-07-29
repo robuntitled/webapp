@@ -24,4 +24,7 @@ export type ActivitySearchResult = {
     viator: 'ok' | 'skipped' | 'error';
   };
   warnings: string[];
+  nextStart?: number | null;
+  hasMore?: boolean;
+  totalCount?: number | null;
 };

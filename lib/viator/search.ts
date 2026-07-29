@@ -34,6 +34,8 @@ type FreetextResponse = {
   };
 };
 
+export const ACTIVITIES_PAGE_SIZE = 48;
+
 function pickImage(p: ViatorProduct): string | null {
   const images = p.images ?? [];
   const cover = images.find((i) => i.isCover) ?? images[0];
@@ -62,7 +64,6 @@ function mapProduct(
     p.productUrl?.trim() ||
     `https://www.viator.com/tours/d0-${encodeURIComponent(code)}`;
 
-  // Leggero offset così i pin non si sovrappongono tutti sul centro città
   let lat = coords.lat;
   let lng = coords.lng;
   if (lat != null && lng != null) {
@@ -94,25 +95,50 @@ function mapProduct(
 export type ViatorActivitiesSearch = {
   results: ActivityOffer[];
   destinationName: string | null;
+  totalCount: number | null;
+  nextStart: number | null;
+  hasMore: boolean;
 };
 
 /**
  * Ricerca attività Viator (affiliate): freetext PRODUCTS sulla destinazione.
+ * `start` = indice 1-based Viator (1, 49, 97…).
  */
 export async function searchViatorActivities(params: {
   city: string;
   query?: string;
   startDate?: string;
   endDate?: string;
+  start?: number;
   limit?: number;
 }): Promise<ViatorActivitiesSearch> {
-  if (!isViatorConfigured()) return { results: [], destinationName: null };
+  if (!isViatorConfigured()) {
+    return {
+      results: [],
+      destinationName: null,
+      totalCount: null,
+      nextStart: null,
+      hasMore: false,
+    };
+  }
 
   const city = params.city.trim();
   const query = params.query?.trim() ?? '';
-  const limit = Math.min(Math.max(params.limit ?? 24, 1), 50);
+  const pageSize = Math.min(
+    Math.max(params.limit ?? ACTIVITIES_PAGE_SIZE, 1),
+    50
+  );
+  const start = Math.max(1, params.start ?? 1);
   const searchTerm = [city, query].filter(Boolean).join(' ').slice(0, 120);
-  if (!searchTerm) return { results: [], destinationName: null };
+  if (!searchTerm) {
+    return {
+      results: [],
+      destinationName: null,
+      totalCount: null,
+      nextStart: null,
+      hasMore: false,
+    };
+  }
 
   let destinationId: string | undefined;
   let destinationName: string | null = null;
@@ -144,7 +170,10 @@ export async function searchViatorActivities(params: {
   const body: Record<string, unknown> = {
     searchTerm: destinationId ? query || city : searchTerm,
     searchTypes: [
-      { searchType: 'PRODUCTS', pagination: { start: 1, count: limit } },
+      {
+        searchType: 'PRODUCTS',
+        pagination: { start, count: pageSize },
+      },
     ],
     productSorting: { sort: 'DEFAULT' },
     productFiltering,
@@ -158,9 +187,27 @@ export async function searchViatorActivities(params: {
   });
 
   const products = data.products?.results ?? [];
+  const totalCount =
+    typeof data.products?.totalCount === 'number'
+      ? data.products.totalCount
+      : null;
   const results = products
-    .map((p, i) => mapProduct(p, { lat: destLat, lng: destLng }, i))
+    .map((p, i) =>
+      mapProduct(p, { lat: destLat, lng: destLng }, start - 1 + i)
+    )
     .filter((x): x is ActivityOffer => x != null);
 
-  return { results, destinationName };
+  const nextStart = start + pageSize;
+  const hasMore =
+    results.length >= pageSize &&
+    (totalCount == null || nextStart <= totalCount) &&
+    nextStart <= 50 * 5; // max 5 pagine
+
+  return {
+    results,
+    destinationName,
+    totalCount,
+    nextStart: hasMore ? nextStart : null,
+    hasMore,
+  };
 }

@@ -14,6 +14,7 @@ const schema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  start: z.coerce.number().int().min(1).max(500).optional().default(1),
 });
 
 export async function POST(request: Request) {
@@ -31,14 +32,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { results, providers, warnings, destinationName } =
+    const { results, providers, warnings, destinationName, nextStart, hasMore, totalCount } =
       await searchAffiliateActivities({
         city: parsed.data.city,
         query: parsed.data.query || undefined,
         startDate: parsed.data.startDate,
         endDate: parsed.data.endDate,
+        start: parsed.data.start,
       });
-    return NextResponse.json({ results, providers, warnings, destinationName });
+    return NextResponse.json({
+      results,
+      providers,
+      warnings,
+      destinationName,
+      nextStart,
+      hasMore,
+      totalCount,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Ricerca fallita';
     return NextResponse.json({ error: message }, { status: 502 });

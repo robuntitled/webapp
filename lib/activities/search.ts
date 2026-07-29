@@ -1,7 +1,10 @@
 import 'server-only';
 
 import type { ActivitySearchResult } from '@/lib/activities/types';
-import { searchViatorActivities } from '@/lib/viator/search';
+import {
+  ACTIVITIES_PAGE_SIZE,
+  searchViatorActivities,
+} from '@/lib/viator/search';
 import { isViatorConfigured } from '@/lib/viator/config';
 
 function sortOffers<T extends { rating?: number | null; priceFrom?: number | null }>(
@@ -22,11 +25,13 @@ export async function searchAffiliateActivities(params: {
   query?: string;
   startDate?: string;
   endDate?: string;
+  start?: number;
 }): Promise<ActivitySearchResult> {
   const city = params.city.trim();
   const query = params.query?.trim() || undefined;
   const startDate = params.startDate?.trim() || undefined;
   const endDate = params.endDate?.trim() || undefined;
+  const start = Math.max(1, params.start ?? 1);
   const warnings: string[] = [];
 
   if (!isViatorConfigured()) {
@@ -37,26 +42,33 @@ export async function searchAffiliateActivities(params: {
       warnings: [
         'Configura VIATOR_API_KEY per mostrare attività prenotabili.',
       ],
+      nextStart: null,
+      hasMore: false,
+      totalCount: null,
     };
   }
 
   try {
-    const { results: raw, destinationName } = await searchViatorActivities({
+    const page = await searchViatorActivities({
       city,
       query,
       startDate,
       endDate,
-      limit: 48,
+      start,
+      limit: ACTIVITIES_PAGE_SIZE,
     });
-    const results = sortOffers(raw);
-    if (!results.length) {
+    const results = sortOffers(page.results);
+    if (!results.length && start === 1) {
       warnings.push('Nessuna attività prenotabile trovata per questa destinazione');
     }
     return {
       results,
-      destinationName,
+      destinationName: page.destinationName,
       providers: { viator: 'ok' },
       warnings,
+      nextStart: page.nextStart,
+      hasMore: page.hasMore,
+      totalCount: page.totalCount,
     };
   } catch (e) {
     const reason = e instanceof Error ? e.message : 'errore sconosciuto';
@@ -66,6 +78,9 @@ export async function searchAffiliateActivities(params: {
       destinationName: null,
       providers: { viator: 'error' },
       warnings: [`Viator non disponibile: ${reason}`],
+      nextStart: null,
+      hasMore: false,
+      totalCount: null,
     };
   }
 }

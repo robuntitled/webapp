@@ -1,7 +1,10 @@
 import 'server-only';
 
 import type { AttractionHit, AttractionSearchResult } from '@/lib/attractions/types';
-import { searchViatorAttractions } from '@/lib/viator/attractions';
+import {
+  ATTRACTIONS_PAGE_SIZE,
+  searchViatorAttractions,
+} from '@/lib/viator/attractions';
 import { isViatorConfigured } from '@/lib/viator/config';
 
 export type AttractionServerFilters = {
@@ -43,7 +46,6 @@ function sortAttractions(
       return b.productCount - a.productCount;
     });
   }
-  // Consigliate: API order, soft by tour count as soft signal
   return list.sort((a, b) => b.productCount - a.productCount);
 }
 
@@ -54,6 +56,7 @@ export async function searchAttractions(params: {
   freeOnly?: boolean;
   minRating?: number;
   sort?: 'rating' | 'default';
+  start?: number;
 }): Promise<AttractionSearchResult> {
   if (!isViatorConfigured()) {
     return {
@@ -63,29 +66,37 @@ export async function searchAttractions(params: {
       warnings: [
         'Configura VIATOR_API_KEY per mostrare attrazioni (catalogo Viator).',
       ],
+      nextStart: null,
+      hasMore: false,
+      totalCount: null,
     };
   }
 
   try {
-    const { results, destinationName } = await searchViatorAttractions({
+    const page = await searchViatorAttractions({
       city: params.city,
       query: params.query,
-      limit: 30,
+      start: params.start ?? 1,
+      limit: ATTRACTIONS_PAGE_SIZE,
     });
 
-    const filtered = applyFilters(results, {
+    const filtered = applyFilters(page.results, {
       withTours: params.withTours,
       freeOnly: params.freeOnly,
       minRating: params.minRating,
     });
 
     return {
-      results: sortAttractions(filtered, params.sort ?? 'default').slice(0, 48),
-      destinationName,
+      results: sortAttractions(filtered, params.sort ?? 'default'),
+      destinationName: page.destinationName,
       provider: 'ok',
-      warnings: filtered.length
-        ? []
-        : ['Nessuna attrazione trovata con i filtri selezionati'],
+      warnings:
+        filtered.length || (params.start ?? 1) > 1
+          ? []
+          : ['Nessuna attrazione trovata con i filtri selezionati'],
+      nextStart: page.nextStart,
+      hasMore: page.hasMore,
+      totalCount: page.totalCount,
     };
   } catch (e) {
     const detail = e instanceof Error ? e.message : 'errore sconosciuto';
@@ -95,6 +106,9 @@ export async function searchAttractions(params: {
       destinationName: null,
       provider: 'error',
       warnings: [`Viator non disponibile: ${detail}`],
+      nextStart: null,
+      hasMore: false,
+      totalCount: null,
     };
   }
 }

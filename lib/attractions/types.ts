@@ -20,4 +20,7 @@ export type AttractionSearchResult = {
   destinationName?: string | null;
   provider: 'ok' | 'skipped' | 'error';
   warnings: string[];
+  nextStart?: number | null;
+  hasMore?: boolean;
+  totalCount?: number | null;
 };

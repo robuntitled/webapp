@@ -10,6 +10,7 @@ const schema = z.object({
   freeOnly: z.boolean().optional().default(false),
   minRating: z.number().min(0).max(5).optional().default(0),
   sort: z.enum(['rating', 'default']).optional().default('default'),
+  start: z.coerce.number().int().min(1).max(500).optional().default(1),
 });
 
 export async function POST(request: Request) {
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const { city, query, withTours, freeOnly, minRating, sort } = parsed.data;
+  const { city, query, withTours, freeOnly, minRating, sort, start } =
+    parsed.data;
   const result = await searchAttractions({
     city,
     query: query || undefined,
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
     freeOnly,
     minRating: minRating || undefined,
     sort,
+    start,
   });
 
   return NextResponse.json(result);

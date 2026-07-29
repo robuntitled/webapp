@@ -12,6 +12,7 @@ import {
   PrenotaAffiliateSearchBar,
   type AffiliateSortKey,
 } from '@/components/travel/PrenotaAffiliateSearchBar';
+import { Button } from '@/components/ui/button';
 import { withAffiliateBookingPrefs } from '@/lib/travel/affiliate-deeplink';
 import {
   defaultAffiliateDates,
@@ -65,8 +66,11 @@ export function PrenotaAttractionsClient() {
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<AttractionHit[] | null>(null);
   const [destinationName, setDestinationName] = useState<string | null>(null);
+  const [nextStart, setNextStart] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [sort, setSort] = useState<AffiliateSortKey>('default');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -131,16 +135,20 @@ export function PrenotaAttractionsClient() {
     return pins;
   }, [visible]);
 
-  const search = async () => {
+  const fetchPage = async (start: number, append: boolean) => {
     const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
       return;
     }
 
-    setLoading(true);
-    setResults(null);
-    setHighlightedId(null);
+    if (append) setLoadingMore(true);
+    else {
+      setLoading(true);
+      setResults(null);
+      setHighlightedId(null);
+    }
+
     try {
       const res = await fetch('/api/attractions/search', {
         method: 'POST',
@@ -151,6 +159,7 @@ export function PrenotaAttractionsClient() {
           query: query.trim(),
           minRating: 0,
           sort: sort === 'rating' ? 'rating' : 'default',
+          start,
         }),
       });
       const data = (await res.json()) as {
@@ -158,18 +167,30 @@ export function PrenotaAttractionsClient() {
         destinationName?: string | null;
         warnings?: string[];
         error?: string;
+        nextStart?: number | null;
+        hasMore?: boolean;
       };
       if (!res.ok) {
         toast.error(data.error ?? 'Ricerca fallita');
         return;
       }
-      for (const w of data.warnings ?? []) toast.message(w);
-      setDestinationName(data.destinationName ?? null);
-      setResults(data.results ?? []);
+      if (!append) {
+        for (const w of data.warnings ?? []) toast.message(w);
+        setDestinationName(data.destinationName ?? null);
+      }
+      const page = data.results ?? [];
+      setResults((prev) => {
+        if (!append || !prev) return page;
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...page.filter((r) => !seen.has(r.id))];
+      });
+      setNextStart(data.nextStart ?? null);
+      setHasMore(Boolean(data.hasMore));
     } catch {
       toast.error('Errore di rete');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -208,7 +229,7 @@ export function PrenotaAttractionsClient() {
         onEndDateChange={setEndDate}
         onAdultsChange={setAdults}
         onChildrenChange={setChildren}
-        onSearch={() => void search()}
+        onSearch={() => void fetchPage(1, false)}
         loading={loading}
         queryPlaceholder="Colosseo, museo, landmark…"
         minRating={minRating}
@@ -224,6 +245,7 @@ export function PrenotaAttractionsClient() {
           <span className="font-medium text-foreground">{destinationName}</span>
           {' · '}
           {cards?.length ?? 0} risultati
+          {mapPins.length > 0 ? ` · ${mapPins.length} sulla mappa` : null}
         </p>
       )}
 
@@ -241,21 +263,43 @@ export function PrenotaAttractionsClient() {
             mapPins.length > 0 && 'lg:grid-cols-[1fr_minmax(300px,38%)]'
           )}
         >
-          <ul className="grid gap-3.5">
-            {cards.map((item) => (
-              <li
-                key={item.id}
-                id={`attraction-${item.id}`}
-                onMouseEnter={() => setHighlightedId(item.id)}
-                className={cn(
-                  'rounded-2xl transition',
-                  highlightedId === item.id && 'ring-2 ring-primary/35'
-                )}
-              >
-                <PrenotaAffiliateResultCard item={item} />
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3.5">
+            <ul className="grid gap-3.5">
+              {cards.map((item) => (
+                <li
+                  key={item.id}
+                  id={`attraction-${item.id}`}
+                  onMouseEnter={() => setHighlightedId(item.id)}
+                  className={cn(
+                    'rounded-2xl transition',
+                    highlightedId === item.id && 'ring-2 ring-primary/35'
+                  )}
+                >
+                  <PrenotaAffiliateResultCard item={item} />
+                </li>
+              ))}
+            </ul>
+            {hasMore && nextStart != null ? (
+              <div className="flex justify-center pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl"
+                  disabled={loadingMore}
+                  onClick={() => void fetchPage(nextStart, true)}
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Caricamento…
+                    </>
+                  ) : (
+                    'Carica altri'
+                  )}
+                </Button>
+              </div>
+            ) : null}
+          </div>
           {mapPins.length > 0 ? (
             <div className="lg:sticky lg:top-24 lg:self-start">
               <HotelsResultsMap
