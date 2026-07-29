@@ -1,6 +1,7 @@
 import {
   getGetTransferBaseUrl,
   getGetTransferMarker,
+  getGetTransferPromoId,
   getGetTransferSubId,
 } from '@/lib/gettransfer/config';
 
@@ -27,6 +28,7 @@ export function buildMarkerParam(marker: string, subId: string): string {
 export function wrapTravelpayoutsAffiliateUrl(
   targetUrl: string,
   marker: string,
+  promoId: number,
   subId?: string
 ): string {
   const url = new URL(TP_MEDIA_REDIRECT);
@@ -34,7 +36,8 @@ export function wrapTravelpayoutsAffiliateUrl(
     'marker',
     subId ? buildMarkerParam(marker, subId) : marker
   );
-  url.searchParams.set('p', targetUrl);
+  url.searchParams.set('p', String(promoId));
+  url.searchParams.set('u', targetUrl);
   return url.toString();
 }
 
@@ -73,16 +76,21 @@ export type GetTransferHandoff = {
 /** Handoff verso GetTransfer con marker Travelpayouts se configurato. */
 export function buildGetTransferAffiliateHandoff(
   params: GetTransferSearchParams,
-  options?: { marker?: string | null; subId?: string | null }
+  options?: {
+    marker?: string | null;
+    promoId?: number | null;
+    subId?: string | null;
+  }
 ): GetTransferHandoff {
   const target = buildGetTransferSearchUrl(params);
   const marker = options?.marker ?? getGetTransferMarker();
-  if (!marker) {
+  const promoId = options?.promoId ?? getGetTransferPromoId();
+  if (!marker || !promoId) {
     return { url: target, hasAffiliateTracking: false };
   }
   const subId = options?.subId ?? getGetTransferSubId();
   return {
-    url: wrapTravelpayoutsAffiliateUrl(target, marker, subId),
+    url: wrapTravelpayoutsAffiliateUrl(target, marker, promoId, subId),
     hasAffiliateTracking: true,
   };
 }
