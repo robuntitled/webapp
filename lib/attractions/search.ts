@@ -61,7 +61,7 @@ export async function searchAttractions(params: {
       destinationName: null,
       provider: 'skipped',
       warnings: [
-        'Configura VIATOR_API_KEY per mostrare attrazioni (catalogo Viator). GetYourGuide non espone un catalogo attrazioni separato.',
+        'Configura VIATOR_API_KEY per mostrare attrazioni (catalogo Viator).',
       ],
     };
   }

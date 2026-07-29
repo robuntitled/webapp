@@ -1,15 +1,14 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, Landmark, Star, Ticket } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ExternalLink, Landmark, Star } from 'lucide-react';
 
 export type PrenotaAffiliateCardItem = {
   id: string;
   title: string;
   description?: string | null;
   imageUrl?: string | null;
-  provider: 'viator' | 'getyourguide';
+  provider: 'viator';
   rating?: number | null;
   ratingCount?: number | null;
   priceFrom?: number | null;
@@ -41,10 +40,6 @@ function formatDuration(mins: number | null | undefined) {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
-function providerLabel(p: PrenotaAffiliateCardItem['provider']) {
-  return p === 'viator' ? 'Viator' : 'GetYourGuide';
-}
-
 export function PrenotaAffiliateResultCard({ item }: { item: PrenotaAffiliateCardItem }) {
   const price = formatPrice(item.priceFrom, item.currency);
   const duration = formatDuration(item.durationMinutes);
@@ -65,22 +60,11 @@ export function PrenotaAffiliateResultCard({ item }: { item: PrenotaAffiliateCar
             />
           ) : (
             <div className="flex h-full min-h-[140px] items-center justify-center text-muted-foreground/35">
-              {item.provider === 'viator' ? (
-                <Landmark className="h-9 w-9" />
-              ) : (
-                <Ticket className="h-9 w-9" />
-              )}
+              <Landmark className="h-9 w-9" />
             </div>
           )}
-          <span
-            className={cn(
-              'absolute left-2.5 top-2.5 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm',
-              item.provider === 'viator'
-                ? 'bg-emerald-950/70 text-emerald-100'
-                : 'bg-orange-950/70 text-orange-100'
-            )}
-          >
-            {providerLabel(item.provider)}
+          <span className="absolute left-2.5 top-2.5 rounded-md bg-emerald-950/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 backdrop-blur-sm">
+            Viator
           </span>
         </div>
 

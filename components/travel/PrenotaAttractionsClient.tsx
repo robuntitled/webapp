@@ -10,7 +10,6 @@ import {
 } from '@/components/travel/PrenotaAffiliateResultCard';
 import {
   PrenotaAffiliateSearchBar,
-  type AffiliateProviderFilter,
   type AffiliateSortKey,
 } from '@/components/travel/PrenotaAffiliateSearchBar';
 import { withAffiliateBookingPrefs } from '@/lib/travel/affiliate-deeplink';
@@ -52,7 +51,6 @@ type FormCache = {
   endDate: string;
   adults: number;
   children: number;
-  providerFilter: AffiliateProviderFilter;
   minRating: number;
   sort: AffiliateSortKey;
 };
@@ -69,8 +67,6 @@ export function PrenotaAttractionsClient() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<AttractionHit[] | null>(null);
   const [destinationName, setDestinationName] = useState<string | null>(null);
-  const [providerFilter, setProviderFilter] =
-    useState<AffiliateProviderFilter>('all');
   const [minRating, setMinRating] = useState(0);
   const [sort, setSort] = useState<AffiliateSortKey>('default');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -84,7 +80,6 @@ export function PrenotaAttractionsClient() {
       if (cached.endDate) setEndDate(cached.endDate);
       if (cached.adults) setAdults(cached.adults);
       setChildren(cached.children ?? 0);
-      if (cached.providerFilter) setProviderFilter(cached.providerFilter);
       setMinRating(cached.minRating ?? 0);
       if (cached.sort) setSort(cached.sort);
     }
@@ -100,7 +95,6 @@ export function PrenotaAttractionsClient() {
       endDate,
       adults,
       children,
-      providerFilter,
       minRating,
       sort,
     };
@@ -108,27 +102,11 @@ export function PrenotaAttractionsClient() {
     const onHide = () => saveSearchFormCache('attractions', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [
-    cacheReady,
-    city,
-    query,
-    startDate,
-    endDate,
-    adults,
-    children,
-    providerFilter,
-    minRating,
-    sort,
-  ]);
+  }, [cacheReady, city, query, startDate, endDate, adults, children, minRating, sort]);
 
   const visible = useMemo(() => {
     if (!results) return null;
-    let list =
-      providerFilter === 'getyourguide'
-        ? []
-        : providerFilter === 'viator' || providerFilter === 'all'
-          ? [...results]
-          : [...results];
+    let list = [...results];
     if (minRating > 0) {
       list = list.filter((r) => (r.rating ?? 0) >= minRating);
     }
@@ -136,7 +114,7 @@ export function PrenotaAttractionsClient() {
       list.map((r) => ({ ...r, priceFrom: null as number | null })),
       sort
     );
-  }, [results, providerFilter, minRating, sort]);
+  }, [results, minRating, sort]);
 
   const bookingPrefs = useMemo(
     () => ({ startDate, endDate, adults, children }),
@@ -233,8 +211,6 @@ export function PrenotaAttractionsClient() {
         onSearch={() => void search()}
         loading={loading}
         queryPlaceholder="Colosseo, museo, landmark…"
-        providerFilter={providerFilter}
-        onProviderFilterChange={setProviderFilter}
         minRating={minRating}
         onMinRatingChange={setMinRating}
         sort={sort}

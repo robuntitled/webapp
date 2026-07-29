@@ -32,9 +32,6 @@ type FreetextResponse = {
     totalCount?: number;
     results?: ViatorProduct[];
   };
-  destinations?: {
-    results?: Array<{ id?: number; name?: string }>;
-  };
 };
 
 function pickImage(p: ViatorProduct): string | null {
@@ -47,13 +44,16 @@ function pickImage(p: ViatorProduct): string | null {
     .sort((a, b) => {
       const aw = a.width ?? 0;
       const bw = b.width ?? 0;
-      // Prefer ~400px wide thumbs
       return Math.abs(aw - 400) - Math.abs(bw - 400);
     });
   return ranked[0]?.url ?? null;
 }
 
-function mapProduct(p: ViatorProduct): ActivityOffer | null {
+function mapProduct(
+  p: ViatorProduct,
+  coords: { lat: number | null; lng: number | null },
+  index: number
+): ActivityOffer | null {
   const code = p.productCode?.trim();
   const title = p.title?.trim();
   if (!code || !title) return null;
@@ -61,6 +61,18 @@ function mapProduct(p: ViatorProduct): ActivityOffer | null {
   const bookingUrl =
     p.productUrl?.trim() ||
     `https://www.viator.com/tours/d0-${encodeURIComponent(code)}`;
+
+  // Leggero offset così i pin non si sovrappongono tutti sul centro città
+  let lat = coords.lat;
+  let lng = coords.lng;
+  if (lat != null && lng != null) {
+    const ring = Math.floor(index / 8);
+    const slot = index % 8;
+    const angle = (slot / 8) * Math.PI * 2;
+    const radius = 0.012 + ring * 0.008;
+    lat = lat + Math.sin(angle) * radius;
+    lng = lng + Math.cos(angle) * radius;
+  }
 
   return {
     id: `viator:${code}`,
@@ -73,9 +85,16 @@ function mapProduct(p: ViatorProduct): ActivityOffer | null {
     rating: p.reviews?.combinedAverageRating ?? null,
     ratingCount: p.reviews?.totalReviews ?? null,
     durationMinutes: p.duration?.fixedDurationInMinutes ?? null,
+    lat,
+    lng,
     bookingUrl,
   };
 }
+
+export type ViatorActivitiesSearch = {
+  results: ActivityOffer[];
+  destinationName: string | null;
+};
 
 /**
  * Ricerca attività Viator (affiliate): freetext PRODUCTS sulla destinazione.
@@ -86,19 +105,27 @@ export async function searchViatorActivities(params: {
   startDate?: string;
   endDate?: string;
   limit?: number;
-}): Promise<ActivityOffer[]> {
-  if (!isViatorConfigured()) return [];
+}): Promise<ViatorActivitiesSearch> {
+  if (!isViatorConfigured()) return { results: [], destinationName: null };
 
   const city = params.city.trim();
   const query = params.query?.trim() ?? '';
   const limit = Math.min(Math.max(params.limit ?? 24, 1), 50);
   const searchTerm = [city, query].filter(Boolean).join(' ').slice(0, 120);
-  if (!searchTerm) return [];
+  if (!searchTerm) return { results: [], destinationName: null };
 
   let destinationId: string | undefined;
+  let destinationName: string | null = null;
+  let destLat: number | null = null;
+  let destLng: number | null = null;
   try {
     const dest = await resolveViatorDestinationId(city);
-    if (dest) destinationId = dest.id;
+    if (dest) {
+      destinationId = dest.id;
+      destinationName = dest.name;
+      destLat = dest.lat;
+      destLng = dest.lng;
+    }
   } catch {
     // continua senza filtro destinazione
   }
@@ -131,5 +158,9 @@ export async function searchViatorActivities(params: {
   });
 
   const products = data.products?.results ?? [];
-  return products.map(mapProduct).filter((x): x is ActivityOffer => x != null);
+  const results = products
+    .map((p, i) => mapProduct(p, { lat: destLat, lng: destLng }, i))
+    .filter((x): x is ActivityOffer => x != null);
+
+  return { results, destinationName };
 }

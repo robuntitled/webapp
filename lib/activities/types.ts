@@ -1,4 +1,4 @@
-export type ActivityProvider = 'viator' | 'getyourguide';
+export type ActivityProvider = 'viator';
 
 export type ActivityOffer = {
   id: string;
@@ -19,9 +19,9 @@ export type ActivityOffer = {
 
 export type ActivitySearchResult = {
   results: ActivityOffer[];
+  destinationName?: string | null;
   providers: {
     viator: 'ok' | 'skipped' | 'error';
-    getyourguide: 'ok' | 'skipped' | 'error';
   };
   warnings: string[];
 };

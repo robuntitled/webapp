@@ -31,13 +31,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { results, providers, warnings } = await searchAffiliateActivities({
-      city: parsed.data.city,
-      query: parsed.data.query || undefined,
-      startDate: parsed.data.startDate,
-      endDate: parsed.data.endDate,
-    });
-    return NextResponse.json({ results, providers, warnings });
+    const { results, providers, warnings, destinationName } =
+      await searchAffiliateActivities({
+        city: parsed.data.city,
+        query: parsed.data.query || undefined,
+        startDate: parsed.data.startDate,
+        endDate: parsed.data.endDate,
+      });
+    return NextResponse.json({ results, providers, warnings, destinationName });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Ricerca fallita';
     return NextResponse.json({ error: message }, { status: 502 });

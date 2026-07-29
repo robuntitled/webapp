@@ -10,7 +10,6 @@ import {
 } from '@/components/travel/PrenotaAffiliateResultCard';
 import {
   PrenotaAffiliateSearchBar,
-  type AffiliateProviderFilter,
   type AffiliateSortKey,
 } from '@/components/travel/PrenotaAffiliateSearchBar';
 import { withAffiliateBookingPrefs } from '@/lib/travel/affiliate-deeplink';
@@ -32,7 +31,7 @@ const HotelsResultsMap = dynamic(
 
 type ActivityHit = {
   id: string;
-  provider: 'viator' | 'getyourguide';
+  provider: 'viator';
   title: string;
   description?: string | null;
   imageUrl?: string | null;
@@ -53,10 +52,17 @@ type FormCache = {
   endDate: string;
   adults: number;
   children: number;
-  providerFilter: AffiliateProviderFilter;
   minRating: number;
   sort: AffiliateSortKey;
 };
+
+function formatDuration(mins: number | null | undefined) {
+  if (mins == null || mins <= 0) return null;
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 
 export function PrenotaActivitiesClient() {
   const defaults = defaultAffiliateDates();
@@ -69,8 +75,7 @@ export function PrenotaActivitiesClient() {
   const [children, setChildren] = useState(0);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ActivityHit[] | null>(null);
-  const [providerFilter, setProviderFilter] =
-    useState<AffiliateProviderFilter>('all');
+  const [destinationName, setDestinationName] = useState<string | null>(null);
   const [minRating, setMinRating] = useState(0);
   const [sort, setSort] = useState<AffiliateSortKey>('default');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -84,7 +89,6 @@ export function PrenotaActivitiesClient() {
       if (cached.endDate) setEndDate(cached.endDate);
       if (cached.adults) setAdults(cached.adults);
       setChildren(cached.children ?? 0);
-      if (cached.providerFilter) setProviderFilter(cached.providerFilter);
       setMinRating(cached.minRating ?? 0);
       if (cached.sort) setSort(cached.sort);
     }
@@ -100,7 +104,6 @@ export function PrenotaActivitiesClient() {
       endDate,
       adults,
       children,
-      providerFilter,
       minRating,
       sort,
     };
@@ -108,30 +111,16 @@ export function PrenotaActivitiesClient() {
     const onHide = () => saveSearchFormCache('activities', payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [
-    cacheReady,
-    city,
-    query,
-    startDate,
-    endDate,
-    adults,
-    children,
-    providerFilter,
-    minRating,
-    sort,
-  ]);
+  }, [cacheReady, city, query, startDate, endDate, adults, children, minRating, sort]);
 
   const visible = useMemo(() => {
     if (!results) return null;
-    let list =
-      providerFilter === 'all'
-        ? [...results]
-        : results.filter((r) => r.provider === providerFilter);
+    let list = [...results];
     if (minRating > 0) {
       list = list.filter((r) => (r.rating ?? 0) >= minRating);
     }
     return sortAffiliateByKey(list, sort);
-  }, [results, providerFilter, minRating, sort]);
+  }, [results, minRating, sort]);
 
   const bookingPrefs = useMemo(
     () => ({ startDate, endDate, adults, children }),
@@ -140,29 +129,32 @@ export function PrenotaActivitiesClient() {
 
   const mapPins = useMemo(() => {
     if (!visible) return [];
-    return visible
-      .filter(
-        (r): r is ActivityHit & { lat: number; lng: number } =>
-          typeof r.lat === 'number' && typeof r.lng === 'number'
-      )
-      .map((r) => ({
+    const pins: {
+      id: string;
+      name: string;
+      lat: number;
+      lng: number;
+      price?: number;
+      currency?: string;
+    }[] = [];
+    for (const r of visible) {
+      if (typeof r.lat !== 'number' || typeof r.lng !== 'number') continue;
+      pins.push({
         id: r.id,
         name: r.title,
         lat: r.lat,
         lng: r.lng,
         price: r.priceFrom ?? undefined,
         currency: r.currency ?? undefined,
-      }));
+      });
+    }
+    return pins;
   }, [visible]);
 
   const search = async () => {
     const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
-      return;
-    }
-    if (!startDate || !endDate) {
-      toast.error('Seleziona le date');
       return;
     }
 
@@ -177,12 +169,13 @@ export function PrenotaActivitiesClient() {
         body: JSON.stringify({
           city: cityLabel,
           query: query.trim(),
-          startDate,
-          endDate,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       });
       const data = (await res.json()) as {
         results?: ActivityHit[];
+        destinationName?: string | null;
         warnings?: string[];
         error?: string;
       };
@@ -191,11 +184,8 @@ export function PrenotaActivitiesClient() {
         return;
       }
       for (const w of data.warnings ?? []) toast.message(w);
-      const list = data.results ?? [];
-      setResults(list);
-      if (!list.length && !(data.warnings ?? []).length) {
-        toast.message('Nessuna attività trovata');
-      }
+      setDestinationName(data.destinationName ?? null);
+      setResults(data.results ?? []);
     } catch {
       toast.error('Errore di rete');
     } finally {
@@ -209,14 +199,14 @@ export function PrenotaActivitiesClient() {
       title: r.title,
       description: r.description,
       imageUrl: r.imageUrl,
-      provider: r.provider,
+      provider: 'viator' as const,
       rating: r.rating,
       ratingCount: r.ratingCount,
       priceFrom: r.priceFrom,
       currency: r.currency,
-      durationMinutes: r.durationMinutes,
+      metaRight: [formatDuration(r.durationMinutes)].filter(Boolean).join(' · '),
       bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
-      ctaLabel: 'Prenota',
+      ctaLabel: 'Apri',
     })) ?? null;
 
   return (
@@ -237,8 +227,6 @@ export function PrenotaActivitiesClient() {
         onSearch={() => void search()}
         loading={loading}
         queryPlaceholder="Tour, snorkeling, museo…"
-        providerFilter={providerFilter}
-        onProviderFilterChange={setProviderFilter}
         minRating={minRating}
         onMinRatingChange={setMinRating}
         sort={sort}
@@ -246,55 +234,61 @@ export function PrenotaActivitiesClient() {
         showFilters
       />
 
+      {destinationName && results && (
+        <p className="text-xs text-muted-foreground">
+          Destinazione Viator:{' '}
+          <span className="font-medium text-foreground">{destinationName}</span>
+          {' · '}
+          {cards?.length ?? 0} risultati
+        </p>
+      )}
+
       {loading && !results && (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-16 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          Cerchiamo attività prenotabili…
+          Cerchiamo attività…
         </div>
       )}
 
       {cards && (
-        <>
-          <p className="text-xs text-muted-foreground">{cards.length} risultati</p>
-          <div
-            className={cn(
-              'grid gap-4',
-              mapPins.length > 0 && 'lg:grid-cols-[1fr_minmax(300px,38%)]'
-            )}
-          >
-            <ul className="grid gap-3.5">
-              {cards.map((item) => (
-                <li
-                  key={item.id}
-                  id={`activity-${item.id}`}
-                  onMouseEnter={() => setHighlightedId(item.id)}
-                  className={cn(
-                    'rounded-2xl transition',
-                    highlightedId === item.id && 'ring-2 ring-primary/35'
-                  )}
-                >
-                  <PrenotaAffiliateResultCard item={item} />
-                </li>
-              ))}
-            </ul>
-            {mapPins.length > 0 ? (
-              <div className="lg:sticky lg:top-24 lg:self-start">
-                <HotelsResultsMap
-                  pins={mapPins}
-                  highlightedId={highlightedId}
-                  onPinClick={(id) => {
-                    setHighlightedId(id);
-                    document
-                      .getElementById(`activity-${id}`)
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }}
-                  emptyLabel="Coordinate attività non disponibili"
-                  className="h-[min(70vh,640px)] min-h-[320px]"
-                />
-              </div>
-            ) : null}
-          </div>
-        </>
+        <div
+          className={cn(
+            'grid gap-4',
+            mapPins.length > 0 && 'lg:grid-cols-[1fr_minmax(300px,38%)]'
+          )}
+        >
+          <ul className="grid gap-3.5">
+            {cards.map((item) => (
+              <li
+                key={item.id}
+                id={`activity-${item.id}`}
+                onMouseEnter={() => setHighlightedId(item.id)}
+                className={cn(
+                  'rounded-2xl transition',
+                  highlightedId === item.id && 'ring-2 ring-primary/35'
+                )}
+              >
+                <PrenotaAffiliateResultCard item={item} />
+              </li>
+            ))}
+          </ul>
+          {mapPins.length > 0 ? (
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <HotelsResultsMap
+                pins={mapPins}
+                highlightedId={highlightedId}
+                onPinClick={(id) => {
+                  setHighlightedId(id);
+                  document
+                    .getElementById(`activity-${id}`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                emptyLabel="Coordinate attività non disponibili"
+                className="h-[min(70vh,640px)] min-h-[320px]"
+              />
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

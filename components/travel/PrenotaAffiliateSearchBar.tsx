@@ -5,10 +5,8 @@ import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export type AffiliateSortKey = 'default' | 'price_asc' | 'price_desc' | 'rating';
-export type AffiliateProviderFilter = 'all' | 'viator' | 'getyourguide';
 
 export type PrenotaAffiliateSearchBarProps = {
   city: string;
@@ -26,8 +24,6 @@ export type PrenotaAffiliateSearchBarProps = {
   onSearch: () => void;
   loading: boolean;
   queryPlaceholder: string;
-  providerFilter: AffiliateProviderFilter;
-  onProviderFilterChange: (v: AffiliateProviderFilter) => void;
   minRating: number;
   onMinRatingChange: (v: number) => void;
   sort: AffiliateSortKey;
@@ -51,8 +47,6 @@ export function PrenotaAffiliateSearchBar({
   onSearch,
   loading,
   queryPlaceholder,
-  providerFilter,
-  onProviderFilterChange,
   minRating,
   onMinRatingChange,
   sort,
@@ -121,36 +115,9 @@ export function PrenotaAffiliateSearchBar({
 
         {showFilters ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/40 pt-2.5">
-            <div
-              className="inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5"
-              role="tablist"
-              aria-label="Provider"
-            >
-              {(
-                [
-                  ['all', 'Tutti'],
-                  ['viator', 'Viator'],
-                  ['getyourguide', 'GetYourGuide'],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={providerFilter === key}
-                  onClick={() => onProviderFilterChange(key)}
-                  className={cn(
-                    'rounded-md px-2.5 py-1 text-[11px] font-semibold transition',
-                    providerFilter === key
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
+            <p className="text-[11px] font-medium text-muted-foreground">
+              Partner: <span className="text-foreground">Viator</span>
+            </p>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 Stelle
