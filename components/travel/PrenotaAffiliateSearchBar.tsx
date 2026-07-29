@@ -1,9 +1,16 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  airportsInCountry,
+  resolvePlaceExact,
+  type PlaceSuggestion,
+} from '@/lib/travel/airport-catalog';
 import { Loader2, Search } from 'lucide-react';
 
 export type AffiliateSortKey = 'default' | 'price_asc' | 'price_desc' | 'rating';
@@ -53,21 +60,40 @@ export function PrenotaAffiliateSearchBar({
   onSortChange,
   showFilters = true,
 }: PrenotaAffiliateSearchBarProps) {
+  const [cityPlace, setCityPlace] = useState<PlaceSuggestion | null>(() =>
+    city ? resolvePlaceExact(city) : null
+  );
+
+  useEffect(() => {
+    setCityPlace(city ? resolvePlaceExact(city) : null);
+  }, [city]);
+
   return (
     <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10">
       <div className="rounded-[0.95rem] bg-card px-3 py-3 sm:px-3.5 sm:py-3">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.05fr_1.15fr_0.95fr_auto] lg:items-end">
-          <label className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Città
-            </span>
-            <Input
-              value={city}
-              onChange={(e) => onCityChange(e.target.value)}
-              placeholder="Città o destinazione…"
-              className="h-12 rounded-xl border-slate-200 bg-slate-50 font-semibold"
-            />
-          </label>
+          <AirportPlaceInput
+            label="Città"
+            value={city}
+            selected={cityPlace}
+            onValueChange={(v) => {
+              onCityChange(v);
+              setCityPlace(null);
+            }}
+            onClearSelection={() => setCityPlace(null)}
+            onSelect={(place) => {
+              setCityPlace(place);
+              if (place.kind === 'country') {
+                const hub = airportsInCountry(place.code)[0]?.label;
+                onCityChange(hub || place.label);
+              } else {
+                onCityChange(place.label);
+              }
+            }}
+            placeholder="Città o paese…"
+            kinds={['city', 'country']}
+            showAirportCode={false}
+          />
           <label className="space-y-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Cerca

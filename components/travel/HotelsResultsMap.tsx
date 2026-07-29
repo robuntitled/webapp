@@ -187,7 +187,7 @@ export function HotelsResultsMap({
     <button
       type="button"
       onClick={() => setExpanded((v) => !v)}
-      className="absolute right-2.5 top-2.5 z-[500] inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background/95 px-2.5 text-xs font-semibold text-foreground shadow-md backdrop-blur transition hover:bg-background"
+      className="absolute right-2.5 top-2.5 z-[2000] inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-2.5 text-xs font-semibold text-foreground shadow-lg transition hover:bg-muted"
       aria-label={expanded ? 'Riduci mappa' : 'Espandi mappa'}
     >
       {expanded ? (

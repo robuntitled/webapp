@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { AttractionHit } from '@/lib/attractions/types';
 import { cleanAffiliateDescription } from '@/lib/travel/affiliate-ui';
+import { filterHitsNearDestination } from '@/lib/travel/geo';
 import { viatorFetch } from '@/lib/viator/client';
 import { isViatorConfigured } from '@/lib/viator/config';
 import { resolveViatorDestinationId } from '@/lib/viator/destinations';
@@ -239,60 +240,29 @@ export async function searchViatorAttractions(params: {
   const totalCount =
     typeof data.totalCount === 'number' ? data.totalCount : null;
 
-  // Affina con query testo (solo sulla pagina corrente; freetext se pochi match)
+  // Solo attrazioni vicino al centro destinazione (niente day-trip tipo Pompei su Roma)
+  results = filterHitsNearDestination(results, {
+    lat: dest.lat,
+    lng: dest.lng,
+  });
+
+  // Affina con query testo SOLO sul set già filtrato per destinazione (no freetext globale)
   if (query) {
     const q = query.toLowerCase();
-    const filtered = results.filter(
+    results = results.filter(
       (r) =>
         r.name.toLowerCase().includes(q) ||
         (r.description?.toLowerCase().includes(q) ?? false) ||
         (r.address?.toLowerCase().includes(q) ?? false)
     );
-    if (filtered.length >= 3 || start > 1) {
-      results = filtered;
-    } else {
-      const ft = await viatorFetch<FreetextAttractions>('/search/freetext', {
-        method: 'POST',
-        body: JSON.stringify({
-          searchTerm: query,
-          searchTypes: [
-            {
-              searchType: 'ATTRACTIONS',
-              pagination: { start, count: pageSize },
-            },
-          ],
-          currency: 'EUR',
-        }),
-        timeoutMs: 15_000,
-      });
-      const fromFt =
-        ft.attractions?.results?.map((r) =>
-          mapAttraction({
-            attractionId: r.id,
-            name: r.name,
-            description: r.description,
-            productCount: r.productsCount,
-            images: r.images,
-            reviews: r.reviews,
-          })
-        ) ?? [];
-      const merged = new Map<string, AttractionHit>();
-      for (const hit of [
-        ...filtered,
-        ...fromFt.filter((x): x is AttractionHit => x != null),
-      ]) {
-        merged.set(hit.id, hit);
-      }
-      results = [...merged.values()];
-    }
   }
 
   const nextStart = start + pageSize;
   const hasMore =
-    results.length > 0 &&
+    (data.attractions?.length ?? 0) >= pageSize &&
     (totalCount != null
       ? nextStart <= totalCount
-      : results.length >= pageSize) &&
+      : (data.attractions?.length ?? 0) >= pageSize) &&
     nextStart <= 30 * 5;
 
   return {
