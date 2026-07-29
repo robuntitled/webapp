@@ -24,6 +24,15 @@ export function isViatorConfigured(): boolean {
   return Boolean(getViatorApiKey());
 }
 
+/** Soglia anti-rumore: nasconde tour/attrazioni poco recensite */
+export const MIN_VIATOR_REVIEW_COUNT = 30;
+
+export function hasEnoughViatorReviews(
+  count: number | null | undefined
+): boolean {
+  return typeof count === 'number' && count >= MIN_VIATOR_REVIEW_COUNT;
+}
+
 export function getViatorCampaign(): string | undefined {
   const c = process.env.VIATOR_CAMPAIGN?.trim();
   return c || undefined;

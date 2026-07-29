@@ -4,7 +4,10 @@ import type { AttractionHit } from '@/lib/attractions/types';
 import { cleanAffiliateDescription } from '@/lib/travel/affiliate-ui';
 import { filterHitsNearDestination } from '@/lib/travel/geo';
 import { viatorFetch } from '@/lib/viator/client';
-import { isViatorConfigured } from '@/lib/viator/config';
+import {
+  hasEnoughViatorReviews,
+  isViatorConfigured,
+} from '@/lib/viator/config';
 import { resolveViatorDestinationId } from '@/lib/viator/destinations';
 
 type ImageLike =
@@ -212,7 +215,9 @@ export async function searchViatorAttractions(params: {
           reviews: r.reviews,
         })
       ) ?? [];
-    const results = mapped.filter((x): x is AttractionHit => x != null);
+    const results = mapped
+      .filter((x): x is AttractionHit => x != null)
+      .filter((x) => hasEnoughViatorReviews(x.ratingCount));
     const nextStart = start + pageSize;
     const hasMore =
       results.length >= pageSize && nextStart <= ATTRACTIONS_MAX_START;
@@ -238,7 +243,8 @@ export async function searchViatorAttractions(params: {
 
   let results = (data.attractions ?? [])
     .map(mapAttraction)
-    .filter((x): x is AttractionHit => x != null);
+    .filter((x): x is AttractionHit => x != null)
+    .filter((x) => hasEnoughViatorReviews(x.ratingCount));
   const totalCount =
     typeof data.totalCount === 'number' ? data.totalCount : null;
   const rawPageCount = data.attractions?.length ?? 0;

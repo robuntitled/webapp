@@ -3,7 +3,10 @@ import 'server-only';
 import type { ActivityOffer } from '@/lib/activities/types';
 import { cleanAffiliateDescription } from '@/lib/travel/affiliate-ui';
 import { viatorFetch } from '@/lib/viator/client';
-import { isViatorConfigured } from '@/lib/viator/config';
+import {
+  hasEnoughViatorReviews,
+  isViatorConfigured,
+} from '@/lib/viator/config';
 import { resolveViatorDestinationId } from '@/lib/viator/destinations';
 
 type ViatorImageVariant = { height?: number; width?: number; url?: string };
@@ -197,7 +200,8 @@ export async function searchViatorActivities(params: {
     .map((p, i) =>
       mapProduct(p, { lat: destLat, lng: destLng }, start - 1 + i)
     )
-    .filter((x): x is ActivityOffer => x != null);
+    .filter((x): x is ActivityOffer => x != null)
+    .filter((x) => hasEnoughViatorReviews(x.ratingCount));
 
   const nextStart = start + pageSize;
   // Usa il conteggio grezzo API (non i soli mappati) + totalCount quando c’è
