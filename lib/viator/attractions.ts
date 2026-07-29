@@ -56,6 +56,9 @@ type FreetextAttractions = {
       description?: string;
       productsCount?: number;
       destinationName?: string;
+      /** Presente per partner affiliate; senza questo non mostriamo il risultato */
+      attractionUrl?: string;
+      url?: string;
       images?: ImageLike[];
       reviews?: {
         totalReviews?: number;
@@ -100,9 +103,10 @@ function mapAttraction(a: ViatorAttraction): AttractionHit | null {
   const name = a.name?.trim();
   if (id == null || !name) return null;
 
-  const bookingUrl =
-    a.attractionUrl?.trim() ||
-    `https://www.viator.com/attractions/-/d0-a${id}`;
+  // Solo attractionUrl affiliate API (pagina attrazione specifica + pid/mcid).
+  // Niente fallback /attractions/-/d0-a… che non risolvono l’attrazione scelta.
+  const bookingUrl = a.attractionUrl?.trim();
+  if (!bookingUrl || !/^https?:\/\//i.test(bookingUrl)) return null;
 
   const address = formatAddress(a.address);
   const description =
@@ -213,6 +217,7 @@ export async function searchViatorAttractions(params: {
           productCount: r.productsCount,
           images: r.images,
           reviews: r.reviews,
+          attractionUrl: r.attractionUrl?.trim() || r.url?.trim(),
         })
       ) ?? [];
     const results = mapped

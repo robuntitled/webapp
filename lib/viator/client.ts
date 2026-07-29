@@ -50,8 +50,16 @@ async function viatorFetchOnce<T>(
 
   try {
     const campaign = getViatorCampaign();
-    const qs = campaign
-      ? `${path.includes('?') ? '&' : '?'}campaign-value=${encodeURIComponent(campaign)}`
+    // target-lander=NONE → productUrl/attractionUrl aprono il PDP reale, non il
+    // lander affiliate generico (lista destinazione + prodotti correlati).
+    const extras = [
+      campaign
+        ? `campaign-value=${encodeURIComponent(campaign)}`
+        : null,
+      'target-lander=NONE',
+    ].filter(Boolean);
+    const qs = extras.length
+      ? `${path.includes('?') ? '&' : '?'}${extras.join('&')}`
       : '';
     const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}${qs}`;
 

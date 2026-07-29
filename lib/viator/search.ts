@@ -65,9 +65,10 @@ function mapProduct(
   const title = p.title?.trim();
   if (!code || !title) return null;
 
-  const bookingUrl =
-    p.productUrl?.trim() ||
-    `https://www.viator.com/tours/d0-${encodeURIComponent(code)}`;
+  // Solo URL affiliate API (path prodotto reale + pid/mcid). Niente fallback
+  // generici tipo /tours/d0-CODE che finiscono su destinazione/home.
+  const bookingUrl = p.productUrl?.trim();
+  if (!bookingUrl || !/^https?:\/\//i.test(bookingUrl)) return null;
 
   let lat = coords.lat;
   let lng = coords.lng;
