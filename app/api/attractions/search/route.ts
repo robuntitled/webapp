@@ -6,6 +6,14 @@ import { guardPaidApi } from '@/lib/api/request-guard';
 const schema = z.object({
   city: z.string().trim().min(2).max(80),
   query: z.string().trim().max(120).optional().default(''),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   withTours: z.boolean().optional().default(false),
   freeOnly: z.boolean().optional().default(false),
   minRating: z.number().min(0).max(5).optional().default(0),
@@ -27,11 +35,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri non validi' }, { status: 400 });
   }
 
-  const { city, query, withTours, freeOnly, minRating, sort, start } =
+  const { city, query, startDate, endDate, withTours, freeOnly, minRating, sort, start } =
     parsed.data;
   const result = await searchAttractions({
     city,
     query: query || undefined,
+    startDate,
+    endDate,
     withTours,
     freeOnly,
     minRating: minRating || undefined,

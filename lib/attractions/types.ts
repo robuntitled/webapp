@@ -6,12 +6,17 @@ export type AttractionHit = {
   imageUrl?: string | null;
   rating?: number | null;
   ratingCount?: number | null;
+  /** Legacy POI field; per prodotti singoli resta 0 */
   productCount: number;
   freeAttraction: boolean;
+  priceFrom?: number | null;
+  currency?: string | null;
+  durationMinutes?: number | null;
+  /** Es. "Colosseo · Piazza del Colosseo…" */
   address?: string | null;
   lat?: number | null;
   lng?: number | null;
-  /** Deep-link affiliate Viator (pagina attrazione + tour) */
+  /** Deep-link affiliate Viator (pagina prodotto) */
   bookingUrl: string;
 };
 

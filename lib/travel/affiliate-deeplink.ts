@@ -13,16 +13,38 @@ function normalizeIsoDate(value: string | undefined): string | undefined {
   return v;
 }
 
+/** Parametri query che non precompilano il PDP Viator (o confondono). */
+const STRIP_KEYS = [
+  'date',
+  'startDate',
+  'endDate',
+  'adults',
+  'children',
+  'travellers-adults',
+  'travellers-children',
+  'travellers-children-ages',
+  'travel-date-from',
+  'travel-date-to',
+  'paxAdult',
+  'paxChild',
+  'numAdults',
+  'numChildren',
+  'numberOfAdults',
+  'numberOfChildren',
+  'paxMix',
+] as const;
+
 /**
- * Arricchisce URL affiliate Viator con date / pax, senza alterare il path del
- * prodotto/attrazione né i parametri di attribuzione (pid, mcid, medium, …).
+ * Arricchisce URL affiliate Viator con preferenze booking.
  *
- * Contesto ufficiale:
- * - I `productUrl` / `attractionUrl` API puntano di default a un lander affiliate
- *   “conversion-optimized” (lista destinazione), non al PDP specifico.
- *   `target_lander=NONE` forza il product/attraction page reale.
- * - Prefill date/pax sul PDP non è documentato; usiamo i nomi dei Dynamic Widget
- *   (`travel-date-from`, `travellers-adults`, …) + `date` come alias booking panel.
+ * Verificato sul PDP viator.com (lug 2026):
+ * - `travelDate=YYYY-MM-DD` precompila il date picker (param usato anche da Viator
+ *   sui propri link prodotto).
+ * - Adulti/bambini non sono supportati via query string sul PDP affiliate: restano
+ *   al default prodotto (di solito 2) o alla sessione listing su viator.com.
+ *   I param Dynamic Widget (`travellers-adults`, …) valgono solo per gli embed.
+ *
+ * `target_lander=NONE` apre il PDP prodotto invece del lander destinazione.
  */
 export function withAffiliateBookingPrefs(
   bookingUrl: string,
@@ -36,48 +58,22 @@ export function withAffiliateBookingPrefs(
     const host = url.hostname.replace(/^www\./, '');
     if (!host.includes('viator.com')) return raw;
 
-    const adults = Math.min(Math.max(Math.floor(prefs.adults ?? 2), 1), 20);
-    const children = Math.min(Math.max(Math.floor(prefs.children ?? 0), 0), 20);
-    const from = normalizeIsoDate(prefs.startDate);
-    const to = normalizeIsoDate(prefs.endDate) || from;
-
-    // Atterraggio sul PDP/attraction page, non sul lander generico destinazione.
-    url.searchParams.set('target_lander', 'NONE');
-
-    if (from) {
-      // Dynamic Widget / partner URL conventions
-      url.searchParams.set('travel-date-from', from);
-      // Alias tipici del booking panel PDP
-      url.searchParams.set('date', from);
-      url.searchParams.set('travelDate', from);
-    }
-    if (to) {
-      url.searchParams.set('travel-date-to', to);
-    }
-
-    url.searchParams.set('travellers-adults', String(adults));
-    url.searchParams.set('adults', String(adults));
-
-    if (children > 0) {
-      url.searchParams.set('travellers-children', String(children));
-      url.searchParams.set('children', String(children));
-    } else {
-      url.searchParams.delete('travellers-children');
-      url.searchParams.delete('children');
-      url.searchParams.delete('travellers-children-ages');
-    }
-
-    // Rimuovi alias obsoleti/conflicting che a volte arrivano da cache o vecchi link
-    for (const key of [
-      'startDate',
-      'endDate',
-      'paxAdult',
-      'paxChild',
-      'numAdults',
-      'numChildren',
-    ]) {
+    for (const key of STRIP_KEYS) {
       url.searchParams.delete(key);
     }
+
+    url.searchParams.set('target_lander', 'NONE');
+
+    const from = normalizeIsoDate(prefs.startDate);
+    if (from) {
+      url.searchParams.set('travelDate', from);
+    }
+
+    // Prefs pax accettate dal tipo per la UI NomadLink, ma non serializzate:
+    // Viator le ignora sul productUrl affiliate.
+    void prefs.endDate;
+    void prefs.adults;
+    void prefs.children;
 
     return url.toString();
   } catch {

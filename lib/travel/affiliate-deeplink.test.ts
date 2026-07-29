@@ -34,7 +34,7 @@ describe('withAffiliateBookingPrefs', () => {
     expect(new URL(out).searchParams.get('target_lander')).toBe('NONE');
   });
 
-  it('appends travel dates and party size (widget + booking aliases)', () => {
+  it('sets travelDate (PDP date picker) and does not fake unsupported pax params', () => {
     const out = withAffiliateBookingPrefs(PRODUCT, {
       startDate: '2026-08-15',
       endDate: '2026-08-20',
@@ -42,14 +42,11 @@ describe('withAffiliateBookingPrefs', () => {
       children: 2,
     });
     const p = new URL(out).searchParams;
-    expect(p.get('travel-date-from')).toBe('2026-08-15');
-    expect(p.get('travel-date-to')).toBe('2026-08-20');
-    expect(p.get('date')).toBe('2026-08-15');
     expect(p.get('travelDate')).toBe('2026-08-15');
-    expect(p.get('travellers-adults')).toBe('3');
-    expect(p.get('adults')).toBe('3');
-    expect(p.get('travellers-children')).toBe('2');
-    expect(p.get('children')).toBe('2');
+    expect(p.get('adults')).toBeNull();
+    expect(p.get('children')).toBeNull();
+    expect(p.get('travellers-adults')).toBeNull();
+    expect(p.get('date')).toBeNull();
   });
 
   it('works the same for attraction URLs (path preserved)', () => {
@@ -63,9 +60,7 @@ describe('withAffiliateBookingPrefs', () => {
     expect(url.pathname).toBe('/Rome-attractions/Colosseum/d511-a90');
     expect(url.searchParams.get('pid')).toBe('P00063937');
     expect(url.searchParams.get('target_lander')).toBe('NONE');
-    expect(url.searchParams.get('travel-date-from')).toBe('2026-09-01');
-    expect(url.searchParams.get('travellers-adults')).toBe('2');
-    expect(url.searchParams.get('travellers-children')).toBe('1');
+    expect(url.searchParams.get('travelDate')).toBe('2026-09-01');
   });
 
   it('ignores invalid dates and leaves non-Viator URLs unchanged', () => {
@@ -73,7 +68,7 @@ describe('withAffiliateBookingPrefs', () => {
       startDate: '15/08/2026',
       adults: 2,
     });
-    expect(new URL(badDate).searchParams.get('travel-date-from')).toBeNull();
+    expect(new URL(badDate).searchParams.get('travelDate')).toBeNull();
     expect(new URL(badDate).searchParams.get('target_lander')).toBe('NONE');
 
     const other = 'https://example.com/book?x=1';

@@ -8,9 +8,7 @@ import {
 import { isViatorConfigured } from '@/lib/viator/config';
 
 export type AttractionServerFilters = {
-  /** Solo attrazioni con almeno un tour collegato */
-  withTours?: boolean;
-  /** Solo ingresso gratuito */
+  /** Solo ingresso gratuito (legacy POI; con prodotti singoli di solito false) */
   freeOnly?: boolean;
   /** Rating minimo (0–5) */
   minRating?: number;
@@ -21,9 +19,6 @@ function applyFilters(
   filters: AttractionServerFilters
 ): AttractionHit[] {
   let list = results;
-  if (filters.withTours) {
-    list = list.filter((r) => r.productCount > 0);
-  }
   if (filters.freeOnly) {
     list = list.filter((r) => r.freeAttraction);
   }
@@ -43,15 +38,17 @@ function sortAttractions(
       const ra = a.rating ?? 0;
       const rb = b.rating ?? 0;
       if (rb !== ra) return rb - ra;
-      return b.productCount - a.productCount;
+      return (b.ratingCount ?? 0) - (a.ratingCount ?? 0);
     });
   }
-  return list.sort((a, b) => b.productCount - a.productCount);
+  return list;
 }
 
 export async function searchAttractions(params: {
   city: string;
   query?: string;
+  startDate?: string;
+  endDate?: string;
   withTours?: boolean;
   freeOnly?: boolean;
   minRating?: number;
@@ -76,12 +73,13 @@ export async function searchAttractions(params: {
     const page = await searchViatorAttractions({
       city: params.city,
       query: params.query,
+      startDate: params.startDate,
+      endDate: params.endDate,
       start: params.start ?? 1,
       limit: ATTRACTIONS_PAGE_SIZE,
     });
 
     const filtered = applyFilters(page.results, {
-      withTours: params.withTours,
       freeOnly: params.freeOnly,
       minRating: params.minRating,
     });
@@ -93,7 +91,7 @@ export async function searchAttractions(params: {
       warnings:
         filtered.length || (params.start ?? 1) > 1
           ? []
-          : ['Nessuna attrazione trovata con i filtri selezionati'],
+          : ['Nessuna esperienza trovata con i filtri selezionati'],
       nextStart: page.nextStart,
       hasMore: page.hasMore,
       totalCount: page.totalCount,

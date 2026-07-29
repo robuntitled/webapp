@@ -39,6 +39,9 @@ type AttractionHit = {
   ratingCount?: number | null;
   productCount: number;
   freeAttraction: boolean;
+  priceFrom?: number | null;
+  currency?: string | null;
+  durationMinutes?: number | null;
   address?: string | null;
   lat?: number | null;
   lng?: number | null;
@@ -110,10 +113,7 @@ export function PrenotaAttractionsClient() {
     if (minRating > 0) {
       list = list.filter((r) => (r.rating ?? 0) >= minRating);
     }
-    return sortAffiliateByKey(
-      list.map((r) => ({ ...r, priceFrom: null as number | null })),
-      sort
-    );
+    return sortAffiliateByKey(list, sort);
   }, [results, minRating, sort]);
 
   const bookingPrefs = useMemo(
@@ -134,13 +134,9 @@ export function PrenotaAttractionsClient() {
         imageUrl: r.imageUrl,
         rating: r.rating,
         ratingCount: r.ratingCount,
-        subtitle: [
-          r.freeAttraction ? 'Ingresso libero' : null,
-          r.productCount > 0 ? `${r.productCount} esperienze` : null,
-          r.address,
-        ]
-          .filter(Boolean)
-          .join(' · '),
+        subtitle: r.address ?? undefined,
+        priceFrom: r.priceFrom ?? undefined,
+        currency: r.currency ?? undefined,
         bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
         ctaLabel: 'Prenota',
       });
@@ -160,6 +156,8 @@ export function PrenotaAttractionsClient() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         city: cityLabel,
+        startDate,
+        endDate,
         minRating: 0,
         sort: sort === 'rating' ? 'rating' : 'default',
         start,
@@ -246,13 +244,10 @@ export function PrenotaAttractionsClient() {
       provider: 'viator' as const,
       rating: r.rating,
       ratingCount: r.ratingCount,
-      metaRight: [
-        r.freeAttraction ? 'Ingresso libero' : null,
-        r.productCount > 0 ? `${r.productCount} esperienze` : null,
-        r.address,
-      ]
-        .filter(Boolean)
-        .join(' · '),
+      priceFrom: r.priceFrom,
+      currency: r.currency,
+      durationMinutes: r.durationMinutes,
+      metaRight: r.address,
       bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
       ctaLabel: 'Prenota',
     })) ?? null;
@@ -292,7 +287,7 @@ export function PrenotaAttractionsClient() {
       {loading && !results && (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-16 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          Cerchiamo attrazioni…
+          Cerchiamo esperienze…
         </div>
       )}
 

@@ -18,4 +18,11 @@ describe('searchPlaceSuggestions', () => {
     const hits = searchPlaceSuggestions('egypt', 10);
     expect(hits.some((h) => h.code === 'EG' || h.code === 'CAI')).toBe(true);
   });
+
+  it('trova Ancona come città', () => {
+    const hits = searchPlaceSuggestions('ancona', 10);
+    expect(hits.some((h) => h.kind === 'city' && h.label === 'Ancona')).toBe(
+      true
+    );
+  });
 });

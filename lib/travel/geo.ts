@@ -17,14 +17,14 @@ export function haversineKm(
 
 /**
  * Tiene solo punti entro maxKm dal centro destinazione.
- * Evita day-trip lontani (es. Pompei in catalogo “Roma”).
+ * Evita day-trip lontani (es. Tivoli / Civita su catalogo “Roma”).
  */
 export function filterHitsNearDestination<
   T extends { lat?: number | null; lng?: number | null },
 >(
   hits: T[],
   center: { lat: number | null; lng: number | null },
-  maxKm = 85
+  maxKm = 15
 ): T[] {
   if (center.lat == null || center.lng == null) return hits;
   return hits.filter((h) => {
