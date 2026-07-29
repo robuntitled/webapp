@@ -133,27 +133,26 @@ export function PrenotaActivitiesClient() {
 
   const mapPins = useMemo(() => {
     if (!visible) return [];
-    const pins: {
-      id: string;
-      name: string;
-      lat: number;
-      lng: number;
-      price?: number;
-      currency?: string;
-    }[] = [];
-    for (const r of visible) {
-      if (typeof r.lat !== 'number' || typeof r.lng !== 'number') continue;
-      pins.push({
+    return visible
+      .filter(
+        (r): r is ActivityHit & { lat: number; lng: number } =>
+          typeof r.lat === 'number' && typeof r.lng === 'number'
+      )
+      .map((r) => ({
         id: r.id,
         name: r.title,
         lat: r.lat,
         lng: r.lng,
         price: r.priceFrom ?? undefined,
         currency: r.currency ?? undefined,
-      });
-    }
-    return pins;
-  }, [visible]);
+        imageUrl: r.imageUrl,
+        rating: r.rating,
+        ratingCount: r.ratingCount,
+        subtitle: formatDuration(r.durationMinutes),
+        bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
+        ctaLabel: 'Prenota',
+      }));
+  }, [visible, bookingPrefs]);
 
   const fetchPage = async (start: number, append: boolean) => {
     const cityLabel = city.trim();

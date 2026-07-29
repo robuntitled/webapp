@@ -9,7 +9,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { ExternalLink, Maximize2, Minimize2, Star, X } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,12 @@ export type HotelMapPin = {
   lng: number;
   price?: number;
   currency?: string;
+  imageUrl?: string | null;
+  rating?: number | null;
+  ratingCount?: number | null;
+  subtitle?: string | null;
+  bookingUrl?: string;
+  ctaLabel?: string;
 };
 
 /** Alias generico (hotel / attività / attrazioni) */
@@ -29,6 +35,8 @@ type HotelsResultsMapProps = {
   pins: HotelMapPin[];
   highlightedId?: string | null;
   onPinClick?: (id: string) => void;
+  /** Prenota in-app (hotel) quando non c’è bookingUrl */
+  onBookClick?: (id: string) => void;
   className?: string;
   emptyLabel?: string;
   /** Mostra pulsante espandi fullscreen (default true) */
@@ -39,6 +47,19 @@ const CARTO_URL =
   'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const CARTO_ATTR =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
+
+function formatPrice(amount: number | undefined, currency?: string) {
+  if (amount == null || Number.isNaN(amount)) return null;
+  try {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: currency || 'EUR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${Math.round(amount)} ${currency || 'EUR'}`;
+  }
+}
 
 function makeIcon(highlighted: boolean, priceLabel?: string) {
   const bg = highlighted ? '#365f73' : '#1e3a4c';
@@ -85,16 +106,96 @@ function InvalidateSize({ tick }: { tick: number }) {
   return null;
 }
 
+function MapPinCard({
+  pin,
+  onBookClick,
+}: {
+  pin: HotelMapPin;
+  onBookClick?: (id: string) => void;
+}) {
+  const price = formatPrice(pin.price, pin.currency);
+  const cta = pin.ctaLabel ?? 'Prenota';
+  const canBook = Boolean(pin.bookingUrl || onBookClick);
+
+  return (
+    <div className="nl-map-pin-card w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-none">
+      {pin.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={pin.imageUrl}
+          alt=""
+          className="h-[110px] w-full object-cover"
+        />
+      ) : null}
+      <div className="space-y-2 p-3">
+        {pin.subtitle ? (
+          <p className="line-clamp-1 text-[11px] text-slate-500">{pin.subtitle}</p>
+        ) : null}
+        <p className="m-0 line-clamp-2 text-sm font-semibold leading-snug">
+          {pin.name}
+        </p>
+        <div className="flex items-end justify-between gap-2">
+          <div className="min-w-0">
+            {pin.rating != null ? (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                {pin.rating.toFixed(1)}
+                {pin.ratingCount != null ? (
+                  <span className="font-normal text-slate-500">
+                    ({pin.ratingCount.toLocaleString('it-IT')})
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+            {price ? (
+              <p className="m-0 mt-0.5 text-sm font-semibold tracking-tight">
+                {pin.bookingUrl ? `da ${price}` : price}
+              </p>
+            ) : null}
+          </div>
+          {canBook ? (
+            pin.bookingUrl ? (
+              <a
+                href={pin.bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#1e3a4c] px-2.5 py-1.5 text-[11px] font-semibold text-white no-underline transition hover:opacity-90"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {cta}
+                <ExternalLink className="h-3 w-3 opacity-90" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center rounded-lg bg-[#1e3a4c] px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:opacity-90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBookClick?.(pin.id);
+                }}
+              >
+                {cta}
+              </button>
+            )
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MapCanvas({
   pins,
   highlightedId,
   onPinClick,
+  onBookClick,
   scrollZoom,
   sizeTick,
 }: {
   pins: HotelMapPin[];
   highlightedId?: string | null;
   onPinClick?: (id: string) => void;
+  onBookClick?: (id: string) => void;
   scrollZoom: boolean;
   sizeTick: number;
 }) {
@@ -125,13 +226,8 @@ function MapCanvas({
               click: () => onPinClick?.(p.id),
             }}
           >
-            <Popup>
-              <p className="m-0 text-sm font-semibold">{p.name}</p>
-              {p.price != null ? (
-                <p className="m-0 mt-0.5 text-xs text-slate-600">
-                  da {Math.round(p.price)} {p.currency ?? 'EUR'}
-                </p>
-              ) : null}
+            <Popup maxWidth={280} minWidth={260} className="nl-map-popup">
+              <MapPinCard pin={p} onBookClick={onBookClick} />
             </Popup>
           </Marker>
         );
@@ -144,6 +240,7 @@ export function HotelsResultsMap({
   pins,
   highlightedId,
   onPinClick,
+  onBookClick,
   className,
   emptyLabel = 'Coordinate non disponibili per questa ricerca',
   expandable = true,
@@ -226,6 +323,7 @@ export function HotelsResultsMap({
             pins={pins}
             highlightedId={highlightedId}
             onPinClick={onPinClick}
+            onBookClick={onBookClick}
             scrollZoom
             sizeTick={sizeTick}
           />
@@ -246,6 +344,7 @@ export function HotelsResultsMap({
         pins={pins}
         highlightedId={highlightedId}
         onPinClick={onPinClick}
+        onBookClick={onBookClick}
         scrollZoom={false}
         sizeTick={sizeTick}
       />

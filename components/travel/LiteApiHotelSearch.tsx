@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { addDays, format, parseISO } from 'date-fns';
 import {
   ArrowDownWideNarrow,
   BedDouble,
@@ -108,6 +109,27 @@ type HotelFormCache = {
   filters: Record<FilterKey, boolean>;
 };
 
+/** Check-in tra 7 giorni, checkout giorno successivo (minimo 1 notte). */
+function defaultHotelDates() {
+  const checkin = addDays(new Date(), 7);
+  return {
+    checkin: format(checkin, 'yyyy-MM-dd'),
+    checkout: format(addDays(checkin, 1), 'yyyy-MM-dd'),
+  };
+}
+
+function ensureCheckoutAfterCheckin(checkin: string, checkout: string) {
+  if (!checkin) return checkout;
+  if (!checkout || checkout <= checkin) {
+    try {
+      return format(addDays(parseISO(checkin), 1), 'yyyy-MM-dd');
+    } catch {
+      return checkout;
+    }
+  }
+  return checkout;
+}
+
 function FilterChip({
   active,
   onClick,
@@ -188,13 +210,21 @@ export function LiteApiHotelSearch({
   className,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
+  const hotelDefaults = defaultHotelDates();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
   const [cityName, setCityName] = useState(defaultCity);
   const [cityPlace, setCityPlace] = useState<PlaceSuggestion | null>(() =>
     defaultCity ? resolvePlaceExact(defaultCity) : null
   );
-  const [checkin, setCheckin] = useState(defaultCheckin);
-  const [checkout, setCheckout] = useState(defaultCheckout);
+  const [checkin, setCheckin] = useState(
+    defaultCheckin || hotelDefaults.checkin
+  );
+  const [checkout, setCheckout] = useState(() =>
+    ensureCheckoutAfterCheckin(
+      defaultCheckin || hotelDefaults.checkin,
+      defaultCheckout || hotelDefaults.checkout
+    )
+  );
   const [adults, setAdults] = useState(defaultAdults);
   const [childrenCount, setChildrenCount] = useState(0);
   const [childAges, setChildAges] = useState<number[]>([]);
@@ -223,14 +253,21 @@ export function LiteApiHotelSearch({
       const city = cached.cityName ?? '';
       setCityName(city);
       setCityPlace(city ? resolvePlaceExact(city) : null);
-      setCheckin(cached.checkin ?? '');
-      setCheckout(cached.checkout ?? '');
+      const nextIn = cached.checkin || hotelDefaults.checkin;
+      const nextOut = ensureCheckoutAfterCheckin(
+        nextIn,
+        cached.checkout || hotelDefaults.checkout
+      );
+      setCheckin(nextIn);
+      setCheckout(nextOut);
       setAdults(cached.adults ?? 1);
       setChildrenCount(cached.childrenCount ?? 0);
       setChildAges(cached.childAges ?? []);
       if (cached.filters) setFilters(cached.filters);
     }
     setCacheReady(true);
+    // hotelDefaults is stable per mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey]);
 
   useEffect(() => {
@@ -279,9 +316,39 @@ export function LiteApiHotelSearch({
           lng: h.lng,
           price: h.totalAmount,
           currency: h.currency,
+          imageUrl: h.photo,
+          rating: h.rating,
+          subtitle: [h.address, h.city].filter(Boolean).join(' · ') || h.roomName,
+          ctaLabel: 'Prenota',
         })),
     [hotels]
   );
+
+  const bookHotel = (hotelId: string) => {
+    const h = hotels?.find((x) => x.hotelId === hotelId);
+    if (!h) return;
+    saveHotelOfferDraft({
+      hotelId: h.hotelId,
+      name: h.name,
+      address: h.address,
+      city: h.city,
+      photo: h.photo,
+      stars: h.stars,
+      rating: h.rating,
+      roomName: h.roomName,
+      boardName: h.boardName,
+      offerId: h.offerId,
+      totalAmount: h.totalAmount,
+      currency: h.currency,
+      freeCancellation: h.freeCancellation || h.refundable,
+      checkin,
+      checkout,
+      adults,
+      childrenAges: childAges.slice(0, childrenCount),
+      savedAt: Date.now(),
+    });
+    router.push('/prenota/hotel/checkout');
+  };
 
   const sortLabel =
     SORT_OPTIONS.find((o) => o.id === sort)?.label ?? 'Dal più economico';
@@ -392,8 +459,13 @@ export function LiteApiHotelSearch({
               tripType="stay"
               startDate={checkin}
               endDate={checkout}
-              onStartDateChange={setCheckin}
-              onEndDateChange={setCheckout}
+              onStartDateChange={(v) => {
+                setCheckin(v);
+                setCheckout((prev) => ensureCheckoutAfterCheckin(v, prev));
+              }}
+              onEndDateChange={(v) =>
+                setCheckout(ensureCheckoutAfterCheckin(checkin, v))
+              }
             />
 
             <GuestsPicker
@@ -610,30 +682,7 @@ export function LiteApiHotelSearch({
                         <Button
                           type="button"
                           className="rounded-xl font-semibold"
-                          onClick={() => {
-                            saveHotelOfferDraft({
-                              hotelId: h.hotelId,
-                              name: h.name,
-                              address: h.address,
-                              city: h.city,
-                              photo: h.photo,
-                              stars: h.stars,
-                              rating: h.rating,
-                              roomName: h.roomName,
-                              boardName: h.boardName,
-                              offerId: h.offerId,
-                              totalAmount: h.totalAmount,
-                              currency: h.currency,
-                              freeCancellation:
-                                h.freeCancellation || h.refundable,
-                              checkin,
-                              checkout,
-                              adults,
-                              childrenAges: childAges.slice(0, childrenCount),
-                              savedAt: Date.now(),
-                            });
-                            router.push('/prenota/hotel/checkout');
-                          }}
+                          onClick={() => bookHotel(h.hotelId)}
                         >
                           Prenota
                         </Button>
@@ -655,6 +704,7 @@ export function LiteApiHotelSearch({
                       .getElementById(`hotel-${id}`)
                       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
+                  onBookClick={bookHotel}
                   className="h-[min(70vh,640px)] min-h-[320px]"
                 />
               </div>

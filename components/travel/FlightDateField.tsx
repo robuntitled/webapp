@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { format, parseISO } from 'date-fns';
+import { addDays, format, isSameDay, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { CalendarDays } from 'lucide-react';
@@ -156,10 +156,19 @@ export function FlightDateField({
               disabled={{ before: today }}
               onSelect={(range) => {
                 if (!range?.from) return;
-                onStartDateChange(format(range.from, 'yyyy-MM-dd'));
+                const fromIso = format(range.from, 'yyyy-MM-dd');
+                onStartDateChange(fromIso);
                 if (range.to) {
-                  onEndDateChange(format(range.to, 'yyyy-MM-dd'));
+                  // Hotel: checkout non può essere lo stesso giorno del check-in
+                  const to =
+                    isStay && isSameDay(range.to, range.from)
+                      ? addDays(range.from, 1)
+                      : range.to;
+                  onEndDateChange(format(to, 'yyyy-MM-dd'));
                   setOpen(false);
+                } else if (isStay) {
+                  // Prima selezione: checkout = giorno successivo
+                  onEndDateChange(format(addDays(range.from, 1), 'yyyy-MM-dd'));
                 } else {
                   onEndDateChange('');
                 }

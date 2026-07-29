@@ -127,13 +127,30 @@ export function PrenotaAttractionsClient() {
 
   const mapPins = useMemo(() => {
     if (!visible) return [];
-    const pins: { id: string; name: string; lat: number; lng: number }[] = [];
+    const pins = [];
     for (const r of visible) {
       if (typeof r.lat !== 'number' || typeof r.lng !== 'number') continue;
-      pins.push({ id: r.id, name: r.name, lat: r.lat, lng: r.lng });
+      pins.push({
+        id: r.id,
+        name: r.name,
+        lat: r.lat,
+        lng: r.lng,
+        imageUrl: r.imageUrl,
+        rating: r.rating,
+        ratingCount: r.ratingCount,
+        subtitle: [
+          r.freeAttraction ? 'Ingresso libero' : null,
+          r.productCount > 0 ? `${r.productCount} esperienze` : null,
+          r.address,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
+        ctaLabel: 'Prenota',
+      });
     }
     return pins;
-  }, [visible]);
+  }, [visible, bookingPrefs]);
 
   const fetchPage = async (start: number, append: boolean) => {
     const cityLabel = city.trim();
