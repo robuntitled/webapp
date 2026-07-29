@@ -18,6 +18,19 @@ const schema = z.object({
   checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   adults: z.coerce.number().int().min(1).max(9).optional(),
+  /** Età bambini separate da virgola, es. "5,8" */
+  childrenAges: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => {
+      if (!v) return [] as number[];
+      return v
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isFinite(n) && n >= 0 && n <= 17)
+        .slice(0, 6);
+    }),
   currency: z.string().trim().length(3).optional(),
   refundableOnly: z
     .enum(['0', '1', 'true', 'false'])
@@ -63,6 +76,7 @@ export async function GET(request: Request) {
     checkin: searchParams.get('checkin'),
     checkout: searchParams.get('checkout'),
     adults: searchParams.get('adults') ?? undefined,
+    childrenAges: searchParams.get('childrenAges') ?? undefined,
     currency: searchParams.get('currency') ?? undefined,
     refundableOnly: searchParams.get('refundableOnly') ?? undefined,
     breakfast: searchParams.get('breakfast') ?? undefined,
@@ -97,6 +111,7 @@ export async function GET(request: Request) {
       checkin: parsed.data.checkin,
       checkout: parsed.data.checkout,
       adults: parsed.data.adults,
+      childrenAges: parsed.data.childrenAges,
       currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
       guestNationality: 'IT',
       limit: 100,

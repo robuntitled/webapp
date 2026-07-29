@@ -1,10 +1,10 @@
 'use client';
 
 import { FlightDateField } from '@/components/travel/FlightDateField';
+import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, Search, Users } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type AffiliateSortKey = 'default' | 'price_asc' | 'price_desc' | 'rating';
@@ -26,7 +26,6 @@ export type PrenotaAffiliateSearchBarProps = {
   onSearch: () => void;
   loading: boolean;
   queryPlaceholder: string;
-  /** Filtri sotto la barra (stessi su entrambe le pagine) */
   providerFilter: AffiliateProviderFilter;
   onProviderFilterChange: (v: AffiliateProviderFilter) => void;
   minRating: number;
@@ -61,25 +60,29 @@ export function PrenotaAffiliateSearchBar({
   showFilters = true,
 }: PrenotaAffiliateSearchBarProps) {
   return (
-    <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15">
-      <div className="space-y-3 rounded-[1.35rem] bg-card p-4 sm:p-5">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_0.7fr_auto]">
-          <label className="space-y-1.5 text-sm">
-            <Label>Città</Label>
+    <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10">
+      <div className="rounded-[0.95rem] bg-card px-3 py-3 sm:px-3.5 sm:py-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.05fr_1.15fr_0.95fr_auto] lg:items-end">
+          <label className="space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Città
+            </span>
             <Input
               value={city}
               onChange={(e) => onCityChange(e.target.value)}
               placeholder="Città o destinazione…"
-              className="h-11 rounded-xl"
+              className="h-12 rounded-xl border-slate-200 bg-slate-50 font-semibold"
             />
           </label>
-          <label className="space-y-1.5 text-sm">
-            <Label>Cerca (opzionale)</Label>
+          <label className="space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Cerca
+            </span>
             <Input
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder={queryPlaceholder}
-              className="h-11 rounded-xl"
+              className="h-12 rounded-xl border-slate-200 bg-slate-50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onSearch();
               }}
@@ -92,42 +95,17 @@ export function PrenotaAffiliateSearchBar({
             onStartDateChange={onStartDateChange}
             onEndDateChange={onEndDateChange}
           />
-          <label className="space-y-1.5 text-sm">
-            <Label>Persone</Label>
-            <div className="relative">
-              <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <select
-                value={adults}
-                onChange={(e) => onAdultsChange(Number(e.target.value))}
-                className="h-11 w-full appearance-none rounded-xl border border-input bg-background pl-9 pr-3 text-sm font-medium"
-                aria-label="Numero adulti"
-              >
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n} {n === 1 ? 'adulto' : 'adulti'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {onChildrenChange ? (
-              <select
-                value={children}
-                onChange={(e) => onChildrenChange(Number(e.target.value))}
-                className="mt-1.5 h-9 w-full rounded-lg border border-input bg-background px-2 text-xs"
-                aria-label="Numero bambini"
-              >
-                {Array.from({ length: 9 }, (_, i) => i).map((n) => (
-                  <option key={n} value={n}>
-                    {n === 0 ? 'Nessun bambino' : `${n} bambin${n === 1 ? 'o' : 'i'}`}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-          </label>
+          <GuestsPicker
+            adults={adults}
+            childrenCount={children}
+            onAdultsChange={onAdultsChange}
+            onChildrenChange={onChildrenChange ?? (() => {})}
+            label="Persone"
+          />
           <div className="flex items-end">
             <Button
               type="button"
-              className="h-11 w-full rounded-xl sm:w-auto"
+              className="h-12 w-full rounded-xl px-5 font-semibold lg:w-auto"
               onClick={onSearch}
               disabled={loading}
             >
@@ -142,9 +120,9 @@ export function PrenotaAffiliateSearchBar({
         </div>
 
         {showFilters ? (
-          <div className="flex flex-col gap-3 border-t border-border/50 pt-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/40 pt-2.5">
             <div
-              className="inline-flex rounded-xl border border-border/70 bg-muted/40 p-0.5"
+              className="inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5"
               role="tablist"
               aria-label="Provider"
             >
@@ -162,7 +140,7 @@ export function PrenotaAffiliateSearchBar({
                   aria-selected={providerFilter === key}
                   onClick={() => onProviderFilterChange(key)}
                   className={cn(
-                    'rounded-[0.65rem] px-3 py-1.5 text-xs font-semibold transition',
+                    'rounded-md px-2.5 py-1 text-[11px] font-semibold transition',
                     providerFilter === key
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -173,13 +151,13 @@ export function PrenotaAffiliateSearchBar({
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                Min. stelle
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                Stelle
                 <select
                   value={minRating}
                   onChange={(e) => onMinRatingChange(Number(e.target.value))}
-                  className="h-8 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground"
+                  className="h-7 rounded-md border border-border bg-background px-1.5 text-[11px] font-medium text-foreground"
                 >
                   <option value={0}>Tutte</option>
                   <option value={3}>3+</option>
@@ -187,12 +165,12 @@ export function PrenotaAffiliateSearchBar({
                   <option value={4.5}>4.5+</option>
                 </select>
               </label>
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 Ordina
                 <select
                   value={sort}
                   onChange={(e) => onSortChange(e.target.value as AffiliateSortKey)}
-                  className="h-8 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground"
+                  className="h-7 rounded-md border border-border bg-background px-1.5 text-[11px] font-medium text-foreground"
                 >
                   <option value="default">Consigliate</option>
                   <option value="price_asc">Prezzo ↑</option>

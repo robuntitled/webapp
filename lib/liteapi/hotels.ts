@@ -34,6 +34,8 @@ export type HotelSearchInput = {
   checkin: string;
   checkout: string;
   adults?: number;
+  /** Età bambini (anni), come richiesto da LiteAPI occupancies.children */
+  childrenAges?: number[];
   currency?: string;
   guestNationality?: string;
   /** Override markup % (default da env). */
@@ -356,6 +358,9 @@ export async function searchHotelRates(
   input: HotelSearchInput
 ): Promise<LiteHotelOffer[]> {
   const adults = Math.min(9, Math.max(1, input.adults ?? 2));
+  const childrenAges = (input.childrenAges ?? [])
+    .map((a) => Math.min(17, Math.max(0, Math.round(a))))
+    .slice(0, 6);
   const currency = (input.currency ?? 'EUR').toUpperCase();
   const guestNationality = (input.guestNationality ?? 'IT').toUpperCase();
   const margin = input.margin ?? getLiteApiDefaultMargin();
@@ -384,7 +389,7 @@ export async function searchHotelRates(
     checkout,
     currency,
     guestNationality,
-    occupancies: [{ rooms: 1, adults, children: [] as number[] }],
+    occupancies: [{ rooms: 1, adults, children: childrenAges }],
     timeout: 12,
     roomMapping: true,
     includeHotelData: true,

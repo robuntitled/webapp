@@ -20,7 +20,7 @@ export function PrenotaPageShell({
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(0.55_0.1_200_/0.12),transparent_55%),radial-gradient(ellipse_at_top_right,oklch(0.68_0.16_45_/0.1),transparent_50%)]"
         />
-        <div className="container relative mx-auto max-w-6xl px-4 py-6 sm:py-8">
+        <div className="container relative mx-auto max-w-6xl px-4 py-4 sm:py-5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
               Prenota
@@ -31,16 +31,16 @@ export function PrenotaPageShell({
               </span>
             ) : null}
           </div>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          <h1 className="mt-0.5 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {title}
           </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
-          <div className="mt-4">
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
+          <div className="mt-3">
             <PrenotaNavTabs />
           </div>
         </div>
       </div>
-      <div className="container mx-auto max-w-6xl px-4 py-6 sm:py-8">{children}</div>
+      <div className="container mx-auto max-w-6xl px-4 py-4 sm:py-5">{children}</div>
     </div>
   );
 }

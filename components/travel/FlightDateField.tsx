@@ -92,7 +92,7 @@ export function FlightDateField({
   };
 
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('space-y-1', className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         {fieldTitle}
       </span>

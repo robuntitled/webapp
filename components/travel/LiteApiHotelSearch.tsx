@@ -14,13 +14,13 @@ import {
   MapPin,
   Search,
   Star,
-  Users,
   Waves,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
+import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -28,7 +28,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import {
   airportsInCountry,
   resolvePlaceExact,
@@ -104,6 +103,8 @@ type HotelFormCache = {
   checkin: string;
   checkout: string;
   adults: number;
+  childrenCount: number;
+  childAges: number[];
   filters: Record<FilterKey, boolean>;
 };
 
@@ -195,6 +196,8 @@ export function LiteApiHotelSearch({
   const [checkin, setCheckin] = useState(defaultCheckin);
   const [checkout, setCheckout] = useState(defaultCheckout);
   const [adults, setAdults] = useState(defaultAdults);
+  const [childrenCount, setChildrenCount] = useState(0);
+  const [childAges, setChildAges] = useState<number[]>([]);
   const [filters, setFilters] = useState<Record<FilterKey, boolean>>({
     freeCancel: false,
     breakfast: false,
@@ -223,6 +226,8 @@ export function LiteApiHotelSearch({
       setCheckin(cached.checkin ?? '');
       setCheckout(cached.checkout ?? '');
       setAdults(cached.adults ?? 1);
+      setChildrenCount(cached.childrenCount ?? 0);
+      setChildAges(cached.childAges ?? []);
       if (cached.filters) setFilters(cached.filters);
     }
     setCacheReady(true);
@@ -235,13 +240,25 @@ export function LiteApiHotelSearch({
       checkin,
       checkout,
       adults,
+      childrenCount,
+      childAges,
       filters,
     };
     saveSearchFormCache(cacheKey, payload);
     const onHide = () => saveSearchFormCache(cacheKey, payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [adults, cacheKey, cacheReady, checkin, checkout, cityName, filters]);
+  }, [
+    adults,
+    cacheKey,
+    cacheReady,
+    checkin,
+    checkout,
+    childAges,
+    childrenCount,
+    cityName,
+    filters,
+  ]);
 
   const hotels = useMemo(() => {
     if (!rawHotels) return null;
@@ -303,6 +320,8 @@ export function LiteApiHotelSearch({
         adults: String(Math.min(9, Math.max(1, adults))),
         currency: 'EUR',
       });
+      const ages = childAges.slice(0, childrenCount);
+      if (ages.length) qs.set('childrenAges', ages.join(','));
       // Filtri solo lato client dopo la risposta ampia
 
       const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {
@@ -330,22 +349,22 @@ export function LiteApiHotelSearch({
   };
 
   return (
-    <div className={cn('space-y-5', className)}>
+    <div className={cn('space-y-4', className)}>
       <div
         className={cn(
-          'overflow-hidden rounded-3xl',
+          'overflow-hidden rounded-2xl',
           compact
-            ? 'border border-border/60 bg-card p-3.5'
-            : 'bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/15'
+            ? 'border border-border/60 bg-card p-3'
+            : 'bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10'
         )}
       >
-        <div className={cn(!compact && 'rounded-[1.35rem] bg-card p-4 sm:p-5')}>
+        <div className={cn(!compact && 'rounded-[0.95rem] bg-card px-3 py-3 sm:px-3.5')}>
           <div
             className={cn(
-              'grid gap-3',
+              'grid gap-2',
               compact
                 ? 'grid-cols-1'
-                : 'sm:grid-cols-2 lg:grid-cols-[1.4fr_1.3fr_0.7fr_auto] lg:items-end'
+                : 'sm:grid-cols-2 lg:grid-cols-[1.35fr_1.25fr_0.95fr_auto] lg:items-end'
             )}
           >
             <AirportPlaceInput
@@ -377,22 +396,14 @@ export function LiteApiHotelSearch({
               onEndDateChange={setCheckout}
             />
 
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Ospiti
-              </span>
-              <div className="relative">
-                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="number"
-                  min={1}
-                  max={9}
-                  value={adults}
-                  onChange={(e) => setAdults(Number(e.target.value) || 1)}
-                  className="h-12 rounded-xl border-border bg-muted/40 pl-9"
-                />
-              </div>
-            </label>
+            <GuestsPicker
+              adults={adults}
+              childrenCount={childrenCount}
+              onAdultsChange={setAdults}
+              onChildrenChange={setChildrenCount}
+              childAges={childAges}
+              onChildAgesChange={setChildAges}
+            />
 
             <div className="flex items-end">
               <Button
@@ -411,7 +422,7 @@ export function LiteApiHotelSearch({
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2.5">
             <FilterChip
               active={filters.freeCancel}
               onClick={() => toggle('freeCancel')}
@@ -618,6 +629,7 @@ export function LiteApiHotelSearch({
                               checkin,
                               checkout,
                               adults,
+                              childrenAges: childAges.slice(0, childrenCount),
                               savedAt: Date.now(),
                             });
                             router.push('/prenota/hotel/checkout');

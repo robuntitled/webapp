@@ -97,6 +97,7 @@ export function HotelsResultsMap({
         center={center}
         zoom={12}
         scrollWheelZoom={false}
+        attributionControl={false}
         className="h-full w-full min-h-[280px]"
         style={{ zIndex: 0 }}
       >

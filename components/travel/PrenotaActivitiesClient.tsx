@@ -220,7 +220,7 @@ export function PrenotaActivitiesClient() {
     })) ?? null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PrenotaAffiliateSearchBar
         city={city}
         query={query}

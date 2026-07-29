@@ -180,7 +180,7 @@ export function AirportPlaceInput({
       : null;
 
   return (
-    <div ref={rootRef} className={cn('relative space-y-1.5', className)}>
+    <div ref={rootRef} className={cn('relative space-y-1', className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         {label}
       </span>
