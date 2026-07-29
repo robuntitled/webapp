@@ -229,10 +229,9 @@ function MapPinCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 p-3.5">
-        <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-3 p-3.5">
           {price ? (
-            <>
+            <div className="min-w-0 flex-1">
               <p className="m-0 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
                 {pin.bookingUrl ? 'A partire da' : 'Totale'}
               </p>
@@ -240,38 +239,37 @@ function MapPinCard({
                 {pricePrefix}
                 {price}
               </p>
-            </>
+            </div>
           ) : (
-            <p className="m-0 text-sm text-slate-500">Dettagli sul partner</p>
+            <div className="min-w-0 flex-1" />
           )}
-        </div>
 
-        {canBook ? (
-          pin.bookingUrl ? (
-            <a
-              href={pin.bookingUrl}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-[#1a3344] px-4 text-sm font-semibold text-white no-underline shadow-lg shadow-slate-900/20 transition hover:bg-[#243f52] hover:shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {cta}
-              <ExternalLink className="h-3.5 w-3.5 opacity-90" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              className="inline-flex h-11 shrink-0 items-center rounded-xl bg-[#1a3344] px-4 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-[#243f52] hover:shadow-xl"
-              onClick={(e) => {
-                e.stopPropagation();
-                onBookClick?.(pin.id);
-              }}
-            >
-              {cta}
-            </button>
-          )
-        ) : null}
-      </div>
+          {canBook ? (
+            pin.bookingUrl ? (
+              <a
+                href={pin.bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-[#1a3344] px-4 text-sm font-semibold text-white no-underline shadow-lg shadow-slate-900/20 transition hover:bg-[#243f52] hover:shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {cta}
+                <ExternalLink className="h-3.5 w-3.5 opacity-90" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="inline-flex h-11 shrink-0 items-center rounded-xl bg-[#1a3344] px-4 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-[#243f52] hover:shadow-xl"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBookClick?.(pin.id);
+                }}
+              >
+                {cta}
+              </button>
+            )
+          ) : null}
+        </div>
     </article>
   );
 }

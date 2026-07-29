@@ -152,13 +152,52 @@ export function PrenotaAttractionsClient() {
     return pins;
   }, [visible, bookingPrefs]);
 
-  const fetchPage = async (start: number, append: boolean) => {
+  const requestPage = async (start: number) => {
     const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
-      return;
+      return null;
     }
+    const res = await fetch('/api/attractions/search', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        city: cityLabel,
+        query: query.trim(),
+        minRating: 0,
+        sort: sort === 'rating' ? 'rating' : 'default',
+        start,
+      }),
+    });
+    const data = (await res.json()) as {
+      results?: AttractionHit[];
+      destinationName?: string | null;
+      warnings?: string[];
+      error?: string;
+      nextStart?: number | null;
+      hasMore?: boolean;
+    };
+    if (!res.ok) {
+      toast.error(data.error ?? 'Ricerca fallita');
+      return null;
+    }
+    return {
+      page: data.results ?? [],
+      nextStart: data.nextStart ?? null,
+      hasMore: Boolean(data.hasMore),
+      destinationName: data.destinationName,
+      warnings: data.warnings,
+    };
+  };
 
+  const mergePages = (prev: AttractionHit[] | null, page: AttractionHit[]) => {
+    if (!prev) return page;
+    const seen = new Set(prev.map((r) => r.id));
+    return [...prev, ...page.filter((r) => !seen.has(r.id))];
+  };
+
+  const fetchPage = async (start: number, append: boolean) => {
     if (append) setLoadingMore(true);
     else {
       setLoading(true);
@@ -167,42 +206,34 @@ export function PrenotaAttractionsClient() {
     }
 
     try {
-      const res = await fetch('/api/attractions/search', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          city: cityLabel,
-          query: query.trim(),
-          minRating: 0,
-          sort: sort === 'rating' ? 'rating' : 'default',
-          start,
-        }),
-      });
-      const data = (await res.json()) as {
-        results?: AttractionHit[];
-        destinationName?: string | null;
-        warnings?: string[];
-        error?: string;
-        nextStart?: number | null;
-        hasMore?: boolean;
-      };
-      if (!res.ok) {
-        toast.error(data.error ?? 'Ricerca fallita');
-        return;
-      }
+      const first = await requestPage(start);
+      if (!first) return;
+
       if (!append) {
-        for (const w of data.warnings ?? []) toast.message(w);
-        setDestinationName(data.destinationName ?? null);
+        for (const w of first.warnings ?? []) toast.message(w);
+        setDestinationName(first.destinationName ?? null);
       }
-      const page = data.results ?? [];
-      setResults((prev) => {
-        if (!append || !prev) return page;
-        const seen = new Set(prev.map((r) => r.id));
-        return [...prev, ...page.filter((r) => !seen.has(r.id))];
-      });
-      setNextStart(data.nextStart ?? null);
-      setHasMore(Boolean(data.hasMore));
+
+      let merged = first.page;
+      let cursor = first.nextStart;
+      let more = first.hasMore;
+
+      if (!append && more && cursor != null) {
+        const second = await requestPage(cursor);
+        if (second) {
+          merged = mergePages(merged, second.page);
+          cursor = second.nextStart;
+          more = second.hasMore;
+        }
+      }
+
+      if (append) {
+        setResults((prev) => mergePages(prev, first.page));
+      } else {
+        setResults(merged);
+      }
+      setNextStart(cursor);
+      setHasMore(more);
     } catch {
       toast.error('Errore di rete');
     } finally {
@@ -228,7 +259,7 @@ export function PrenotaAttractionsClient() {
         .filter(Boolean)
         .join(' · '),
       bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
-      ctaLabel: 'Apri',
+      ctaLabel: 'Prenota',
     })) ?? null;
 
   return (
@@ -297,11 +328,11 @@ export function PrenotaAttractionsClient() {
               ))}
             </ul>
             {hasMore && nextStart != null ? (
-              <div className="flex justify-center pt-1">
+              <div className="flex justify-center pt-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-xl"
+                  className="h-11 min-w-[220px] rounded-xl font-semibold"
                   disabled={loadingMore}
                   onClick={() => void fetchPage(nextStart, true)}
                 >

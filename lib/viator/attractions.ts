@@ -42,6 +42,8 @@ type AttractionsSearchResponse = {
 };
 
 export const ATTRACTIONS_PAGE_SIZE = 30;
+/** Max start index → ~10 pagine × 30 (cap API Viator) */
+const ATTRACTIONS_MAX_START = 30 * 10;
 
 type FreetextAttractions = {
   attractions?: {
@@ -213,7 +215,7 @@ export async function searchViatorAttractions(params: {
     const results = mapped.filter((x): x is AttractionHit => x != null);
     const nextStart = start + pageSize;
     const hasMore =
-      results.length >= pageSize && nextStart <= 30 * 5;
+      results.length >= pageSize && nextStart <= ATTRACTIONS_MAX_START;
     return {
       results,
       destinationName: null,
@@ -239,6 +241,7 @@ export async function searchViatorAttractions(params: {
     .filter((x): x is AttractionHit => x != null);
   const totalCount =
     typeof data.totalCount === 'number' ? data.totalCount : null;
+  const rawPageCount = data.attractions?.length ?? 0;
 
   // Solo attrazioni vicino al centro destinazione (niente day-trip tipo Pompei su Roma)
   results = filterHitsNearDestination(results, {
@@ -259,11 +262,9 @@ export async function searchViatorAttractions(params: {
 
   const nextStart = start + pageSize;
   const hasMore =
-    (data.attractions?.length ?? 0) >= pageSize &&
     (totalCount != null
       ? nextStart <= totalCount
-      : (data.attractions?.length ?? 0) >= pageSize) &&
-    nextStart <= 30 * 5;
+      : rawPageCount >= pageSize) && nextStart <= ATTRACTIONS_MAX_START;
 
   return {
     results,

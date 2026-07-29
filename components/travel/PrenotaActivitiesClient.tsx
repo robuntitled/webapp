@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,12 +22,6 @@ import {
   saveSearchFormCache,
 } from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
-
-const HotelsResultsMap = dynamic(
-  () =>
-    import('@/components/travel/HotelsResultsMap').then((m) => m.HotelsResultsMap),
-  { ssr: false }
-);
 
 type ActivityHit = {
   id: string;
@@ -57,6 +50,14 @@ type FormCache = {
   sort: AffiliateSortKey;
 };
 
+type PageResult = {
+  page: ActivityHit[];
+  nextStart: number | null;
+  hasMore: boolean;
+  destinationName?: string | null;
+  warnings?: string[];
+};
+
 function formatDuration(mins: number | null | undefined) {
   if (mins == null || mins <= 0) return null;
   if (mins < 60) return `${mins} min`;
@@ -82,7 +83,6 @@ export function PrenotaActivitiesClient() {
   const [hasMore, setHasMore] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [sort, setSort] = useState<AffiliateSortKey>('default');
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
     const cached = loadSearchFormCache<FormCache>('activities');
@@ -131,80 +131,88 @@ export function PrenotaActivitiesClient() {
     [startDate, endDate, adults, children]
   );
 
-  const mapPins = useMemo(() => {
-    if (!visible) return [];
-    return visible
-      .filter(
-        (r): r is ActivityHit & { lat: number; lng: number } =>
-          typeof r.lat === 'number' && typeof r.lng === 'number'
-      )
-      .map((r) => ({
-        id: r.id,
-        name: r.title,
-        lat: r.lat,
-        lng: r.lng,
-        price: r.priceFrom ?? undefined,
-        currency: r.currency ?? undefined,
-        imageUrl: r.imageUrl,
-        rating: r.rating,
-        ratingCount: r.ratingCount,
-        subtitle: formatDuration(r.durationMinutes),
-        bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
-        ctaLabel: 'Prenota',
-      }));
-  }, [visible, bookingPrefs]);
-
-  const fetchPage = async (start: number, append: boolean) => {
+  const requestPage = async (start: number): Promise<PageResult | null> => {
     const cityLabel = city.trim();
     if (!cityLabel) {
       toast.error('Inserisci una città');
-      return;
+      return null;
     }
+    const res = await fetch('/api/activities/search', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        city: cityLabel,
+        query: query.trim(),
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        start,
+      }),
+    });
+    const data = (await res.json()) as {
+      results?: ActivityHit[];
+      destinationName?: string | null;
+      warnings?: string[];
+      error?: string;
+      nextStart?: number | null;
+      hasMore?: boolean;
+    };
+    if (!res.ok) {
+      toast.error(data.error ?? 'Ricerca fallita');
+      return null;
+    }
+    return {
+      page: data.results ?? [],
+      nextStart: data.nextStart ?? null,
+      hasMore: Boolean(data.hasMore),
+      destinationName: data.destinationName,
+      warnings: data.warnings,
+    };
+  };
 
+  const mergePages = (prev: ActivityHit[] | null, page: ActivityHit[]) => {
+    if (!prev) return page;
+    const seen = new Set(prev.map((r) => r.id));
+    return [...prev, ...page.filter((r) => !seen.has(r.id))];
+  };
+
+  const fetchPage = async (start: number, append: boolean) => {
     if (append) setLoadingMore(true);
     else {
       setLoading(true);
       setResults(null);
-      setHighlightedId(null);
     }
 
     try {
-      const res = await fetch('/api/activities/search', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          city: cityLabel,
-          query: query.trim(),
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          start,
-        }),
-      });
-      const data = (await res.json()) as {
-        results?: ActivityHit[];
-        destinationName?: string | null;
-        warnings?: string[];
-        error?: string;
-        nextStart?: number | null;
-        hasMore?: boolean;
-      };
-      if (!res.ok) {
-        toast.error(data.error ?? 'Ricerca fallita');
-        return;
-      }
+      const first = await requestPage(start);
+      if (!first) return;
+
       if (!append) {
-        for (const w of data.warnings ?? []) toast.message(w);
-        setDestinationName(data.destinationName ?? null);
+        for (const w of first.warnings ?? []) toast.message(w);
+        setDestinationName(first.destinationName ?? null);
       }
-      const page = data.results ?? [];
-      setResults((prev) => {
-        if (!append || !prev) return page;
-        const seen = new Set(prev.map((r) => r.id));
-        return [...prev, ...page.filter((r) => !seen.has(r.id))];
-      });
-      setNextStart(data.nextStart ?? null);
-      setHasMore(Boolean(data.hasMore));
+
+      let merged = first.page;
+      let cursor = first.nextStart;
+      let more = first.hasMore;
+
+      // Prima ricerca: carica subito una seconda pagina se disponibile
+      if (!append && more && cursor != null) {
+        const second = await requestPage(cursor);
+        if (second) {
+          merged = mergePages(merged, second.page);
+          cursor = second.nextStart;
+          more = second.hasMore;
+        }
+      }
+
+      if (append) {
+        setResults((prev) => mergePages(prev, first.page));
+      } else {
+        setResults(merged);
+      }
+      setNextStart(cursor);
+      setHasMore(more);
     } catch {
       toast.error('Errore di rete');
     } finally {
@@ -226,7 +234,7 @@ export function PrenotaActivitiesClient() {
       currency: r.currency,
       metaRight: [formatDuration(r.durationMinutes)].filter(Boolean).join(' · '),
       bookingUrl: withAffiliateBookingPrefs(r.bookingUrl, bookingPrefs),
-      ctaLabel: 'Apri',
+      ctaLabel: 'Prenota',
     })) ?? null;
 
   return (
@@ -260,7 +268,6 @@ export function PrenotaActivitiesClient() {
           <span className="font-medium text-foreground">{destinationName}</span>
           {' · '}
           {cards?.length ?? 0} risultati
-          {mapPins.length > 0 ? ` · ${mapPins.length} sulla mappa` : null}
         </p>
       )}
 
@@ -272,63 +279,32 @@ export function PrenotaActivitiesClient() {
       )}
 
       {cards && (
-        <div
-          className={cn(
-            'grid gap-4',
-            mapPins.length > 0 && 'lg:grid-cols-[1fr_minmax(300px,38%)]'
-          )}
-        >
-          <div className="space-y-3.5">
-            <ul className="grid gap-3.5">
-              {cards.map((item) => (
-                <li
-                  key={item.id}
-                  id={`activity-${item.id}`}
-                  onMouseEnter={() => setHighlightedId(item.id)}
-                  className={cn(
-                    'rounded-2xl transition',
-                    highlightedId === item.id && 'ring-2 ring-primary/35'
-                  )}
-                >
-                  <PrenotaAffiliateResultCard item={item} />
-                </li>
-              ))}
-            </ul>
-            {hasMore && nextStart != null ? (
-              <div className="flex justify-center pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-xl"
-                  disabled={loadingMore}
-                  onClick={() => void fetchPage(nextStart, true)}
-                >
-                  {loadingMore ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Caricamento…
-                    </>
-                  ) : (
-                    'Carica altri'
-                  )}
-                </Button>
-              </div>
-            ) : null}
-          </div>
-          {mapPins.length > 0 ? (
-            <div className="lg:sticky lg:top-24 lg:self-start">
-              <HotelsResultsMap
-                pins={mapPins}
-                highlightedId={highlightedId}
-                onPinClick={(id) => {
-                  setHighlightedId(id);
-                  document
-                    .getElementById(`activity-${id}`)
-                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
-                emptyLabel="Coordinate attività non disponibili"
-                className="h-[min(70vh,640px)] min-h-[320px]"
-              />
+        <div className="space-y-3.5">
+          <ul className="grid gap-3.5">
+            {cards.map((item) => (
+              <li key={item.id} id={`activity-${item.id}`}>
+                <PrenotaAffiliateResultCard item={item} />
+              </li>
+            ))}
+          </ul>
+          {hasMore && nextStart != null ? (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 min-w-[220px] rounded-xl font-semibold"
+                disabled={loadingMore}
+                onClick={() => void fetchPage(nextStart, true)}
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Caricamento…
+                  </>
+                ) : (
+                  'Carica altri'
+                )}
+              </Button>
             </div>
           ) : null}
         </div>

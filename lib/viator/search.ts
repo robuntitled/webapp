@@ -34,7 +34,9 @@ type FreetextResponse = {
   };
 };
 
-export const ACTIVITIES_PAGE_SIZE = 48;
+export const ACTIVITIES_PAGE_SIZE = 50;
+/** Max start index (1-based) → ~10 pagine × 50 */
+const ACTIVITIES_MAX_START = 50 * 10;
 
 function pickImage(p: ViatorProduct): string | null {
   const images = p.images ?? [];
@@ -198,10 +200,11 @@ export async function searchViatorActivities(params: {
     .filter((x): x is ActivityOffer => x != null);
 
   const nextStart = start + pageSize;
+  // Usa il conteggio grezzo API (non i soli mappati) + totalCount quando c’è
   const hasMore =
-    results.length >= pageSize &&
-    (totalCount == null || nextStart <= totalCount) &&
-    nextStart <= 50 * 5; // max 5 pagine
+    (totalCount != null
+      ? nextStart <= totalCount
+      : products.length >= pageSize) && nextStart <= ACTIVITIES_MAX_START;
 
   return {
     results,
