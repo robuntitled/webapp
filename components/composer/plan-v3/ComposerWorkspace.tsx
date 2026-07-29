@@ -5,7 +5,12 @@ import { MapColumn } from '@/components/composer/plan-v3/MapColumn';
 import type { DayTrackerSelection } from '@/components/composer/plan-v3/DayTracker';
 import type { MapPin } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
-import type { ComposerBlock, ComposerDay, ComposerDraft } from '@/types/composer';
+import type {
+  ComposerBlock,
+  ComposerDay,
+  ComposerDraft,
+  ComposerGenerateResponse,
+} from '@/types/composer';
 
 type ComposerWorkspaceProps = {
   draft: ComposerDraft;
@@ -31,6 +36,10 @@ type ComposerWorkspaceProps = {
   onReorderBlocks: (fromIndex: number, toIndex: number) => void;
   onAddTransport: () => void;
   onAddHotel: () => void;
+  onApplyGeneratedDay: (
+    response: ComposerGenerateResponse,
+    mode: 'replace' | 'append'
+  ) => void;
   onUpdateBlockNotes: (blockId: string, notes: string) => void;
   onAddAttachment: (blockId: string, label: string, url: string) => void;
   onRemoveAttachment: (blockId: string, id: string) => void;

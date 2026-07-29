@@ -39,6 +39,7 @@ import type {
   ComposerBlock,
   ComposerDay,
   ComposerDraft,
+  ComposerGenerateResponse,
 } from '@/types/composer';
 import { toast } from 'sonner';
 
@@ -423,6 +424,35 @@ export function ComposerPlanStep({
     }));
   };
 
+  const applyGeneratedDay = (
+    response: ComposerGenerateResponse,
+    mode: 'replace' | 'append'
+  ) => {
+    const day = activeDay ?? ensureActiveDay();
+    if (!day) return;
+    updateDay(day.dayIndex, (d) => {
+      const blocks =
+        mode === 'replace'
+          ? response.blocks.map((b, i) => ({ ...b, sortOrder: i }))
+          : [
+              ...d.blocks,
+              ...response.blocks.map((b, i) => ({
+                ...b,
+                sortOrder: d.blocks.length + i,
+              })),
+            ];
+      return {
+        ...d,
+        title: mode === 'replace' ? response.suggestedTitle : d.title,
+        blocks,
+      };
+    });
+    if (response.blocks[0]) {
+      setHighlightedPinId(response.blocks[0].id);
+    }
+    setMapMode('day');
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <ComposerWorkspace
@@ -476,6 +506,7 @@ export function ComposerPlanStep({
           setTravelMode('hotel');
           setTravelOpen(true);
         }}
+        onApplyGeneratedDay={applyGeneratedDay}
         onEditBlock={setEditingBlock}
         onRemoveBlock={removeBlock}
         onHoverBlock={setHighlightedPinId}

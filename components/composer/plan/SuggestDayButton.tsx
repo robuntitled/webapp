@@ -141,7 +141,7 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
           size="sm"
           disabled={loading}
           onClick={() => void handleSuggest('replace')}
-          className="rounded-full h-9 px-4 bg-gradient-to-r from-accent to-orange-500 hover:from-accent/90 hover:to-orange-500/90 text-white font-semibold shadow-lg shadow-accent/25 border-0"
+          className="h-11 rounded-xl px-4 bg-gradient-to-r from-violet-600 to-orange-500 hover:brightness-110 text-white font-semibold shadow-lg shadow-orange-500/20 border-0"
         >
           {loading && activeMode === 'replace' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -158,7 +158,7 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
             variant="outline"
             disabled={loading}
             onClick={() => void handleSuggest('append')}
-            className="rounded-full h-9 px-3.5 border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:text-accent font-medium"
+            className="h-11 rounded-xl px-3.5 border-white/15 bg-white/5 text-white hover:bg-white/10 font-medium"
           >
             {loading && activeMode === 'append' ? (
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />

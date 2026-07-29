@@ -8,9 +8,15 @@ import { DayTimeline } from '@/components/composer/plan-v3/DayTimeline';
 import { NextDayCta } from '@/components/composer/plan-v3/NextDayCta';
 import { FullTripMapsCta } from '@/components/composer/plan-v3/FullTripMapsCta';
 import { DayNotesField } from '@/components/composer/plan/DayNotesField';
+import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
 import { formatComposerDayLabel } from '@/lib/composer/days';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
-import type { ComposerBlock, ComposerDay, ComposerDraft } from '@/types/composer';
+import type {
+  ComposerBlock,
+  ComposerDay,
+  ComposerDraft,
+  ComposerGenerateResponse,
+} from '@/types/composer';
 import { Bus, ChevronLeft, ChevronRight, Hotel, Plus, Sparkles } from 'lucide-react';
 
 type ItineraryColumnProps = {
@@ -34,6 +40,10 @@ type ItineraryColumnProps = {
   onReorderBlocks: (fromIndex: number, toIndex: number) => void;
   onAddTransport: () => void;
   onAddHotel: () => void;
+  onApplyGeneratedDay: (
+    response: ComposerGenerateResponse,
+    mode: 'replace' | 'append'
+  ) => void;
   onUpdateBlockNotes: (blockId: string, notes: string) => void;
   onAddAttachment: (blockId: string, label: string, url: string) => void;
   onRemoveAttachment: (blockId: string, id: string) => void;
@@ -63,6 +73,7 @@ export function ItineraryColumn({
   onReorderBlocks,
   onAddTransport,
   onAddHotel,
+  onApplyGeneratedDay,
   onUpdateBlockNotes,
   onAddAttachment,
   onRemoveAttachment,
@@ -169,7 +180,7 @@ export function ItineraryColumn({
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   onClick={onAddActivity}
@@ -196,6 +207,11 @@ export function ItineraryColumn({
                   <Hotel className="mr-1.5 h-4 w-4" />
                   Hotel
                 </Button>
+                <SuggestDayButton
+                  draft={draft}
+                  activeDay={activeDay}
+                  onApplied={onApplyGeneratedDay}
+                />
               </div>
 
               <DayTimeline
