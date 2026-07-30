@@ -93,8 +93,9 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10">
-        <div className="overflow-hidden rounded-[0.95rem] bg-card">
+      <div className="overflow-visible rounded-2xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10">
+        {/* overflow-visible: il datepicker Omio non deve essere clipato */}
+        <div className="overflow-visible rounded-[0.95rem] bg-card">
           <div className="flex items-center gap-2.5 border-b border-border/40 px-4 py-2.5 sm:px-5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Icon className="h-4 w-4" />
@@ -109,11 +110,11 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
             </div>
           </div>
 
-          <div className="px-3 py-3 sm:px-4 sm:py-4">
+          <div className="overflow-visible px-3 py-3 pb-8 sm:px-4 sm:py-4 sm:pb-10">
             {!configured ? (
               <OmioSetupBanner />
             ) : (
-              <div className="relative min-h-[220px]">
+              <div className="relative min-h-[220px] overflow-visible">
                 {loading ? (
                   <div className="absolute inset-0 z-10 flex flex-col justify-center rounded-xl bg-card/90 px-1 backdrop-blur-[2px]">
                     <OmioWidgetSkeleton />
@@ -121,7 +122,7 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
                 ) : null}
                 <div
                   key={mountKey}
-                  className="omio-nemo-shell min-h-[220px] w-full [&_iframe]:w-full [&_iframe]:max-w-full"
+                  className="omio-nemo-shell relative z-20 min-h-[220px] w-full overflow-visible [&_iframe]:w-full [&_iframe]:max-w-full"
                 >
                   <div
                     data-omio-widget="true"

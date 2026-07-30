@@ -5,6 +5,28 @@
   --secondary-color: oklch(0.38 0.08 220);
   --font-family: var(--font-dm-sans), system-ui, sans-serif;
   --background: transparent;
+  overflow: visible !important;
+  position: relative;
+  z-index: 20;
+}
+
+/* Datepicker / dropdown Omio: fuori dal clip del card */
+.omio-nemo-shell,
+.omio-nemo-shell form,
+.omio-nemo-shell [class*='widget-'],
+.omio-nemo-shell [class*='search-widget'] {
+  overflow: visible !important;
+}
+
+.omio-nemo-shell [class*='calendar'],
+.omio-nemo-shell [class*='Calendar'],
+.omio-nemo-shell [class*='datepicker'],
+.omio-nemo-shell [class*='DatePicker'],
+.omio-nemo-shell [class*='popover'],
+.omio-nemo-shell [class*='dropdown'],
+.omio-nemo-shell [class*='Popup'],
+.omio-nemo-shell [class*='popup'] {
+  z-index: 80 !important;
 }
 
 .dark .omio-nemo-shell {
