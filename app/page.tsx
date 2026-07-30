@@ -8,6 +8,7 @@ import { mapAuthError } from '@/lib/auth/oauth-errors';
 import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
 import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
 import { HeroBackground } from '@/components/brand/HeroBackground';
+import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -215,56 +216,70 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen">
-      <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="gradient" />
+      <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="gradient" parallax />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
         {/* Brand panel — visibile su desktop */}
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-end p-12 pb-20">
-          <div className="mb-6 flex items-center gap-3">
-            <Image src="/assets/logo.png" alt="" width={48} height={48} className="rounded-xl" />
-            <span className="font-display text-3xl font-semibold text-white">NomadLink</span>
-          </div>
-          <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
-            Viaggia insieme. Organizza meglio.
-          </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-white/75">
-            Scopri viaggi di gruppo, crea itinerari con l’AI e prenota i voli nello stesso posto.
-          </p>
+          <ScrollReveal variant="decor">
+            <div className="mb-6 flex items-center gap-3">
+              <Image src="/assets/logo.png" alt="" width={48} height={48} className="rounded-xl" />
+              <span className="font-display text-3xl font-semibold text-white">NomadLink</span>
+            </div>
+          </ScrollReveal>
+          <ScrollReveal variant="title">
+            <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
+              Viaggia insieme. Organizza meglio.
+            </h1>
+          </ScrollReveal>
+          <ScrollReveal variant="title" stagger={1}>
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-white/75">
+              Scopri viaggi di gruppo, crea itinerari con l’AI e prenota i voli nello stesso posto.
+            </p>
+          </ScrollReveal>
           <ul className="mt-10 max-w-md space-y-3 text-sm text-white/70">
-            <li className="flex items-start gap-3">
-              <Users className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
-              <span>Unisciti a crew aperte o invita i tuoi amici</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <Map className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
-              <span>Componi il giorno per giorno su mappa con l’AI</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <Plane className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
-              <span>Prenota i voli; hotel e luoghi a supporto del viaggio</span>
-            </li>
+            {[
+              { Icon: Users, text: 'Unisciti a crew aperte o invita i tuoi amici' },
+              { Icon: Map, text: 'Componi il giorno per giorno su mappa con l’AI' },
+              { Icon: Plane, text: 'Prenota i voli; hotel e luoghi a supporto del viaggio' },
+            ].map(({ Icon, text }, i) => (
+              <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
+                <div className="flex items-start gap-3">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
+                  <span>{text}</span>
+                </div>
+              </ScrollReveal>
+            ))}
           </ul>
         </div>
 
         {/* Form panel */}
         <div className="flex flex-1 items-center justify-center px-4 py-16 lg:py-12">
-          <div className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
+          <ScrollReveal variant="card" className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
             <div className="text-center lg:text-left">
-              <div className="mb-4 flex items-center justify-center gap-2 lg:hidden">
-                <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-lg" />
-                <span className="font-display text-2xl font-semibold">NomadLink</span>
-              </div>
-              <p className="mb-3 text-sm leading-relaxed text-muted-foreground lg:hidden">
-                Viaggi di gruppo, itinerari AI e prenotazione voli — in un solo posto.
-              </p>
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
-              </h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                {isRegisterMode
-                  ? 'Inizia a organizzare o unirti a un viaggio'
-                  : 'Accedi per scoprire, creare e prenotare'}
-              </p>
+              <ScrollReveal variant="decor">
+                <div className="mb-4 flex items-center justify-center gap-2 lg:hidden">
+                  <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-lg" />
+                  <span className="font-display text-2xl font-semibold">NomadLink</span>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal variant="title" stagger={1}>
+                <p className="mb-3 text-sm leading-relaxed text-muted-foreground lg:hidden">
+                  Viaggi di gruppo, itinerari AI e prenotazione voli — in un solo posto.
+                </p>
+              </ScrollReveal>
+              <ScrollReveal variant="title">
+                <h2 className="font-display text-2xl font-semibold text-foreground">
+                  {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
+                </h2>
+              </ScrollReveal>
+              <ScrollReveal variant="card" stagger={1}>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  {isRegisterMode
+                    ? 'Inizia a organizzare o unirti a un viaggio'
+                    : 'Accedi per scoprire, creare e prenotare'}
+                </p>
+              </ScrollReveal>
             </div>
 
             <div className="space-y-2">
@@ -416,7 +431,7 @@ export default function LoginPage() {
                 {isRegisterMode ? 'Accedi' : 'Registrati'}
               </button>
             </p>
-          </div>
+          </ScrollReveal>
         </div>
       </div>
     </main>

@@ -15,6 +15,7 @@ export default async function DashboardPage() {
       <HeroBackground
         images={[BRAND_IMAGES.heroes.dashboard, ...BRAND_IMAGES.heroes.slideshow.slice(1, 4)]}
         overlay="gradient"
+        parallax
       />
       <DashboardClient initialTrips={trips} session={session} />
     </div>

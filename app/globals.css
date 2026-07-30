@@ -924,4 +924,81 @@
   .card-travel {
     @apply rounded-2xl border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden;
   }
+
+  /* ── Premium scroll-linked motion (homepage) ── */
+  .nl-scroll-reveal-fallback {
+    will-change: transform, opacity;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .nl-scroll-reveal-title {
+        animation: nl-reveal-title linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 38%;
+      }
+
+      .nl-scroll-reveal-card {
+        animation: nl-reveal-card linear both;
+        animation-timeline: view();
+        animation-range: entry calc(6% + var(--nl-stagger, 0) * 4%) cover calc(42% + var(--nl-stagger, 0) * 4%);
+      }
+
+      .nl-scroll-reveal-decor {
+        animation: nl-reveal-decor linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 50%;
+      }
+    }
+
+    @supports (animation-timeline: scroll()) {
+      .nl-scroll-parallax-hero .nl-hero-slide-active {
+        animation: nl-hero-parallax linear both;
+        animation-timeline: scroll();
+        animation-range: 0% 100%;
+      }
+    }
+  }
+
+  @keyframes nl-reveal-title {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 28px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes nl-reveal-card {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes nl-reveal-decor {
+    from {
+      opacity: 0.5;
+      transform: translate3d(0, 10px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes nl-hero-parallax {
+    from {
+      transform: translate3d(0, 0, 0) scale(1.06);
+    }
+    to {
+      transform: translate3d(0, -6%, 0) scale(1.1);
+    }
+  }
 }
