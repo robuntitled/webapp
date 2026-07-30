@@ -1,0 +1,48 @@
+/* NomadLink scoped overrides for Omio Nemo search widget */
+
+.omio-nemo-shell {
+  --primary-color: oklch(0.38 0.08 220);
+  --secondary-color: oklch(0.38 0.08 220);
+  --font-family: var(--font-dm-sans), system-ui, sans-serif;
+  --background: transparent;
+}
+
+.dark .omio-nemo-shell {
+  --primary-color: oklch(0.72 0.06 215);
+  --secondary-color: oklch(0.55 0.1 215);
+}
+
+/* Drop Omio co-branding — NomadLink header covers attribution */
+.omio-nemo-shell [class*='branding-container'],
+.omio-nemo-shell [class*='logo-wrapper'] {
+  display: none !important;
+}
+
+/* Avoid double bordered box inside our gradient shell */
+.omio-nemo-shell [class*='widget-'] {
+  border: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Softer field chrome (best-effort; Omio uses high-specificity rules) */
+.omio-nemo-shell.omio-nemo-shell form[class^='omio-search-widget-nemo'] input,
+.omio-nemo-shell.omio-nemo-shell form[class^='omio-search-widget-nemo'] [class*='dateInput'] {
+  border-radius: 0.75rem !important;
+}
+
+.dark .omio-nemo-shell.omio-nemo-shell form[class^='omio-search-widget-nemo'] input,
+.dark
+  .omio-nemo-shell.omio-nemo-shell
+  form[class^='omio-search-widget-nemo']
+  [class*='dateInput'] {
+  background-color: oklch(0.26 0.03 250) !important;
+  border-color: oklch(1 0 0 / 12%) !important;
+  color: oklch(0.97 0.005 95) !important;
+}
+
+/* Cerca button — NomadLink teal via --secondary-color; round corners */
+.omio-nemo-shell.omio-nemo-shell form[class^='omio-search-widget-nemo'] button[type='submit'] {
+  border-radius: 0.75rem !important;
+}
