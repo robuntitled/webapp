@@ -113,7 +113,10 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
                   data-omio-widget="true"
                   data-partner-id={partnerId}
                   data-default-travel-mode={travelMode}
+                  data-new-tab="true"
                   data-redirect={redirect}
+                  data-layout="fluid"
+                  style={{ width: '100%' }}
                 />
               </div>
             </div>
