@@ -1,62 +1,46 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  buildOmioIframeSrc,
-  buildOmioWidgetLoadOptions,
-  getOmioSubId,
+  DEFAULT_OMIO_PARTNER_ID,
+  DEFAULT_OMIO_REDIRECT,
+  getOmioNemoBundleUrls,
+  getOmioPartnerId,
+  getOmioRedirectUrl,
   isOmioWidgetConfigured,
-  resolveOmioWidgetScriptUrl,
+  omioTravelModeAttr,
 } from '@/lib/omio/config';
 
-describe('resolveOmioWidgetScriptUrl', () => {
-  it('prefers explicit script URL override', () => {
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_SCRIPT_URL', 'https://cdn.example/omio.js');
-    vi.stubEnv('NEXT_PUBLIC_OMIO_PARTNER_SLUG', 'nomadlink');
-    expect(resolveOmioWidgetScriptUrl()).toBe('https://cdn.example/omio.js');
-  });
-
-  it('builds URL from partner slug', () => {
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_SCRIPT_URL', '');
-    vi.stubEnv('NEXT_PUBLIC_OMIO_PARTNER_SLUG', 'nomadlink');
-    expect(resolveOmioWidgetScriptUrl()).toBe(
-      'https://widgets-v2.omio.com/nomadlink/widgets.js'
-    );
-  });
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
-describe('isOmioWidgetConfigured', () => {
-  it('is true with iframe src only', () => {
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_SCRIPT_URL', '');
+describe('Omio Nemo widget config', () => {
+  it('defaults partner id and redirect from Impact embed', () => {
+    vi.stubEnv('NEXT_PUBLIC_OMIO_PARTNER_ID', '');
     vi.stubEnv('NEXT_PUBLIC_OMIO_PARTNER_SLUG', '');
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_IFRAME_SRC', 'https://www.omio.com/widget');
+    vi.stubEnv('NEXT_PUBLIC_OMIO_REDIRECT_URL', '');
+    expect(getOmioPartnerId()).toBe(DEFAULT_OMIO_PARTNER_ID);
+    expect(getOmioRedirectUrl()).toBe(DEFAULT_OMIO_REDIRECT);
     expect(isOmioWidgetConfigured()).toBe(true);
   });
-});
 
-describe('buildOmioWidgetLoadOptions', () => {
-  it('includes transport mode and locale', () => {
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_LOCALE', 'it');
-    expect(buildOmioWidgetLoadOptions('train')).toMatchObject({
-      locale: 'it',
-      preferredTravelMode: 'train',
-      subId: 'prenota_treni',
-    });
+  it('honors env overrides', () => {
+    vi.stubEnv('NEXT_PUBLIC_OMIO_PARTNER_ID', 'custom-partner');
+    vi.stubEnv(
+      'NEXT_PUBLIC_OMIO_REDIRECT_URL',
+      'https://omio.sjv.io/c/1/2/3?u='
+    );
+    expect(getOmioPartnerId()).toBe('custom-partner');
+    expect(getOmioRedirectUrl()).toBe('https://omio.sjv.io/c/1/2/3?u=');
   });
-});
 
-describe('getOmioSubId', () => {
-  it('uses dedicated env per mode', () => {
-    vi.stubEnv('NEXT_PUBLIC_OMIO_SUBID_BUS', 'bus_tab');
-    expect(getOmioSubId('bus')).toBe('bus_tab');
-    expect(getOmioSubId('train')).toBe('prenota_treni');
+  it('builds Italian Nemo bundle URLs', () => {
+    const urls = getOmioNemoBundleUrls('it');
+    expect(urls.css).toContain('/bundle/it/bundle.css');
+    expect(urls.js).toContain('/bundle/it/bundle.js');
   });
-});
 
-describe('buildOmioIframeSrc', () => {
-  it('appends mode query params', () => {
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_IFRAME_SRC', 'https://www.omio.com/embed/search');
-    vi.stubEnv('NEXT_PUBLIC_OMIO_WIDGET_LOCALE', 'it');
-    const url = buildOmioIframeSrc('bus');
-    expect(url).toContain('preferredTravelMode=bus');
-    expect(url).toContain('locale=it');
+  it('maps travel mode attrs', () => {
+    expect(omioTravelModeAttr('bus')).toBe('bus');
+    expect(omioTravelModeAttr('train')).toBe('train');
   });
 });
