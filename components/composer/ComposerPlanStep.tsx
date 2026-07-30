@@ -40,6 +40,7 @@ import type {
   ComposerDay,
   ComposerDraft,
   ComposerGenerateResponse,
+  ComposerTripGenerateResponse,
 } from '@/types/composer';
 import { toast } from 'sonner';
 
@@ -453,6 +454,35 @@ export function ComposerPlanStep({
     setMapMode('day');
   };
 
+  /**
+   * Sostituisce l'intero itinerario con quello generato: ogni giorno riceve
+   * titolo + blocchi, poi i check-out hotel vengono riallineati alle notti.
+   */
+  const applyGeneratedTrip = (response: ComposerTripGenerateResponse) => {
+    const byIndex = new Map(response.days.map((d) => [d.dayIndex, d]));
+
+    const nextDays = draft.days.map((day) => {
+      const generated = byIndex.get(day.dayIndex);
+      if (!generated || generated.blocks.length === 0) return day;
+      return {
+        ...day,
+        title: generated.suggestedTitle || day.title,
+        blocks: generated.blocks.map((b, i) => ({ ...b, sortOrder: i })),
+      };
+    });
+
+    const synced = resyncAllHotelCheckouts(nextDays);
+    commitDays(synced.days);
+
+    if (onPatchDraft && response.tripTitle && !draft.title?.trim()) {
+      onPatchDraft({ title: response.tripTitle });
+    }
+
+    setSelection(1);
+    setMapMode('fullTrip');
+    setHighlightedPinId(null);
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <ComposerWorkspace
@@ -507,6 +537,7 @@ export function ComposerPlanStep({
           setTravelOpen(true);
         }}
         onApplyGeneratedDay={applyGeneratedDay}
+        onApplyGeneratedTrip={applyGeneratedTrip}
         onEditBlock={setEditingBlock}
         onRemoveBlock={removeBlock}
         onHoverBlock={setHighlightedPinId}

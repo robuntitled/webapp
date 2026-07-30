@@ -139,9 +139,10 @@ export function SuggestDayButton({ draft, activeDay, onApplied }: SuggestDayButt
         <Button
           type="button"
           size="sm"
+          variant="outline"
           disabled={loading}
           onClick={() => void handleSuggest('replace')}
-          className="h-11 rounded-xl px-4 bg-gradient-to-r from-violet-600 to-orange-500 hover:brightness-110 text-white font-semibold shadow-lg shadow-orange-500/20 border-0"
+          className="h-11 rounded-xl border-white/15 bg-white/5 px-4 font-medium text-white hover:bg-white/10"
         >
           {loading && activeMode === 'replace' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getGenerateJob, processGenerateJob } from '@/lib/composer/jobs';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,6 +31,7 @@ export async function GET(_request: Request, { params }: Params) {
     id: job.id,
     status: job.status,
     result: job.status === 'done' ? job.result : null,
+    progress: job.progress ?? null,
     error: job.error_message,
   });
 }

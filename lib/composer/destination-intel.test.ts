@@ -10,7 +10,28 @@ describe('resolveDestinationIntel', () => {
     });
 
     expect(intel.region).toBe('Marche');
-    expect(intel.nearestAirport.iata).toBe('AOI');
+    expect(intel.nearestAirport?.iata).toBe('AOI');
     expect(intel.places.some((p) => p.toLowerCase().includes('monte san giusto'))).toBe(true);
+  });
+
+  it('never falls back to a generic airport placeholder', () => {
+    const intel = resolveDestinationIntel('Sydney, Australia', {
+      label: 'Sydney',
+      country: 'Australia',
+      countryCode: 'AU',
+    });
+
+    expect(intel.nearestAirport?.iata).toBe('SYD');
+    expect(intel.nearestAirport?.label ?? '').not.toMatch(/più vicino/i);
+  });
+
+  it('leaves the airport empty when it cannot be resolved', () => {
+    const intel = resolveDestinationIntel('Villaggio remoto, Nowhereland', {
+      label: 'Villaggio remoto',
+      country: 'Nowhereland',
+      countryCode: 'ZZ',
+    });
+
+    expect(intel.nearestAirport).toBeNull();
   });
 });

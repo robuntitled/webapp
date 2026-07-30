@@ -38,10 +38,11 @@ function resolveTimeoutMs(baseUrl: string): number {
 function buildMessages(
   systemPrompt: string,
   userPrompt: string,
-  retrySuffix?: string
+  retrySuffix?: string,
+  jsonSuffix?: string
 ): Array<{ role: 'system' | 'user'; content: string }> {
   const config = getAiConfig();
-  const userContent = [userPrompt, DAY_PLAN_JSON_SUFFIX, retrySuffix]
+  const userContent = [userPrompt, jsonSuffix ?? DAY_PLAN_JSON_SUFFIX, retrySuffix]
     .filter(Boolean)
     .join('\n\n');
 
@@ -68,6 +69,7 @@ async function callOpenAiCompatibleOnce<T>(params: {
   userPrompt: string;
   maxOutputTokens: number;
   retrySuffix?: string;
+  jsonSuffix?: string;
 }): Promise<OpenAiStructuredResult<T>> {
   const config = getAiConfig();
   const url = `${params.baseUrl.replace(/\/$/, '')}/chat/completions`;
@@ -75,7 +77,12 @@ async function callOpenAiCompatibleOnce<T>(params: {
 
   const body: Record<string, unknown> = {
     model: params.model,
-    messages: buildMessages(params.systemPrompt, params.userPrompt, params.retrySuffix),
+    messages: buildMessages(
+      params.systemPrompt,
+      params.userPrompt,
+      params.retrySuffix,
+      params.jsonSuffix
+    ),
     temperature: 0.2,
     max_tokens: params.maxOutputTokens,
     stream: false,
@@ -146,6 +153,7 @@ export async function generateOpenAiCompatibleStructured<T>(params: {
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens?: number;
+  jsonSuffix?: string;
 }): Promise<OpenAiStructuredResult<T>> {
   const cooldownMs = await getQuotaCooldownRemainingMsAsync();
   if (cooldownMs > 0) {
@@ -171,6 +179,7 @@ export async function generateOpenAiCompatibleStructured<T>(params: {
         userPrompt: params.userPrompt,
         maxOutputTokens,
         retrySuffix,
+        jsonSuffix: params.jsonSuffix,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore AI';

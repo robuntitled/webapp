@@ -52,6 +52,7 @@ function specsForDay(ctx: MockDayContext, intel: DestinationIntel): { title: str
   const isFirst = ctx.dayIndex === 1;
   const isLast = ctx.dayIndex === ctx.totalDays;
   const airport = intel.nearestAirport;
+  const arrivalLabel = airport?.label ?? `${dest} — aeroporto da confermare`;
   const origin = homeIata(ctx);
 
   if (isFirst) {
@@ -61,20 +62,21 @@ function specsForDay(ctx: MockDayContext, intel: DestinationIntel): { title: str
       specs: [
         {
           type: 'flight',
-          title: `Volo ${origin} → ${airport.label}`,
+          title: airport ? `Volo ${origin} → ${airport.label}` : `Volo ${origin} → ${dest}`,
           timeSlot: 'morning',
           extra: {
             origin,
-            destination: airport.iata,
+            destination: airport?.iata,
+            needsAirport: !airport,
             duration: '1h 15m',
             originLabel: ctx.organizerOrigin?.city,
           },
         },
         {
           type: 'transport',
-          title: `Transfer ${airport.label} → ${dest}`,
+          title: `Transfer ${arrivalLabel} → ${dest}`,
           timeSlot: 'afternoon',
-          extra: { from: airport.label, to: dest, mode: 'auto', duration: '45m' },
+          extra: { from: arrivalLabel, to: dest, mode: 'auto', duration: '45m' },
         },
         {
           type: 'hotel',
@@ -124,17 +126,18 @@ function specsForDay(ctx: MockDayContext, intel: DestinationIntel): { title: str
         },
         {
           type: 'transport',
-          title: `Transfer ${dest} → ${airport.label}`,
+          title: `Transfer ${dest} → ${arrivalLabel}`,
           timeSlot: 'afternoon',
-          extra: { from: dest, to: airport.label, mode: 'auto', duration: '45m' },
+          extra: { from: dest, to: arrivalLabel, mode: 'auto', duration: '45m' },
         },
         {
           type: 'flight',
-          title: `Volo ${airport.iata} → ${origin}`,
+          title: airport ? `Volo ${airport.iata} → ${origin}` : `Volo di rientro → ${origin}`,
           timeSlot: 'afternoon',
           extra: {
-            origin: airport.iata,
+            origin: airport?.iata,
             destination: origin,
+            needsAirport: !airport,
             duration: '1h 15m',
             originLabel: ctx.organizerOrigin?.city,
           },

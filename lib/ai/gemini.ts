@@ -56,10 +56,16 @@ async function callGeminiOnce<T>(params: {
   fetchTimeoutMs: number;
   retrySuffix?: string;
   useResponseSchema?: boolean;
+  responseSchema?: Record<string, unknown>;
+  jsonSuffix?: string;
 }): Promise<GeminiStructuredResult<T>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`;
 
-  const userPrompt = [params.userPrompt, DAY_PLAN_JSON_SUFFIX, params.retrySuffix]
+  const userPrompt = [
+    params.userPrompt,
+    params.jsonSuffix ?? DAY_PLAN_JSON_SUFFIX,
+    params.retrySuffix,
+  ]
     .filter(Boolean)
     .join('\n\n');
 
@@ -80,7 +86,7 @@ async function callGeminiOnce<T>(params: {
           maxOutputTokens: params.maxOutputTokens,
           responseMimeType: 'application/json',
           ...(params.useResponseSchema !== false
-            ? { responseSchema: aiDayPlanGeminiSchema }
+            ? { responseSchema: params.responseSchema ?? aiDayPlanGeminiSchema }
             : {}),
         },
       }),
@@ -135,6 +141,10 @@ export async function generateGeminiStructured<T>(params: {
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens?: number;
+  /** JSON Schema alternativo (default: piano giornaliero). */
+  responseSchema?: Record<string, unknown>;
+  /** Esempio JSON da appendere al prompt utente. */
+  jsonSuffix?: string;
 }): Promise<GeminiStructuredResult<T>> {
   const cooldownMs = await getQuotaCooldownRemainingMsAsync();
   if (cooldownMs > 0) {
@@ -177,6 +187,8 @@ export async function generateGeminiStructured<T>(params: {
           fetchTimeoutMs: Math.min(remainingMs, callBudgetMs),
           retrySuffix: attempt.retrySuffix,
           useResponseSchema: attempt.useResponseSchema,
+          responseSchema: params.responseSchema,
+          jsonSuffix: params.jsonSuffix,
         });
       } catch (error) {
         if (error instanceof GeminiQuotaError) {

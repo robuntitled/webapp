@@ -10,6 +10,7 @@ import type {
   ComposerDay,
   ComposerDraft,
   ComposerGenerateResponse,
+  ComposerTripGenerateResponse,
 } from '@/types/composer';
 
 type ComposerWorkspaceProps = {
@@ -40,6 +41,7 @@ type ComposerWorkspaceProps = {
     response: ComposerGenerateResponse,
     mode: 'replace' | 'append'
   ) => void;
+  onApplyGeneratedTrip: (response: ComposerTripGenerateResponse) => void;
   onUpdateBlockNotes: (blockId: string, notes: string) => void;
   onAddAttachment: (blockId: string, label: string, url: string) => void;
   onRemoveAttachment: (blockId: string, id: string) => void;

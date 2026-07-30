@@ -570,6 +570,77 @@ export function resolvePlaceExact(query: string): PlaceSuggestion | null {
   return country ?? null;
 }
 
+export type AirportInfo = {
+  iata: string;
+  /** Nome aeroporto (es. "Kingsford Smith") */
+  name: string;
+  city: string;
+  countryCode: string;
+  countryLabel: string;
+  /** Etichetta pronta per UI/prompt: "Sydney Kingsford Smith (SYD)" */
+  label: string;
+};
+
+function toAirportInfo(a: AirportDef): AirportInfo {
+  return {
+    iata: a.iata,
+    name: a.name,
+    city: a.city,
+    countryCode: a.countryCode,
+    countryLabel: a.countryLabel,
+    label: `${a.city} ${a.name} (${a.iata})`,
+  };
+}
+
+export function findAirportByIata(iata: string): AirportInfo | null {
+  const def = AIRPORT_BY_IATA.get(iata.trim().toUpperCase());
+  return def ? toAirportInfo(def) : null;
+}
+
+/** Aeroporti che servono una città (match esatto su nome città o alias). */
+export function findAirportsForCity(city: string): AirportInfo[] {
+  const q = normalize(city);
+  if (!q) return [];
+  return AIRPORTS.filter(
+    (a) =>
+      normalize(a.city) === q ||
+      (a.aliases ?? []).some((alias) => normalize(alias) === q)
+  ).map(toAirportInfo);
+}
+
+/** Hub principali di un paese, in ordine di importanza (primo = hub primario). */
+export function primaryAirportsForCountry(
+  countryCodeOrName: string,
+  limit = 3
+): AirportInfo[] {
+  const q = normalize(countryCodeOrName);
+  const country = uniqueCountries().find(
+    (c) =>
+      c.code.toLowerCase() === q ||
+      normalize(c.label) === q ||
+      c.aliases.some((a) => normalize(a) === q)
+  );
+  if (!country) return [];
+  return country.airports
+    .map((iata) => AIRPORT_BY_IATA.get(iata))
+    .filter((a): a is AirportDef => Boolean(a))
+    .map(toAirportInfo)
+    .slice(0, limit);
+}
+
+/** true se il testo è (solo) il nome/codice di un paese, non una città. */
+export function matchCountryOnly(value: string): { code: string; label: string } | null {
+  const q = normalize(value);
+  if (!q) return null;
+  const country = uniqueCountries().find(
+    (c) =>
+      c.code.toLowerCase() === q ||
+      normalize(c.label) === q ||
+      c.aliases.some((a) => normalize(a) === q)
+  );
+  return country ? { code: country.code, label: country.label } : null;
+}
+
 export function placeDisplayValue(place: PlaceSuggestion): string {
   if (place.kind === 'airport') return `${place.label} (${place.code})`;
   if (place.kind === 'country') return place.label;

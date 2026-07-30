@@ -150,6 +150,58 @@ export type ComposerGenerateMeta = {
   version: string;
 };
 
+/** Richiesta generazione itinerario completo (tutti i giorni in un job) */
+export type ComposerTripGenerateRequest = {
+  destination: string;
+  destinationMeta?: DestinationMeta;
+  startDate: string;
+  endDate: string;
+  /** Giorni presenti nel composer (date reali, anche se aggiunti a mano) */
+  days: Array<{ dayIndex: number; date: string; title?: string }>;
+  planningMode: 'solo' | 'group';
+  maxParticipants: number;
+  organizerOrigin?: ComposerOrigin;
+  crewOrigins?: ComposerOrigin[];
+  plannerProfile?: PlannerProfile;
+  /** false = sola andata (niente volo di rientro nell'ultimo giorno) */
+  roundtrip?: boolean;
+  tripId?: string;
+};
+
+export type ComposerTripDayResult = {
+  dayIndex: number;
+  date: string;
+  suggestedTitle: string;
+  blocks: ComposerBlock[];
+};
+
+/** Cosa è stato agganciato a dati reali (vs. solo struttura AI/smart) */
+export type ComposerTripEnrichment = {
+  flights: boolean;
+  hotels: boolean;
+  activities: boolean;
+  transfers: boolean;
+};
+
+export type ComposerTripGenerateResponse = {
+  tripTitle: string;
+  days: ComposerTripDayResult[];
+  quotes?: ComposerTravelQuotes;
+  warnings: string[];
+  meta: ComposerGenerateMeta & {
+    daysFilled: number;
+    blocksTotal: number;
+    enrichment: ComposerTripEnrichment;
+  };
+};
+
+/** Avanzamento job multi-giorno, mostrato nella UI durante l'attesa */
+export type ComposerJobProgress = {
+  current: number;
+  total: number;
+  label: string;
+};
+
 /** Risposta JSON sync — consumata direttamente dalla UI */
 export type ComposerGenerateResponse = {
   dayIndex: number;

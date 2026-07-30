@@ -1,7 +1,10 @@
+import { resolveDestinationContext } from '@/lib/composer/destination-context';
+
 export type DestinationIntel = {
   region: string;
   vibe: string;
-  nearestAirport: { iata: string; label: string };
+  /** null quando non riusciamo a risolvere un aeroporto reale (mai un segnaposto). */
+  nearestAirport: { iata: string; label: string } | null;
   hubCity: string;
   places: string[];
   foods: string[];
@@ -141,11 +144,14 @@ export function resolveDestinationIntel(
 
   const label = meta?.label ?? destination.split(',')[0]?.trim() ?? destination;
   if (!regionKey && meta?.countryCode !== 'IT') {
+    const ctx = resolveDestinationContext(destination, meta);
     return {
       region: meta?.country ?? 'Destinazione',
       vibe: 'esplorazione urbana e locale',
-      nearestAirport: { iata: 'ROM', label: 'Aeroporto internazionale più vicino' },
-      hubCity: label,
+      nearestAirport: ctx.airport
+        ? { iata: ctx.airport.iata, label: ctx.airport.label }
+        : null,
+      hubCity: ctx.cityLabel || label,
       places: [
         `Centro storico di ${label}`,
         'Mercato o quartiere autentico',
@@ -181,7 +187,7 @@ export function pickRotated<T>(items: T[], dayIndex: number, offset = 0): T {
 export function buildIntelPromptBlock(intel: DestinationIntel, destLabel: string): string {
   return [
     `${intel.region}: ${intel.vibe}`,
-    `airport=${intel.nearestAirport.iata}`,
+    `airport=${intel.nearestAirport?.iata ?? 'sconosciuto'}`,
     `hub=${intel.hubCity}`,
     `places=${intel.places.slice(0, 3).join(', ')}`,
     `food=${intel.foods.slice(0, 2).join(', ')}`,

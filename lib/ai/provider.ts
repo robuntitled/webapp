@@ -22,11 +22,15 @@ export class AiBudgetExceededError extends Error {
   }
 }
 
-async function callProvider<T>(params: {
+type ProviderCallParams = {
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens?: number;
-}): Promise<{
+  responseSchema?: Record<string, unknown>;
+  jsonSuffix?: string;
+};
+
+async function callProvider<T>(params: ProviderCallParams): Promise<{
   data: T;
   model: string;
   usage: { inputTokens: number; outputTokens: number };
@@ -34,7 +38,12 @@ async function callProvider<T>(params: {
   const config = getAiConfig();
 
   if (config.provider === 'openai') {
-    const result = await generateOpenAiCompatibleStructured<T>(params);
+    const result = await generateOpenAiCompatibleStructured<T>({
+      systemPrompt: params.systemPrompt,
+      userPrompt: params.userPrompt,
+      maxOutputTokens: params.maxOutputTokens,
+      jsonSuffix: params.jsonSuffix,
+    });
     return result;
   }
 
@@ -47,6 +56,12 @@ export async function generateStructured<T>(params: {
   systemPrompt: string;
   userPrompt: string;
   maxOutputTokens?: number;
+  /** JSON Schema provider-side (Gemini structured output). */
+  responseSchema?: Record<string, unknown>;
+  /** Esempio JSON appeso al prompt utente. */
+  jsonSuffix?: string;
+  /** Normalizzatore alternativo al piano-giornata (default). */
+  normalize?: (raw: unknown) => unknown;
 }): Promise<StructuredGenerationResult<T>> {
   const config = getAiConfig();
 
@@ -59,9 +74,17 @@ export async function generateStructured<T>(params: {
     throw new AiBudgetExceededError();
   }
 
-  const result = await callProvider<T>(params);
+  const result = await callProvider<T>({
+    systemPrompt: params.systemPrompt,
+    userPrompt: params.userPrompt,
+    maxOutputTokens: params.maxOutputTokens,
+    responseSchema: params.responseSchema,
+    jsonSuffix: params.jsonSuffix,
+  });
 
-  const normalized = normalizeAiDayPlan(result.data) ?? result.data;
+  const normalized = params.normalize
+    ? (params.normalize(result.data) ?? result.data)
+    : (normalizeAiDayPlan(result.data) ?? result.data);
   let parsed = params.schema.safeParse(normalized);
   if (!parsed.success && normalized !== result.data) {
     parsed = params.schema.safeParse(result.data);

@@ -1,4 +1,19 @@
-import type { ComposerGenerateRequest, ComposerGenerateResponse } from '@/types/composer';
+import type {
+  ComposerGenerateRequest,
+  ComposerGenerateResponse,
+  ComposerJobProgress,
+  ComposerTripGenerateRequest,
+  ComposerTripGenerateResponse,
+} from '@/types/composer';
+
+export class VagueDestinationClientError extends Error {
+  suggestions: string[];
+  constructor(message: string, suggestions: string[] = []) {
+    super(message);
+    this.name = 'VagueDestinationClientError';
+    this.suggestions = suggestions;
+  }
+}
 
 function parseJsonSafe(text: string): unknown {
   const trimmed = text.trim();
@@ -76,4 +91,80 @@ export async function requestDayGeneration(
 
   // Risposta sync (fallback o emergency mock)
   return data as ComposerGenerateResponse;
+}
+
+async function pollTripJob(
+  jobId: string,
+  onProgress?: (progress: ComposerJobProgress) => void
+): Promise<ComposerTripGenerateResponse> {
+  // Un itinerario completo può richiedere ~2 minuti (AI + tariffe live)
+  const maxAttempts = 150;
+  for (let i = 0; i < maxAttempts; i++) {
+    const res = await fetch(`/api/composer/jobs/${jobId}`, { cache: 'no-store' });
+    const raw = await res.text();
+    const data = parseJsonSafe(raw) as {
+      error?: string;
+      status?: string;
+      progress?: ComposerJobProgress | null;
+      result?: ComposerTripGenerateResponse;
+    };
+
+    if (!res.ok) {
+      throw new Error(data.error ?? `Job fallito (HTTP ${res.status})`);
+    }
+
+    if (data.progress) onProgress?.(data.progress);
+
+    if (data.status === 'done' && data.result) {
+      return data.result;
+    }
+    if (data.status === 'error') {
+      throw new Error(data.error ?? 'Generazione itinerario fallita');
+    }
+
+    await sleep(i < 10 ? 900 : 1500);
+  }
+  throw new Error('Generazione troppo lenta — riprova');
+}
+
+export async function requestTripGeneration(
+  body: ComposerTripGenerateRequest,
+  onProgress?: (progress: ComposerJobProgress) => void
+): Promise<ComposerTripGenerateResponse> {
+  let response: Response;
+  try {
+    response = await fetch('/api/composer/generate-trip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Connessione interrotta — controlla la rete e riprova');
+  }
+
+  const raw = await response.text();
+  const data = parseJsonSafe(raw) as {
+    error?: string;
+    code?: string;
+    suggestions?: string[];
+    jobId?: string;
+    status?: string;
+  } & Partial<ComposerTripGenerateResponse>;
+
+  if (response.status === 202 && data.jobId) {
+    return pollTripJob(data.jobId, onProgress);
+  }
+
+  if (response.status === 422 && data.code === 'vague_destination') {
+    throw new VagueDestinationClientError(
+      data.error ?? 'Destinazione troppo generica',
+      data.suggestions ?? []
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error ?? `Generazione fallita (HTTP ${response.status})`);
+  }
+
+  return data as ComposerTripGenerateResponse;
 }

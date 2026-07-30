@@ -9,6 +9,7 @@ import { NextDayCta } from '@/components/composer/plan-v3/NextDayCta';
 import { FullTripMapsCta } from '@/components/composer/plan-v3/FullTripMapsCta';
 import { DayNotesField } from '@/components/composer/plan/DayNotesField';
 import { SuggestDayButton } from '@/components/composer/plan/SuggestDayButton';
+import { SuggestTripButton } from '@/components/composer/plan/SuggestTripButton';
 import { formatComposerDayLabel } from '@/lib/composer/days';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type {
@@ -16,6 +17,7 @@ import type {
   ComposerDay,
   ComposerDraft,
   ComposerGenerateResponse,
+  ComposerTripGenerateResponse,
 } from '@/types/composer';
 import { Bus, ChevronLeft, ChevronRight, Hotel, Plus, Sparkles } from 'lucide-react';
 
@@ -44,6 +46,7 @@ type ItineraryColumnProps = {
     response: ComposerGenerateResponse,
     mode: 'replace' | 'append'
   ) => void;
+  onApplyGeneratedTrip: (response: ComposerTripGenerateResponse) => void;
   onUpdateBlockNotes: (blockId: string, notes: string) => void;
   onAddAttachment: (blockId: string, label: string, url: string) => void;
   onRemoveAttachment: (blockId: string, id: string) => void;
@@ -74,6 +77,7 @@ export function ItineraryColumn({
   onAddTransport,
   onAddHotel,
   onApplyGeneratedDay,
+  onApplyGeneratedTrip,
   onUpdateBlockNotes,
   onAddAttachment,
   onRemoveAttachment,
@@ -138,8 +142,10 @@ export function ItineraryColumn({
             >
               <h2 className="font-display text-2xl font-semibold text-white">Overview viaggio</h2>
               <p className="text-sm text-white/50">
-                Seleziona un giorno per pianificare, oppure mostra il percorso completo sulla mappa.
+                Seleziona un giorno per pianificare, oppure lascia che l&apos;AI riempia tutte le
+                giornate con voli, alloggio e attività.
               </p>
+              <SuggestTripButton draft={draft} onApplied={onApplyGeneratedTrip} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {draft.days.map((day) => (
                   <button
@@ -177,6 +183,15 @@ export function ItineraryColumn({
                 <p className="text-xs text-white/40">
                   <Sparkles className="mr-1 inline h-3 w-3 text-amber-400/70" />
                   {formatComposerDayLabel(activeDay.date, activeDay.dayIndex)}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <SuggestTripButton draft={draft} onApplied={onApplyGeneratedTrip} />
+                <p className="text-[11px] leading-tight text-white/45">
+                  Riempie tutte le {draft.days.length}{' '}
+                  {draft.days.length === 1 ? 'giornata' : 'giornate'}: volo, transfer, check-in,
+                  attività e rientro.
                 </p>
               </div>
 
