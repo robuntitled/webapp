@@ -229,19 +229,20 @@ export default function LoginPage() {
           </ScrollReveal>
           <ScrollReveal variant="title">
             <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
-              Viaggia insieme. Organizza meglio.
+              Trova la crew. Costruisci il viaggio.
             </h1>
           </ScrollReveal>
           <ScrollReveal variant="title" stagger={1}>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-white/75">
-              Scopri viaggi di gruppo, crea itinerari con l’AI e prenota i voli nello stesso posto.
+              Unisciti a viaggi aperti o creane uno tuo: itinerario giorno per giorno con AI e
+              mappa, chat di gruppo e prenotazione voli — senza il caos di mille chat.
             </p>
           </ScrollReveal>
           <ul className="mt-10 max-w-md space-y-3 text-sm text-white/70">
             {[
-              { Icon: Users, text: 'Unisciti a crew aperte o invita i tuoi amici' },
-              { Icon: Map, text: 'Componi il giorno per giorno su mappa con l’AI' },
-              { Icon: Plane, text: 'Prenota i voli; hotel e luoghi a supporto del viaggio' },
+              { Icon: Users, text: 'Scopri viaggi aperti o invita i tuoi amici' },
+              { Icon: Map, text: 'Pianifica ogni giorno su mappa, con suggerimenti AI' },
+              { Icon: Plane, text: 'Coordina la crew e prenota i voli nello stesso posto' },
             ].map(({ Icon, text }, i) => (
               <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
                 <div className="flex items-start gap-3">
@@ -265,7 +266,7 @@ export default function LoginPage() {
               </ScrollReveal>
               <ScrollReveal variant="title" stagger={1}>
                 <p className="mb-3 text-sm leading-relaxed text-muted-foreground lg:hidden">
-                  Viaggi di gruppo, itinerari AI e prenotazione voli — in un solo posto.
+                  Viaggi di gruppo con itinerario AI, mappa e chat — dalla idea alla partenza.
                 </p>
               </ScrollReveal>
               <ScrollReveal variant="title">
@@ -276,8 +277,8 @@ export default function LoginPage() {
               <ScrollReveal variant="card" stagger={1}>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   {isRegisterMode
-                    ? 'Inizia a organizzare o unirti a un viaggio'
-                    : 'Accedi per scoprire, creare e prenotare'}
+                    ? 'Unisciti a un viaggio aperto o organizzane uno tuo'
+                    : 'Accedi per scoprire, creare e coordinare i tuoi viaggi'}
                 </p>
               </ScrollReveal>
             </div>

@@ -26,7 +26,8 @@ const appName = process.env.LEGAL_TRADE_NAME ?? process.env.NEXT_PUBLIC_APP_NAME
 
 export const metadata: Metadata = {
   title: appName,
-  description: 'Trova e crea viaggi di gruppo unici — fotografia e avventura nel mondo.',
+  description:
+    'Trova e crea viaggi di gruppo: itinerari AI su mappa, chat della crew e prenotazione voli in un unico posto.',
   // Omio / Impact affiliate site verification
   other: {
     'impact-site-verification': '177e37a3-3cd3-490f-9407-6af80805e74b',
