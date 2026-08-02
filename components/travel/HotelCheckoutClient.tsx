@@ -135,6 +135,8 @@ export function HotelCheckoutClient({
     bookingId: string | null;
     bookingRef: string | null;
     status: string | null;
+    creditsFormatted: string | null;
+    balanceFormatted: string | null;
   } | null>(null);
 
   const stripePromise = useMemo(() => {
@@ -174,6 +176,11 @@ export function HotelCheckoutClient({
           holderOverride?.guestFirstName || guestFirstName || hFirst;
         const guestLn =
           holderOverride?.guestLastName || guestLastName || hLast;
+        const pendingPay = loadHotelPaymentPending();
+        const offer = draft ?? loadHotelOfferDraft();
+        const amount = payment?.price ?? pendingPay?.price ?? offer?.totalAmount ?? null;
+        const currency =
+          payment?.currency ?? pendingPay?.currency ?? offer?.currency ?? 'EUR';
         const res = await fetch('/api/liteapi/hotels/book', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -190,6 +197,9 @@ export function HotelCheckoutClient({
                 occupancyNumber: 1,
               },
             ],
+            ...(amount != null && amount > 0
+              ? { bookingAmount: amount, currency }
+              : {}),
           }),
         });
         const data = (await res.json()) as {
@@ -197,20 +207,35 @@ export function HotelCheckoutClient({
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
+          credits?: {
+            credited?: boolean;
+            creditFormatted?: string | null;
+            balanceFormatted?: string;
+          } | null;
         };
         if (!res.ok) {
           toast.error(data.error ?? 'Conferma prenotazione fallita');
           return;
         }
+        const creditFmt =
+          data.credits?.credited && data.credits.creditFormatted
+            ? data.credits.creditFormatted
+            : null;
         setConfirmation({
           bookingId: data.bookingId ?? null,
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
+          creditsFormatted: creditFmt,
+          balanceFormatted: data.credits?.balanceFormatted ?? null,
         });
         clearHotelOfferDraft();
         clearHotelPaymentPending();
         setStep('done');
-        toast.success('Hotel prenotato');
+        if (creditFmt) {
+          toast.success(`Hotel prenotato · ${creditFmt} di credito`);
+        } else {
+          toast.success('Hotel prenotato');
+        }
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href);
           url.search = '';
@@ -222,7 +247,7 @@ export function HotelCheckoutClient({
         setSubmitting(false);
       }
     },
-    [email, firstName, guestFirstName, guestLastName, lastName]
+    [draft, email, firstName, guestFirstName, guestLastName, lastName, payment?.currency, payment?.price]
   );
 
   useEffect(() => {
@@ -359,9 +384,28 @@ export function HotelCheckoutClient({
               ? `ID: ${confirmation.bookingId}`
               : 'Riceverai i dettagli via email.'}
         </p>
-        <Button className="rounded-xl" onClick={() => router.push('/prenota/hotel')}>
-          Altre ricerche
-        </Button>
+        {confirmation?.creditsFormatted ? (
+          <p className="rounded-2xl bg-accent/15 px-4 py-3 text-sm text-foreground">
+            Hai guadagnato <strong>{confirmation.creditsFormatted}</strong> di credito
+            NomadLink
+            {confirmation.balanceFormatted
+              ? ` · saldo ${confirmation.balanceFormatted}`
+              : ''}
+            .
+          </p>
+        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button className="rounded-xl" onClick={() => router.push('/prenota/hotel')}>
+            Altre ricerche
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => router.push('/dashboard/impostazioni')}
+          >
+            Vedi crediti
+          </Button>
+        </div>
       </div>
     );
   }

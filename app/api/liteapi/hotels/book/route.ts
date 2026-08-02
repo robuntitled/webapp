@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookHotel } from '@/lib/liteapi/hotel-booking';
+import { grantCreditsAfterBook } from '@/lib/credits/grant-after-book';
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
@@ -24,6 +25,9 @@ const schema = z.object({
     )
     .min(1)
     .max(9),
+  /** Fallback prezzo se la risposta book non lo espone. */
+  bookingAmount: z.number().positive().max(1_000_000).optional(),
+  currency: z.string().trim().length(3).optional(),
 });
 
 export async function POST(request: Request) {
@@ -54,12 +58,33 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await bookHotel(parsed.data);
+    const { bookingAmount, currency, ...bookInput } = parsed.data;
+    const result = await bookHotel(bookInput);
+
+    let credits: Awaited<ReturnType<typeof grantCreditsAfterBook>>['public'] | null =
+      null;
+    try {
+      const granted = await grantCreditsAfterBook({
+        userId: session.user.id,
+        bookingKind: 'hotel',
+        bookingId: result.bookingId,
+        bookingRef: result.bookingRef,
+        transactionId: bookInput.transactionId,
+        fallbackAmountEuros: bookingAmount ?? null,
+        fallbackCurrency: currency ?? null,
+        raw: result.raw,
+      });
+      credits = granted.public;
+    } catch (creditErr) {
+      console.error('[hotels/book] credits', creditErr);
+    }
+
     return NextResponse.json({
       ok: true,
       bookingId: result.bookingId,
       bookingRef: result.bookingRef,
       status: result.status,
+      credits,
     });
   } catch (e) {
     if (e instanceof LiteApiError) {

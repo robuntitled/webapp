@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Scale, Shield } from 'lucide-react';
+import { Coins, Mail, Scale, Shield } from 'lucide-react';
 import { SettingsCommunicationsSection } from '@/components/settings/SettingsCommunicationsSection';
+import { SettingsCreditsSection } from '@/components/settings/SettingsCreditsSection';
 import { SettingsSecuritySection } from '@/components/settings/SettingsSecuritySection';
 import { SettingsPrivacySection } from '@/components/settings/SettingsPrivacySection';
 import type { UserSettings } from '@/types/user';
+import type { CreditsPageData } from '@/lib/data/credits';
 
-type SettingsTab = 'communications' | 'security' | 'privacy';
+type SettingsTab = 'credits' | 'communications' | 'security' | 'privacy';
 
 const TABS: {
   id: SettingsTab;
@@ -16,6 +18,13 @@ const TABS: {
   icon: typeof Mail;
   accent: string;
 }[] = [
+  {
+    id: 'credits',
+    label: 'Crediti',
+    description: 'Cashback prenotazioni e saldo',
+    icon: Coins,
+    accent: 'hub-accent-teal',
+  },
   {
     id: 'communications',
     label: 'Comunicazioni',
@@ -42,10 +51,15 @@ const TABS: {
 type SettingsPageClientProps = {
   userSettings: UserSettings | null;
   privacyEmail: string;
+  credits: CreditsPageData;
 };
 
-export function SettingsPageClient({ userSettings, privacyEmail }: SettingsPageClientProps) {
-  const [active, setActive] = useState<SettingsTab>('communications');
+export function SettingsPageClient({
+  userSettings,
+  privacyEmail,
+  credits,
+}: SettingsPageClientProps) {
+  const [active, setActive] = useState<SettingsTab>('credits');
   const activeMeta = TABS.find((t) => t.id === active)!;
 
   return (
@@ -63,7 +77,7 @@ export function SettingsPageClient({ userSettings, privacyEmail }: SettingsPageC
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = active === tab.id;
@@ -102,6 +116,7 @@ export function SettingsPageClient({ userSettings, privacyEmail }: SettingsPageC
         </div>
 
         <div className="hub-panel-body p-6 md:p-8">
+          {active === 'credits' && <SettingsCreditsSection credits={credits} />}
           {active === 'communications' && (
             <SettingsCommunicationsSection userSettings={userSettings} />
           )}

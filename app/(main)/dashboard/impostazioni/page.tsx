@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { SettingsPageClient } from '@/components/settings/SettingsPageClient';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
+import { getCreditsPageData } from '@/lib/data/credits';
 import { getUserSettings } from '@/lib/data/users';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
@@ -14,9 +15,10 @@ export default async function SettingsPage() {
     redirect('/');
   }
 
-  const [userSettings, company] = await Promise.all([
+  const [userSettings, company, credits] = await Promise.all([
     getUserSettings(session.user.id),
     Promise.resolve(getCompanyProfile()),
+    getCreditsPageData(session.user.id),
   ]);
 
   return (
@@ -29,6 +31,7 @@ export default async function SettingsPage() {
         <SettingsPageClient
           userSettings={userSettings}
           privacyEmail={company.privacyEmail}
+          credits={credits}
         />
       </div>
     </div>
