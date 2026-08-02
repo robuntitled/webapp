@@ -3,9 +3,8 @@ import Image from 'next/image';
 import { auth } from '@/auth';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { PrenotaNavMenu } from '@/components/layout/PrenotaNavMenu';
 import { Button } from '@/components/ui/button';
-import { Heart, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
 
 export async function Navbar() {
@@ -32,28 +31,40 @@ export async function Navbar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          <Link
-            href="/dashboard"
-            className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            Scopri
-          </Link>
-          {session?.user && (
+          {session?.user ? (
             <>
+              <Link
+                href="/dashboard"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                Home
+              </Link>
+              <Link
+                href="/dashboard/scopri"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                Scopri
+              </Link>
               <Link
                 href="/dashboard/crea?new=1"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                Organizza
+                Crea
               </Link>
-              <PrenotaNavMenu />
               <Link
                 href="/dashboard/miei-viaggi"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                I Miei Viaggi
+                I miei viaggi
               </Link>
             </>
+          ) : (
+            <Link
+              href="/dashboard/scopri"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Scopri
+            </Link>
           )}
         </nav>
 
@@ -61,19 +72,12 @@ export async function Navbar() {
           <MobileNav isLoggedIn={!!session?.user} />
           {session?.user ? (
             <>
-              <Link href="/dashboard/preferiti" className="hidden sm:block">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Heart className="h-5 w-5 text-accent" />
-                </Button>
-              </Link>
-              {session.user && (
-                <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
-                  <Link href="/dashboard/crea?new=1">
-                    <Plus className="h-4 w-4" />
-                    Nuovo Viaggio
-                  </Link>
-                </Button>
-              )}
+              <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
+                <Link href="/dashboard/crea?new=1">
+                  <Plus className="h-4 w-4" />
+                  Crea viaggio
+                </Link>
+              </Button>
               <UserNav
                 user={session.user}
                 showCostsDashboard={showCostsDashboard}

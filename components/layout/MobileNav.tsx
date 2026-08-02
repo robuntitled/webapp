@@ -6,18 +6,12 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LINKS = [
-  { href: '/dashboard', label: 'Scopri' },
-  { href: '/dashboard/crea?new=1', label: 'Organizza', auth: true },
-  { href: '/prenota/voli', label: 'Prenota · Voli', auth: true },
-  { href: '/prenota/hotel', label: 'Prenota · Hotel', auth: true },
-  { href: '/prenota/auto', label: 'Prenota · Noleggio auto', auth: true },
-  { href: '/prenota/trasporti/bus', label: 'Prenota · Bus', auth: true },
-  { href: '/prenota/trasporti/treni', label: 'Prenota · Treni', auth: true },
-  { href: '/prenota/trasporti/taxi', label: 'Prenota · Taxi', auth: true },
-  { href: '/prenota/attrazioni', label: 'Prenota · Attrazioni', auth: true },
-  { href: '/prenota/attivita', label: 'Prenota · Attività', auth: true },
-  { href: '/dashboard/miei-viaggi', label: 'I Miei Viaggi', auth: true },
+  { href: '/dashboard', label: 'Home', auth: true },
+  { href: '/dashboard/scopri', label: 'Scopri' },
+  { href: '/dashboard/crea?new=1', label: 'Crea viaggio', auth: true },
+  { href: '/dashboard/miei-viaggi', label: 'I miei viaggi', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
+  { href: '/dashboard/impostazioni', label: 'Impostazioni', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];
 
 export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
@@ -51,7 +45,6 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                 {link.label}
               </Link>
             ))}
-
           </nav>
         </>
       )}

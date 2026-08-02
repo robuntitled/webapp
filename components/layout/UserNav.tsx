@@ -52,6 +52,9 @@ export function UserNav({
             <Link href="/dashboard/profilo">Modifica profilo</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
+            <Link href="/dashboard/preferiti">Preferiti</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link href="/dashboard/impostazioni">Impostazioni</Link>
           </DropdownMenuItem>
           {showCostsDashboard ? (

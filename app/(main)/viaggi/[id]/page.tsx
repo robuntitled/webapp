@@ -63,7 +63,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             variant="ghost"
             className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
           >
-            <Link href="/dashboard">
+            <Link href="/dashboard/scopri">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Torna alla ricerca
             </Link>

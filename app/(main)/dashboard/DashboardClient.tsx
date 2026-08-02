@@ -51,28 +51,32 @@ export default function DashboardClient({
       <div className="text-center max-w-3xl mx-auto mb-10">
         <ScrollReveal variant="decor">
           <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
-            Meno WhatsApp, più viaggio
+            Step · Unisciti
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
           <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-            Trova un viaggio e unisciti in modalità relax
+            Trova un viaggio e parti in modalità relax
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
           <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-            Cerca viaggi aperti a cui unirti. Gli inviti tra amici arrivano via WhatsApp — qui
-            compaiono solo i viaggi organizzati da una persona.
+            Scopri itinerari aperti già organizzati. Unisciti, rilassati e vivi l&apos;avventura.
           </p>
         </ScrollReveal>
         {session?.user && (
           <ScrollReveal variant="card" stagger={2}>
-            <Button asChild className="mt-6 rounded-full gap-2">
-              <Link href="/dashboard/crea">
-                <Plus className="h-4 w-4" />
-                Organizza il tuo viaggio
-              </Link>
-            </Button>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <Button asChild variant="outline" className="rounded-full border-white/20 bg-transparent text-white hover:bg-white/10">
+                <Link href="/dashboard">Torna al percorso</Link>
+              </Button>
+              <Button asChild className="rounded-full gap-2">
+                <Link href="/dashboard/crea?new=1">
+                  <Plus className="h-4 w-4" />
+                  Preferisco creare
+                </Link>
+              </Button>
+            </div>
           </ScrollReveal>
         )}
       </div>
