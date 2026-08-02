@@ -72,6 +72,7 @@ export async function createTrip(formData: FormData) {
   }
 
   revalidatePath('/dashboard');
+  revalidatePath('/dashboard/scopri');
   revalidatePath('/dashboard/cerca');
   revalidatePath('/dashboard/miei-viaggi');
   redirect(`/viaggi/${created.id}`);
@@ -105,6 +106,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
   }
 
   revalidatePath('/dashboard');
+  revalidatePath('/dashboard/scopri');
   revalidatePath('/dashboard/miei-viaggi');
   revalidatePath(`/viaggi/${tripId}`);
   redirect('/dashboard/miei-viaggi');

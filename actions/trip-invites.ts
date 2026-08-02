@@ -151,5 +151,6 @@ export async function respondTripInvite(input: {
   revalidatePath(`/viaggi/${invite.trip_id}`);
   revalidatePath('/dashboard/miei-viaggi');
   revalidatePath('/dashboard');
+  revalidatePath('/dashboard/scopri');
   return { ok: true };
 }

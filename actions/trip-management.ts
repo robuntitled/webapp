@@ -32,6 +32,7 @@ export async function deleteTrip(tripId: string) {
 
   revalidatePath('/dashboard/miei-viaggi');
   revalidatePath('/dashboard');
+  revalidatePath('/dashboard/scopri');
 }
 
 /** Join idempotente: non lancia errori (evita crash RSC in produzione). */
@@ -81,6 +82,7 @@ export async function joinTrip(tripId: string): Promise<JoinTripResult> {
   if (existing) {
     revalidatePath('/dashboard/miei-viaggi');
     revalidatePath('/dashboard');
+    revalidatePath('/dashboard/scopri');
     revalidatePath(`/viaggi/${tripId}`);
     return { ok: true, alreadyJoined: true };
   }
@@ -105,6 +107,7 @@ export async function joinTrip(tripId: string): Promise<JoinTripResult> {
     if (insertError.code === '23505') {
       revalidatePath('/dashboard/miei-viaggi');
       revalidatePath('/dashboard');
+      revalidatePath('/dashboard/scopri');
       revalidatePath(`/viaggi/${tripId}`);
       return { ok: true, alreadyJoined: true };
     }
@@ -114,6 +117,7 @@ export async function joinTrip(tripId: string): Promise<JoinTripResult> {
 
   revalidatePath('/dashboard/miei-viaggi');
   revalidatePath('/dashboard');
+  revalidatePath('/dashboard/scopri');
   revalidatePath(`/viaggi/${tripId}`);
   return { ok: true };
 }
