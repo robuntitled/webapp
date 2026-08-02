@@ -179,7 +179,7 @@ export async function getAdminCostHub(days = 30): Promise<AdminCostHub> {
       inApp: 'Hotel + voli in-app (search/prebook/book)',
       consoleUrl: 'https://dashboard.liteapi.travel/',
       billingUrl: 'https://docs.liteapi.travel/',
-      note: 'Unico provider travel. Markup hotel via LITEAPI_MARGIN.',
+      note: 'Unico provider travel. Markup via LITEAPI_MARGIN; cashback utente via BOOKING_CASHBACK_PERCENT.',
     },
   ];
 

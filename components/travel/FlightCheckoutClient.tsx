@@ -349,6 +349,8 @@ export function FlightCheckoutClient({
     bookingId: string | null;
     bookingRef: string | null;
     status: string | null;
+    creditsFormatted: string | null;
+    balanceFormatted: string | null;
   } | null>(null);
 
   const stripePromise = useMemo(() => {
@@ -362,31 +364,57 @@ export function FlightCheckoutClient({
     async (prebookId: string, transactionId: string) => {
       setSubmitting(true);
       try {
+        const pendingPay = loadFlightPaymentPending();
+        const offer = draft ?? loadFlightCheckoutDraft();
+        const amount = payment?.price ?? pendingPay?.price ?? offer?.price ?? null;
+        const currency =
+          payment?.currency ?? pendingPay?.currency ?? offer?.currency ?? 'EUR';
         const res = await fetch('/api/liteapi/flights/book', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ prebookId, transactionId }),
+          body: JSON.stringify({
+            prebookId,
+            transactionId,
+            ...(amount != null && amount > 0
+              ? { bookingAmount: amount, currency }
+              : {}),
+          }),
         });
         const data = (await res.json()) as {
           error?: string;
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
+          credits?: {
+            credited?: boolean;
+            creditFormatted?: string | null;
+            balanceFormatted?: string;
+          } | null;
         };
         if (!res.ok) {
           toast.error(data.error ?? 'Conferma prenotazione fallita');
           return;
         }
+        const creditFmt =
+          data.credits?.credited && data.credits.creditFormatted
+            ? data.credits.creditFormatted
+            : null;
         setConfirmation({
           bookingId: data.bookingId ?? null,
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
+          creditsFormatted: creditFmt,
+          balanceFormatted: data.credits?.balanceFormatted ?? null,
         });
         clearFlightCheckoutDraft();
         clearFlightPaymentPending();
         setStep('done');
-        toast.success('Prenotazione confermata');
+        if (creditFmt) {
+          toast.success(`Prenotazione confermata · ${creditFmt} di credito`);
+        } else {
+          toast.success('Prenotazione confermata');
+        }
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href);
           url.search = '';
@@ -398,7 +426,7 @@ export function FlightCheckoutClient({
         setSubmitting(false);
       }
     },
-    []
+    [draft, payment?.currency, payment?.price]
   );
 
   useEffect(() => {
@@ -646,9 +674,24 @@ export function FlightCheckoutClient({
             {confirmation.bookingRef || confirmation.bookingId || '—'}
           </p>
         </div>
-        <Button asChild className="w-full rounded-xl bg-primary">
-          <Link href="/prenota/voli">Nuova ricerca</Link>
-        </Button>
+        {confirmation.creditsFormatted ? (
+          <p className="rounded-2xl bg-emerald-100/70 px-4 py-3 text-sm text-emerald-900">
+            Hai guadagnato <strong>{confirmation.creditsFormatted}</strong> di credito
+            NomadLink
+            {confirmation.balanceFormatted
+              ? ` · saldo ${confirmation.balanceFormatted}`
+              : ''}
+            .
+          </p>
+        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild className="w-full rounded-xl bg-primary">
+            <Link href="/prenota/voli">Nuova ricerca</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full rounded-xl">
+            <Link href="/dashboard/impostazioni">Vedi crediti</Link>
+          </Button>
+        </div>
       </div>
     );
   }
