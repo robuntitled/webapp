@@ -58,9 +58,30 @@ type QuotesResponse = {
   error?: string;
   code?: string;
   configured?: boolean;
+  sandbox?: boolean;
+  hint?: string;
 };
 
 const DEFAULT_TIME = '10:00';
+/** GetTransfer requires the pickup to be at least 24h ahead. */
+const MIN_HOURS_AHEAD = 24;
+
+function pickupTimestamp(date: string, time: string): number {
+  return new Date(`${date}T${time}:00`).getTime();
+}
+
+function isTooSoon(date: string, time: string): boolean {
+  const ts = pickupTimestamp(date, time);
+  if (Number.isNaN(ts)) return false;
+  return ts < Date.now() + MIN_HOURS_AHEAD * 60 * 60 * 1000;
+}
+
+/** First day where the default pickup time still clears the 24h minimum. */
+function defaultPickupDate(): string {
+  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+  if (!isTooSoon(tomorrow, DEFAULT_TIME)) return tomorrow;
+  return format(addDays(new Date(), 2), 'yyyy-MM-dd');
+}
 
 function formatDuration(mins: number | undefined): string | null {
   if (mins == null || mins <= 0) return null;
@@ -154,9 +175,7 @@ export function PrenotaTransferClient() {
   const [to, setTo] = useState('');
   const [fromPlace, setFromPlace] = useState<PlaceSuggestion | null>(null);
   const [toPlace, setToPlace] = useState<PlaceSuggestion | null>(null);
-  const [pickupDate, setPickupDate] = useState(() =>
-    format(addDays(new Date(), 1), 'yyyy-MM-dd')
-  );
+  const [pickupDate, setPickupDate] = useState(defaultPickupDate);
   const [pickupTime, setPickupTime] = useState(DEFAULT_TIME);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
@@ -169,6 +188,7 @@ export function PrenotaTransferClient() {
     duration?: number;
   } | null>(null);
   const [apiUnavailable, setApiUnavailable] = useState(false);
+  const [noOffersHint, setNoOffersHint] = useState<string | null>(null);
 
   const affiliateReady = isGetTransferAffiliateConfigured();
   const pax = adults + children;
@@ -178,8 +198,11 @@ export function PrenotaTransferClient() {
     if (cached) {
       setFrom(cached.from ?? '');
       setTo(cached.to ?? '');
-      if (cached.pickupDate) setPickupDate(cached.pickupDate);
-      if (cached.pickupTime) setPickupTime(cached.pickupTime);
+      const cachedTime = cached.pickupTime || DEFAULT_TIME;
+      if (cached.pickupTime) setPickupTime(cachedTime);
+      if (cached.pickupDate && !isTooSoon(cached.pickupDate, cachedTime)) {
+        setPickupDate(cached.pickupDate);
+      }
       if (cached.adults) setAdults(cached.adults);
       setChildren(cached.children ?? 0);
       setFromPlace(cached.from ? resolvePlaceExact(cached.from) : null);
@@ -235,11 +258,18 @@ export function PrenotaTransferClient() {
       toast.error('Partenza e destinazione devono essere diverse.');
       return;
     }
+    if (isTooSoon(pickupDate, pickupTime)) {
+      toast.error(
+        `Il transfer deve essere prenotato con almeno ${MIN_HOURS_AHEAD} ore di anticipo.`
+      );
+      return;
+    }
 
     setLoading(true);
     setOffers(null);
     setRouteMeta(null);
     setApiUnavailable(false);
+    setNoOffersHint(null);
 
     try {
       const res = await fetch('/api/gettransfer/quotes', {
@@ -252,6 +282,8 @@ export function PrenotaTransferClient() {
           date: pickupDate,
           time: pickupTime,
           pax,
+          fromCountry: fromPlace?.countryCode,
+          toCountry: toPlace?.countryCode,
         }),
       });
 
@@ -280,9 +312,14 @@ export function PrenotaTransferClient() {
         duration: data.duration,
       });
 
+      setNoOffersHint(list.length ? null : (data.hint ?? null));
+
       if (!list.length) {
         toast.message('Nessuna offerta per questo tragitto', {
-          description: 'Prova date diverse o apri GetTransfer per richiedere un preventivo.',
+          description:
+            data.hint ??
+            'Prova date diverse o apri GetTransfer per richiedere un preventivo.',
+          duration: data.hint ? 8000 : undefined,
         });
       }
     } catch {
@@ -479,6 +516,11 @@ export function PrenotaTransferClient() {
       {offers && offers.length === 0 && !loading ? (
         <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
           <p>Nessuna tariffa disponibile per questo tragitto.</p>
+          {noOffersHint ? (
+            <p className="mt-1.5 text-[13px] text-amber-600 dark:text-amber-400">
+              {noOffersHint}
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="outline"

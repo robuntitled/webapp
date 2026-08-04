@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { guardPaidApi } from '@/lib/api/request-guard';
 import {
+  buildDateTo,
   fetchRouteInfo,
   GetTransferError,
   isGetTransferApiConfigured,
+  isGetTransferSandbox,
+  SANDBOX_NO_OFFERS_HINT,
 } from '@/lib/gettransfer/client';
+import { validatePickupDate } from '@/lib/gettransfer/pickup-window';
 import { parseRouteInfoOffers } from '@/lib/gettransfer/route-info';
 import { searchPlaces } from '@/lib/places/nominatim';
 
@@ -23,15 +27,25 @@ const schema = z.object({
     .optional()
     .default('10:00'),
   pax: z.coerce.number().int().min(1).max(20).optional().default(2),
+  fromCountry: z.string().trim().length(2).optional(),
+  toCountry: z.string().trim().length(2).optional(),
 });
 
-const MIN_HOURS_AHEAD = 6;
+type ResolvedPoint = {
+  label: string;
+  lat: number;
+  lng: number;
+  countryCode?: string;
+};
 
 async function resolvePoint(
   label: string,
   lat?: number,
-  lng?: number
-): Promise<{ label: string; lat: number; lng: number }> {
+  lng?: number,
+  countryCode?: string
+): Promise<ResolvedPoint> {
+  const normalizedCountry = countryCode?.trim().toUpperCase();
+
   if (
     lat != null &&
     lng != null &&
@@ -42,7 +56,11 @@ async function resolvePoint(
     lng >= -180 &&
     lng <= 180
   ) {
-    return { label, lat, lng };
+    if (normalizedCountry) return { label, lat, lng, countryCode: normalizedCountry };
+    // countries[] is required by the spec, so best-effort resolve it from the
+    // label; a failure must not break a search that already has coordinates.
+    const hit = await searchPlaces(label, 1).catch(() => []);
+    return { label, lat, lng, countryCode: hit[0]?.countryCode };
   }
 
   const hits = await searchPlaces(label, 5);
@@ -51,23 +69,12 @@ async function resolvePoint(
   }
 
   const best = hits[0];
-  return { label: best.label, lat: best.lat, lng: best.lng };
-}
-
-function buildDateTo(date: string, time: string): string {
-  return `${date}T${time}:00`;
-}
-
-function validatePickupDate(dateTo: string): string | null {
-  const pickup = new Date(dateTo);
-  if (Number.isNaN(pickup.getTime())) {
-    return 'Data o ora non valida.';
-  }
-  const min = Date.now() + MIN_HOURS_AHEAD * 60 * 60 * 1000;
-  if (pickup.getTime() < min) {
-    return `Il transfer deve essere almeno ${MIN_HOURS_AHEAD} ore nel futuro.`;
-  }
-  return null;
+  return {
+    label: best.label,
+    lat: best.lat,
+    lng: best.lng,
+    countryCode: normalizedCountry ?? best.countryCode,
+  };
 }
 
 export async function POST(request: Request) {
@@ -112,14 +119,19 @@ export async function POST(request: Request) {
 
   try {
     const [from, to] = await Promise.all([
-      resolvePoint(fromLabel, parsed.data.fromLat, parsed.data.fromLng),
-      resolvePoint(toLabel, parsed.data.toLat, parsed.data.toLng),
+      resolvePoint(
+        fromLabel,
+        parsed.data.fromLat,
+        parsed.data.fromLng,
+        parsed.data.fromCountry
+      ),
+      resolvePoint(toLabel, parsed.data.toLat, parsed.data.toLng, parsed.data.toCountry),
     ]);
 
     const raw = await fetchRouteInfo({
       points: [
-        { lat: from.lat, lng: from.lng },
-        { lat: to.lat, lng: to.lng },
+        { lat: from.lat, lng: from.lng, countryCode: from.countryCode },
+        { lat: to.lat, lng: to.lng, countryCode: to.countryCode },
       ],
       pax,
       dateTo,
@@ -128,6 +140,7 @@ export async function POST(request: Request) {
     });
 
     const { offers, distance, duration, success } = parseRouteInfoOffers(raw);
+    const sandbox = isGetTransferSandbox();
 
     return NextResponse.json({
       configured: true,
@@ -139,6 +152,8 @@ export async function POST(request: Request) {
       distance,
       duration,
       success,
+      sandbox,
+      hint: sandbox && offers.length === 0 ? SANDBOX_NO_OFFERS_HINT : undefined,
     });
   } catch (e) {
     if (e instanceof GetTransferError) {
