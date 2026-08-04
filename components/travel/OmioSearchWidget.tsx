@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AlertCircle, Bus, ExternalLink, TrainFront } from 'lucide-react';
 import {
   getOmioPartnerId,
@@ -9,7 +9,7 @@ import {
   omioTravelModeAttr,
   type OmioTransportMode,
 } from '@/lib/omio/config';
-import { loadOmioNemoBundle } from '@/lib/omio/widget-loader';
+import { mountOmioNemoWidget } from '@/lib/omio/widget-loader';
 import './omio-nemo-shell.css';
 
 const MODE_COPY: Record<
@@ -36,14 +36,17 @@ function OmioWidgetSkeleton() {
   return (
     <div className="space-y-3 py-1" aria-hidden>
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="h-12 animate-pulse rounded-xl bg-muted/60" />
-        <div className="h-12 animate-pulse rounded-xl bg-muted/60" />
+        <div className="h-12 animate-pulse rounded-xl bg-muted/70" />
+        <div className="h-12 animate-pulse rounded-xl bg-muted/70" />
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-        <div className="h-12 animate-pulse rounded-xl bg-muted/50" />
-        <div className="h-12 animate-pulse rounded-xl bg-muted/50" />
-        <div className="h-12 w-full animate-pulse rounded-xl bg-primary/15 sm:w-32" />
+        <div className="h-12 animate-pulse rounded-xl bg-muted/55" />
+        <div className="h-12 animate-pulse rounded-xl bg-muted/55" />
+        <div className="h-12 w-full animate-pulse rounded-xl bg-primary/20 sm:w-32" />
       </div>
+      <p className="pt-1 text-center text-[11px] text-muted-foreground">
+        Caricamento ricerca…
+      </p>
     </div>
   );
 }
@@ -51,10 +54,11 @@ function OmioWidgetSkeleton() {
 export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
   const reactId = useId().replace(/:/g, '');
   const mountKey = `omio-nemo-${mode}-${reactId}`;
+  const mountRef = useRef<HTMLDivElement>(null);
   const copy = MODE_COPY[mode];
   const Icon = copy.icon;
 
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -65,31 +69,37 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
 
   useEffect(() => {
     if (!configured) {
-      setLoading(false);
+      setReady(false);
       return;
     }
 
+    const el = mountRef.current;
+    if (!el) return;
+
     let cancelled = false;
-    setLoading(true);
+    setReady(false);
     setError(null);
 
-    void loadOmioNemoBundle()
+    // Pulisci residui da remount React / cambio tab
+    el.innerHTML = '';
+
+    void mountOmioNemoWidget(el)
       .then(() => {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        setReady(true);
       })
       .catch((e) => {
-        if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : 'Impossibile caricare il widget Omio'
-          );
-          setLoading(false);
-        }
+        if (cancelled) return;
+        setError(
+          e instanceof Error ? e.message : 'Impossibile caricare il widget Omio'
+        );
+        setReady(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [configured, attempt, mountKey]);
+  }, [configured, attempt, mountKey, travelMode]);
 
   return (
     <div className="space-y-3">
@@ -115,16 +125,24 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
               <OmioSetupBanner />
             ) : (
               <div className="relative min-h-[220px] overflow-visible">
-                {loading ? (
-                  <div className="absolute inset-0 z-10 flex flex-col justify-center rounded-xl bg-card/90 px-1 backdrop-blur-[2px]">
+                {!ready && !error ? (
+                  <div className="absolute inset-0 z-30 flex flex-col justify-center rounded-xl bg-card px-1">
                     <OmioWidgetSkeleton />
                   </div>
                 ) : null}
+
+                {/*
+                  Nascondi il mount finché Omio non ha iniettato il form:
+                  evita flash CSS grezzo / box bianco sopra lo skeleton.
+                */}
                 <div
-                  key={mountKey}
-                  className="omio-nemo-shell relative z-20 min-h-[220px] w-full overflow-visible [&_iframe]:w-full [&_iframe]:max-w-full"
+                  className={`omio-nemo-shell relative z-10 min-h-[220px] w-full overflow-visible transition-opacity duration-200 [&_iframe]:w-full [&_iframe]:max-w-full ${
+                    ready ? 'opacity-100' : 'pointer-events-none opacity-0'
+                  }`}
                 >
                   <div
+                    ref={mountRef}
+                    data-omio-mount={mountKey}
                     data-omio-widget="true"
                     data-partner-id={partnerId}
                     data-default-travel-mode={travelMode}

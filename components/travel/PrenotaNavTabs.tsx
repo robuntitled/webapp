@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { prefetchOmioNemoBundle } from '@/lib/omio/widget-loader';
 
 const LINK_TABS = [
   { href: '/prenota/voli', label: 'Voli', icon: Plane },
@@ -60,8 +61,15 @@ export function PrenotaNavTabs() {
         );
       })}
 
-      <DropdownMenu>
-        <DropdownMenuTrigger className={cn(pillClass(transportActive), 'outline-none')}>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (open) prefetchOmioNemoBundle();
+        }}
+      >
+        <DropdownMenuTrigger
+          className={cn(pillClass(transportActive), 'outline-none')}
+          onMouseEnter={() => prefetchOmioNemoBundle()}
+        >
           <Bus className="h-3.5 w-3.5" />
           Trasporti
           <ChevronDown className="h-3 w-3 opacity-70" />
