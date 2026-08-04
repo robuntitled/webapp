@@ -28,9 +28,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '6mb',
     },
-    // Next 15.5+ proxy/middleware: altrimenti il body viene tagliato a ~1 MB in prod
-    proxyClientMaxBodySize: '6mb',
-    middlewareClientMaxBodySize: '6mb',
   },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
