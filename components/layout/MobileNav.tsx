@@ -16,6 +16,7 @@ const LINKS = [
   { href: '/prenota/trasporti/taxi', label: 'Prenota · Taxi', auth: true },
   { href: '/prenota/attrazioni', label: 'Prenota · Attrazioni', auth: true },
   { href: '/prenota/attivita', label: 'Prenota · Attività', auth: true },
+  { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
   { href: '/dashboard/miei-viaggi', label: 'I Miei Viaggi', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];

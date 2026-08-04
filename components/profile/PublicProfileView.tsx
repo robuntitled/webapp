@@ -21,6 +21,9 @@ import type {
   PublicProfileReview,
   PublicProfileTrip,
 } from '@/lib/data/public-profile';
+import type { FeedPost } from '@/lib/data/posts';
+import { CreatePostComposer } from '@/components/social/CreatePostComposer';
+import { PostFeed } from '@/components/social/PostFeed';
 import { cn } from '@/lib/utils';
 
 type PublicProfileViewProps = {
@@ -28,6 +31,8 @@ type PublicProfileViewProps = {
   organizedTrips: PublicProfileTrip[];
   joinedTrips: PublicProfileTrip[];
   reviews: PublicProfileReview[];
+  posts?: FeedPost[];
+  viewerId?: string | null;
   isOwn?: boolean;
   canReview?: boolean;
 };
@@ -127,6 +132,8 @@ export function PublicProfileView({
   organizedTrips,
   joinedTrips,
   reviews,
+  posts = [],
+  viewerId,
   isOwn,
   canReview,
 }: PublicProfileViewProps) {
@@ -268,6 +275,35 @@ export function PublicProfileView({
         </div>
 
         <div className="mt-12 space-y-12">
+          <section className="space-y-4">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-white">
+                Diario
+              </h2>
+              <p className="mt-1 text-sm text-white/50">
+                Post e foto dal profilo
+              </p>
+            </div>
+            {isOwn ? (
+              <div className="rounded-2xl border border-white/12 bg-white/[0.05] p-1 backdrop-blur-md [&_textarea]:bg-white/10 [&_textarea]:text-white [&_textarea]:placeholder:text-white/40">
+                <CreatePostComposer
+                  compact
+                  placeholder="Condividi un momento dal viaggio…"
+                />
+              </div>
+            ) : null}
+            <PostFeed
+              posts={posts}
+              currentUserId={viewerId}
+              tone="onDark"
+              emptyMessage={
+                isOwn
+                  ? 'Non hai ancora pubblicato nulla. Scrivi il primo post.'
+                  : 'Nessun post pubblico ancora.'
+              }
+            />
+          </section>
+
           <TripSection
             title="Organizza"
             subtitle="Viaggi aperti creati da questa persona"

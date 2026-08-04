@@ -49,6 +49,12 @@ export async function Navbar() {
               </Link>
               <PrenotaNavMenu />
               <Link
+                href="/dashboard/bacheca"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                Bacheca
+              </Link>
+              <Link
                 href="/dashboard/miei-viaggi"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >

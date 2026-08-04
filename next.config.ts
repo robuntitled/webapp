@@ -61,6 +61,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'hare-media-cdn.tripadvisor.com',
       },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
 };

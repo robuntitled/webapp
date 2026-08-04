@@ -8,6 +8,7 @@ import {
   getPublicReviews,
   haveSharedTrip,
 } from '@/lib/data/public-profile';
+import { listUserPosts } from '@/lib/data/posts';
 import { PublicProfileView } from '@/components/profile/PublicProfileView';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const session = await auth();
   const viewerId = session?.user?.id;
 
-  const [organizedTrips, joinedTrips, reviews, shared, alreadyReviewed] =
+  const [organizedTrips, joinedTrips, reviews, shared, alreadyReviewed, posts] =
     await Promise.all([
       getPublicOrganizedTrips(profile.id),
       getPublicJoinedTrips(profile.id),
@@ -36,6 +37,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
       viewerId && viewerId !== profile.id
         ? getExistingReview(profile.id, viewerId)
         : Promise.resolve(false),
+      listUserPosts(profile.id, viewerId, 30),
     ]);
 
   const canReview = Boolean(
@@ -48,6 +50,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
       organizedTrips={organizedTrips}
       joinedTrips={joinedTrips}
       reviews={reviews}
+      posts={posts}
+      viewerId={viewerId}
       isOwn={viewerId === profile.id}
       canReview={canReview}
     />
