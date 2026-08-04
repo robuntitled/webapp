@@ -45,8 +45,10 @@ export function HeroBackground({
 
   const overlayClass = {
     light: 'bg-white/40',
-    dark: 'bg-slate-950/65',
-    gradient: 'bg-gradient-to-b from-slate-950/75 via-slate-950/50 to-slate-950/80',
+    dark: 'bg-slate-950/78',
+    // Più opaco: evita titoli/testi scuri illeggibili sopra le foto
+    gradient:
+      'bg-gradient-to-b from-slate-950/88 via-slate-950/72 to-[#0c1520]/94',
   }[overlay];
 
   const useParallax = parallax && !reduced;

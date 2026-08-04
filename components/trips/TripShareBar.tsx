@@ -230,7 +230,9 @@ export function TripInviteInbox({ invites }: TripInviteInboxProps) {
 
   return (
     <section className="space-y-3">
-      <h2 className="font-display text-lg font-semibold">Inviti in sospeso</h2>
+      <h2 className="nl-hero-section-title font-display text-lg font-semibold text-white">
+        Inviti in sospeso
+      </h2>
       <ul className="space-y-2">
         {visible.map((inv) => {
           const fromName =

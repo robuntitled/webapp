@@ -285,12 +285,11 @@ export function PublicProfileView({
               </p>
             </div>
             {isOwn ? (
-              <div className="rounded-2xl border border-white/12 bg-white/[0.05] p-1 backdrop-blur-md [&_textarea]:bg-white/10 [&_textarea]:text-white [&_textarea]:placeholder:text-white/40">
-                <CreatePostComposer
-                  compact
-                  placeholder="Condividi un momento dal viaggio…"
-                />
-              </div>
+              <CreatePostComposer
+                compact
+                tone="onDark"
+                placeholder="Condividi un momento dal viaggio…"
+              />
             ) : null}
             <PostFeed
               posts={posts}

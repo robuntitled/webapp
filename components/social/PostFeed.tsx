@@ -1,5 +1,7 @@
+import { Images } from 'lucide-react';
 import { PostCard } from '@/components/social/PostCard';
 import type { FeedPost } from '@/lib/data/posts';
+import { cn } from '@/lib/utils';
 
 type PostFeedProps = {
   posts: FeedPost[];
@@ -16,20 +18,29 @@ export function PostFeed({
 }: PostFeedProps) {
   if (!posts.length) {
     return (
-      <p
-        className={
+      <div
+        className={cn(
+          'flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed px-6 py-14 text-center',
           tone === 'onDark'
-            ? 'rounded-2xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-white/45'
-            : 'rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground'
-        }
+            ? 'border-white/15 bg-white/[0.03] text-white/55'
+            : 'border-border bg-muted/20 text-muted-foreground'
+        )}
       >
-        {emptyMessage}
-      </p>
+        <div
+          className={cn(
+            'flex h-12 w-12 items-center justify-center rounded-2xl',
+            tone === 'onDark' ? 'bg-white/8 text-accent' : 'bg-muted text-primary'
+          )}
+        >
+          <Images className="h-5 w-5" />
+        </div>
+        <p className="max-w-sm text-sm leading-relaxed">{emptyMessage}</p>
+      </div>
     );
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-4">
       {posts.map((post) => (
         <li key={post.id}>
           <PostCard post={post} currentUserId={currentUserId} tone={tone} />

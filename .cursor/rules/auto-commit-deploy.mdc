@@ -1,0 +1,20 @@
+---
+description: Always commit and deploy completed work without asking
+alwaysApply: true
+---
+
+# Auto commit + deploy
+
+When a feature, fix, or meaningful change set is finished and working:
+
+1. **Commit** following the repo git protocol (status/diff/log, HEREDOC message, no secrets, no amend unless rules allow).
+2. **Push** to `origin` on the current branch.
+3. **Deploy production** with `npx vercel --prod --yes` (or the project’s established deploy path).
+
+Do **not** ask the user for confirmation before commit/push/deploy for ordinary completed work. Only pause if:
+
+- the user explicitly said not to deploy this change
+- there are secrets / destructive git operations involved
+- deploy/build fails and needs a decision
+
+Prefer one commit per coherent change set, then push + deploy in the same turn.

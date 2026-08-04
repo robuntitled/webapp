@@ -26,12 +26,15 @@ type TripJoinRequestsInboxProps = {
   requests: JoinRequestItem[];
   /** Nasconde il titolo del viaggio quando l'elenco è già dentro un viaggio. */
   showTripTitle?: boolean;
+  /** Su HeroBackground usa testo chiaro; dentro Card usa default. */
+  tone?: 'default' | 'onDark';
   className?: string;
 };
 
 export function TripJoinRequestsInbox({
   requests,
   showTripTitle = true,
+  tone = 'default',
   className,
 }: TripJoinRequestsInboxProps) {
   const [pending, startTransition] = useTransition();
@@ -54,9 +57,21 @@ export function TripJoinRequestsInbox({
 
   return (
     <section className={className}>
-      <h2 className="font-display text-lg font-semibold">
+      <h2
+        className={
+          tone === 'onDark'
+            ? 'nl-hero-section-title font-display text-lg font-semibold text-white'
+            : 'font-display text-lg font-semibold text-foreground'
+        }
+      >
         Richieste di partecipazione
-        <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+        <span
+          className={
+            tone === 'onDark'
+              ? 'ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium text-white'
+              : 'ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'
+          }
+        >
           {visible.length}
         </span>
       </h2>

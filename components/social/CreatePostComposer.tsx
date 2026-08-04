@@ -3,20 +3,24 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { ImagePlus, Loader2, X } from 'lucide-react';
+import { ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createPost } from '@/actions/posts';
+import { cn } from '@/lib/utils';
 
 type CreatePostComposerProps = {
   placeholder?: string;
   compact?: boolean;
+  /** Glass scuro per bacheca / profilo su hero */
+  tone?: 'default' | 'onDark';
 };
 
 export function CreatePostComposer({
   placeholder = 'Racconta un viaggio, un posto, un momento…',
   compact = false,
+  tone = 'default',
 }: CreatePostComposerProps) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -24,6 +28,7 @@ export function CreatePostComposer({
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [pending, startTransition] = useTransition();
+  const onDark = tone === 'onDark';
 
   const onPickFile = async (f: File | null) => {
     if (!f) return;
@@ -71,23 +76,37 @@ export function CreatePostComposer({
 
   return (
     <div
-      className={
-        compact
-          ? 'space-y-3 rounded-2xl border border-border/60 bg-card p-4'
-          : 'space-y-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm'
-      }
+      className={cn(
+        'space-y-3 rounded-3xl p-4 sm:p-5',
+        onDark
+          ? 'nl-feed-composer'
+          : 'border border-border/60 bg-card shadow-sm',
+        compact && 'p-4'
+      )}
     >
+      {onDark ? (
+        <div className="mb-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+          Nuovo post
+        </div>
+      ) : null}
+
       <Textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder={placeholder}
         maxLength={2000}
         rows={compact ? 3 : 4}
-        className="resize-none rounded-xl border-border/50 bg-background/50"
+        className={cn(
+          'resize-none rounded-2xl',
+          onDark
+            ? 'border-white/10 bg-transparent text-white placeholder:text-white/40 focus-visible:ring-accent/40'
+            : 'border-border/50 bg-background/50'
+        )}
       />
 
       {preview ? (
-        <div className="relative overflow-hidden rounded-xl border border-border/50">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={preview} alt="" className="max-h-72 w-full object-cover" />
           <button
@@ -114,7 +133,11 @@ export function CreatePostComposer({
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-full"
+            className={cn(
+              'rounded-full',
+              onDark &&
+                'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'
+            )}
             disabled={pending}
             onClick={() => fileRef.current?.click()}
           >
@@ -125,7 +148,7 @@ export function CreatePostComposer({
         <Button
           type="button"
           size="sm"
-          className="rounded-full"
+          className="rounded-full px-5"
           disabled={pending || (!body.trim() && !file)}
           onClick={publish}
         >

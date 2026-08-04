@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 type PostCardProps = {
   post: FeedPost;
   currentUserId?: string | null;
-  /** Variante scura per profilo pubblico */
+  /** Variante scura per bacheca / profilo pubblico */
   tone?: 'default' | 'onDark';
 };
 
@@ -35,22 +35,24 @@ export function PostCard({
     (post.author.username ? `@${post.author.username}` : 'Viaggiatore');
   const href = profilePath(post.author.username, post.author.id);
   const isOwn = currentUserId === post.author.id;
-
   const onDark = tone === 'onDark';
 
   return (
     <article
       className={cn(
-        'rounded-2xl border p-4',
-        onDark
-          ? 'border-white/10 bg-white/[0.04]'
-          : 'border-border/60 bg-card'
+        'rounded-3xl p-4 sm:p-5',
+        onDark ? 'nl-feed-card' : 'border border-border/60 bg-card'
       )}
     >
       <div className="flex items-start gap-3">
         {href ? (
           <Link href={href} className="shrink-0">
-            <Avatar className={cn('h-10 w-10', onDark && 'border border-white/15')}>
+            <Avatar
+              className={cn(
+                'h-11 w-11 ring-2',
+                onDark ? 'ring-white/15' : 'ring-border/60'
+              )}
+            >
               <AvatarImage src={post.author.image ?? ''} alt="" />
               <AvatarFallback className="text-xs">
                 {getInitialsFromNames(post.author.firstName, post.author.lastName)}
@@ -58,7 +60,7 @@ export function PostCard({
             </Avatar>
           </Link>
         ) : (
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-11 w-11">
             <AvatarImage src={post.author.image ?? ''} alt="" />
             <AvatarFallback className="text-xs">?</AvatarFallback>
           </Avatar>
@@ -71,21 +73,29 @@ export function PostCard({
                 <Link
                   href={href}
                   className={cn(
-                    'truncate text-sm font-medium hover:underline',
+                    'truncate text-sm font-semibold hover:underline',
                     onDark ? 'text-white' : 'text-foreground'
                   )}
                 >
                   {name}
                 </Link>
               ) : (
-                <p className="text-sm font-medium">{name}</p>
+                <p
+                  className={cn(
+                    'text-sm font-semibold',
+                    onDark ? 'text-white' : 'text-foreground'
+                  )}
+                >
+                  {name}
+                </p>
               )}
               <p
                 className={cn(
-                  'text-[11px]',
-                  onDark ? 'text-white/40' : 'text-muted-foreground'
+                  'mt-0.5 text-[11px]',
+                  onDark ? 'text-white/45' : 'text-muted-foreground'
                 )}
               >
+                {post.author.username ? `@${post.author.username} · ` : ''}
                 {new Date(post.createdAt).toLocaleString('it-IT', {
                   day: 'numeric',
                   month: 'short',
@@ -101,7 +111,7 @@ export function PostCard({
                 size="icon"
                 className={cn(
                   'h-8 w-8 shrink-0 rounded-full',
-                  onDark && 'text-white/60 hover:text-white'
+                  onDark && 'text-white/55 hover:bg-white/10 hover:text-white'
                 )}
                 disabled={pending}
                 aria-label="Elimina post"
@@ -125,8 +135,8 @@ export function PostCard({
           {post.body ? (
             <p
               className={cn(
-                'mt-2 whitespace-pre-wrap text-sm leading-relaxed',
-                onDark ? 'text-white/80' : 'text-foreground'
+                'mt-3 whitespace-pre-wrap text-[15px] leading-relaxed',
+                onDark ? 'text-white/88' : 'text-foreground'
               )}
             >
               {post.body}
@@ -134,18 +144,23 @@ export function PostCard({
           ) : null}
 
           {post.imageUrl ? (
-            <div className="mt-3 overflow-hidden rounded-xl border border-black/5">
+            <div
+              className={cn(
+                'mt-3 overflow-hidden rounded-2xl',
+                onDark ? 'ring-1 ring-white/10' : 'border border-black/5'
+              )}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={post.imageUrl}
                 alt=""
-                className="max-h-[420px] w-full object-cover"
+                className="max-h-[460px] w-full object-cover"
                 loading="lazy"
               />
             </div>
           ) : null}
 
-          <div className="mt-3">
+          <div className="mt-3.5 flex items-center gap-2">
             <button
               type="button"
               disabled={pending || !currentUserId}
@@ -167,12 +182,12 @@ export function PostCard({
                 });
               }}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition',
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition',
                 liked
-                  ? 'text-rose-500'
+                  ? 'bg-rose-500/15 text-rose-400'
                   : onDark
-                    ? 'text-white/55 hover:text-white'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                    : 'bg-muted text-muted-foreground hover:text-foreground',
                 !currentUserId && 'opacity-60'
               )}
             >
