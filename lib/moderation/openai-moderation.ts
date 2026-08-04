@@ -1,11 +1,12 @@
 import 'server-only';
 
 const OPENAI_MODERATION_URL = 'https://api.openai.com/v1/moderations';
-const MODEL = 'omni-moderation-latest';
+/** Multimodale testo+immagine; per solo testo usiamo input stringa (meno token). */
+const MODEL_OMNI = 'omni-moderation-latest';
 
 export type ModerationResult =
   | { ok: true; skipped?: boolean }
-  | { ok: false; error: string; categories?: string[] };
+  | { ok: false; error: string; categories?: string[]; code?: string };
 
 type ModerationApiResponse = {
   results?: Array<{
@@ -13,14 +14,13 @@ type ModerationApiResponse = {
     categories?: Record<string, boolean>;
     category_scores?: Record<string, number>;
   }>;
-  error?: { message?: string };
+  error?: { message?: string; type?: string; code?: string };
 };
 
 function getModerationApiKey(): string | undefined {
   return (
     process.env.OPENAI_MODERATION_API_KEY?.trim() ||
     process.env.OPENAI_API_KEY?.trim() ||
-    // Solo se AI punta a OpenAI cloud, riusa la stessa key
     (process.env.AI_BASE_URL?.includes('api.openai.com')
       ? process.env.AI_API_KEY?.trim()
       : undefined)
@@ -34,8 +34,58 @@ function flaggedCategories(categories: Record<string, boolean> | undefined): str
     .map(([k]) => k);
 }
 
+/** Rimpicciolisce l'immagine per stare nei TPM Free (~10k/min). */
+async function shrinkForModeration(
+  data: Buffer,
+  mimeType: string
+): Promise<{ data: Buffer; mimeType: string }> {
+  try {
+    const sharp = (await import('sharp')).default;
+    const out = await sharp(data)
+      .rotate()
+      .resize({
+        width: 512,
+        height: 512,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: 65, mozjpeg: true })
+      .toBuffer();
+    return { data: out, mimeType: 'image/jpeg' };
+  } catch (e) {
+    console.warn('[moderation] sharp resize failed, using original', e);
+    return { data, mimeType };
+  }
+}
+
+async function callModeration(
+  apiKey: string,
+  body: Record<string, unknown>,
+  attempt = 0
+): Promise<{ res: Response; data: ModerationApiResponse }> {
+  const res = await fetch(OPENAI_MODERATION_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20_000),
+  });
+
+  const data = (await res.json()) as ModerationApiResponse;
+
+  if (res.status === 429 && attempt < 2) {
+    const waitMs = 1200 * (attempt + 1);
+    await new Promise((r) => setTimeout(r, waitMs));
+    return callModeration(apiKey, body, attempt + 1);
+  }
+
+  return { res, data };
+}
+
 /**
- * Modera testo e/o immagine con OpenAI omni-moderation (gratis).
+ * Modera testo e/o immagine con OpenAI Moderation (gratis).
  * Se manca la API key: in produzione blocca; in dev skip con warning.
  */
 export async function moderatePostContent(input: {
@@ -59,41 +109,50 @@ export async function moderatePostContent(input: {
     return { ok: true, skipped: true };
   }
 
-  const parts: Array<
-    | { type: 'text'; text: string }
-    | { type: 'image_url'; image_url: { url: string } }
-  > = [];
+  let requestBody: Record<string, unknown>;
 
-  if (text) {
-    parts.push({ type: 'text', text });
-  }
-  if (input.image?.data?.length) {
-    const b64 = input.image.data.toString('base64');
+  if (hasImage && input.image) {
+    const shrunk = await shrinkForModeration(input.image.data, input.image.mimeType);
+    const b64 = shrunk.data.toString('base64');
+    const parts: Array<
+      | { type: 'text'; text: string }
+      | { type: 'image_url'; image_url: { url: string } }
+    > = [];
+    if (text) parts.push({ type: 'text', text });
     parts.push({
       type: 'image_url',
-      image_url: {
-        url: `data:${input.image.mimeType};base64,${b64}`,
-      },
+      image_url: { url: `data:${shrunk.mimeType};base64,${b64}` },
     });
+    requestBody = { model: MODEL_OMNI, input: parts };
+  } else {
+    // Solo testo: stringa semplice (meno overhead)
+    requestBody = { model: MODEL_OMNI, input: text };
   }
 
   try {
-    const res = await fetch(OPENAI_MODERATION_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        input: parts.length === 1 && parts[0].type === 'text' ? text : parts,
-      }),
-      signal: AbortSignal.timeout(15_000),
-    });
+    const { res, data } = await callModeration(apiKey, requestBody);
 
-    const data = (await res.json()) as ModerationApiResponse;
     if (!res.ok) {
-      console.error('[moderation] OpenAI error', res.status, data.error?.message);
+      console.error(
+        '[moderation] OpenAI error',
+        res.status,
+        data.error?.message ?? data.error?.code
+      );
+      if (res.status === 429) {
+        return {
+          ok: false,
+          code: 'RATE_LIMIT',
+          error:
+            'Moderazione temporaneamente satura (limite OpenAI). Riprova tra un minuto.',
+        };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return {
+          ok: false,
+          code: 'AUTH',
+          error: 'Chiave OpenAI non valida. Controlla OPENAI_API_KEY su Vercel.',
+        };
+      }
       return {
         ok: false,
         error: 'Impossibile verificare il contenuto. Riprova tra poco.',
