@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { profilePath } from '@/lib/profile/paths';
+import { moderatePostContent } from '@/lib/moderation/openai-moderation';
 
 export type PostActionResult =
   | { ok: true; postId?: string }
@@ -45,7 +46,8 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
   }
 
   const file = formData.get('image');
-  let imageUrl: string | null = null;
+  let imageFile: File | null = null;
+  let imageBuffer: Buffer | null = null;
 
   if (file instanceof File && file.size > 0) {
     if (!ALLOWED_TYPES.has(file.type)) {
@@ -54,20 +56,40 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
     if (file.size > MAX_IMAGE_BYTES) {
       return { ok: false, error: 'Immagine troppo grande (max 5 MB).' };
     }
+    imageFile = file;
+    imageBuffer = Buffer.from(await file.arrayBuffer());
+  }
 
+  if (!bodyRaw && !imageFile) {
+    return { ok: false, error: 'Scrivi qualcosa o aggiungi una foto.' };
+  }
+
+  const moderation = await moderatePostContent({
+    text: bodyRaw || undefined,
+    image:
+      imageBuffer && imageFile
+        ? { data: imageBuffer, mimeType: imageFile.type }
+        : undefined,
+  });
+  if (!moderation.ok) {
+    return { ok: false, error: moderation.error };
+  }
+
+  let imageUrl: string | null = null;
+  if (imageFile && imageBuffer) {
     const ext =
-      file.type === 'image/png'
+      imageFile.type === 'image/png'
         ? 'png'
-        : file.type === 'image/webp'
+        : imageFile.type === 'image/webp'
           ? 'webp'
-          : file.type === 'image/gif'
+          : imageFile.type === 'image/gif'
             ? 'gif'
             : 'jpg';
     const path = `${userId}/${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('post-media')
-      .upload(path, file, { contentType: file.type, upsert: false });
+      .upload(path, imageBuffer, { contentType: imageFile.type, upsert: false });
 
     if (uploadError) {
       console.error('[createPost upload]', uploadError.message);
@@ -76,10 +98,6 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
 
     const { data: pub } = supabaseAdmin.storage.from('post-media').getPublicUrl(path);
     imageUrl = pub.publicUrl || null;
-  }
-
-  if (!bodyRaw && !imageUrl) {
-    return { ok: false, error: 'Scrivi qualcosa o aggiungi una foto.' };
   }
 
   const { data, error } = await supabaseAdmin
