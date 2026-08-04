@@ -29,10 +29,15 @@ export function CreatePostComposer({
     if (!f) return;
     try {
       const compressed = await imageCompression(f, {
-        maxSizeMB: 1.2,
+        maxSizeMB: 0.9,
         maxWidthOrHeight: 1600,
         useWebWorker: true,
+        initialQuality: 0.82,
       });
+      if (compressed.size > 4.5 * 1024 * 1024) {
+        toast.error('Foto ancora troppo grande dopo la compressione. Prova un’altra immagine.');
+        return;
+      }
       setFile(compressed);
       setPreview(URL.createObjectURL(compressed));
     } catch {

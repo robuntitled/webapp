@@ -23,6 +23,15 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_TRAVELPAYOUTS_DEFAULT_ORIGIN_IATA ||
       'ROM',
   },
+  // Post foto (FormData) — default Next = 1 MB, troppo basso per l'MVP social
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
+    // Next 15.5+ proxy/middleware: altrimenti il body viene tagliato a ~1 MB in prod
+    proxyClientMaxBodySize: '6mb',
+    middlewareClientMaxBodySize: '6mb',
+  },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
