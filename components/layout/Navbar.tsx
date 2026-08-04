@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { PrenotaNavMenu } from '@/components/layout/PrenotaNavMenu';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Heart, Plus } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
@@ -66,6 +67,7 @@ export async function Navbar() {
                   <Heart className="h-5 w-5 text-accent" />
                 </Button>
               </Link>
+              <NotificationBell />
               {session.user && (
                 <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
                   <Link href="/dashboard/crea?new=1">

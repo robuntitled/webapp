@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Heart, Users, MapPin, LogIn, Palmtree, ArrowRight } from 'lucide-react';
 import { useTransition, useState, useEffect } from 'react';
 import { toggleFavorite } from '@/actions/favorites';
-import { joinTrip } from '@/actions/trip-management';
+import { requestToJoinTrip } from '@/actions/trip-join-requests';
 import { useRouter } from 'next/navigation';
 import { type Session } from 'next-auth';
 import { toast } from 'sonner';
@@ -42,6 +42,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
   const [joinPending, startJoinTransition] = useTransition();
   const [optimisticFavorited, setOptimisticFavorited] = useState(trip.isFavorited);
   const [optimisticJoined, setOptimisticJoined] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
   const [phoneGateOpen, setPhoneGateOpen] = useState(false);
 
   const userId = session?.user?.id;
@@ -52,6 +53,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
 
   useEffect(() => {
     setOptimisticJoined(false);
+    setRequestSent(false);
   }, [trip.id, trip.trip_participants]);
 
   const planningMode = trip.planningMode ?? 'group';
@@ -62,7 +64,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
 
   const creator = isTripCreator(trip, userId);
   const participant = isTripParticipant(trip, userId) || optimisticJoined;
-  const joinable = canJoinTrip(trip, userId) && !optimisticJoined;
+  const joinable = canJoinTrip(trip, userId) && !optimisticJoined && !requestSent;
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -85,7 +87,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
   };
 
   const doJoin = async () => {
-    const result = await joinTrip(trip.id);
+    const result = await requestToJoinTrip(trip.id);
     if (!result.ok) {
       if (result.code === 'PHONE_VERIFY_REQUIRED' || isPhoneGateError(result.error)) {
         setPhoneGateOpen(true);
@@ -94,12 +96,17 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
       toast.error(result.error);
       return;
     }
-    setOptimisticJoined(true);
-    toast.success(
-      result.alreadyJoined
-        ? 'Sei già nella crew di questo viaggio'
-        : 'Sei dentro! Modalità relax attiva 🏖️'
-    );
+    if (result.status === 'already_member') {
+      setOptimisticJoined(true);
+      toast.success('Sei già nella crew di questo viaggio');
+    } else {
+      setRequestSent(true);
+      toast.success(
+        result.status === 'already_pending'
+          ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
+          : 'Richiesta inviata! L’organizzatore deve accettarla 🤞'
+      );
+    }
     router.refresh();
   };
 
@@ -228,13 +235,18 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                     onClick={handleJoinClick}
                     disabled={joinPending}
                   >
-                    {joinPending ? 'Entro...' : (
+                    {joinPending ? 'Invio...' : (
                       <>
                         <LogIn className="mr-1.5 h-3.5 w-3.5" />
                         Ci sto! 🏖️
                       </>
                     )}
                   </Button>
+                )}
+                {requestSent && !participant && (
+                  <Badge variant="secondary" className="rounded-full text-[10px] shrink-0">
+                    ⏳ Richiesta inviata
+                  </Badge>
                 )}
                 {participant && !creator && (
                   <Badge variant="secondary" className="rounded-full text-[10px] shrink-0">
@@ -255,6 +267,10 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                     <ArrowRight className="h-4 w-4 ml-auto" />
                   </Link>
                 </Button>
+              ) : requestSent ? (
+                <Button className="w-full rounded-full" variant="outline" disabled>
+                  ⏳ Richiesta inviata — attendi l’organizzatore
+                </Button>
               ) : joinable ? (
                 <Button
                   className="w-full rounded-full gap-2"
@@ -262,11 +278,11 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                   disabled={joinPending}
                 >
                   {joinPending ? (
-                    'Ti stiamo aggiungendo...'
+                    'Invio richiesta...'
                   ) : (
                     <>
                       <LogIn className="h-4 w-4" />
-                      Unisciti — modalità relax 🏖️
+                      Chiedi di unirti — modalità relax 🏖️
                     </>
                   )}
                 </Button>

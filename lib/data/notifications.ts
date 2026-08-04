@@ -1,0 +1,99 @@
+import 'server-only';
+
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+export type NotificationType =
+  | 'trip_join_request'
+  | 'trip_join_accepted'
+  | 'trip_join_rejected';
+
+export type AppNotification = {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  metadata: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+};
+
+function isMissingTable(error: { code?: string } | null): boolean {
+  return error?.code === '42P01';
+}
+
+export async function createNotification(input: {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  link?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('user_notifications')
+    .insert({
+      user_id: input.userId,
+      type: input.type,
+      title: input.title,
+      body: input.body ?? null,
+      link: input.link ?? null,
+      metadata: input.metadata ?? {},
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    if (!isMissingTable(error)) {
+      console.error('[createNotification]', error.message);
+    }
+    return null;
+  }
+  return (data?.id as string) ?? null;
+}
+
+export async function listNotificationsForUser(
+  userId: string,
+  limit = 20
+): Promise<AppNotification[]> {
+  const { data, error } = await supabaseAdmin
+    .from('user_notifications')
+    .select('id, type, title, body, link, metadata, read_at, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data?.length) {
+    if (error && !isMissingTable(error)) {
+      console.error('[listNotifications]', error.message);
+    }
+    return [];
+  }
+
+  return data.map((row) => ({
+    id: row.id as string,
+    type: row.type as NotificationType,
+    title: String(row.title ?? ''),
+    body: (row.body as string | null) ?? null,
+    link: (row.link as string | null) ?? null,
+    metadata: (row.metadata as Record<string, unknown>) ?? {},
+    readAt: (row.read_at as string | null) ?? null,
+    createdAt: String(row.created_at),
+  }));
+}
+
+export async function countUnreadNotifications(userId: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from('user_notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null);
+
+  if (error) {
+    if (!isMissingTable(error)) {
+      console.error('[countUnreadNotifications]', error.message);
+    }
+    return 0;
+  }
+  return count ?? 0;
+}

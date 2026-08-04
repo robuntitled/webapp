@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation';
 import { fetchCreatedTrips, fetchJoinedTrips } from '@/lib/data/trips';
 import { getComposerDraft } from '@/lib/data/planner-profile';
 import { listPendingInvitesForUser } from '@/lib/data/trip-invites';
+import { listPendingJoinRequestsForOrganizer } from '@/lib/data/trip-join-requests';
 import { MyTripsHub } from '@/components/trips/MyTripsHub';
 import { TripInviteInbox } from '@/components/trips/TripShareBar';
+import { TripJoinRequestsInbox } from '@/components/trips/TripJoinRequestsInbox';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 
@@ -18,12 +20,14 @@ export default async function MyTripsPage() {
 
   const userId = session.user.id;
 
-  const [createdTrips, joinedTrips, composerDraft, pendingInvites] = await Promise.all([
-    fetchCreatedTrips(userId),
-    fetchJoinedTrips(userId),
-    getComposerDraft(userId),
-    listPendingInvitesForUser(userId),
-  ]);
+  const [createdTrips, joinedTrips, composerDraft, pendingInvites, joinRequests] =
+    await Promise.all([
+      fetchCreatedTrips(userId),
+      fetchJoinedTrips(userId),
+      getComposerDraft(userId),
+      listPendingInvitesForUser(userId),
+      listPendingJoinRequestsForOrganizer(userId),
+    ]);
 
   const draftPayload = composerDraft
     ? {
@@ -41,6 +45,7 @@ export default async function MyTripsPage() {
       />
 
       <div className="relative z-0 container mx-auto max-w-5xl space-y-8 px-4 py-10 pb-24">
+        <TripJoinRequestsInbox requests={joinRequests} />
         <TripInviteInbox invites={pendingInvites} />
         <MyTripsHub
           createdTrips={createdTrips}

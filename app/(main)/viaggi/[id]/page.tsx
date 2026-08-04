@@ -16,6 +16,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TripDetailActions } from '@/components/trips/TripDetailActions';
 import { TripShareBar } from '@/components/trips/TripShareBar';
 import { TripCrewPeek } from '@/components/trips/TripCrewPeek';
+import { TripJoinRequestsInbox } from '@/components/trips/TripJoinRequestsInbox';
+import {
+  getJoinRequestStatus,
+  listPendingJoinRequestsForTrip,
+} from '@/lib/data/trip-join-requests';
 import { TripRoleBadge } from '@/components/trips/TripRoleBadge';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { resolveUserTripRole } from '@/lib/trips/roles';
@@ -49,8 +54,16 @@ export default async function TripDetailPage({ params }: PageProps) {
     participant?.role as TripParticipantRole | undefined
   );
   const showInvite = isCreator || userRole === 'owner' || userRole === 'editor';
+  const canManageRequests = showInvite;
   const composerItinerary =
     (trip.composerVersion ?? 0) >= 1 ? await fetchComposerItinerary(trip.id) : null;
+
+  const [joinRequests, myJoinRequestStatus] = await Promise.all([
+    canManageRequests ? listPendingJoinRequestsForTrip(trip.id) : Promise.resolve([]),
+    session?.user?.id && !isCreator && !isParticipant
+      ? getJoinRequestStatus(trip.id, session.user.id)
+      : Promise.resolve(null),
+  ]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,9 +193,18 @@ export default async function TripDetailPage({ params }: PageProps) {
                   isCreator={isCreator}
                   isParticipant={isParticipant}
                   isFavorited={trip.isFavorited}
+                  joinRequestStatus={myJoinRequestStatus}
                 />
               </CardContent>
             </Card>
+
+            {canManageRequests && joinRequests.length > 0 && (
+              <Card className="rounded-[1.75rem] border border-border/50">
+                <CardContent className="p-6">
+                  <TripJoinRequestsInbox requests={joinRequests} showTripTitle={false} />
+                </CardContent>
+              </Card>
+            )}
 
             <TripBookingPanel
               tripId={trip.id}

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, X, LogIn } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toggleFavorite } from '@/actions/favorites';
-import { joinTrip } from '@/actions/trip-management';
+import { requestToJoinTrip } from '@/actions/trip-join-requests';
 import { useRouter } from 'next/navigation';
 import { type Session } from 'next-auth';
 import { toast } from 'sonner';
@@ -29,6 +29,7 @@ export function FavoriteTripCard({
   const [isRemoving, startRemoving] = useTransition();
   const [isJoining, startJoining] = useTransition();
   const [phoneGateOpen, setPhoneGateOpen] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   const imageUrl = trip.imageUrl || '/images/trips/placeholder.jpg';
   const status = getTripStatus(trip.startDate, trip.endDate);
@@ -51,7 +52,7 @@ export function FavoriteTripCard({
   };
 
   const doJoin = async () => {
-    const result = await joinTrip(trip.id);
+    const result = await requestToJoinTrip(trip.id);
     if (!result.ok) {
       if (result.code === 'PHONE_VERIFY_REQUIRED' || isPhoneGateError(result.error)) {
         setPhoneGateOpen(true);
@@ -60,11 +61,16 @@ export function FavoriteTripCard({
       toast.error(result.error);
       return;
     }
-    toast.success(
-      result.alreadyJoined
-        ? 'Sei già nella crew di questo viaggio'
-        : 'Ti sei unito al viaggio con successo!'
-    );
+    if (result.status === 'already_member') {
+      toast.success('Sei già nella crew di questo viaggio');
+    } else {
+      setRequestSent(true);
+      toast.success(
+        result.status === 'already_pending'
+          ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
+          : 'Richiesta inviata! L’organizzatore deve accettarla 🤞'
+      );
+    }
     router.refresh();
   };
 
@@ -149,13 +155,17 @@ export function FavoriteTripCard({
                   <Badge variant="outline" className="text-green-600 border-green-600">
                     Partecipi
                   </Badge>
+                ) : requestSent ? (
+                  <Badge variant="outline" className="text-amber-600 border-amber-600">
+                    Richiesta inviata
+                  </Badge>
                 ) : (
                   <Button size="sm" onClick={handleJoinClick} disabled={isJoining}>
                     {isJoining ? (
-                      'Mi unisco...'
+                      'Invio...'
                     ) : (
                       <>
-                        <LogIn className="mr-2 h-4 w-4" /> Unisciti
+                        <LogIn className="mr-2 h-4 w-4" /> Chiedi di unirti
                       </>
                     )}
                   </Button>
