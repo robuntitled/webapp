@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { profilePath } from '@/lib/profile/paths';
-import { moderatePostContent } from '@/lib/moderation/openai-moderation';
+import { moderatePostContent } from '@/lib/moderation/moderate-post';
 
 export type PostActionResult =
   | { ok: true; postId?: string }
@@ -64,12 +64,8 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
     return { ok: false, error: 'Scrivi qualcosa o aggiungi una foto.' };
   }
 
-  const moderation = await moderatePostContent({
+  const moderation = moderatePostContent({
     text: bodyRaw || undefined,
-    image:
-      imageBuffer && imageFile
-        ? { data: imageBuffer, mimeType: imageFile.type }
-        : undefined,
   });
   if (!moderation.ok) {
     return { ok: false, error: moderation.error };
