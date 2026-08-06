@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTripMessages, isTripMember, postTripMessage } from '@/lib/data/trip-chat';
+import { moderatePostContent } from '@/lib/moderation/moderate-post';
 import { z } from 'zod';
 
 const postSchema = z.object({
@@ -50,6 +51,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Messaggio non valido' }, { status: 400 });
+  }
+
+  const moderation = moderatePostContent({ text: parsed.data.body });
+  if (!moderation.ok) {
+    return NextResponse.json({ error: moderation.error }, { status: 400 });
   }
 
   try {

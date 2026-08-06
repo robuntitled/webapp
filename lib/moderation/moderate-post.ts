@@ -22,8 +22,8 @@ const MESSAGES: Record<TextBlockReason, string> = {
 };
 
 /**
- * Moderazione locale: linguaggio offensivo, link/email/telefono,
- * canali off-platform e competitor.
+ * Moderazione locale (post bacheca + chat viaggio): linguaggio offensivo,
+ * link/email/telefono, canali off-platform e competitor.
  */
 export function moderatePostContent(input: {
   text?: string;
