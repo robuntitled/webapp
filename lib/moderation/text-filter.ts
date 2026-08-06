@@ -7,6 +7,7 @@ import {
 } from 'obscenity';
 import { COMPETITOR_TERMS } from '@/lib/moderation/competitors';
 import { findContactViolation } from '@/lib/moderation/contact-filter';
+import { deobfuscateForWords } from '@/lib/moderation/deobfuscate';
 import {
   LATIN_PHRASES,
   LATIN_PROFANITY,
@@ -95,11 +96,29 @@ function hasBlockedLatinToken(normalized: string): boolean {
   for (const token of normalized.split(' ')) {
     if (LATIN_WORD_SET.has(token)) return true;
   }
+  // anche substring senza spazi (dopo collapse "c a z z o")
+  const compact = normalized.replace(/\s+/g, '');
+  for (const word of LATIN_WORD_SET) {
+    if (word.length >= 4 && compact.includes(word)) return true;
+  }
   return false;
 }
 
 function hasCompetitorMention(normalized: string): boolean {
   return NORMALIZED_COMPETITORS.some((term) => term && normalized.includes(term));
+}
+
+function hasProfanity(text: string): boolean {
+  if (matcher.hasMatch(text)) return true;
+
+  const normalized = normalizeText(text);
+  if (normalized && hasBlockedLatinToken(normalized)) return true;
+  if (NORMALIZED_PHRASES.some((p) => p && normalized.includes(p))) return true;
+
+  const lower = text.toLowerCase();
+  if (NORMALIZED_NON_LATIN.some((t) => t && lower.includes(t))) return true;
+
+  return false;
 }
 
 /** Motivo del blocco, o null se il testo è ok. */
@@ -110,19 +129,13 @@ export function findTextBlockReason(text: string): TextBlockReason | null {
   const contact = findContactViolation(raw);
   if (contact) return contact;
 
-  const normalized = normalizeText(raw);
+  const deobfuscated = deobfuscateForWords(raw);
+  const variants = [raw, deobfuscated, normalizeText(deobfuscated)];
 
-  if (hasCompetitorMention(normalized)) return 'competitor';
-
-  if (matcher.hasMatch(raw)) return 'profanity';
-  if (normalized && hasBlockedLatinToken(normalized)) return 'profanity';
-  if (NORMALIZED_PHRASES.some((p) => p && normalized.includes(p))) {
-    return 'profanity';
-  }
-
-  const lower = raw.toLowerCase();
-  if (NORMALIZED_NON_LATIN.some((t) => t && lower.includes(t))) {
-    return 'profanity';
+  for (const variant of variants) {
+    if (!variant) continue;
+    if (hasCompetitorMention(normalizeText(variant))) return 'competitor';
+    if (hasProfanity(variant)) return 'profanity';
   }
 
   return null;

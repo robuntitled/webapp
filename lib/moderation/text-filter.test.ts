@@ -64,4 +64,22 @@ describe('textLooksUnsafe', () => {
     );
     expect(findTextBlockReason('guarda su Nomad List')).toBe('competitor');
   });
+
+  it('blocks obfuscated phones, emails and insults', () => {
+    expect(
+      findTextBlockReason(
+        'tre nove tre tre sei due due sette cinque otto'
+      )
+    ).toBe('phone');
+    expect(findTextBlockReason('3 3 3 1 2 3 4 5 6 7')).toBe('phone');
+    expect(
+      findTextBlockReason('three three three one two three four five six seven')
+    ).toBe('phone');
+    expect(findTextBlockReason('mario chiocciola gmail punto com')).toBe(
+      'email'
+    );
+    expect(findTextBlockReason('sito example punto com')).toBe('link');
+    expect(findTextBlockReason('c a z z o')).toBe('profanity');
+    expect(findTextBlockReason('str0nzo')).toBe('profanity');
+  });
 });
