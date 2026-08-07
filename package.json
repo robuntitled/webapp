@@ -22,6 +22,7 @@
     "db:join-requests": "node scripts/db-exec.mjs supabase/migrations/019_trip_join_requests.sql",
     "db:notifications": "node scripts/db-exec.mjs supabase/migrations/020_user_notifications.sql",
     "db:posts": "node scripts/db-exec.mjs supabase/migrations/021_user_posts.sql",
+    "db:community-map": "node scripts/db-exec.mjs supabase/migrations/022_user_map_location.sql",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",
     "db:email-verify": "node scripts/db-exec.mjs supabase/migrations/009_email_verification.sql",
