@@ -175,6 +175,113 @@ export function CreatePostComposer({
     });
   };
 
+  const locationBlock =
+    preview || file ? (
+      <div className="space-y-2">
+        {geo ? (
+          <div
+            className={cn(
+              'flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2 text-xs',
+              onDark ? 'bg-white/5 text-white/85' : 'bg-muted text-foreground'
+            )}
+          >
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
+            <span className="min-w-0 flex-1 truncate">
+              {geo.label
+                ? geo.label
+                : geo.source === 'exif'
+                  ? 'GPS letto dai metadati della foto'
+                  : 'Luogo selezionato'}
+              {geo.source === 'exif' ? (
+                <span className="ml-1 opacity-50">(dallo scatto)</span>
+              ) : null}
+            </span>
+            <button
+              type="button"
+              className="text-[11px] font-medium text-accent hover:underline"
+              onClick={() => setShowPlaceSearch(true)}
+            >
+              Correggi
+            </button>
+            <button
+              type="button"
+              className="opacity-70 hover:opacity-100"
+              onClick={() => {
+                setGeo(null);
+                setPlaceQuery('');
+                setShowPlaceSearch(false);
+              }}
+              aria-label="Rimuovi posizione foto"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : readingMeta ? (
+          <p
+            className={cn(
+              'flex items-center gap-2 px-1 text-xs',
+              onDark ? 'text-white/55' : 'text-muted-foreground'
+            )}
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Cerco GPS nei metadati della foto…
+          </p>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => setShowPlaceSearch(true)}
+            className={cn(
+              'h-8 rounded-full text-xs',
+              onDark &&
+                'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'
+            )}
+          >
+            <MapPin className="mr-1.5 h-3.5 w-3.5" />
+            Dove è stata scattata?
+          </Button>
+        )}
+
+        {showPlaceSearch ? (
+          <div className="space-y-1">
+            <PlaceSearchInput
+              value={placeQuery}
+              placeholder="Cerca città o luogo dello scatto…"
+              className={cn(
+                'h-10 rounded-xl pl-9 text-sm',
+                onDark
+                  ? 'border-white/15 bg-white/5 text-white placeholder:text-white/35'
+                  : ''
+              )}
+              onChange={(label, coords) => {
+                setPlaceQuery(label);
+                if (coords) {
+                  setGeo({
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    label,
+                    source: 'place',
+                  });
+                  setShowPlaceSearch(false);
+                  toast.success('Luogo dello scatto impostato.');
+                }
+              }}
+            />
+            <p
+              className={cn(
+                'px-1 text-[10px]',
+                onDark ? 'text-white/40' : 'text-muted-foreground'
+              )}
+            >
+              Se i metadati non c’erano, indica il posto reale dello scatto.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <div
       className={cn(
@@ -192,6 +299,9 @@ export function CreatePostComposer({
         </div>
       ) : null}
 
+      {/* Posizione sempre sopra testo e foto */}
+      {locationBlock}
+
       <Textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
@@ -207,127 +317,30 @@ export function CreatePostComposer({
       />
 
       {preview ? (
-        <div className="space-y-2">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={preview}
-              alt=""
-              className="max-h-72 w-full object-cover"
-              decoding="async"
-            />
-            {readingMeta || compressing ? (
-              <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-3 py-1.5 text-[11px] text-white/85">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {readingMeta
-                  ? 'Lettura metadati GPS della foto…'
-                  : 'Ottimizzazione foto…'}
-              </div>
-            ) : null}
-            <button
-              type="button"
-              onClick={clearImage}
-              className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/75"
-              aria-label="Rimuovi foto"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {geo ? (
-              <div
-                className={cn(
-                  'flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2 text-xs',
-                  onDark ? 'bg-white/5 text-white/85' : 'bg-muted text-foreground'
-                )}
-              >
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
-                <span className="min-w-0 flex-1 truncate">
-                  {geo.label
-                    ? geo.label
-                    : geo.source === 'exif'
-                      ? 'GPS letto dai metadati della foto'
-                      : 'Luogo selezionato'}
-                  {geo.source === 'exif' ? (
-                    <span className="ml-1 text-white/40">(dallo scatto)</span>
-                  ) : null}
-                </span>
-                <button
-                  type="button"
-                  className="text-[11px] font-medium text-accent hover:underline"
-                  onClick={() => setShowPlaceSearch(true)}
-                >
-                  Correggi
-                </button>
-                <button
-                  type="button"
-                  className="opacity-70 hover:opacity-100"
-                  onClick={() => {
-                    setGeo(null);
-                    setPlaceQuery('');
-                    setShowPlaceSearch(false);
-                  }}
-                  aria-label="Rimuovi posizione foto"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : readingMeta ? (
-              <p className="flex items-center gap-2 px-1 text-xs text-white/55">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Cerco GPS nei metadati della foto…
-              </p>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => setShowPlaceSearch(true)}
-                className={cn(
-                  'h-8 rounded-full text-xs',
-                  onDark &&
-                    'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'
-                )}
-              >
-                <MapPin className="mr-1.5 h-3.5 w-3.5" />
-                Dove è stata scattata?
-              </Button>
-            )}
-
-            {showPlaceSearch ? (
-              <div className="space-y-1">
-                <PlaceSearchInput
-                  value={placeQuery}
-                  placeholder="Cerca città o luogo dello scatto…"
-                  className={cn(
-                    'h-10 rounded-xl pl-9 text-sm',
-                    onDark
-                      ? 'border-white/15 bg-white/5 text-white placeholder:text-white/35'
-                      : ''
-                  )}
-                  onChange={(label, coords) => {
-                    setPlaceQuery(label);
-                    if (coords) {
-                      setGeo({
-                        lat: coords.lat,
-                        lng: coords.lng,
-                        label,
-                        source: 'place',
-                      });
-                      setShowPlaceSearch(false);
-                      toast.success('Luogo dello scatto impostato.');
-                    }
-                  }}
-                />
-                <p className="px-1 text-[10px] text-white/40">
-                  Se i metadati non c’erano (es. privacy iPhone), indica qui il posto
-                  reale dello scatto.
-                </p>
-              </div>
-            ) : null}
-          </div>
+        <div className="relative overflow-hidden rounded-2xl border border-white/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt=""
+            className="max-h-72 w-full object-cover"
+            decoding="async"
+          />
+          {readingMeta || compressing ? (
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-3 py-1.5 text-[11px] text-white/85">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {readingMeta
+                ? 'Lettura metadati GPS della foto…'
+                : 'Ottimizzazione foto…'}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={clearImage}
+            className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/75"
+            aria-label="Rimuovi foto"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       ) : null}
 

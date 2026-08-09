@@ -18,7 +18,6 @@ import {
   Navigation,
   EyeOff,
   Users,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -35,9 +34,9 @@ import type {
 } from '@/lib/data/community-map';
 import { cn } from '@/lib/utils';
 
-/** Dark professional basemap (Carto Dark Matter). */
-const CARTO_DARK_URL =
-  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+/** Stile chiaro tipo travel (Carto Voyager). */
+const CARTO_URL =
+  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
 type MapTab = 'people' | 'photos';
 
@@ -59,25 +58,17 @@ function FitBounds({ points }: { points: BoundPoint[] }) {
       return;
     }
     if (points.length === 1) {
-      map.flyTo([points[0].lat, points[0].lng], 6, {
-        duration: 0.75,
-        easeLinearity: 0.25,
-      });
+      map.flyTo([points[0].lat, points[0].lng], 6, { duration: 0.7 });
       return;
     }
     const bounds = L.latLngBounds(
       points.map((p) => [p.lat, p.lng] as [number, number])
     );
-    map.flyToBounds(bounds.pad(0.22), {
-      maxZoom: 7,
-      duration: 0.85,
-      easeLinearity: 0.25,
-    });
+    map.flyToBounds(bounds.pad(0.2), { maxZoom: 7, duration: 0.75 });
   }, [map, points]);
   return null;
 }
 
-/** Ricalcola le dimensioni Leaflet dopo fullscreen / resize container. */
 function MapResizeSync({
   expanded,
   sizeTick,
@@ -111,40 +102,27 @@ function MapResizeSync({
 }
 
 function makeAvatarIcon(imageUrl: string | null, isMe: boolean) {
-  const ring = isMe ? '#e8a87c' : '#3d8fa3';
+  const ring = isMe ? '#e8a87c' : '#2f6f82';
   const safe = imageUrl?.replace(/"/g, '') ?? '';
   const inner = safe
     ? `<img src="${safe}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:9999px" />`
-    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:linear-gradient(145deg,#1a3344,#243f52);color:#fff;font-size:11px;font-weight:700">NL</span>`;
+    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#1a3344;color:#fff;font-size:11px;font-weight:700">NL</span>`;
   return L.divIcon({
     className: 'community-map-marker',
-    html: `<div style="
-      width:38px;height:38px;border-radius:9999px;overflow:hidden;
-      border:2.5px solid ${ring};
-      box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08);
-      background:#0f172a;
-      transition: transform .15s ease;
-    ">${inner}</div>`,
-    iconSize: [38, 38],
-    iconAnchor: [19, 19],
-    popupAnchor: [0, -20],
+    html: `<div style="width:36px;height:36px;border-radius:9999px;overflow:hidden;border:2.5px solid ${ring};box-shadow:0 4px 14px rgba(15,23,42,0.28);background:#fff">${inner}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
   });
 }
 
-/** Pin leggero (niente download foto nel marker → mappa più fluida). */
 function makePhotoIcon() {
   return L.divIcon({
     className: 'community-photo-marker',
-    html: `<div style="
-      width:34px;height:34px;border-radius:10px;
-      display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(145deg,#2f6f82,#1a4a58);
-      border:2px solid rgba(255,255,255,0.85);
-      box-shadow:0 8px 20px rgba(0,0,0,0.5);
-    "><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
+    html: `<div style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#2f6f82;border:2px solid #fff;box-shadow:0 4px 14px rgba(15,23,42,0.3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 }
 
@@ -262,263 +240,228 @@ export function CommunityMap({
     }
   }
 
-  const subtitle =
+  const countLabel =
     tab === 'people'
       ? pins.length === 0
-        ? 'Nessun viaggiatore in mappa. Condividi la tua posizione (opt-in).'
-        : `${pins.length} viaggiatore${pins.length === 1 ? '' : 'i'} · ~1 km`
+        ? 'Nessun viaggiatore in mappa'
+        : `${pins.length} viaggiatori`
       : photoPins.length === 0
-        ? 'Nessuna foto georeferenziata. Usa il GPS dello scatto o cerca il luogo reale.'
-        : `${photoPins.length} foto · luogo dello scatto`;
+        ? 'Nessuna foto georeferenziata'
+        : `${photoPins.length} foto`;
 
-  const header = (
-    <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
-      <div className="min-w-0 space-y-2">
-        <div className="flex items-center gap-2 text-white">
-          <MapPin className="h-4 w-4 text-accent" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">
-            Mappa community
-          </h2>
-        </div>
-        <div className="flex gap-1 rounded-full bg-black/25 p-0.5">
-          <button
-            type="button"
-            onClick={() => setTab('people')}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition',
-              tab === 'people'
-                ? 'bg-white/15 text-white'
-                : 'text-white/55 hover:text-white/80'
-            )}
-          >
-            <Users className="h-3.5 w-3.5" />
-            Viaggiatori
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('photos')}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition',
-              tab === 'photos'
-                ? 'bg-white/15 text-white'
-                : 'text-white/55 hover:text-white/80'
-            )}
-          >
-            <Camera className="h-3.5 w-3.5" />
-            Foto
-          </button>
-        </div>
-        <p className="text-xs text-white/65">{subtitle}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {tab === 'people' ? (
-          visible ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => void onHide()}
-              className="gap-1.5 bg-white/10 text-white hover:bg-white/15"
-            >
-              <EyeOff className="h-3.5 w-3.5" />
-              Nascondi
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              onClick={() => void onShare()}
-              className="gap-1.5"
-            >
-              <Navigation className="h-3.5 w-3.5" />
-              {busy ? 'Attendi…' : 'Condividi posizione'}
-            </Button>
-          )
-        ) : null}
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="h-8 gap-1.5 bg-white/95 px-3 text-xs font-semibold text-slate-900 hover:bg-white"
-          onClick={() => setExpanded((v) => !v)}
-          aria-label={expanded ? 'Riduci mappa' : 'Espandi mappa'}
-        >
-          {expanded ? (
-            <>
-              <Minimize2 className="h-3.5 w-3.5" />
-              Riduci
-            </>
-          ) : (
-            <>
-              <Maximize2 className="h-3.5 w-3.5" />
-              Espandi
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-
-  const mapCanvas = (
-    <div
+  const shell = (
+    <section
       className={cn(
-        'relative min-h-0 w-full flex-1 bg-[#0b1220]',
-        '[&_.leaflet-container]:h-full [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-[#0b1220]',
-        '[&_.leaflet-control-attribution]:!hidden',
-        '[&_.leaflet-control-zoom]:border-0 [&_.leaflet-control-zoom]:shadow-lg',
-        '[&_.leaflet-control-zoom-in]:!bg-slate-900/90 [&_.leaflet-control-zoom-in]:!text-white [&_.leaflet-control-zoom-in]:!border-white/10',
-        '[&_.leaflet-control-zoom-out]:!bg-slate-900/90 [&_.leaflet-control-zoom-out]:!text-white [&_.leaflet-control-zoom-out]:!border-white/10',
-        '[&_.leaflet-popup-content-wrapper]:rounded-xl [&_.leaflet-popup-content-wrapper]:border [&_.leaflet-popup-content-wrapper]:border-white/10 [&_.leaflet-popup-content-wrapper]:bg-slate-950/95 [&_.leaflet-popup-content-wrapper]:text-white [&_.leaflet-popup-content-wrapper]:shadow-2xl',
-        '[&_.leaflet-popup-tip]:bg-slate-950/95',
-        !expanded && 'h-[300px] sm:h-[380px] flex-none'
+        'flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5',
+        !expanded && 'rounded-3xl nl-feed-card',
+        className
       )}
     >
-      {expanded ? (
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="absolute right-2.5 top-2.5 z-[2000] inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/20 bg-white/95 px-3 text-xs font-semibold text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
-          aria-label="Riduci mappa"
-        >
-          <X className="h-3.5 w-3.5" />
-          Riduci
-        </button>
-      ) : null}
-      {mounted ? (
-        <MapContainer
-          key={`${tab}-${expanded ? 'full' : 'inline'}`}
-          center={[28, 12]}
-          zoom={2}
-          className="h-full w-full"
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom
-          attributionControl={false}
-          zoomControl
-          preferCanvas
-          zoomAnimation
-          fadeAnimation
-          markerZoomAnimation
-          zoomSnap={0.5}
-          zoomDelta={0.5}
-          wheelPxPerZoomLevel={80}
-        >
-          <TileLayer
-            url={CARTO_DARK_URL}
-            keepBuffer={2}
-            updateWhenIdle
-            updateWhenZooming={false}
-          />
-          <MapResizeSync expanded={expanded} sizeTick={sizeTick} />
-          <FitBounds points={fitPoints} />
-          {tab === 'people'
-            ? pins.map((pin) => (
-                <Marker
-                  key={pin.id}
-                  position={[pin.lat, pin.lng]}
-                  icon={personIcons.get(pin.id)}
-                >
-                  <Popup className="community-popup">
-                    <div className="min-w-[140px] space-y-1 text-sm text-white">
-                      <p className="font-semibold">
-                        {personLabel(pin)}
-                        {pin.id === currentUserId ? ' (tu)' : ''}
-                      </p>
-                      {pin.label ? (
-                        <p className="text-xs text-white/55">{pin.label}</p>
-                      ) : null}
-                      {pin.href ? (
-                        <Link
-                          href={pin.href}
-                          className="text-xs font-medium text-accent underline-offset-2 hover:underline"
-                        >
-                          Vedi profilo
-                        </Link>
-                      ) : null}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))
-            : photoPins.map((pin) => (
-                <Marker
-                  key={pin.id}
-                  position={[pin.lat, pin.lng]}
-                  icon={PHOTO_ICON}
-                >
-                  <Popup className="community-popup">
-                    <div className="w-[190px] space-y-1.5 text-sm text-white">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={pin.imageUrl}
-                        alt=""
-                        className="h-28 w-full rounded-lg object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <p className="font-semibold">{personLabel(pin.author)}</p>
-                      {pin.label ? (
-                        <p className="text-xs text-white/55">{pin.label}</p>
-                      ) : null}
-                      {pin.body ? (
-                        <p className="line-clamp-2 text-xs text-white/70">
-                          {pin.body}
-                        </p>
-                      ) : null}
-                      {pin.href ? (
-                        <Link
-                          href={pin.href}
-                          className="text-xs font-medium text-accent underline-offset-2 hover:underline"
-                        >
-                          Vedi profilo
-                        </Link>
-                      ) : null}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-        </MapContainer>
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-white/50">
-          Caricamento mappa…
+      <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-base font-semibold tracking-tight text-white sm:text-lg">
+              Mappa community
+            </h2>
+            <span className="hidden text-xs text-white/45 sm:inline">
+              · {countLabel}
+            </span>
+          </div>
+          <div className="mt-2 flex items-center gap-4 text-sm">
+            <button
+              type="button"
+              onClick={() => setTab('people')}
+              className={cn(
+                'inline-flex items-center gap-1.5 pb-0.5 transition',
+                tab === 'people'
+                  ? 'border-b-2 border-accent font-medium text-white'
+                  : 'text-white/50 hover:text-white/80'
+              )}
+            >
+              <Users className="h-3.5 w-3.5" />
+              Viaggiatori
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('photos')}
+              className={cn(
+                'inline-flex items-center gap-1.5 pb-0.5 transition',
+                tab === 'photos'
+                  ? 'border-b-2 border-accent font-medium text-white'
+                  : 'text-white/50 hover:text-white/80'
+              )}
+            >
+              <Camera className="h-3.5 w-3.5" />
+              Foto
+            </button>
+          </div>
         </div>
-      )}
-    </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {tab === 'people' ? (
+            visible ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => void onHide()}
+                className="h-8 gap-1.5 px-2.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                Nascondi
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy}
+                onClick={() => void onShare()}
+                className="h-8 gap-1.5 rounded-full px-3 text-xs"
+              >
+                <Navigation className="h-3.5 w-3.5" />
+                {busy ? '…' : 'Condividi'}
+              </Button>
+            )
+          ) : null}
+          {!expanded ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-xs font-medium text-white transition hover:bg-white/15"
+              aria-label="Espandi mappa"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Espandi
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          'relative min-h-0 w-full flex-1 bg-[#e8eef2]',
+          '[&_.leaflet-container]:h-full [&_.leaflet-container]:w-full',
+          '[&_.leaflet-control-attribution]:!hidden',
+          '[&_.leaflet-control-zoom]:border-0 [&_.leaflet-control-zoom]:overflow-hidden [&_.leaflet-control-zoom]:rounded-lg [&_.leaflet-control-zoom]:shadow-md',
+          '[&_.leaflet-control-zoom-in]:!h-8 [&_.leaflet-control-zoom-in]:!w-8 [&_.leaflet-control-zoom-in]:!leading-8 [&_.leaflet-control-zoom-in]:!border-0 [&_.leaflet-control-zoom-in]:!bg-white/95',
+          '[&_.leaflet-control-zoom-out]:!h-8 [&_.leaflet-control-zoom-out]:!w-8 [&_.leaflet-control-zoom-out]:!leading-8 [&_.leaflet-control-zoom-out]:!border-0 [&_.leaflet-control-zoom-out]:!bg-white/95',
+          '[&_.leaflet-popup-content-wrapper]:rounded-xl [&_.leaflet-popup-content-wrapper]:border-0 [&_.leaflet-popup-content-wrapper]:shadow-xl',
+          !expanded && 'h-[280px] flex-none sm:h-[340px]'
+        )}
+      >
+        {expanded ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="absolute right-3 top-3 z-[2000] inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-xs font-semibold text-slate-800 shadow-md transition hover:bg-slate-50"
+            aria-label="Riduci mappa"
+          >
+            <Minimize2 className="h-3.5 w-3.5" />
+            Riduci
+          </button>
+        ) : null}
+
+        {mounted ? (
+          <MapContainer
+            key={`${tab}-${expanded ? 'full' : 'inline'}`}
+            center={[28, 12]}
+            zoom={2}
+            className="h-full w-full"
+            style={{ height: '100%', width: '100%' }}
+            scrollWheelZoom
+            attributionControl={false}
+            zoomControl
+            preferCanvas
+            worldCopyJump={false}
+            maxBounds={[
+              [-85, -180],
+              [85, 180],
+            ]}
+            maxBoundsViscosity={1}
+          >
+            <TileLayer url={CARTO_URL} noWrap />
+            <MapResizeSync expanded={expanded} sizeTick={sizeTick} />
+            <FitBounds points={fitPoints} />
+            {tab === 'people'
+              ? pins.map((pin) => (
+                  <Marker
+                    key={pin.id}
+                    position={[pin.lat, pin.lng]}
+                    icon={personIcons.get(pin.id)}
+                  >
+                    <Popup>
+                      <div className="min-w-[130px] space-y-1 text-sm text-slate-900">
+                        <p className="font-semibold">
+                          {personLabel(pin)}
+                          {pin.id === currentUserId ? ' (tu)' : ''}
+                        </p>
+                        {pin.label ? (
+                          <p className="text-xs text-slate-500">{pin.label}</p>
+                        ) : null}
+                        {pin.href ? (
+                          <Link
+                            href={pin.href}
+                            className="text-xs font-medium text-[#2f6f82] hover:underline"
+                          >
+                            Vedi profilo
+                          </Link>
+                        ) : null}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))
+              : photoPins.map((pin) => (
+                  <Marker
+                    key={pin.id}
+                    position={[pin.lat, pin.lng]}
+                    icon={PHOTO_ICON}
+                  >
+                    <Popup>
+                      <div className="w-[180px] space-y-1.5 text-sm text-slate-900">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={pin.imageUrl}
+                          alt=""
+                          className="h-28 w-full rounded-lg object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <p className="font-semibold">
+                          {personLabel(pin.author)}
+                        </p>
+                        {pin.label ? (
+                          <p className="text-xs text-slate-500">{pin.label}</p>
+                        ) : null}
+                        {pin.href ? (
+                          <Link
+                            href={pin.href}
+                            className="text-xs font-medium text-[#2f6f82] hover:underline"
+                          >
+                            Vedi profilo
+                          </Link>
+                        ) : null}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+          </MapContainer>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-slate-500">
+            Caricamento mappa…
+          </div>
+        )}
+      </div>
+    </section>
   );
 
   if (expanded) {
     return (
-      <div className="fixed inset-0 z-[200] flex flex-col bg-slate-950/50 p-2 backdrop-blur-[2px] sm:p-4">
-        <div className="mb-2 flex items-center justify-between gap-2 px-1">
-          <p className="text-sm font-semibold text-white drop-shadow">
-            Mappa community
-          </p>
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/20 bg-white/95 px-3 text-xs font-semibold text-slate-900 shadow-lg transition hover:bg-white"
-          >
-            <X className="h-3.5 w-3.5" />
-            Riduci
-          </button>
-        </div>
-        <section className="nl-feed-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 shadow-2xl">
-          {header}
-          {mapCanvas}
-        </section>
+      <div className="fixed inset-0 z-[200] flex flex-col bg-black/40 p-3 backdrop-blur-sm sm:p-5">
+        {shell}
       </div>
     );
   }
 
-  return (
-    <section
-      className={cn(
-        'flex flex-col overflow-hidden rounded-3xl nl-feed-card',
-        className
-      )}
-    >
-      {header}
-      {mapCanvas}
-    </section>
-  );
+  return shell;
 }
