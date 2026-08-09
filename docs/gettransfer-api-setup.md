@@ -53,7 +53,14 @@ Riferimento: PDF ufficiale *GetTransfer.com API book_now updated* (Travelpayouts
 
 ### Limite del sandbox
 
-Nell'ambiente di test (`gtrbox.org`) le offerte **`book_now` esistono solo per Istanbul (IST) e Londra Heathrow**. Su qualsiasi altra tratta la risposta arriva senza offerte: non è un bug dell'integrazione. In sandbox l'API NomadLink restituisce in questo caso un `hint` esplicito mostrato nella UI.
+Nell'ambiente di test (`gtrbox.org`) le offerte **`book_now`** sono disponibili su un set limitato di tratte. Travelpayouts ha confermato (tra le altre):
+
+- Heathrow (LHR) → Londra centro
+- Istanbul Airport (IST) → Istanbul
+- Madrid → Barcellona
+- Aeroporto BCN → Barcellona centro
+
+Su altre tratte la risposta può arrivare senza `book_now`: non è un bug dell'integrazione. In sandbox l'API NomadLink mostra un `hint` esplicito.
 
 ## 3. Affiliate (commissioni)
 
@@ -101,6 +108,6 @@ Documentato qui per il futuro; **oggi NomadLink si ferma a `route_info` + handof
 
 1. Imposta token + `GETTRANSFER_ENV=sandbox` (opzionale `GETTRANSFER_DEBUG=1`)
 2. Accedi a NomadLink → Prenota → Trasporti → Taxi
-3. Cerca un tragitto **con almeno 24 ore di anticipo**, usando Istanbul (IST) o Londra Heathrow: in sandbox le altre tratte non hanno offerte `book_now`
+3. Cerca un tragitto **con almeno 24 ore di anticipo**, usando una tratta sandbox nota (es. Heathrow→Londra o IST→Istanbul)
 4. Dovresti vedere le card con prezzi; il pagamento avviene su GetTransfer
 5. Controlla nei log l'URL grezzo: deve contenere `points[]=(lat,lng)` codificato e uno o due `countries[]`

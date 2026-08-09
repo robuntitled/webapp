@@ -31,9 +31,9 @@ export function getGetTransferApiBaseUrl(): string {
   return 'https://gettransfer.com/api';
 }
 
-/** In the sandbox, book_now offers exist only for Istanbul and London Heathrow. */
+/** Hint when sandbox returns route info without book_now offers. */
 export const SANDBOX_NO_OFFERS_HINT =
-  'In sandbox le offerte book_now esistono solo per Istanbul (IST) e Londra Heathrow.';
+  'In sandbox prova tratte note (es. Heathrow→Londra, IST→Istanbul, Madrid→Barcellona, aeroporto BCN→centro). Altre destinazioni possono non avere book_now.';
 
 export function isGetTransferSandbox(): boolean {
   const env = process.env.GETTRANSFER_ENV?.trim().toLowerCase();
