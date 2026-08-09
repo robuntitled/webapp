@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   MapContainer,
@@ -12,7 +13,6 @@ import {
 import L from 'leaflet';
 import {
   Camera,
-  MapPin,
   Maximize2,
   Minimize2,
   Navigation,
@@ -455,13 +455,30 @@ export function CommunityMap({
     </section>
   );
 
-  if (expanded) {
-    return (
-      <div className="fixed inset-0 z-[200] flex flex-col bg-black/40 p-3 backdrop-blur-sm sm:p-5">
-        {shell}
-      </div>
-    );
-  }
+  // Portal su body: evita che navbar/overflow della bacheca taglino l’angolo in alto a sinistra
+  const fullscreen =
+    expanded && mounted
+      ? createPortal(
+          <div className="fixed inset-0 z-[9999] flex flex-col bg-slate-950/55 p-3 backdrop-blur-sm sm:p-4">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-[#0f1c24] shadow-2xl ring-1 ring-white/10">
+              {shell}
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
-  return shell;
+  return (
+    <>
+      {expanded ? (
+        <div
+          className={cn('h-[280px] sm:h-[340px]', className)}
+          aria-hidden
+        />
+      ) : (
+        shell
+      )}
+      {fullscreen}
+    </>
+  );
 }
