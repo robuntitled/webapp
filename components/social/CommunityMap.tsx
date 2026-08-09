@@ -18,6 +18,7 @@ import {
   Navigation,
   EyeOff,
   Users,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -338,16 +339,22 @@ export function CommunityMap({
         ) : null}
         <Button
           type="button"
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 text-white/80 hover:bg-white/10 hover:text-white"
+          size="sm"
+          variant="secondary"
+          className="h-8 gap-1.5 bg-white/95 px-3 text-xs font-semibold text-slate-900 hover:bg-white"
           onClick={() => setExpanded((v) => !v)}
           aria-label={expanded ? 'Riduci mappa' : 'Espandi mappa'}
         >
           {expanded ? (
-            <Minimize2 className="h-4 w-4" />
+            <>
+              <Minimize2 className="h-3.5 w-3.5" />
+              Riduci
+            </>
           ) : (
-            <Maximize2 className="h-4 w-4" />
+            <>
+              <Maximize2 className="h-3.5 w-3.5" />
+              Espandi
+            </>
           )}
         </Button>
       </div>
@@ -368,6 +375,17 @@ export function CommunityMap({
         !expanded && 'h-[300px] sm:h-[380px] flex-none'
       )}
     >
+      {expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="absolute right-2.5 top-2.5 z-[2000] inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/20 bg-white/95 px-3 text-xs font-semibold text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
+          aria-label="Riduci mappa"
+        >
+          <X className="h-3.5 w-3.5" />
+          Riduci
+        </button>
+      ) : null}
       {mounted ? (
         <MapContainer
           key={`${tab}-${expanded ? 'full' : 'inline'}`}
@@ -471,7 +489,20 @@ export function CommunityMap({
   if (expanded) {
     return (
       <div className="fixed inset-0 z-[200] flex flex-col bg-slate-950/50 p-2 backdrop-blur-[2px] sm:p-4">
-        <section className="nl-feed-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <p className="text-sm font-semibold text-white drop-shadow">
+            Mappa community
+          </p>
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/20 bg-white/95 px-3 text-xs font-semibold text-slate-900 shadow-lg transition hover:bg-white"
+          >
+            <X className="h-3.5 w-3.5" />
+            Riduci
+          </button>
+        </div>
+        <section className="nl-feed-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 shadow-2xl">
           {header}
           {mapCanvas}
         </section>
