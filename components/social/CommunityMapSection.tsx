@@ -1,7 +1,11 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { CommunityMapPin, MyMapLocation } from '@/lib/data/community-map';
+import type {
+  CommunityMapPin,
+  CommunityPhotoPin,
+  MyMapLocation,
+} from '@/lib/data/community-map';
 
 const CommunityMap = dynamic(
   () =>
@@ -18,6 +22,7 @@ const CommunityMap = dynamic(
 
 type CommunityMapSectionProps = {
   pins: CommunityMapPin[];
+  photoPins: CommunityPhotoPin[];
   me: MyMapLocation | null;
   currentUserId: string;
 };

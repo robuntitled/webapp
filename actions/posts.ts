@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { profilePath } from '@/lib/profile/paths';
 import { moderatePostContent } from '@/lib/moderation/moderate-post';
+import { reverseGeocode } from '@/lib/places/nominatim';
 
 export type PostActionResult =
   | { ok: true; postId?: string }
@@ -18,6 +19,17 @@ const ALLOWED_TYPES = new Set([
   'image/webp',
   'image/gif',
 ]);
+
+/** ~1 km — privacy a livello città/quartiere. */
+function coarseCoord(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function parseOptionalCoord(raw: FormDataEntryValue | null): number | null {
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
 
 function revalidateSocial(username?: string | null, userId?: string) {
   revalidatePath('/dashboard/bacheca');
@@ -71,6 +83,37 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
     return { ok: false, error: moderation.error };
   }
 
+  let lat = parseOptionalCoord(formData.get('lat'));
+  let lng = parseOptionalCoord(formData.get('lng'));
+  let locationLabel: string | null = null;
+
+  if (lat != null && lng != null) {
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return { ok: false, error: 'Coordinate foto non valide.' };
+    }
+    if (!imageFile) {
+      lat = null;
+      lng = null;
+    } else {
+      lat = coarseCoord(lat);
+      lng = coarseCoord(lng);
+      try {
+        const place = await reverseGeocode(lat, lng);
+        locationLabel = place
+          ? [place.label, place.country].filter(Boolean).join(', ')
+          : null;
+        if (locationLabel && locationLabel.length > 120) {
+          locationLabel = locationLabel.slice(0, 120);
+        }
+      } catch {
+        /* label opzionale */
+      }
+    }
+  } else {
+    lat = null;
+    lng = null;
+  }
+
   let imageUrl: string | null = null;
   if (imageFile && imageBuffer) {
     const ext =
@@ -102,6 +145,9 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
       user_id: userId,
       body: bodyRaw,
       image_url: imageUrl,
+      lat,
+      lng,
+      location_label: locationLabel,
     })
     .select('id')
     .maybeSingle();

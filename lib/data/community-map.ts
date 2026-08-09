@@ -63,6 +63,79 @@ export async function listCommunityMapPins(
     .filter((p): p is CommunityMapPin => p !== null);
 }
 
+export type CommunityPhotoPin = {
+  id: string;
+  imageUrl: string;
+  lat: number;
+  lng: number;
+  label: string | null;
+  body: string;
+  createdAt: string;
+  author: {
+    id: string;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  href: string | null;
+};
+
+export async function listCommunityPhotoPins(
+  limit = 200
+): Promise<CommunityPhotoPin[]> {
+  const { data, error } = await supabaseAdmin
+    .from('user_posts')
+    .select('id, user_id, body, image_url, lat, lng, location_label, created_at')
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+    .not('image_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('[listCommunityPhotoPins]', error.message);
+    return [];
+  }
+
+  const rows = data ?? [];
+  if (!rows.length) return [];
+
+  const userIds = [...new Set(rows.map((r) => r.user_id as string))];
+  const { data: users } = await supabaseAdmin
+    .from('users')
+    .select('id, username, first_name, last_name')
+    .in('id', userIds);
+  const userMap = new Map((users ?? []).map((u) => [u.id as string, u]));
+
+  return rows
+    .map((row) => {
+      const lat = Number(row.lat);
+      const lng = Number(row.lng);
+      const imageUrl = row.image_url as string | null;
+      if (!imageUrl || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      const u = userMap.get(row.user_id as string);
+      if (!u) return null;
+      const username = (u.username as string | null) ?? null;
+      return {
+        id: row.id as string,
+        imageUrl,
+        lat,
+        lng,
+        label: (row.location_label as string | null) ?? null,
+        body: String(row.body ?? ''),
+        createdAt: String(row.created_at),
+        author: {
+          id: u.id as string,
+          username,
+          firstName: (u.first_name as string | null) ?? null,
+          lastName: (u.last_name as string | null) ?? null,
+        },
+        href: profilePath(username, u.id as string),
+      } satisfies CommunityPhotoPin;
+    })
+    .filter((p): p is CommunityPhotoPin => p !== null);
+}
+
 export async function getMyMapLocation(
   userId: string
 ): Promise<MyMapLocation | null> {

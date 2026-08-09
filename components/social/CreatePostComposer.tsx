@@ -3,12 +3,15 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import { ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
+import exifr from 'exifr';
+import { ImagePlus, Loader2, MapPin, Navigation, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createPost } from '@/actions/posts';
 import { cn } from '@/lib/utils';
+
+type PhotoGeo = { lat: number; lng: number; source: 'exif' | 'gps' };
 
 type CreatePostComposerProps = {
   placeholder?: string;
@@ -16,6 +19,24 @@ type CreatePostComposerProps = {
   /** Glass scuro per bacheca / profilo su hero */
   tone?: 'default' | 'onDark';
 };
+
+async function readExifGps(file: File): Promise<PhotoGeo | null> {
+  try {
+    const gps = await exifr.gps(file);
+    if (
+      gps &&
+      typeof gps.latitude === 'number' &&
+      typeof gps.longitude === 'number' &&
+      Number.isFinite(gps.latitude) &&
+      Number.isFinite(gps.longitude)
+    ) {
+      return { lat: gps.latitude, lng: gps.longitude, source: 'exif' };
+    }
+  } catch {
+    /* no GPS in file */
+  }
+  return null;
+}
 
 export function CreatePostComposer({
   placeholder = 'Racconta un viaggio, un posto, un momento…',
@@ -27,12 +48,15 @@ export function CreatePostComposer({
   const [body, setBody] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [geo, setGeo] = useState<PhotoGeo | null>(null);
+  const [geoBusy, setGeoBusy] = useState(false);
   const [pending, startTransition] = useTransition();
   const onDark = tone === 'onDark';
 
   const onPickFile = async (f: File | null) => {
     if (!f) return;
     try {
+      const fromExif = await readExifGps(f);
       const compressed = await imageCompression(f, {
         maxSizeMB: 0.9,
         maxWidthOrHeight: 1600,
@@ -45,6 +69,10 @@ export function CreatePostComposer({
       }
       setFile(compressed);
       setPreview(URL.createObjectURL(compressed));
+      setGeo(fromExif);
+      if (fromExif) {
+        toast.success('Posizione letta dalla foto (EXIF).');
+      }
     } catch {
       toast.error('Errore durante la compressione della foto.');
     }
@@ -52,9 +80,34 @@ export function CreatePostComposer({
 
   const clearImage = () => {
     setFile(null);
+    setGeo(null);
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocalizzazione non supportata.');
+      return;
+    }
+    setGeoBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeo({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          source: 'gps',
+        });
+        setGeoBusy(false);
+        toast.success('Posizione attuale aggiunta alla foto.');
+      },
+      () => {
+        setGeoBusy(false);
+        toast.error('Impossibile rilevare la posizione.');
+      },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60_000 }
+    );
   };
 
   const publish = () => {
@@ -62,12 +115,16 @@ export function CreatePostComposer({
       const fd = new FormData();
       fd.set('body', body);
       if (file) fd.set('image', file);
+      if (file && geo) {
+        fd.set('lat', String(geo.lat));
+        fd.set('lng', String(geo.lng));
+      }
       const res = await createPost(fd);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success('Post pubblicato');
+      toast.success(geo && file ? 'Post pubblicato sulla mappa foto' : 'Post pubblicato');
       setBody('');
       clearImage();
       router.refresh();
@@ -106,17 +163,58 @@ export function CreatePostComposer({
       />
 
       {preview ? (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt="" className="max-h-72 w-full object-cover" />
-          <button
-            type="button"
-            onClick={clearImage}
-            className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/75"
-            aria-label="Rimuovi foto"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div className="space-y-2">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="" className="max-h-72 w-full object-cover" />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/75"
+              aria-label="Rimuovi foto"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {geo ? (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
+                  onDark
+                    ? 'bg-accent/20 text-accent'
+                    : 'bg-accent/10 text-foreground'
+                )}
+              >
+                <MapPin className="h-3 w-3" />
+                {geo.source === 'exif' ? 'GPS dalla foto' : 'Posizione attuale'}
+                <button
+                  type="button"
+                  className="ml-0.5 opacity-70 hover:opacity-100"
+                  onClick={() => setGeo(null)}
+                  aria-label="Rimuovi posizione"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={geoBusy || pending}
+                onClick={useCurrentLocation}
+                className={cn(
+                  'h-8 rounded-full text-xs',
+                  onDark &&
+                    'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'
+                )}
+              >
+                <Navigation className="mr-1.5 h-3.5 w-3.5" />
+                {geoBusy ? 'Rilevo…' : 'Tagga sulla mappa'}
+              </Button>
+            )}
+          </div>
         </div>
       ) : null}
 

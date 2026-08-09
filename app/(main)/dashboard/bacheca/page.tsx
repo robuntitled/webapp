@@ -4,6 +4,7 @@ import { listFeedPosts } from '@/lib/data/posts';
 import {
   getMyMapLocation,
   listCommunityMapPins,
+  listCommunityPhotoPins,
 } from '@/lib/data/community-map';
 import { CreatePostComposer } from '@/components/social/CreatePostComposer';
 import { PostFeed } from '@/components/social/PostFeed';
@@ -20,9 +21,10 @@ export default async function BachecaPage() {
   }
 
   const userId = session.user.id;
-  const [posts, pins, me] = await Promise.all([
+  const [posts, pins, photoPins, me] = await Promise.all([
     listFeedPosts(userId, 50),
     listCommunityMapPins(500),
+    listCommunityPhotoPins(200),
     getMyMapLocation(userId),
   ]);
 
@@ -47,7 +49,12 @@ export default async function BachecaPage() {
           </p>
         </header>
 
-        <CommunityMapSection pins={pins} me={me} currentUserId={userId} />
+        <CommunityMapSection
+          pins={pins}
+          photoPins={photoPins}
+          me={me}
+          currentUserId={userId}
+        />
         <CreatePostComposer tone="onDark" />
         <PostFeed
           posts={posts}
