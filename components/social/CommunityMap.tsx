@@ -50,6 +50,42 @@ type CommunityMapProps = {
 
 type BoundPoint = { lat: number; lng: number };
 
+/**
+ * Privacy arrotonda a ~1km → utenti vicini finiscono sulle stesse coordinate
+ * e i marker si sovrappongono (conteggio 2, icona 1). Offset solo in UI.
+ */
+function spreadOverlappingPins<T extends { id: string; lat: number; lng: number }>(
+  items: T[]
+): Array<T & { displayLat: number; displayLng: number }> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = `${item.lat.toFixed(4)},${item.lng.toFixed(4)}`;
+    const list = groups.get(key) ?? [];
+    list.push(item);
+    groups.set(key, list);
+  }
+
+  const out: Array<T & { displayLat: number; displayLng: number }> = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      const p = group[0];
+      out.push({ ...p, displayLat: p.lat, displayLng: p.lng });
+      continue;
+    }
+    // Cerchio ~250–400 m così i pin restano distinti
+    const radius = 0.0025 + Math.min(group.length, 8) * 0.00035;
+    group.forEach((p, i) => {
+      const angle = (2 * Math.PI * i) / group.length - Math.PI / 2;
+      out.push({
+        ...p,
+        displayLat: p.lat + Math.sin(angle) * radius,
+        displayLng: p.lng + Math.cos(angle) * radius,
+      });
+    });
+  }
+  return out;
+}
+
 function FitBounds({ points }: { points: BoundPoint[] }) {
   const map = useMap();
   useEffect(() => {
@@ -181,10 +217,16 @@ export function CommunityMap({
     return map;
   }, [pins, currentUserId]);
 
+  const displayPeople = useMemo(() => spreadOverlappingPins(pins), [pins]);
+  const displayPhotos = useMemo(
+    () => spreadOverlappingPins(photoPins),
+    [photoPins]
+  );
+
   const fitPoints: BoundPoint[] =
     tab === 'people'
-      ? pins.map((p) => ({ lat: p.lat, lng: p.lng }))
-      : photoPins.map((p) => ({ lat: p.lat, lng: p.lng }));
+      ? displayPeople.map((p) => ({ lat: p.displayLat, lng: p.displayLng }))
+      : displayPhotos.map((p) => ({ lat: p.displayLat, lng: p.displayLng }));
 
   async function onShare() {
     if (!navigator.geolocation) {
@@ -384,11 +426,14 @@ export function CommunityMap({
             <MapResizeSync expanded={expanded} sizeTick={sizeTick} />
             <FitBounds points={fitPoints} />
             {tab === 'people'
-              ? pins.map((pin) => (
+              ? displayPeople.map((pin) => (
                   <Marker
                     key={pin.id}
-                    position={[pin.lat, pin.lng]}
-                    icon={personIcons.get(pin.id)}
+                    position={[pin.displayLat, pin.displayLng]}
+                    icon={
+                      personIcons.get(pin.id) ??
+                      makeAvatarIcon(pin.image, pin.id === currentUserId)
+                    }
                   >
                     <Popup>
                       <div className="min-w-[130px] space-y-1 text-sm text-slate-900">
@@ -411,10 +456,10 @@ export function CommunityMap({
                     </Popup>
                   </Marker>
                 ))
-              : photoPins.map((pin) => (
+              : displayPhotos.map((pin) => (
                   <Marker
                     key={pin.id}
-                    position={[pin.lat, pin.lng]}
+                    position={[pin.displayLat, pin.displayLng]}
                     icon={PHOTO_ICON}
                   >
                     <Popup>
