@@ -3,13 +3,13 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
-import exifr from 'exifr';
 import { ImagePlus, Loader2, MapPin, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
 import { createPost } from '@/actions/posts';
+import { readPhotoGpsFromFile } from '@/lib/social/read-photo-gps';
 import { cn } from '@/lib/utils';
 
 type PhotoGeo = {
@@ -25,36 +25,34 @@ type CreatePostComposerProps = {
   tone?: 'default' | 'onDark';
 };
 
-async function readExifGps(file: File): Promise<PhotoGeo | null> {
+async function reverseLabel(lat: number, lng: number): Promise<string | null> {
   try {
-    const gps = await exifr.gps(file);
-    if (
-      gps &&
-      typeof gps.latitude === 'number' &&
-      typeof gps.longitude === 'number' &&
-      Number.isFinite(gps.latitude) &&
-      Number.isFinite(gps.longitude)
-    ) {
-      return { lat: gps.latitude, lng: gps.longitude, source: 'exif' };
-    }
+    const res = await fetch(
+      `/api/places/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      place?: { label?: string; country?: string; subtitle?: string };
+    };
+    const p = data.place;
+    if (!p?.label) return null;
+    return [p.label, p.country].filter(Boolean).join(', ');
   } catch {
-    /* no GPS */
+    return null;
   }
-  return null;
 }
 
 async function compressForUpload(file: File): Promise<File> {
-  if (file.size <= 350_000 && file.type !== 'image/png') {
+  if (file.size <= 350_000 && /^image\/(jpeg|webp)$/i.test(file.type)) {
     return file;
   }
-  const compressed = await imageCompression(file, {
+  return imageCompression(file, {
     maxSizeMB: 0.55,
     maxWidthOrHeight: 1280,
     useWebWorker: true,
     initialQuality: 0.72,
     fileType: 'image/webp',
   });
-  return compressed;
 }
 
 export function CreatePostComposer({
@@ -68,6 +66,7 @@ export function CreatePostComposer({
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [compressing, setCompressing] = useState(false);
+  const [readingMeta, setReadingMeta] = useState(false);
   const [geo, setGeo] = useState<PhotoGeo | null>(null);
   const [placeQuery, setPlaceQuery] = useState('');
   const [showPlaceSearch, setShowPlaceSearch] = useState(false);
@@ -77,7 +76,6 @@ export function CreatePostComposer({
   const onPickFile = async (f: File | null) => {
     if (!f) return;
 
-    // Anteprima immediata (niente attesa compressione)
     const quickUrl = URL.createObjectURL(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -85,15 +83,38 @@ export function CreatePostComposer({
     });
     setFile(f);
     setCompressing(true);
+    setReadingMeta(true);
     setShowPlaceSearch(false);
     setPlaceQuery('');
+    setGeo(null);
 
-    const fromExif = await readExifGps(f);
-    setGeo(fromExif);
-    if (fromExif) {
-      toast.success('Posizione dello scatto letta dalla foto.');
+    // 1) Metadati GPS dello scatto (prima della compressione, che li rimuove)
+    try {
+      const gps = await readPhotoGpsFromFile(f);
+      if (gps) {
+        const label = await reverseLabel(gps.lat, gps.lng);
+        setGeo({
+          lat: gps.lat,
+          lng: gps.lng,
+          label: label ?? undefined,
+          source: 'exif',
+        });
+        toast.success(
+          label
+            ? `Luogo dello scatto: ${label}`
+            : 'GPS dello scatto letto dai metadati della foto.'
+        );
+      } else {
+        setShowPlaceSearch(true);
+        toast.message(
+          'Nessun GPS nei metadati. Cerca il luogo dove è stata scattata la foto.'
+        );
+      }
+    } finally {
+      setReadingMeta(false);
     }
 
+    // 2) Compressione in parallelo-logico dopo (file già selezionato)
     try {
       const compressed = await compressForUpload(f);
       if (compressed.size > 4.5 * 1024 * 1024) {
@@ -120,14 +141,15 @@ export function CreatePostComposer({
     setPlaceQuery('');
     setShowPlaceSearch(false);
     setCompressing(false);
+    setReadingMeta(false);
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const publish = () => {
-    if (compressing) {
-      toast.message('Attendi un attimo: sto ottimizzando la foto…');
+    if (compressing || readingMeta) {
+      toast.message('Attendi: sto leggendo i metadati / ottimizzando la foto…');
       return;
     }
     startTransition(async () => {
@@ -194,10 +216,12 @@ export function CreatePostComposer({
               className="max-h-72 w-full object-cover"
               decoding="async"
             />
-            {compressing ? (
+            {readingMeta || compressing ? (
               <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-3 py-1.5 text-[11px] text-white/85">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Ottimizzazione foto…
+                {readingMeta
+                  ? 'Lettura metadati GPS della foto…'
+                  : 'Ottimizzazione foto…'}
               </div>
             ) : null}
             <button
@@ -223,8 +247,11 @@ export function CreatePostComposer({
                   {geo.label
                     ? geo.label
                     : geo.source === 'exif'
-                      ? 'Posizione dallo scatto (EXIF)'
+                      ? 'GPS letto dai metadati della foto'
                       : 'Luogo selezionato'}
+                  {geo.source === 'exif' ? (
+                    <span className="ml-1 text-white/40">(dallo scatto)</span>
+                  ) : null}
                 </span>
                 <button
                   type="button"
@@ -246,6 +273,11 @@ export function CreatePostComposer({
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
+            ) : readingMeta ? (
+              <p className="flex items-center gap-2 px-1 text-xs text-white/55">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Cerco GPS nei metadati della foto…
+              </p>
             ) : (
               <Button
                 type="button"
@@ -264,7 +296,7 @@ export function CreatePostComposer({
               </Button>
             )}
 
-            {showPlaceSearch || (geo && !geo.label && geo.source === 'exif') ? (
+            {showPlaceSearch ? (
               <div className="space-y-1">
                 <PlaceSearchInput
                   value={placeQuery}
@@ -290,8 +322,8 @@ export function CreatePostComposer({
                   }}
                 />
                 <p className="px-1 text-[10px] text-white/40">
-                  Usa il GPS della foto se presente, oppure cerca il posto reale dello
-                  scatto (non la tua posizione attuale).
+                  Se i metadati non c’erano (es. privacy iPhone), indica qui il posto
+                  reale dello scatto.
                 </p>
               </div>
             ) : null}
@@ -304,7 +336,7 @@ export function CreatePostComposer({
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
             className="hidden"
             onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
           />
@@ -328,7 +360,9 @@ export function CreatePostComposer({
           type="button"
           size="sm"
           className="rounded-full px-5"
-          disabled={pending || compressing || (!body.trim() && !file)}
+          disabled={
+            pending || compressing || readingMeta || (!body.trim() && !file)
+          }
           onClick={publish}
         >
           {pending ? (
