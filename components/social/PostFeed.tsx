@@ -1,5 +1,7 @@
 import { Images } from 'lucide-react';
 import { PostCard } from '@/components/social/PostCard';
+import { SponsoredFeedCard } from '@/components/social/SponsoredFeedCard';
+import { injectFeedAds } from '@/lib/ads/inject-feed-ads';
 import type { FeedPost } from '@/lib/data/posts';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +10,8 @@ type PostFeedProps = {
   currentUserId?: string | null;
   tone?: 'default' | 'onDark';
   emptyMessage?: string;
+  /** Disabilita inserimento card sponsorizzate (es. profilo pubblico). */
+  showSponsors?: boolean;
 };
 
 export function PostFeed({
@@ -15,6 +19,7 @@ export function PostFeed({
   currentUserId,
   tone = 'default',
   emptyMessage = 'Ancora nessun post. Sii il primo a raccontare un viaggio.',
+  showSponsors = true,
 }: PostFeedProps) {
   if (!posts.length) {
     return (
@@ -39,13 +44,27 @@ export function PostFeed({
     );
   }
 
+  const items = showSponsors
+    ? injectFeedAds(posts)
+    : posts.map((post) => ({ kind: 'post' as const, post }));
+
   return (
     <ul className="space-y-4">
-      {posts.map((post) => (
-        <li key={post.id}>
-          <PostCard post={post} currentUserId={currentUserId} tone={tone} />
-        </li>
-      ))}
+      {items.map((item, index) =>
+        item.kind === 'ad' ? (
+          <li key={`ad-${item.ad.id}-${index}`}>
+            <SponsoredFeedCard ad={item.ad} tone={tone} />
+          </li>
+        ) : (
+          <li key={item.post.id}>
+            <PostCard
+              post={item.post}
+              currentUserId={currentUserId}
+              tone={tone}
+            />
+          </li>
+        )
+      )}
     </ul>
   );
 }

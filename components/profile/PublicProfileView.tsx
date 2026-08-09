@@ -295,6 +295,7 @@ export function PublicProfileView({
               posts={posts}
               currentUserId={viewerId}
               tone="onDark"
+              showSponsors={false}
               emptyMessage={
                 isOwn
                   ? 'Non hai ancora pubblicato nulla. Scrivi il primo post.'
