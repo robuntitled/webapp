@@ -85,7 +85,10 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
 
   let lat = parseOptionalCoord(formData.get('lat'));
   let lng = parseOptionalCoord(formData.get('lng'));
-  let locationLabel: string | null = null;
+  let locationLabel =
+    String(formData.get('locationLabel') ?? '')
+      .trim()
+      .slice(0, 120) || null;
 
   if (lat != null && lng != null) {
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -94,24 +97,28 @@ export async function createPost(formData: FormData): Promise<PostActionResult> 
     if (!imageFile) {
       lat = null;
       lng = null;
+      locationLabel = null;
     } else {
       lat = coarseCoord(lat);
       lng = coarseCoord(lng);
-      try {
-        const place = await reverseGeocode(lat, lng);
-        locationLabel = place
-          ? [place.label, place.country].filter(Boolean).join(', ')
-          : null;
-        if (locationLabel && locationLabel.length > 120) {
-          locationLabel = locationLabel.slice(0, 120);
+      if (!locationLabel) {
+        try {
+          const place = await reverseGeocode(lat, lng);
+          locationLabel = place
+            ? [place.label, place.country].filter(Boolean).join(', ')
+            : null;
+          if (locationLabel && locationLabel.length > 120) {
+            locationLabel = locationLabel.slice(0, 120);
+          }
+        } catch {
+          /* label opzionale */
         }
-      } catch {
-        /* label opzionale */
       }
     }
   } else {
     lat = null;
     lng = null;
+    locationLabel = null;
   }
 
   let imageUrl: string | null = null;

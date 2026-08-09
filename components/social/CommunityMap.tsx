@@ -34,8 +34,9 @@ import type {
 } from '@/lib/data/community-map';
 import { cn } from '@/lib/utils';
 
-const CARTO_URL =
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+/** Dark professional basemap (Carto Dark Matter). */
+const CARTO_DARK_URL =
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
 type MapTab = 'people' | 'photos';
 
@@ -53,17 +54,24 @@ function FitBounds({ points }: { points: BoundPoint[] }) {
   const map = useMap();
   useEffect(() => {
     if (points.length === 0) {
-      map.setView([30, 10], 2);
+      map.setView([28, 12], 2, { animate: true });
       return;
     }
     if (points.length === 1) {
-      map.setView([points[0].lat, points[0].lng], 6);
+      map.flyTo([points[0].lat, points[0].lng], 6, {
+        duration: 0.75,
+        easeLinearity: 0.25,
+      });
       return;
     }
     const bounds = L.latLngBounds(
       points.map((p) => [p.lat, p.lng] as [number, number])
     );
-    map.fitBounds(bounds.pad(0.2), { maxZoom: 8 });
+    map.flyToBounds(bounds.pad(0.22), {
+      maxZoom: 7,
+      duration: 0.85,
+      easeLinearity: 0.25,
+    });
   }, [map, points]);
   return null;
 }
@@ -102,38 +110,44 @@ function MapResizeSync({
 }
 
 function makeAvatarIcon(imageUrl: string | null, isMe: boolean) {
-  const ring = isMe ? '#e8a87c' : '#2f6f82';
+  const ring = isMe ? '#e8a87c' : '#3d8fa3';
   const safe = imageUrl?.replace(/"/g, '') ?? '';
   const inner = safe
-    ? `<img src="${safe}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:9999px" />`
-    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#1a3344;color:#fff;font-size:11px;font-weight:700">NL</span>`;
+    ? `<img src="${safe}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:9999px" />`
+    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:linear-gradient(145deg,#1a3344,#243f52);color:#fff;font-size:11px;font-weight:700">NL</span>`;
   return L.divIcon({
     className: 'community-map-marker',
     html: `<div style="
-      width:36px;height:36px;border-radius:9999px;overflow:hidden;
-      border:2.5px solid ${ring};box-shadow:0 4px 14px rgba(15,23,42,0.35);
+      width:38px;height:38px;border-radius:9999px;overflow:hidden;
+      border:2.5px solid ${ring};
+      box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08);
       background:#0f172a;
+      transition: transform .15s ease;
     ">${inner}</div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -20],
+  });
+}
+
+/** Pin leggero (niente download foto nel marker → mappa più fluida). */
+function makePhotoIcon() {
+  return L.divIcon({
+    className: 'community-photo-marker',
+    html: `<div style="
+      width:34px;height:34px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(145deg,#2f6f82,#1a4a58);
+      border:2px solid rgba(255,255,255,0.85);
+      box-shadow:0 8px 20px rgba(0,0,0,0.5);
+    "><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
     popupAnchor: [0, -18],
   });
 }
 
-function makePhotoIcon(imageUrl: string) {
-  const safe = imageUrl.replace(/"/g, '');
-  return L.divIcon({
-    className: 'community-photo-marker',
-    html: `<div style="
-      width:44px;height:44px;border-radius:12px;overflow:hidden;
-      border:2.5px solid #fff;box-shadow:0 4px 16px rgba(15,23,42,0.4);
-      background:#0f172a;
-    "><img src="${safe}" alt="" style="width:100%;height:100%;object-fit:cover" /></div>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
-    popupAnchor: [0, -22],
-  });
-}
+const PHOTO_ICON = makePhotoIcon();
 
 export function CommunityMap({
   pins,
@@ -187,14 +201,6 @@ export function CommunityMap({
     }
     return map;
   }, [pins, currentUserId]);
-
-  const photoIcons = useMemo(() => {
-    const map = new Map<string, L.DivIcon>();
-    for (const pin of photoPins) {
-      map.set(pin.id, makePhotoIcon(pin.imageUrl));
-    }
-    return map;
-  }, [photoPins]);
 
   const fitPoints: BoundPoint[] =
     tab === 'people'
@@ -261,8 +267,8 @@ export function CommunityMap({
         ? 'Nessun viaggiatore in mappa. Condividi la tua posizione (opt-in).'
         : `${pins.length} viaggiatore${pins.length === 1 ? '' : 'i'} · ~1 km`
       : photoPins.length === 0
-        ? 'Nessuna foto georeferenziata. Aggiungi una foto con GPS o tagga la posizione.'
-        : `${photoPins.length} foto sulla mappa`;
+        ? 'Nessuna foto georeferenziata. Usa il GPS dello scatto o cerca il luogo reale.'
+        : `${photoPins.length} foto · luogo dello scatto`;
 
   const header = (
     <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
@@ -351,22 +357,41 @@ export function CommunityMap({
   const mapCanvas = (
     <div
       className={cn(
-        'relative min-h-0 w-full flex-1 bg-slate-900/40 [&_.leaflet-container]:h-full [&_.leaflet-container]:w-full [&_.leaflet-control-attribution]:!hidden',
-        !expanded && 'h-[280px] sm:h-[340px] flex-none'
+        'relative min-h-0 w-full flex-1 bg-[#0b1220]',
+        '[&_.leaflet-container]:h-full [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-[#0b1220]',
+        '[&_.leaflet-control-attribution]:!hidden',
+        '[&_.leaflet-control-zoom]:border-0 [&_.leaflet-control-zoom]:shadow-lg',
+        '[&_.leaflet-control-zoom-in]:!bg-slate-900/90 [&_.leaflet-control-zoom-in]:!text-white [&_.leaflet-control-zoom-in]:!border-white/10',
+        '[&_.leaflet-control-zoom-out]:!bg-slate-900/90 [&_.leaflet-control-zoom-out]:!text-white [&_.leaflet-control-zoom-out]:!border-white/10',
+        '[&_.leaflet-popup-content-wrapper]:rounded-xl [&_.leaflet-popup-content-wrapper]:border [&_.leaflet-popup-content-wrapper]:border-white/10 [&_.leaflet-popup-content-wrapper]:bg-slate-950/95 [&_.leaflet-popup-content-wrapper]:text-white [&_.leaflet-popup-content-wrapper]:shadow-2xl',
+        '[&_.leaflet-popup-tip]:bg-slate-950/95',
+        !expanded && 'h-[300px] sm:h-[380px] flex-none'
       )}
     >
       {mounted ? (
         <MapContainer
           key={`${tab}-${expanded ? 'full' : 'inline'}`}
-          center={[30, 10]}
+          center={[28, 12]}
           zoom={2}
           className="h-full w-full"
           style={{ height: '100%', width: '100%' }}
           scrollWheelZoom
           attributionControl={false}
           zoomControl
+          preferCanvas
+          zoomAnimation
+          fadeAnimation
+          markerZoomAnimation
+          zoomSnap={0.5}
+          zoomDelta={0.5}
+          wheelPxPerZoomLevel={80}
         >
-          <TileLayer url={CARTO_URL} />
+          <TileLayer
+            url={CARTO_DARK_URL}
+            keepBuffer={2}
+            updateWhenIdle
+            updateWhenZooming={false}
+          />
           <MapResizeSync expanded={expanded} sizeTick={sizeTick} />
           <FitBounds points={fitPoints} />
           {tab === 'people'
@@ -376,19 +401,19 @@ export function CommunityMap({
                   position={[pin.lat, pin.lng]}
                   icon={personIcons.get(pin.id)}
                 >
-                  <Popup>
-                    <div className="min-w-[140px] space-y-1 text-sm">
-                      <p className="font-semibold text-slate-900">
+                  <Popup className="community-popup">
+                    <div className="min-w-[140px] space-y-1 text-sm text-white">
+                      <p className="font-semibold">
                         {personLabel(pin)}
                         {pin.id === currentUserId ? ' (tu)' : ''}
                       </p>
                       {pin.label ? (
-                        <p className="text-xs text-slate-600">{pin.label}</p>
+                        <p className="text-xs text-white/55">{pin.label}</p>
                       ) : null}
                       {pin.href ? (
                         <Link
                           href={pin.href}
-                          className="text-xs font-medium text-[#2f6f82] underline-offset-2 hover:underline"
+                          className="text-xs font-medium text-accent underline-offset-2 hover:underline"
                         >
                           Vedi profilo
                         </Link>
@@ -401,31 +426,31 @@ export function CommunityMap({
                 <Marker
                   key={pin.id}
                   position={[pin.lat, pin.lng]}
-                  icon={photoIcons.get(pin.id)}
+                  icon={PHOTO_ICON}
                 >
-                  <Popup>
-                    <div className="w-[180px] space-y-1.5 text-sm">
+                  <Popup className="community-popup">
+                    <div className="w-[190px] space-y-1.5 text-sm text-white">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={pin.imageUrl}
                         alt=""
                         className="h-28 w-full rounded-lg object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
-                      <p className="font-semibold text-slate-900">
-                        {personLabel(pin.author)}
-                      </p>
+                      <p className="font-semibold">{personLabel(pin.author)}</p>
                       {pin.label ? (
-                        <p className="text-xs text-slate-600">{pin.label}</p>
+                        <p className="text-xs text-white/55">{pin.label}</p>
                       ) : null}
                       {pin.body ? (
-                        <p className="line-clamp-2 text-xs text-slate-700">
+                        <p className="line-clamp-2 text-xs text-white/70">
                           {pin.body}
                         </p>
                       ) : null}
                       {pin.href ? (
                         <Link
                           href={pin.href}
-                          className="text-xs font-medium text-[#2f6f82] underline-offset-2 hover:underline"
+                          className="text-xs font-medium text-accent underline-offset-2 hover:underline"
                         >
                           Vedi profilo
                         </Link>

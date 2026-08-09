@@ -4,19 +4,24 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
 import exifr from 'exifr';
-import { ImagePlus, Loader2, MapPin, Navigation, Sparkles, X } from 'lucide-react';
+import { ImagePlus, Loader2, MapPin, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
 import { createPost } from '@/actions/posts';
 import { cn } from '@/lib/utils';
 
-type PhotoGeo = { lat: number; lng: number; source: 'exif' | 'gps' };
+type PhotoGeo = {
+  lat: number;
+  lng: number;
+  label?: string;
+  source: 'exif' | 'place';
+};
 
 type CreatePostComposerProps = {
   placeholder?: string;
   compact?: boolean;
-  /** Glass scuro per bacheca / profilo su hero */
   tone?: 'default' | 'onDark';
 };
 
@@ -33,9 +38,23 @@ async function readExifGps(file: File): Promise<PhotoGeo | null> {
       return { lat: gps.latitude, lng: gps.longitude, source: 'exif' };
     }
   } catch {
-    /* no GPS in file */
+    /* no GPS */
   }
   return null;
+}
+
+async function compressForUpload(file: File): Promise<File> {
+  if (file.size <= 350_000 && file.type !== 'image/png') {
+    return file;
+  }
+  const compressed = await imageCompression(file, {
+    maxSizeMB: 0.55,
+    maxWidthOrHeight: 1280,
+    useWebWorker: true,
+    initialQuality: 0.72,
+    fileType: 'image/webp',
+  });
+  return compressed;
 }
 
 export function CreatePostComposer({
@@ -48,69 +67,69 @@ export function CreatePostComposer({
   const [body, setBody] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const [geo, setGeo] = useState<PhotoGeo | null>(null);
-  const [geoBusy, setGeoBusy] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [showPlaceSearch, setShowPlaceSearch] = useState(false);
   const [pending, startTransition] = useTransition();
   const onDark = tone === 'onDark';
 
   const onPickFile = async (f: File | null) => {
     if (!f) return;
+
+    // Anteprima immediata (niente attesa compressione)
+    const quickUrl = URL.createObjectURL(f);
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return quickUrl;
+    });
+    setFile(f);
+    setCompressing(true);
+    setShowPlaceSearch(false);
+    setPlaceQuery('');
+
+    const fromExif = await readExifGps(f);
+    setGeo(fromExif);
+    if (fromExif) {
+      toast.success('Posizione dello scatto letta dalla foto.');
+    }
+
     try {
-      const fromExif = await readExifGps(f);
-      const compressed = await imageCompression(f, {
-        maxSizeMB: 0.9,
-        maxWidthOrHeight: 1600,
-        useWebWorker: true,
-        initialQuality: 0.82,
-      });
+      const compressed = await compressForUpload(f);
       if (compressed.size > 4.5 * 1024 * 1024) {
-        toast.error('Foto ancora troppo grande dopo la compressione. Prova un’altra immagine.');
+        toast.error('Foto ancora troppo grande. Prova un’altra immagine.');
+        clearImage();
         return;
       }
       setFile(compressed);
-      setPreview(URL.createObjectURL(compressed));
-      setGeo(fromExif);
-      if (fromExif) {
-        toast.success('Posizione letta dalla foto (EXIF).');
-      }
+      const nextUrl = URL.createObjectURL(compressed);
+      setPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return nextUrl;
+      });
     } catch {
-      toast.error('Errore durante la compressione della foto.');
+      toast.error('Errore durante l’ottimizzazione della foto.');
+    } finally {
+      setCompressing(false);
     }
   };
 
   const clearImage = () => {
     setFile(null);
     setGeo(null);
+    setPlaceQuery('');
+    setShowPlaceSearch(false);
+    setCompressing(false);
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocalizzazione non supportata.');
+  const publish = () => {
+    if (compressing) {
+      toast.message('Attendi un attimo: sto ottimizzando la foto…');
       return;
     }
-    setGeoBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGeo({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          source: 'gps',
-        });
-        setGeoBusy(false);
-        toast.success('Posizione attuale aggiunta alla foto.');
-      },
-      () => {
-        setGeoBusy(false);
-        toast.error('Impossibile rilevare la posizione.');
-      },
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60_000 }
-    );
-  };
-
-  const publish = () => {
     startTransition(async () => {
       const fd = new FormData();
       fd.set('body', body);
@@ -118,13 +137,16 @@ export function CreatePostComposer({
       if (file && geo) {
         fd.set('lat', String(geo.lat));
         fd.set('lng', String(geo.lng));
+        if (geo.label) fd.set('locationLabel', geo.label);
       }
       const res = await createPost(fd);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success(geo && file ? 'Post pubblicato sulla mappa foto' : 'Post pubblicato');
+      toast.success(
+        geo && file ? 'Post pubblicato (foto georeferenziata)' : 'Post pubblicato'
+      );
       setBody('');
       clearImage();
       router.refresh();
@@ -166,7 +188,18 @@ export function CreatePostComposer({
         <div className="space-y-2">
           <div className="relative overflow-hidden rounded-2xl border border-white/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="" className="max-h-72 w-full object-cover" />
+            <img
+              src={preview}
+              alt=""
+              className="max-h-72 w-full object-cover"
+              decoding="async"
+            />
+            {compressing ? (
+              <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-3 py-1.5 text-[11px] text-white/85">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Ottimizzazione foto…
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={clearImage}
@@ -176,44 +209,92 @@ export function CreatePostComposer({
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+
+          <div className="space-y-2">
             {geo ? (
-              <span
+              <div
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
-                  onDark
-                    ? 'bg-accent/20 text-accent'
-                    : 'bg-accent/10 text-foreground'
+                  'flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2 text-xs',
+                  onDark ? 'bg-white/5 text-white/85' : 'bg-muted text-foreground'
                 )}
               >
-                <MapPin className="h-3 w-3" />
-                {geo.source === 'exif' ? 'GPS dalla foto' : 'Posizione attuale'}
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
+                <span className="min-w-0 flex-1 truncate">
+                  {geo.label
+                    ? geo.label
+                    : geo.source === 'exif'
+                      ? 'Posizione dallo scatto (EXIF)'
+                      : 'Luogo selezionato'}
+                </span>
                 <button
                   type="button"
-                  className="ml-0.5 opacity-70 hover:opacity-100"
-                  onClick={() => setGeo(null)}
-                  aria-label="Rimuovi posizione"
+                  className="text-[11px] font-medium text-accent hover:underline"
+                  onClick={() => setShowPlaceSearch(true)}
                 >
-                  <X className="h-3 w-3" />
+                  Correggi
                 </button>
-              </span>
+                <button
+                  type="button"
+                  className="opacity-70 hover:opacity-100"
+                  onClick={() => {
+                    setGeo(null);
+                    setPlaceQuery('');
+                    setShowPlaceSearch(false);
+                  }}
+                  aria-label="Rimuovi posizione foto"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ) : (
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={geoBusy || pending}
-                onClick={useCurrentLocation}
+                disabled={pending}
+                onClick={() => setShowPlaceSearch(true)}
                 className={cn(
                   'h-8 rounded-full text-xs',
                   onDark &&
                     'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'
                 )}
               >
-                <Navigation className="mr-1.5 h-3.5 w-3.5" />
-                {geoBusy ? 'Rilevo…' : 'Tagga sulla mappa'}
+                <MapPin className="mr-1.5 h-3.5 w-3.5" />
+                Dove è stata scattata?
               </Button>
             )}
+
+            {showPlaceSearch || (geo && !geo.label && geo.source === 'exif') ? (
+              <div className="space-y-1">
+                <PlaceSearchInput
+                  value={placeQuery}
+                  placeholder="Cerca città o luogo dello scatto…"
+                  className={cn(
+                    'h-10 rounded-xl pl-9 text-sm',
+                    onDark
+                      ? 'border-white/15 bg-white/5 text-white placeholder:text-white/35'
+                      : ''
+                  )}
+                  onChange={(label, coords) => {
+                    setPlaceQuery(label);
+                    if (coords) {
+                      setGeo({
+                        lat: coords.lat,
+                        lng: coords.lng,
+                        label,
+                        source: 'place',
+                      });
+                      setShowPlaceSearch(false);
+                      toast.success('Luogo dello scatto impostato.');
+                    }
+                  }}
+                />
+                <p className="px-1 text-[10px] text-white/40">
+                  Usa il GPS della foto se presente, oppure cerca il posto reale dello
+                  scatto (non la tua posizione attuale).
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -247,7 +328,7 @@ export function CreatePostComposer({
           type="button"
           size="sm"
           className="rounded-full px-5"
-          disabled={pending || (!body.trim() && !file)}
+          disabled={pending || compressing || (!body.trim() && !file)}
           onClick={publish}
         >
           {pending ? (

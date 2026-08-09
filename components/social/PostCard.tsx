@@ -156,6 +156,7 @@ export function PostCard({
                 alt=""
                 className="max-h-[460px] w-full object-cover"
                 loading="lazy"
+                decoding="async"
               />
             </div>
           ) : null}
