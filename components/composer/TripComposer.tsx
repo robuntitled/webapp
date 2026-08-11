@@ -234,7 +234,7 @@ export function TripComposer({
               variant="ghost"
               className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
             >
-              <Link href="/i-miei">
+              <Link href="/dashboard/miei-viaggi">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 I miei viaggi
               </Link>

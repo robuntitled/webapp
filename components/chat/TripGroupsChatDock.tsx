@@ -42,8 +42,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [hidingId, setHidingId] = useState<string | null>(null);
 
-  const hideOnComposer =
-    pathname?.startsWith('/organizza') || pathname?.startsWith('/dashboard/crea');
+  const hideOnComposer = pathname?.startsWith('/dashboard/crea');
 
   const loadGroups = useCallback(async () => {
     try {

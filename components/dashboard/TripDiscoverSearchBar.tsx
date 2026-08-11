@@ -43,7 +43,7 @@ export function TripDiscoverSearchBar({
 
   const handleSearch = () => {
     const params = buildDiscoverSearchParams({ searchTerm, dateRange, priceRange });
-    router.push(`/scopri/cerca?${params.toString()}`);
+    router.push(`/dashboard/cerca?${params.toString()}`);
   };
 
   const handleReset = () => {

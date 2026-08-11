@@ -73,10 +73,8 @@ export default function LoginPage() {
     setError('');
     setOauthLoading(provider);
     try {
-      const cb =
-        new URLSearchParams(window.location.search).get('callbackUrl') || '/hub';
       await signIn(provider, {
-        callbackUrl: `${window.location.origin}${cb.startsWith('/') ? cb : '/hub'}`,
+        callbackUrl: `${window.location.origin}/dashboard`,
       });
     } catch {
       setError('Accesso non riuscito. Riprova tra poco.');
@@ -147,9 +145,7 @@ export default function LoginPage() {
 
         const result = await signIn('credentials', { email, password, redirect: false });
         if (result?.ok) {
-          const cb =
-            new URLSearchParams(window.location.search).get('callbackUrl') || '/hub';
-          router.push(cb.startsWith('/') ? cb : '/hub');
+          router.push('/dashboard');
         } else {
           setError('Registrazione riuscita. Prova ad accedere dopo aver verificato l’email.');
         }
@@ -181,9 +177,7 @@ export default function LoginPage() {
         } else if (result?.error) {
           setError('Email o password non validi. Riprova.');
         } else if (result?.ok) {
-          const cb =
-            new URLSearchParams(window.location.search).get('callbackUrl') || '/hub';
-          router.push(cb.startsWith('/') ? cb : '/hub');
+          router.push('/dashboard');
         }
       } catch {
         setError('Si è verificato un errore inaspettato.');

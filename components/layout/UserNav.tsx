@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getInitialsFromFullName } from '@/lib/utils/user';
-import { ROUTES } from '@/lib/nav/routes';
 
 type User = Session['user'];
 
@@ -50,23 +49,20 @@ export function UserNav({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href={ROUTES.hub}>Hub</Link>
+            <Link href="/dashboard/profilo">Modifica profilo</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={ROUTES.profilo}>Modifica profilo</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={ROUTES.impostazioni}>Impostazioni</Link>
+            <Link href="/dashboard/impostazioni">Impostazioni</Link>
           </DropdownMenuItem>
           {showCostsDashboard ? (
             <DropdownMenuItem asChild>
-              <Link href={ROUTES.costi}>Costi API</Link>
+              <Link href="/dashboard/costi">Costi API</Link>
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => signOut({ callbackUrl: ROUTES.home })}>
-          Esci
+        <DropdownMenuItem onSelect={() => signOut({ callbackUrl: '/' })}>
+          Logout
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
