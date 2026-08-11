@@ -4,25 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const LINKS = [
-  { href: '/dashboard', label: 'Scopri' },
-  { href: '/dashboard/crea?new=1', label: 'Organizza', auth: true },
-  { href: '/prenota/voli', label: 'Prenota · Voli', auth: true },
-  { href: '/prenota/hotel', label: 'Prenota · Hotel', auth: true },
-  { href: '/prenota/auto', label: 'Prenota · Noleggio auto', auth: true },
-  { href: '/prenota/trasporti/bus', label: 'Prenota · Bus', auth: true },
-  { href: '/prenota/trasporti/treni', label: 'Prenota · Treni', auth: true },
-  { href: '/prenota/trasporti/taxi', label: 'Prenota · Taxi', auth: true },
-  { href: '/prenota/attrazioni', label: 'Prenota · Attrazioni', auth: true },
-  { href: '/prenota/attivita', label: 'Prenota · Attività', auth: true },
-  { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
-  { href: '/dashboard/miei-viaggi', label: 'I Miei Viaggi', auth: true },
-  { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
-] as const satisfies readonly { href: string; label: string; auth?: boolean }[];
+import { HAMBURGER_LINKS, ROUTES } from '@/lib/nav/routes';
 
 export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [open, setOpen] = useState(false);
+
+  const links = HAMBURGER_LINKS.filter((l) => !('auth' in l && l.auth) || isLoggedIn);
 
   return (
     <div className="md:hidden">
@@ -41,18 +28,36 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
             className="fixed inset-0 top-16 z-40 bg-slate-950/40 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <nav className="fixed top-16 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-md shadow-lg px-4 py-4 flex flex-col gap-1">
-            {LINKS.filter((l) => !('auth' in l && l.auth) || isLoggedIn).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-4 py-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-
+          <nav className="fixed top-16 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-md shadow-lg px-4 py-4 flex flex-col gap-1 max-h-[min(70vh,28rem)] overflow-y-auto">
+            {!isLoggedIn ? (
+              <>
+                <Link
+                  href={ROUTES.scopri}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-4 py-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  Scopri
+                </Link>
+                <Link
+                  href={ROUTES.home}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-4 py-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  Accedi / Registrati
+                </Link>
+              </>
+            ) : (
+              links.map((link) => (
+                <Link
+                  key={link.href + link.label}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-4 py-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))
+            )}
           </nav>
         </>
       )}

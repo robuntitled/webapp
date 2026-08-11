@@ -29,6 +29,20 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '6mb',
     },
   },
+  async redirects() {
+    // IA v1.1 — path legacy → canonici (query string preservata)
+    return [
+      { source: '/dashboard', destination: '/scopri', permanent: false },
+      { source: '/dashboard/cerca', destination: '/scopri/cerca', permanent: false },
+      { source: '/dashboard/crea', destination: '/organizza', permanent: false },
+      { source: '/dashboard/miei-viaggi', destination: '/i-miei', permanent: false },
+      { source: '/dashboard/preferiti', destination: '/preferiti', permanent: false },
+      { source: '/dashboard/profilo', destination: '/profilo', permanent: false },
+      { source: '/dashboard/impostazioni', destination: '/impostazioni', permanent: false },
+      { source: '/dashboard/costi', destination: '/costi', permanent: false },
+      { source: '/dashboard/bacheca', destination: '/scopri', permanent: false },
+    ];
+  },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },

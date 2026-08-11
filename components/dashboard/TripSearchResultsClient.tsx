@@ -90,7 +90,7 @@ export function TripSearchResultsClient({
                     ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
                     : 'Allarga date o prezzo dalla barra in alto.'}
             </p>
-            <Link href="/dashboard" className="inline-block mt-4 text-sm text-accent hover:underline">
+            <Link href="/scopri" className="inline-block mt-4 text-sm text-accent hover:underline">
               Torna alla dashboard
             </Link>
           </div>

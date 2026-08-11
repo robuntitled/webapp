@@ -219,7 +219,7 @@ export function PublicProfileView({
               size="sm"
               className="shrink-0 rounded-full border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white"
             >
-              <Link href="/dashboard/profilo">Modifica profilo</Link>
+              <Link href="/profilo">Modifica profilo</Link>
             </Button>
           ) : null}
         </header>

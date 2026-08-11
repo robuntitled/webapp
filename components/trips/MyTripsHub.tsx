@@ -120,7 +120,7 @@ function DraftListItem({
 
   return (
     <Link
-      href="/dashboard/crea?resume=1"
+      href="/organizza?resume=1"
       className="hub-list-item group flex items-center gap-4 p-4 md:p-5"
     >
       <div className="hub-list-icon hub-icon-amber shrink-0">
@@ -227,7 +227,7 @@ function EmptyPanel({
           Inizia un nuovo viaggio: la bozza si salva automaticamente e la ritrovi qui.
         </p>
         <Button asChild className="mt-6 rounded-full">
-          <Link href="/dashboard/crea?new=1">Nuovo Viaggio</Link>
+          <Link href="/organizza?new=1">Nuovo Viaggio</Link>
         </Button>
       </div>
     );
@@ -242,7 +242,7 @@ function EmptyPanel({
           Crea il primo, invita la crew e tieni tutto in un unico posto.
         </p>
         <Button asChild className="mt-6 rounded-full">
-          <Link href="/dashboard/crea?new=1">Organizza il primo viaggio</Link>
+          <Link href="/organizza?new=1">Organizza il primo viaggio</Link>
         </Button>
       </div>
     );
@@ -268,7 +268,7 @@ function EmptyPanel({
         Unisciti ai viaggi degli amici dalla dashboard — zero pianificazione.
       </p>
       <Button asChild variant="secondary" className="mt-6 rounded-full">
-        <Link href="/dashboard">Scopri</Link>
+        <Link href="/scopri">Scopri</Link>
       </Button>
     </div>
   );
@@ -327,7 +327,7 @@ export function MyTripsHub({
           </p>
         </div>
         <Button asChild size="lg" className="rounded-full shrink-0 gap-2 shadow-lg">
-          <Link href="/dashboard/crea?new=1">
+          <Link href="/organizza?new=1">
             <Plus className="h-4 w-4" />
             Nuovo Viaggio
           </Link>

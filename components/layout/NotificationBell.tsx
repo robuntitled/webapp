@@ -176,7 +176,7 @@ export function NotificationBell() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link
-            href="/dashboard/miei-viaggi"
+            href="/i-miei"
             className="justify-center text-sm text-muted-foreground"
             onClick={() => setOpen(false)}
           >

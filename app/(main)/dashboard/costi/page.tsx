@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function CostiDashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/');
-  if (!isAdminEmail(session.user.email)) redirect('/dashboard/impostazioni');
+  if (!isAdminEmail(session.user.email)) redirect('/impostazioni');
 
   const hub = await getAdminCostHub(30);
 
@@ -31,7 +31,7 @@ export default async function CostiDashboardPage() {
             </h1>
           </div>
           <Link
-            href="/dashboard/impostazioni"
+            href="/impostazioni"
             className="text-sm text-white/65 underline-offset-4 hover:text-white hover:underline"
           >
             Impostazioni

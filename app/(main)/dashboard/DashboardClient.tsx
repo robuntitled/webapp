@@ -68,7 +68,7 @@ export default function DashboardClient({
         {session?.user && (
           <ScrollReveal variant="card" stagger={2}>
             <Button asChild className="mt-6 rounded-full gap-2">
-              <Link href="/dashboard/crea">
+              <Link href="/organizza?new=1">
                 <Plus className="h-4 w-4" />
                 Organizza il tuo viaggio
               </Link>

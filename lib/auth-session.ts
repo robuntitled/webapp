@@ -5,6 +5,16 @@ import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const PROTECTED_PATHS = [
+  '/hub',
+  '/organizza',
+  '/i-miei',
+  '/messaggi',
+  '/profilo',
+  '/impostazioni',
+  '/preferiti',
+  '/prenota',
+  '/costi',
+  // legacy (ancora referenziati in azioni fino a cleanup)
   '/dashboard/crea',
   '/dashboard/miei-viaggi',
   '/dashboard/profilo',
@@ -19,6 +29,7 @@ export const GDPR_PUBLIC_PATHS = [
   '/termini',
   '/cookie',
   '/completa-registrazione',
+  '/scopri',
 ];
 
 function splitDisplayName(name?: string | null, email?: string | null) {
