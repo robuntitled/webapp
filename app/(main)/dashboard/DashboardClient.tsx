@@ -51,18 +51,18 @@ export default function DashboardClient({
       <div className="text-center max-w-3xl mx-auto mb-10">
         <ScrollReveal variant="decor">
           <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
-            Meno WhatsApp, più viaggio
+            Meno pensieri, più orizzonti
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
           <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-            Trova un viaggio e unisciti in modalità relax
+            Trova un viaggio e parti in modalità relax
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
           <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-            Cerca viaggi aperti a cui unirti. Gli inviti tra amici arrivano via WhatsApp — qui
-            compaiono solo i viaggi organizzati da una persona.
+            Scopri itinerari aperti creati da chi ha già organizzato tutto. Unisciti, rilassati e
+            vivi l&apos;avventura.
           </p>
         </ScrollReveal>
         {session?.user && (

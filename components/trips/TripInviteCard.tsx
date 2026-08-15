@@ -19,7 +19,7 @@ export function TripInviteCard({ tripId, tripTitle }: TripInviteCardProps) {
       ? `${window.location.origin}/viaggi/${tripId}`
       : `https://webapp-bice-six-42.vercel.app/viaggi/${tripId}`;
 
-  const inviteMessage = `Ehi! 🌴 Sto organizzando "${tripTitle}" su NomadLink. Entra in modalità relax — zero Excel, zero caos WhatsApp. Ci stai? ${shareUrl}`;
+  const inviteMessage = `Ehi! 🌴 Sto organizzando "${tripTitle}" su NomadLink. Entra in modalità relax — tutto già organizzato. Ci stai? ${shareUrl}`;
 
   const copyLink = async () => {
     try {
