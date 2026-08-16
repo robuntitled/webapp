@@ -179,7 +179,17 @@ export async function getAdminCostHub(days = 30): Promise<AdminCostHub> {
       inApp: 'Hotel + voli in-app (search/prebook/book)',
       consoleUrl: 'https://dashboard.liteapi.travel/',
       billingUrl: 'https://docs.liteapi.travel/',
-      note: 'Unico provider travel. Markup hotel via LITEAPI_MARGIN.',
+      note: 'Hotel + voli in-app. Auto: Duffel Cars.',
+    },
+    {
+      id: 'duffel-cars',
+      name: 'Duffel Cars',
+      category: 'affiliate',
+      configured: envSet('DUFFEL_ACCESS_TOKEN'),
+      inApp: 'Noleggio auto search/quote/book (postpaid)',
+      consoleUrl: 'https://app.duffel.com',
+      billingUrl: 'https://duffel.com/pricing',
+      note: 'Token test `duffel_test_…`. Live: Request access to Cars. Pay-as-you-go, no fee mensile pubblica per Cars.',
     },
   ];
 

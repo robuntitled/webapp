@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { PrenotaPageShell } from '@/components/travel/PrenotaPageShell';
-import { PrenotaPartnerPlaceholder } from '@/components/travel/PrenotaPartnerPlaceholder';
+import { PrenotaCarsClient } from '@/components/travel/PrenotaCarsClient';
 import { redirect } from 'next/navigation';
 
 export default async function PrenotaAutoPage() {
@@ -12,12 +12,12 @@ export default async function PrenotaAutoPage() {
   return (
     <PrenotaPageShell
       title="Noleggio auto"
-      subtitle="Cerca auto per città e date. Prenotazione tramite partner affiliate."
-      badge="Presto"
+      subtitle="Cerca per città o aeroporto, confronta le tariffe e prenota in-app. Pagamento al ritiro sul noleggiatore."
+      badge="Duffel"
     >
-      <PrenotaPartnerPlaceholder
-        icon="car"
-        partnerHint="In attesa delle credenziali API DiscoverCars."
+      <PrenotaCarsClient
+        defaultEmail={session.user.email ?? ''}
+        defaultName={session.user.name ?? ''}
       />
     </PrenotaPageShell>
   );
