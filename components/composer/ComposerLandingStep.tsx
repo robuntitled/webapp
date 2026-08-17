@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays, differenceInCalendarDays } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -18,11 +18,9 @@ import { DestinationSearch } from '@/components/composer/DestinationSearch';
 import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
-import { buildOrganizerOrigin, originFromPlace } from '@/lib/composer/origins';
+import { buildOrganizerOrigin } from '@/lib/composer/origins';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
-import { resolveFlightDestinationIata } from '@/lib/travel/iata';
-import { resolveDestinationContext } from '@/lib/composer/destination-context';
-import { placeDisplayValue, resolvePlaceExact, type PlaceSuggestion } from '@/lib/travel/airport-catalog';
+import { tripDestinationCountryLabel } from '@/lib/composer/destination-context';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import { coverForDestination } from '@/lib/composer/destination-covers';
@@ -165,12 +163,11 @@ export function ComposerLandingStep({
   onChange,
   onStart,
   onBack,
-  profileCity,
-  profileCountry,
+  profileCity: _profileCity,
+  profileCountry: _profileCountry,
 }: ComposerLandingStepProps) {
   const [plannerOpen, setPlannerOpen] = useState(false);
   const titleTouched = useRef(false);
-  const originApplied = useRef(false);
   const startedWithDest = useRef(Boolean(draft.destination?.trim()));
   const [phase, setPhase] = useState<ConfigPhase>(() =>
     draft.destination?.trim() ? 'when' : 'dest'
@@ -258,7 +255,7 @@ export function ComposerLandingStep({
           ? {
               label: 'Da dove',
               title: 'Da dove voli?',
-              subtitle: 'Partenza dal tuo scalo. Meta e date già dentro.',
+              subtitle: 'Sempre dall’Italia. Verso il paese della meta. Date del viaggio.',
               micro: startedWithDest.current ? 2 : 3,
               total: startedWithDest.current ? 3 : 4,
             }
@@ -271,45 +268,17 @@ export function ComposerLandingStep({
             };
 
   useEffect(() => {
-    if (phase !== 'from' || originApplied.current) return;
-    if (draft.organizerOrigin?.iata) {
-      originApplied.current = true;
+    if (phase !== 'from') return;
+    const next = buildOrganizerOrigin('Italia', 'IT');
+    if (draft.organizerOrigin?.iata === next.iata && draft.organizerOrigin?.city === next.city) {
       return;
     }
-    originApplied.current = true;
-    const city = profileCity?.trim() || profileCountry?.trim() || 'Italia';
-    onChange({ organizerOrigin: buildOrganizerOrigin(city, profileCountry ?? undefined) });
-  }, [draft.organizerOrigin?.iata, onChange, phase, profileCity, profileCountry]);
+    onChange({ organizerOrigin: next });
+  }, [draft.organizerOrigin?.city, draft.organizerOrigin?.iata, onChange, phase]);
 
-  const originPrefill = (() => {
-    const stored = draft.organizerOrigin;
-    if (stored?.iata) {
-      const place = resolvePlaceExact(stored.iata) ?? resolvePlaceExact(stored.city);
-      if (place) return placeDisplayValue(place);
-      return stored.city || stored.iata;
-    }
-    const city = profileCity?.trim();
-    if (city) {
-      const place = resolvePlaceExact(city);
-      if (place) return placeDisplayValue(place);
-      return city;
-    }
-    return profileCountry?.trim() || 'Italia';
-  })();
-
-  const destPrefill =
-    resolveFlightDestinationIata(
-      resolveDestinationContext(draft.destination, draft.destinationMeta).airport?.iata ??
-        draft.destination
-    ) ?? draft.destination;
-
-  const handleOriginChange = useCallback(
-    (place: PlaceSuggestion) => {
-      const next = originFromPlace(place);
-      if (draft.organizerOrigin?.iata === next.iata) return;
-      onChange({ organizerOrigin: next });
-    },
-    [draft.organizerOrigin?.iata, onChange]
+  const destCountry = tripDestinationCountryLabel(
+    draft.destination,
+    draft.destinationMeta
   );
 
   const applyDuration = (n: 5 | 7 | 10) => {
@@ -474,16 +443,18 @@ export function ComposerLandingStep({
         {phase === 'from' ? (
           <motion.div key="from" {...phaseMotion}>
             <FlightSearchPanel
+              key={`${draft.startDate}-${draft.endDate}-${destCountry}`}
               variant="composer"
-              defaultOrigin={originPrefill}
-              defaultDestination={destPrefill}
+              hideSearchForm
+              defaultOrigin="Italia"
+              defaultDestination={destCountry}
               defaultStartDate={draft.startDate}
               defaultEndDate={draft.endDate}
               defaultAdults={1}
               defaultTripType="roundtrip"
               autoSearch
               cacheKey={null}
-              onOriginChange={handleOriginChange}
+              onEditDates={() => setPhase('when')}
             />
           </motion.div>
         ) : null}

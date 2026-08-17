@@ -147,6 +147,9 @@ type FlightSearchPanelProps = {
   /** composer: carta bianca sul fondo scuro del crea */
   variant?: 'default' | 'composer';
   onOriginChange?: (place: PlaceSuggestion) => void;
+  /** Nasconde il form OTA: tratta e date arrivano dal viaggio */
+  hideSearchForm?: boolean;
+  onEditDates?: () => void;
 };
 
 type FlightFormCache = {
@@ -243,6 +246,8 @@ export function FlightSearchPanel({
   defaultTripType = 'oneway',
   variant = 'default',
   onOriginChange,
+  hideSearchForm = false,
+  onEditDates,
 }: FlightSearchPanelProps) {
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
@@ -504,10 +509,20 @@ export function FlightSearchPanel({
 
   const composer = variant === 'composer';
 
-  const originLabel = originPlace ? placeDisplayValue(originPlace) : originQuery;
-  const destLabel = destinationPlace
-    ? placeDisplayValue(destinationPlace)
-    : destinationQuery;
+  const originLabel = hideSearchForm
+    ? originPlace?.kind === 'country'
+      ? originPlace.label
+      : originPlace?.countryLabel ?? originQuery
+    : originPlace
+      ? placeDisplayValue(originPlace)
+      : originQuery;
+  const destLabel = hideSearchForm
+    ? destinationPlace?.kind === 'country'
+      ? destinationPlace.label
+      : destinationPlace?.countryLabel ?? destinationQuery
+    : destinationPlace
+      ? placeDisplayValue(destinationPlace)
+      : destinationQuery;
 
   const dateSummary = (() => {
     if (!startDate) return 'Date da scegliere';
@@ -531,6 +546,7 @@ export function FlightSearchPanel({
         className
       )}
     >
+      {!hideSearchForm ? (
       <div
         className={cn(
           'space-y-4',
@@ -668,8 +684,31 @@ export function FlightSearchPanel({
             </div>
           </div>
       </div>
+      ) : (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Tratta
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold text-slate-900">
+              {originLabel} → {destLabel}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">{dateSummary}</p>
+          </div>
+          {onEditDates ? (
+            <button
+              type="button"
+              onClick={onEditDates}
+              className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900"
+            >
+              Cambia date del viaggio
+            </button>
+          ) : null}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end justify-between gap-3">
+        {!hideSearchForm ? (
         <div>
           <p className="text-sm font-medium text-slate-700">
             {originLabel} → {destLabel}
@@ -686,6 +725,9 @@ export function FlightSearchPanel({
               : null}
           </p>
         </div>
+        ) : (
+          <span />
+        )}
 
         {offers && offers.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">

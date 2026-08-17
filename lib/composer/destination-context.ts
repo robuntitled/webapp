@@ -201,3 +201,17 @@ export function checkDestinationPlannable(ctx: DestinationContext): DestinationC
 export function airportPromptLabel(ctx: DestinationContext): string {
   return ctx.airport ? ctx.airport.label : `${ctx.cityLabel} (aeroporto da confermare)`;
 }
+
+/** Paese da mostrare in ricerca voli (mai la città). */
+export function tripDestinationCountryLabel(
+  destination: string,
+  meta?: Partial<DestinationMeta>
+): string {
+  const ctx = resolveDestinationContext(destination, meta);
+  const fromCode = ctx.countryCode ? matchCountryOnly(ctx.countryCode) : null;
+  if (fromCode) return fromCode.label;
+  const fromLabel = ctx.countryLabel ? matchCountryOnly(ctx.countryLabel) : null;
+  if (fromLabel) return fromLabel.label;
+  if (ctx.countryLabel?.trim()) return ctx.countryLabel.trim();
+  return firstSegment(destination) || destination.trim();
+}

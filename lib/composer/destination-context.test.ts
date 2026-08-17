@@ -3,6 +3,7 @@ import {
   airportPromptLabel,
   checkDestinationPlannable,
   resolveDestinationContext,
+  tripDestinationCountryLabel,
 } from '@/lib/composer/destination-context';
 
 describe('resolveDestinationContext', () => {
@@ -116,5 +117,22 @@ describe('checkDestinationPlannable', () => {
 
     expect(check.ok).toBe(true);
     expect(check.ok && check.warning).toMatch(/aeroporto/i);
+  });
+});
+
+describe('tripDestinationCountryLabel', () => {
+  it('restituisce il paese, non la città', () => {
+    expect(tripDestinationCountryLabel('Indonesia')).toBe('Indonesia');
+    expect(tripDestinationCountryLabel('Grecia')).toBe('Grecia');
+    expect(
+      tripDestinationCountryLabel('Atene', {
+        label: 'Atene',
+        lat: 37.98,
+        lng: 23.72,
+        country: 'Grecia',
+        countryCode: 'GR',
+        placeType: 'city',
+      })
+    ).toBe('Grecia');
   });
 });
