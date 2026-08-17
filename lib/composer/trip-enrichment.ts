@@ -8,6 +8,8 @@ import {
   searchActivitiesInBounds,
   type ActivityPlaceResult,
 } from '@/lib/places/activity-search';
+import { searchAffiliateActivities } from '@/lib/activities/search';
+import type { ActivityOffer } from '@/lib/activities/types';
 import { buildGetTransferAffiliateHandoff } from '@/lib/gettransfer/affiliate-url';
 import { withTimeout } from '@/lib/utils/with-timeout';
 import type { DestinationContext } from '@/lib/composer/destination-context';
@@ -103,6 +105,9 @@ function applyFlightOffer(
             includedInRoundTrip: true,
             offerId: offer.offerId,
             needsAirport: false,
+            provider: 'liteapi',
+            bookable: true,
+            source: 'liteapi',
           },
         };
       }
@@ -127,6 +132,9 @@ function applyFlightOffer(
           offerId: offer.offerId,
           roundTrip: offer.hasReturn,
           needsAirport: false,
+          provider: 'liteapi',
+          bookable: true,
+          source: 'liteapi',
         },
       };
     }),
@@ -181,6 +189,9 @@ function applyHotelOffers(
     refundable: best.refundable,
     currency: best.currency,
     nights,
+    provider: 'liteapi',
+    bookable: true,
+    source: 'liteapi',
   };
 
   return days.map((day) => ({
@@ -268,6 +279,9 @@ function applyPlaces(
             rating: hit.rating ?? null,
             ratingCount: hit.ratingCount ?? null,
             photoUrl: hit.photoUrl ?? undefined,
+            provider: 'google',
+            bookable: false,
+            source: 'google_places',
           },
         };
       }
@@ -288,6 +302,9 @@ function applyPlaces(
             rating: hit.rating ?? null,
             ratingCount: hit.ratingCount ?? null,
             photoUrl: hit.photoUrl ?? undefined,
+            provider: 'google',
+            bookable: false,
+            source: 'google_places',
           },
         };
       }
@@ -296,6 +313,47 @@ function applyPlaces(
     }),
   }));
 
+  return { days: next, used };
+}
+
+function applyViatorActivities(
+  days: ComposerTripDayResult[],
+  offers: ActivityOffer[]
+): { days: ComposerTripDayResult[]; used: number } {
+  if (!offers.length) return { days, used: 0 };
+  let cursor = 0;
+  let used = 0;
+  const next = days.map((day) => ({
+    ...day,
+    blocks: day.blocks.map((block) => {
+      if (block.type !== 'activity' || cursor >= offers.length) return block;
+      const existingCode = block.content.productCode;
+      if (typeof existingCode === 'string' && existingCode) return block;
+      const offer = offers[cursor];
+      cursor += 1;
+      used += 1;
+      const code = offer.id.replace(/^viator:/, '');
+      return {
+        ...block,
+        content: {
+          ...block.content,
+          title: offer.title,
+          place: offer.title,
+          lat: offer.lat ?? block.content.lat,
+          lng: offer.lng ?? block.content.lng,
+          photoUrl: offer.imageUrl ?? undefined,
+          price: offer.priceFrom ?? null,
+          currency: offer.currency ?? 'EUR',
+          rating: offer.rating ?? null,
+          productCode: code,
+          bookingUrl: offer.bookingUrl,
+          provider: 'viator',
+          bookable: true,
+          source: 'viator',
+        },
+      };
+    }),
+  }));
   return { days: next, used };
 }
 
@@ -371,7 +429,7 @@ export async function enrichTripDays(
 
   onProgress?.('Cerco voli, hotel e luoghi reali…');
 
-  const [flightOffer, hotelOffers, attractions, meals] = await Promise.all([
+  const [flightOffer, hotelOffers, attractions, meals, viator] = await Promise.all([
     liteApi && destination.airport
       ? safe<LiteApiFlightOffer | null>(
           'Voli',
@@ -433,6 +491,17 @@ export async function enrichTripDays(
           warnings
         )
       : Promise.resolve(null),
+    safe(
+      'Viator',
+      PLACES_TIMEOUT_MS,
+      () =>
+        searchAffiliateActivities({
+          city: destination.cityLabel,
+          startDate: input.startDate,
+          endDate: input.endDate,
+        }),
+      warnings
+    ),
   ]);
 
   let days = input.days;
@@ -471,10 +540,16 @@ export async function enrichTripDays(
 
   const attractionHits = toPlaceHits(attractions?.results);
   const mealHits = toPlaceHits(meals?.results);
+  const viatorOffers = viator?.results ?? [];
+  if (viatorOffers.length > 0) {
+    const appliedViator = applyViatorActivities(days, viatorOffers);
+    days = appliedViator.days;
+    if (appliedViator.used > 0) enrichment.activities = true;
+  }
   if (attractionHits.length > 0 || mealHits.length > 0) {
     const applied = applyPlaces(days, attractionHits, mealHits);
     days = applied.days;
-    enrichment.activities = applied.used > 0;
+    enrichment.activities = enrichment.activities || applied.used > 0;
   } else if (destination.lat == null || destination.lng == null) {
     warnings.push('Coordinate destinazione assenti — attività non agganciate a luoghi reali');
   }

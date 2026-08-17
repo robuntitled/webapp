@@ -13,25 +13,27 @@ type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  source?: 'ai' | 'mock';
+  source?: 'ai' | 'mock' | 'research';
 };
 
 type ComposerAssistantDockProps = {
   draft: ComposerDraft;
   step: ComposerWizardStep;
   plannerProfile?: PlannerProfile | null;
+  onApplyPatch?: (patch: Partial<ComposerDraft>) => void;
 };
 
 const QUICK_PROMPTS = [
-  'Come funziona?',
-  'Idee per il primo giorno',
-  'Quando aggiungo voli e hotel?',
+  'Cerca voli, hotel e attività',
+  'Must visit sulla mappa',
+  'Hotel prenotabili',
 ];
 
 export function ComposerAssistantDock({
   draft,
   step,
   plannerProfile,
+  onApplyPatch,
 }: ComposerAssistantDockProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -39,7 +41,7 @@ export function ComposerAssistantDock({
       id: 'welcome',
       role: 'assistant',
       content:
-        'Ciao! Sono il tuo assistente di viaggio — disponibile in ogni fase. Chiedimi idee, chiarimenti o cosa fare dopo.',
+        'Ciao! Cerco voli LiteAPI, hotel, must visit (Places) e attività Viator. Li salvo sulla mappa: in prenotazione si usano questi, senza rifare la ricerca.',
     },
   ]);
   const [text, setText] = useState('');
@@ -95,6 +97,10 @@ export function ComposerAssistantDock({
           },
         ]);
         return;
+      }
+
+      if (data.draftPatch && onApplyPatch) {
+        onApplyPatch(data.draftPatch as Partial<ComposerDraft>);
       }
 
       setMessages((prev) => [
@@ -165,6 +171,11 @@ export function ComposerAssistantDock({
                     {msg.content}
                     {msg.source === 'ai' && (
                       <span className="block text-[10px] text-accent/70 mt-1">AI</span>
+                    )}
+                    {msg.source === 'research' && (
+                      <span className="block text-[10px] text-accent/70 mt-1">
+                        LiteAPI · Places · Viator
+                      </span>
                     )}
                   </div>
                 </div>

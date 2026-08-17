@@ -59,6 +59,63 @@ export type ComposerOrigin = {
   role: 'organizer' | 'crew';
 };
 
+export type ComposerBookableProvider = 'liteapi' | 'viator' | 'google';
+
+export type ComposerBookableKind = 'flight' | 'hotel' | 'activity' | 'attraction';
+
+/** Offerta/luogo trovato in composer (assistente o enrichment) e riusato in prenotazione. */
+export type ComposerBookablePick = {
+  id: string;
+  kind: ComposerBookableKind;
+  provider: ComposerBookableProvider;
+  title: string;
+  lat?: number | null;
+  lng?: number | null;
+  photoUrl?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  dayIndex?: number;
+  blockId?: string;
+  placeId?: string | null;
+  hotelId?: string | null;
+  offerId?: string | null;
+  rateId?: string | null;
+  address?: string | null;
+  city?: string | null;
+  stars?: number | null;
+  rating?: number | null;
+  roomName?: string | null;
+  boardName?: string | null;
+  freeCancellation?: boolean;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  origin?: string | null;
+  destinationIata?: string | null;
+  airline?: string | null;
+  airlineCode?: string | null;
+  airlineLogo?: string | null;
+  departureAt?: string | null;
+  arrivalAt?: string | null;
+  durationMinutes?: number | null;
+  stops?: number | null;
+  flightNumber?: string | null;
+  cabinClass?: string | null;
+  hasReturn?: boolean;
+  returnOrigin?: string | null;
+  returnDestination?: string | null;
+  returnAirline?: string | null;
+  returnAirlineCode?: string | null;
+  returnAirlineLogo?: string | null;
+  returnDepartureAt?: string | null;
+  returnArrivalAt?: string | null;
+  returnDurationMinutes?: number | null;
+  returnStops?: number | null;
+  returnFlightNumber?: string | null;
+  adults?: number;
+  productCode?: string | null;
+  bookingUrl?: string | null;
+};
+
 export type ComposerDraft = {
   title: string;
   destination: string;
@@ -81,6 +138,8 @@ export type ComposerDraft = {
   days: ComposerDay[];
   /** Copertina scelta da Pexels in pubblicazione */
   imageUrl?: string;
+  /** Voli/hotel/attività già trovati (LiteAPI, Viator, Places) */
+  bookablePicks?: ComposerBookablePick[];
 };
 
 export type ComposerDestination = {

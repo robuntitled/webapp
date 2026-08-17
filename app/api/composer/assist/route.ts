@@ -7,9 +7,12 @@ import {
   replyToAssist,
   type AssistRequest,
 } from '@/lib/composer/assist';
+import { isResearchAssistIntent } from '@/lib/composer/assist-research';
 import { rateLimitAsync } from '@/lib/rate-limit';
 import { plannerProfileSchema } from '@/lib/validations/planner';
 import { logApiMetric } from '@/lib/api/metrics';
+
+export const maxDuration = 60;
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -20,7 +23,7 @@ const assistSchema = z.object({
   message: z.string().min(1).max(1000),
   history: z.array(messageSchema).max(20).optional(),
   draft: z.record(z.string(), z.unknown()).optional(),
-  step: z.enum(['landing', 'plan', 'review']),
+  step: z.enum(['source', 'landing', 'plan', 'review']),
   plannerProfile: plannerProfileSchema.optional().nullable(),
 });
 
@@ -35,7 +38,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Messaggio non valido' }, { status: 400 });
   }
 
-  // Limite messaggi totali (mock + AI)
   const limited = await rateLimitAsync(`composer-assist:${session.user.id}`, {
     limit: 60,
     windowMs: 60 * 60 * 1000,
@@ -48,11 +50,21 @@ export async function POST(request: Request) {
     message: parsed.data.message,
     history: parsed.data.history,
     draft: parsed.data.draft ?? {},
-    step: parsed.data.step,
+    step: parsed.data.step === 'source' ? 'landing' : parsed.data.step,
     plannerProfile: parsed.data.plannerProfile,
   };
 
-  // FAQ / saluti → mock immediato (0 token Gemini)
+  if (isResearchAssistIntent(assistReq.message)) {
+    logApiMetric({
+      service: 'ai',
+      op: 'assist-route',
+      source: 'network',
+      userId: session.user.id,
+    });
+    const result = await replyToAssist(assistReq);
+    return NextResponse.json(result);
+  }
+
   if (isCheapAssistIntent(assistReq.message)) {
     logApiMetric({
       service: 'ai',
@@ -66,7 +78,6 @@ export async function POST(request: Request) {
     });
   }
 
-  // Cap chiamate AI/ora per utente (oltre il mock)
   const aiLimited = await rateLimitAsync(`composer-assist-ai:${session.user.id}`, {
     limit: 25,
     windowMs: 60 * 60 * 1000,

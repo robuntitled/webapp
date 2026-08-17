@@ -96,6 +96,7 @@ type LiteApiHotelSearchProps = {
   cacheKey?: SearchCacheKey | null;
   compact?: boolean;
   className?: string;
+  preferredHotelIds?: string[];
 };
 
 type HotelFormCache = {
@@ -212,6 +213,7 @@ export function LiteApiHotelSearch({
   cacheKey = 'hotels',
   compact = false,
   className,
+  preferredHotelIds,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
   const hotelDefaults = defaultHotelDates();
@@ -410,6 +412,9 @@ export function LiteApiHotelSearch({
       if (refundableOnly) qs.set('refundableOnly', '1');
       if (countryCode && countryCode.length === 2) {
         qs.set('countryCode', countryCode);
+      }
+      if (preferredHotelIds?.length) {
+        qs.set('hotelIds', preferredHotelIds.join(','));
       }
 
       const res = await fetch(`/api/liteapi/hotels/search?${qs}`, {

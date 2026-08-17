@@ -13,6 +13,8 @@ import { TripMap } from '@/components/maps/TripMap';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { TripCoverPicker } from '@/components/trips/TripCoverPicker';
+import { SavedTripBookables } from '@/components/trips/SavedTripBookables';
+import { picksFromDraft } from '@/lib/composer/bookable-picks';
 import {
   AlertTriangle,
   CalendarDays,
@@ -65,6 +67,7 @@ export function ComposerReviewStep({
   const budget = estimateTripBudget(draft.days);
   const blockCount = draft.days.reduce((n, d) => n + d.blocks.length, 0);
   const pins = buildPinsFromDraft(draft);
+  const bookablePicks = picksFromDraft(draft);
   const publishIssues = validatePublishDraft(draft);
   const canPublish = publishIssues.length === 0;
   const formatShort = (iso: string) => {
@@ -202,6 +205,27 @@ export function ComposerReviewStep({
             </ul>
           </div>
         )}
+
+        {bookablePicks.length > 0 ? (
+          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <h4 className="font-display text-base font-semibold text-white">
+              Cosa si prenota dopo
+            </h4>
+            <p className="mt-1 text-xs text-white/55">
+              LiteAPI e Viator restano agganciati. Chi si unisce prenota questi, senza altre ricerche.
+              I must visit restano sulla mappa.
+            </p>
+            <div className="mt-4">
+              <SavedTripBookables
+                picks={bookablePicks}
+                startDate={draft.startDate}
+                endDate={draft.endDate}
+                variant="dark"
+                allowCheckout={false}
+              />
+            </div>
+          </section>
+        ) : null}
 
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]">
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">

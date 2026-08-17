@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { guessCityFromDestination } from '@/lib/travel/destination-hints';
 import type { ComposerDayRow } from '@/lib/data/composer';
 import { BLOCK_META } from '@/lib/composer/blocks';
+import { picksFromItinerary } from '@/lib/composer/bookable-picks';
+import { SavedTripBookables } from '@/components/trips/SavedTripBookables';
 import { cn } from '@/lib/utils';
 
 export type BookingTab = 'voli' | 'hotel' | 'auto' | 'attivita';
@@ -68,6 +70,18 @@ export function TripBookingPanel({
   const [tab, setTab] = useState<BookingTab>('hotel');
 
   const city = useMemo(() => guessCityFromDestination(destination), [destination]);
+
+  const savedPicks = useMemo(
+    () => picksFromItinerary(composerItinerary ?? []),
+    [composerItinerary]
+  );
+  const savedHotelIds = useMemo(
+    () =>
+      savedPicks
+        .filter((p) => p.kind === 'hotel' && p.hotelId)
+        .map((p) => p.hotelId as string),
+    [savedPicks]
+  );
 
   const activityStops = useMemo(() => {
     const days = composerItinerary ?? [];
@@ -132,7 +146,9 @@ export function TripBookingPanel({
           Voli, hotel, auto e attività
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Tariffe live sul contesto di questo viaggio.
+          {savedPicks.some((p) => p.provider === 'liteapi' || p.provider === 'viator')
+            ? 'Questi voli, hotel e attività sono quelli scelti in creazione. Prenota questi, senza rifare la ricerca.'
+            : 'Tariffe live sul contesto di questo viaggio.'}
         </p>
         {locked ? (
           <p className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
@@ -140,6 +156,18 @@ export function TripBookingPanel({
           </p>
         ) : null}
       </div>
+
+      {savedPicks.length > 0 ? (
+        <div className="border-b border-border/40 px-5 py-4">
+          <SavedTripBookables
+            picks={savedPicks}
+            startDate={startDate}
+            endDate={endDate}
+            adults={Math.min(9, Math.max(1, adults))}
+            allowCheckout={!locked && isAuthenticated}
+          />
+        </div>
+      ) : null}
 
       {locked ? null : (
         <>
@@ -189,6 +217,7 @@ export function TripBookingPanel({
             defaultAdults={1}
             cacheKey="trip-hotels"
             compact
+            preferredHotelIds={savedHotelIds}
           />
         ) : tab === 'auto' ? (
           <PrenotaCarsClient

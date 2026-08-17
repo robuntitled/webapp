@@ -1,6 +1,6 @@
 import { BLOCK_META, getBlockDisplayTitle } from '@/lib/composer/blocks';
-import { offsetAroundCenter, resolveDestinationCoords, type LatLng } from '@/lib/maps/coordinates';
-import type { ComposerBlockType, ComposerDay, ComposerDraft } from '@/types/composer';
+import { resolveDestinationCoords, type LatLng } from '@/lib/maps/coordinates';
+import type { ComposerBlockType, ComposerDraft } from '@/types/composer';
 
 export type MapPin = {
   id: string;
@@ -45,10 +45,9 @@ export function buildPinsFromDraft(
 
   for (const day of days) {
     const mappable = day.blocks.filter((b) => MAP_BLOCK_TYPES.has(b.type));
-    mappable.forEach((block, index) => {
-      const coords =
-        readCoords(block.content) ??
-        offsetAroundCenter(center, index + day.dayIndex * 3, mappable.length + day.dayIndex);
+    mappable.forEach((block) => {
+      const coords = readCoords(block.content);
+      if (!coords) return;
 
       const meta = BLOCK_META[block.type];
       pins.push({
@@ -95,10 +94,9 @@ export function buildPinsFromItinerary(
     const blocks = day.trip_blocks.filter((b) =>
       MAP_BLOCK_TYPES.has(b.block_type as ComposerBlockType)
     );
-    blocks.forEach((block, index) => {
-      const coords =
-        readCoords(block.content) ??
-        offsetAroundCenter(center, index + day.day_index * 3, blocks.length + day.day_index);
+    blocks.forEach((block) => {
+      const coords = readCoords(block.content);
+      if (!coords) return;
       const meta = BLOCK_META[block.block_type as ComposerBlockType];
       const title =
         typeof block.content.title === 'string' ? block.content.title : meta?.label ?? 'Tappa';

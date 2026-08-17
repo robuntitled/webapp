@@ -9,6 +9,7 @@ import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
 import type { ComposerDraft } from '@/types/composer';
 import type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 import type { PlannerProfile } from '@/types/planner';
+import { isResearchAssistIntent, runAssistResearch } from '@/lib/composer/assist-research';
 
 export type AssistMessage = {
   role: 'user' | 'assistant';
@@ -87,7 +88,6 @@ export function isCheapAssistIntent(message: string): boolean {
   if (/\b(come funziona|cosa faccio|che faccio dopo)\b/.test(msg) && msg.length < 80) {
     return true;
   }
-  if (/\b(volo|voli|aeroporto)\b/.test(msg) && msg.length < 100) return true;
   if (/\b(pubblic|lanci|pubblica)\b/.test(msg) && msg.length < 80) return true;
 
   return false;
@@ -109,11 +109,11 @@ export function mockAssistReply(req: AssistRequest): string {
   }
 
   if (/volo|voli|aeroporto|partenz/.test(msg)) {
-    return 'I voli li gestisci meglio in prenotazioni dopo la pubblicazione. Ora conviene chiudere tappe e hotel giorno per giorno.';
+    return 'Dimmi «cerca voli hotel e attività»: chiamo LiteAPI, Places e Viator, salvo i risultati sulla mappa e restano in prenotazione.';
   }
 
   if (/hotel|allogg|dormir/.test(msg)) {
-    return 'Per l’hotel usa «Hotel» nel composer: check-in 14:00 e check-out il giorno dopo. Posso consigliarti zone se mi dici il quartiere preferito.';
+    return 'Cerco hotel prenotabili su LiteAPI (non solo Places). Chiedi «cerca hotel» e li salvo con coordinate sulla mappa.';
   }
 
   if (/budget|cost|spes|euro|€/.test(msg)) {
@@ -133,7 +133,7 @@ export function mockAssistReply(req: AssistRequest): string {
   }
 
   if (/aiut|come funziona|cosa/.test(msg)) {
-    return 'Composer in 3 passi: Inizio → Componi (mappa + tappe) → Pubblica. La chat è in basso a destra per idee e chiarimenti.';
+    return 'Composer: template → Quando/Da dove/Con chi → Componi. Chiedimi «cerca voli hotel e attività»: salvo LiteAPI + Places + Viator sulla mappa.';
   }
 
   return `Ok. ${ctx ? `Contesto: ${ctx}. ` : ''}Chiedimi un parere sul viaggio, idee per un giorno o chiarimenti sul flusso.`;
@@ -206,6 +206,8 @@ function buildAssistSystem(context: string, profile?: PlannerProfile | null): st
   // Prompt corto = meno input token (costo maggiore di solito è l’input su chat ripetute)
   return [
     'Assistente viaggi NomadLink. IT, amichevole, utile.',
+    'Puoi cercare voli LiteAPI, hotel LiteAPI, must visit Google Places e attività Viator e salvarli sulla mappa.',
+    'Prenotazione vera solo dopo il gruppo formato: in composer si scelgono e si salvano le offerte.',
     'Risposta completa 2–5 frasi (max ~100 parole). Niente meta/thinking/Attempt.',
     'No prezzi precisi inventati.',
     `Bozza: ${context}`,
@@ -387,8 +389,21 @@ async function callGeminiAssist(params: {
 
 export async function replyToAssist(req: AssistRequest): Promise<{
   reply: string;
-  source: 'ai' | 'mock';
+  source: 'ai' | 'mock' | 'research';
+  draftPatch?: Partial<ComposerDraft>;
 }> {
+  if (isResearchAssistIntent(req.message)) {
+    const research = await runAssistResearch(req.draft, req.message);
+    return {
+      reply: research.reply,
+      source: 'research',
+      draftPatch: {
+        days: research.days,
+        bookablePicks: research.bookablePicks,
+      },
+    };
+  }
+
   // 1) Intent banali → mock (0 token)
   if (isCheapAssistIntent(req.message)) {
     return { reply: mockAssistReply(req), source: 'mock' };

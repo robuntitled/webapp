@@ -30,6 +30,7 @@ import {
   writeComposerLocalSession,
 } from '@/lib/composer/local-draft';
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
+import { applyPicksToDays, mergeBookablePicks } from '@/lib/composer/bookable-picks';
 import { normalizeWizardStep, WIZARD_STEPS } from '@/lib/composer/wizard-steps';
 import type { ComposerDraft, ComposerDay } from '@/types/composer';
 import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
@@ -172,6 +173,22 @@ export function TripComposer({
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  const applyAssistPatch = useCallback((patch: Partial<ComposerDraft>) => {
+    setDraft((prev) => {
+      const days = patch.days ?? prev.days;
+      return {
+        ...prev,
+        ...patch,
+        days,
+        bookablePicks: mergeBookablePicks(prev.bookablePicks, patch.bookablePicks),
+      };
+    });
+    if (patch.days?.length) {
+      setStep((s) => (s === 'source' || s === 'landing' ? 'plan' : s));
+    }
+    toast.success('Salvato sull’itinerario e sulla mappa');
+  }, []);
+
   const applyTemplate = (template: TripTemplate) => {
     const start =
       draft.startDate || format(addDays(new Date(), 21), 'yyyy-MM-dd');
@@ -199,7 +216,8 @@ export function TripComposer({
     );
     const base =
       draft.days.length > 0 ? draft.days : buildComposerDays(draft.startDate, draft.endDate);
-    const days = remapComposerDaysToDuration(base, duration, draft.startDate);
+    const remapped = remapComposerDaysToDuration(base, duration, draft.startDate);
+    const days = applyPicksToDays(remapped, draft.bookablePicks ?? []);
     setDraft((prev) => ({ ...prev, days }));
     setStep('plan');
   };
@@ -384,6 +402,7 @@ export function TripComposer({
         draft={{ ...draft, plannerProfile }}
         step={step}
         plannerProfile={plannerProfile}
+        onApplyPatch={applyAssistPatch}
       />
     </div>
   );

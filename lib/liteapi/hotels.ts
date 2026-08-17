@@ -48,6 +48,8 @@ export type HotelSearchInput = {
   /** Facility IDs LiteAPI (es. piscina) */
   facilityIds?: number[];
   minStars?: number;
+  /** Se presente, cerca tariffe solo su questi hotel (niente catalogo città). */
+  hotelIds?: string[];
 };
 
 type RawRateTotal = { amount?: number | string; currency?: string };
@@ -446,14 +448,16 @@ export async function searchHotelRates(
 
   // Filtri colazione/piscina restano post-process lato API route
 
-  let hotelIds: string[] = [];
+  let hotelIds: string[] = (input.hotelIds ?? []).map((id) => id.trim()).filter(Boolean);
   let coordsById = new Map<string, { lat: number; lng: number }>();
-  try {
-    const catalog = await fetchHotelCatalog(countryCode, cityName, limit);
-    hotelIds = catalog.ids;
-    coordsById = catalog.coordsById;
-  } catch (e) {
-    console.warn('[liteapi] /data/hotels failed, fallback city rates', e);
+  if (hotelIds.length === 0) {
+    try {
+      const catalog = await fetchHotelCatalog(countryCode, cityName, limit);
+      hotelIds = catalog.ids;
+      coordsById = catalog.coordsById;
+    } catch (e) {
+      console.warn('[liteapi] /data/hotels failed, fallback city rates', e);
+    }
   }
 
   if (hotelIds.length > 0) {

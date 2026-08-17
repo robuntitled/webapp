@@ -46,6 +46,19 @@ const schema = z.object({
     .enum(['0', '1', 'true', 'false'])
     .optional()
     .transform((v) => v === '1' || v === 'true'),
+  hotelIds: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .slice(0, 25)
+        : []
+    ),
 });
 
 async function resolveCountryCode(cityName: string): Promise<string> {
@@ -99,6 +112,7 @@ export async function GET(request: Request) {
     breakfast: searchParams.get('breakfast') ?? undefined,
     minStars: searchParams.get('minStars') ?? undefined,
     pool: searchParams.get('pool') ?? undefined,
+    hotelIds: searchParams.get('hotelIds') ?? undefined,
   });
 
   if (!parsed.success) {
@@ -131,8 +145,9 @@ export async function GET(request: Request) {
       childrenAges: parsed.data.childrenAges,
       currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
       guestNationality: 'IT',
-      limit: 100,
+      limit: parsed.data.hotelIds.length ? parsed.data.hotelIds.length : 100,
       refundableRatesOnly: Boolean(parsed.data.refundableOnly),
+      hotelIds: parsed.data.hotelIds.length ? parsed.data.hotelIds : undefined,
     });
 
     if (parsed.data.refundableOnly) {
