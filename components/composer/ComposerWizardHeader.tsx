@@ -32,9 +32,10 @@ export function ComposerWizardHeader({
   const mainIndex = WIZARD_STEPS.indexOf(normalized);
   const stepLabel = wizardStepLabel(normalized);
 
+  const useMicro = typeof microStep === 'number' && typeof microTotal === 'number';
   const progressLabel =
-    microStep != null && microTotal != null && microLabel
-      ? `Step ${mainIndex + 1} di ${WIZARD_STEPS.length} · ${microLabel} (${microStep}/${microTotal})`
+    useMicro && microLabel
+      ? `${microLabel} · ${microStep} di ${microTotal}`
       : `Step ${mainIndex + 1} di ${WIZARD_STEPS.length} · ${stepLabel}`;
 
   return (
@@ -49,18 +50,31 @@ export function ComposerWizardHeader({
       </motion.div>
 
       <div className="flex items-center justify-center gap-2 px-4">
-        {WIZARD_STEPS.map((s, i) => (
-          <div
-            key={s}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              s === normalized
-                ? 'w-10 bg-accent'
-                : i < mainIndex
-                  ? 'w-5 bg-accent/50'
-                  : 'w-5 bg-white/15'
-            }`}
-          />
-        ))}
+        {useMicro
+          ? Array.from({ length: microTotal }, (_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  i + 1 === microStep
+                    ? 'w-10 bg-accent'
+                    : i + 1 < (microStep ?? 0)
+                      ? 'w-5 bg-accent/50'
+                      : 'w-5 bg-white/15'
+                }`}
+              />
+            ))
+          : WIZARD_STEPS.map((s, i) => (
+              <div
+                key={s}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  s === normalized
+                    ? 'w-10 bg-accent'
+                    : i < mainIndex
+                      ? 'w-5 bg-accent/50'
+                      : 'w-5 bg-white/15'
+                }`}
+              />
+            ))}
       </div>
 
       <motion.h2

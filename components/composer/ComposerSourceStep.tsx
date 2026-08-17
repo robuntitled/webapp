@@ -1,114 +1,78 @@
 'use client';
 
-import { PenLine, Sparkles, LayoutTemplate } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { TRIP_TEMPLATES, type TripTemplate } from '@/lib/composer/trip-templates';
-import { cn } from '@/lib/utils';
+import { coverForDestination } from '@/lib/composer/destination-covers';
 
 type ComposerSourceStepProps = {
   onScratch: () => void;
   onTemplate: (template: TripTemplate) => void;
-  onCustomize: (template: TripTemplate) => void;
 };
 
-export function ComposerSourceStep({
-  onScratch,
-  onTemplate,
-  onCustomize,
-}: ComposerSourceStepProps) {
+export function ComposerSourceStep({ onScratch, onTemplate }: ComposerSourceStepProps) {
   return (
-    <div className="mx-auto max-w-3xl pb-16">
-      <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Crea</p>
-      <h1 className="mt-3 font-display text-4xl font-semibold text-white md:text-5xl">
-        Parti da una base. Poi è tuo.
-      </h1>
-      <p className="mt-4 max-w-xl text-white/90">
-        I template sono la via veloce: itinerario già disegnato, tu lo adatti. Da zero solo se vuoi
-        ogni tappa.
+    <div className="mx-auto max-w-4xl pb-16">
+      <p className="text-center text-sm font-medium uppercase tracking-[0.2em] text-accent">
+        Crea
       </p>
-
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
-        <ModeHint
-          icon={LayoutTemplate}
-          title="Template"
-          body="Parti da una meta già disegnata."
-          featured
-        />
-        <ModeHint icon={Sparkles} title="Modifica template" body="Prendi la base e cambia giorni." />
-        <ModeHint icon={PenLine} title="Da zero" body="Destinazione, date, mappa: tutto tu." />
-      </div>
+      <h1 className="mx-auto mt-3 max-w-2xl text-center font-display text-4xl font-semibold text-white md:text-5xl">
+        Scegli la meta. L’itinerario è già pronto.
+      </h1>
+      <p className="mx-auto mt-4 max-w-lg text-center text-white/85">
+        Un modello, tre minuti, poi lo pieghi alle tue date. Da zero solo se vuoi disegnare ogni
+        tappa.
+      </p>
 
       <div className="mt-10 flex items-center justify-between gap-3">
         <h2 className="font-display text-xl font-semibold text-white">Scegli un template</h2>
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full"
-          onClick={onScratch}
-        >
+        <Button type="button" variant="outline" className="rounded-full" onClick={onScratch}>
           Crea da zero
         </Button>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        {TRIP_TEMPLATES.map((tpl) => (
-          <article
-            key={tpl.id}
-            className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"
-          >
-            <div className={cn('mb-4 h-16 rounded-2xl bg-gradient-to-br', tpl.gradient)} />
-            <p className="text-xs uppercase tracking-wider text-white/80">{tpl.region}</p>
-            <h3 className="mt-1 font-display text-xl font-semibold text-white">
-              {tpl.emoji} {tpl.label}
-            </h3>
-            <p className="mt-1 text-sm text-white/85">{tpl.vibe}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                className="rounded-full"
-                onClick={() => onTemplate(tpl)}
-              >
-                Usa template
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="rounded-full"
-                onClick={() => onCustomize(tpl)}
-              >
-                Modifica
-              </Button>
-            </div>
-          </article>
-        ))}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {TRIP_TEMPLATES.map((tpl) => {
+          const cover = coverForDestination(tpl.destinationId);
+          return (
+            <article
+              key={tpl.id}
+              className="overflow-hidden rounded-3xl border border-white/10 bg-black/30 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
+            >
+              <div className="relative h-44">
+                <Image
+                  src={cover}
+                  alt={tpl.label}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 50vw"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                  {tpl.region}
+                </p>
+                <div className="absolute bottom-3 left-4 right-4">
+                  <h3 className="font-display text-2xl font-semibold text-white">
+                    {tpl.emoji} {tpl.label}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-white/85">{tpl.vibe}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <p className="text-xs text-white/60">{tpl.durationDays} giorni già strutturati</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => onTemplate(tpl)}
+                >
+                  Usa template
+                </Button>
+              </div>
+            </article>
+          );
+        })}
       </div>
-    </div>
-  );
-}
-
-function ModeHint({
-  icon: Icon,
-  title,
-  body,
-  featured,
-}: {
-  icon: typeof PenLine;
-  title: string;
-  body: string;
-  featured?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-2xl border px-4 py-3',
-        featured ? 'border-accent/40 bg-accent/10' : 'border-white/10 bg-white/[0.03]'
-      )}
-    >
-      <Icon className={cn('h-4 w-4', featured ? 'text-accent' : 'text-white/50')} />
-      <p className="mt-2 text-sm font-semibold text-white">{title}</p>
-      <p className="mt-0.5 text-xs text-white/80">{body}</p>
     </div>
   );
 }

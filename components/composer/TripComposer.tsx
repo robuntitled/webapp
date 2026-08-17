@@ -172,7 +172,7 @@ export function TripComposer({
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const applyTemplate = (template: TripTemplate, mode: 'use' | 'customize') => {
+  const applyTemplate = (template: TripTemplate) => {
     const start =
       draft.startDate || format(addDays(new Date(), 21), 'yyyy-MM-dd');
     const partial = draftFromTripTemplate(template, start);
@@ -188,7 +188,7 @@ export function TripComposer({
         plannerProfile
       )
     );
-    setStep(mode === 'use' ? 'plan' : 'landing');
+    setStep('landing');
   };
 
   const goToCompose = () => {
@@ -318,8 +318,7 @@ export function TripComposer({
                   setDraft(mergeDraft(EMPTY_DRAFT, { plannerProfile }, plannerProfile));
                   setStep('landing');
                 }}
-                onTemplate={(tpl) => applyTemplate(tpl, 'use')}
-                onCustomize={(tpl) => applyTemplate(tpl, 'customize')}
+                onTemplate={applyTemplate}
               />
             </motion.div>
           )}

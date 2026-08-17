@@ -16,27 +16,108 @@ import {
   Loader2,
   MapPin,
   Navigation,
-  Users,
-  User,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
 import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
-import { findDestination } from '@/lib/composer/destinations';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildOrganizerOrigin } from '@/lib/composer/origins';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
+import { coverForDestination } from '@/lib/composer/destination-covers';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
-const MICRO_STEPS = [
-  { id: 1, label: 'Destinazione' },
-  { id: 2, label: 'Date' },
-  { id: 3, label: 'Viaggio' },
-] as const;
+type ConfigPhase = 'dest' | 'when' | 'from' | 'who';
+
+const WHO_COVERS = {
+  solo: 'https://images.unsplash.com/photo-1504150558240-0b4fd8946624?auto=format&fit=crop&w=900&q=80',
+  group:
+    'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
+} as const;
+
+const FROM_COVER =
+  'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=80';
+
+const DURATION_CARDS = [
+  {
+    n: 5 as const,
+    kicker: 'Ponte',
+    title: '5 giorni',
+    body: 'Il lungo weekend che vale un viaggio.',
+    cover:
+      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    n: 7 as const,
+    kicker: 'Settimana',
+    title: '7 giorni',
+    body: 'Il ritmo giusto. Niente fretta.',
+    cover:
+      'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    n: 10 as const,
+    kicker: 'Il giro',
+    title: '10 giorni',
+    body: 'Ci stai tutto. Zero rimpianti.',
+    cover:
+      'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=900&q=80',
+  },
+];
+
+function PhotoChoiceCard({
+  cover,
+  active,
+  onClick,
+  kicker,
+  title,
+  body,
+  className,
+}: {
+  cover: string;
+  active?: boolean;
+  onClick?: () => void;
+  kicker?: string;
+  title: string;
+  body?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'group relative min-h-[196px] overflow-hidden rounded-3xl text-left shadow-[0_24px_50px_-28px_rgba(0,0,0,0.7)] transition duration-300',
+        active
+          ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220] scale-[1.01]'
+          : 'ring-1 ring-white/12 hover:ring-white/30',
+        className
+      )}
+    >
+      <Image
+        src={cover}
+        alt=""
+        fill
+        sizes="(max-width: 640px) 100vw, 33vw"
+        className="object-cover transition duration-700 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+      <div className="relative z-10 flex h-full min-h-[196px] flex-col justify-end p-5">
+        {kicker ? (
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent">
+            {kicker}
+          </p>
+        ) : null}
+        <p className="font-display text-2xl font-semibold text-white">{title}</p>
+        {body ? <p className="mt-1 text-sm leading-snug text-white/82">{body}</p> : null}
+      </div>
+    </button>
+  );
+}
 
 type ComposerLandingStepProps = {
   draft: ComposerDraft;
@@ -55,12 +136,15 @@ export function ComposerLandingStep({
   profileCity,
   profileCountry,
 }: ComposerLandingStepProps) {
-  const [micro, setMicro] = useState(1);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [originCityInput, setOriginCityInput] = useState(draft.organizerOrigin?.city ?? '');
   const titleTouched = useRef(false);
   const profileOriginApplied = useRef(false);
+  const startedWithDest = useRef(Boolean(draft.destination?.trim()));
+  const [phase, setPhase] = useState<ConfigPhase>(() =>
+    draft.destination?.trim() ? 'when' : 'dest'
+  );
 
   useEffect(() => {
     setOriginCityInput(draft.organizerOrigin?.city ?? '');
@@ -91,8 +175,7 @@ export function ComposerLandingStep({
   });
 
   const selectedDestinations = getDraftDestinations(draft);
-  const featured = findDestination(draft.destination);
-  const heroGradient = featured?.gradient ?? 'from-primary/60 via-accent/40 to-teal-400/30';
+  const destCover = draft.destination ? coverForDestination(draft.destination) : null;
 
   const handleDestinationsChange = (destinations: DestinationMeta[]) => {
     const labels = destinations.map((d) => d.label);
@@ -103,26 +186,80 @@ export function ComposerLandingStep({
     if (destinations.length > 0 && !titleTouched.current) {
       synced.title = generateTripTitle(labels, labels.join('-'));
     }
-    onChange(synced);
+    onChange({
+      ...synced,
+      imageUrl: destinations[0] ? coverForDestination(destinations[0].label) : undefined,
+    });
   };
 
   const canNext =
-    micro === 1
+    phase === 'dest'
       ? selectedDestinations.length > 0
-      : micro === 2
+      : phase === 'when'
         ? Boolean(startDate && endDate && endDate >= startDate)
-        : Boolean(draft.title.trim());
+        : phase === 'from'
+          ? Boolean(draft.organizerOrigin?.city)
+          : Boolean(draft.title.trim());
 
   const goNext = () => {
-    if (micro === 2 && startDate && endDate) {
+    if (phase === 'when' && startDate && endDate) {
       onChange({
         startDate: format(startDate, 'yyyy-MM-dd'),
         endDate: format(endDate, 'yyyy-MM-dd'),
       });
     }
-    if (micro < 3) setMicro((m) => m + 1);
+    if (phase === 'dest') setPhase('when');
+    else if (phase === 'when') setPhase('from');
+    else if (phase === 'from') setPhase('who');
     else onStart();
   };
+
+  const goBack = () => {
+    if (phase === 'dest') {
+      onBack?.();
+      return;
+    }
+    if (phase === 'when') {
+      if (startedWithDest.current) onBack?.();
+      else setPhase('dest');
+      return;
+    }
+    if (phase === 'from') setPhase('when');
+    else setPhase('from');
+  };
+
+  const header =
+    phase === 'dest'
+      ? {
+          label: 'Mete',
+          title: 'Dove andiamo?',
+          subtitle: 'Una o più mete. Poi date, partenza, compagni.',
+          micro: 1,
+          total: 4,
+        }
+      : phase === 'when'
+        ? {
+            label: 'Quando',
+            title: 'Quando parti?',
+            subtitle: 'Date e durata. L’itinerario si piega ai giorni che scegli.',
+            micro: startedWithDest.current ? 1 : 2,
+            total: startedWithDest.current ? 3 : 4,
+          }
+        : phase === 'from'
+          ? {
+              label: 'Da dove',
+              title: 'Da dove voli?',
+              subtitle: 'La tua città. Da qui partono i voli del gruppo.',
+              micro: startedWithDest.current ? 2 : 3,
+              total: startedWithDest.current ? 3 : 4,
+            }
+          : {
+              label: 'Con chi',
+              title: 'Con chi parti?',
+              subtitle: 'Aperto al mondo, o solo con chi inviti tu.',
+              micro: startedWithDest.current ? 3 : 4,
+              total: startedWithDest.current ? 3 : 4,
+            };
 
   /** Come in ba5c42a: reverse Nominatim; prova prima API server (User-Agent valido). */
   const resolveCoordsToOrigin = async (latitude: number, longitude: number) => {
@@ -219,189 +356,201 @@ export function ComposerLandingStep({
     );
   };
 
-  const microMeta = MICRO_STEPS[micro - 1];
+  const applyDuration = (n: 5 | 7 | 10) => {
+    const start = startDate ?? addDays(new Date(), 14);
+    const end = addDays(start, n - 1);
+    const startIso = format(start, 'yyyy-MM-dd');
+    setStartDate(start);
+    setEndDate(end);
+    onChange({
+      startDate: startIso,
+      endDate: format(end, 'yyyy-MM-dd'),
+      days: remapComposerDaysToDuration(draft.days, n, startIso),
+    });
+  };
+
+  const activeDuration =
+    startDate && endDate ? differenceInCalendarDays(endDate, startDate) + 1 : null;
+
+  const phaseMotion = {
+    initial: { opacity: 0, x: 18 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -18 },
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="max-w-2xl mx-auto pb-24"
+      className="mx-auto max-w-3xl pb-24"
     >
       <ComposerWizardHeader
         step="landing"
-        microStep={micro}
-        microTotal={3}
-        microLabel={microMeta.label}
-        title={
-          micro === 1
-            ? 'Dove andiamo?'
-            : micro === 2
-              ? 'Quando e da dove?'
-              : 'Con chi parti?'
-        }
-        subtitle={
-          micro === 1
-            ? 'Una o più mete. Poi date, compagni, mappa.'
-            : micro === 2
-              ? 'Quanto dura, quando parti, da dove voli.'
-              : 'Da solo (aperto) o con gli amici. Poi componi i giorni.'
-        }
+        microStep={header.micro}
+        microTotal={header.total}
+        microLabel={header.label}
+        title={header.title}
+        subtitle={header.subtitle}
       />
 
-      {selectedDestinations.length > 0 && micro > 1 && (
+      {selectedDestinations.length > 0 && phase !== 'dest' ? (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="composer-destination-pill mb-6 flex items-center gap-3 px-4 py-3"
+          className="composer-destination-pill mb-6 flex items-center gap-3 overflow-hidden px-2 py-2"
         >
-          <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${heroGradient} shrink-0`} />
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl">
+            {destCover ? (
+              <Image src={destCover} alt="" fill sizes="48px" className="object-cover" />
+            ) : null}
+          </div>
           <div className="min-w-0">
-            <p className="text-xs text-white/50 uppercase tracking-wider">Mete</p>
-            <p className="font-semibold text-white truncate">{draft.destination}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
+              Mete
+            </p>
+            <p className="truncate font-semibold text-white">{draft.destination}</p>
           </div>
         </motion.div>
-      )}
+      ) : null}
 
-      <div className="composer-panel rounded-3xl p-8 md:p-10">
-        <AnimatePresence mode="wait">
-          {micro === 1 && (
-            <motion.div
-              key="m1"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              className="space-y-6"
-            >
-              <DestinationSearch
-                selectedDestinations={selectedDestinations}
-                plannerProfile={draft.plannerProfile}
-                onDestinationsChange={handleDestinationsChange}
-                onPersonalize={() => setPlannerOpen(true)}
-              />
-            </motion.div>
-          )}
+      <AnimatePresence mode="wait">
+        {phase === 'dest' ? (
+          <motion.div key="dest" {...phaseMotion} className="composer-panel rounded-3xl p-8 md:p-10">
+            <DestinationSearch
+              selectedDestinations={selectedDestinations}
+              plannerProfile={draft.plannerProfile}
+              onDestinationsChange={handleDestinationsChange}
+              onPersonalize={() => setPlannerOpen(true)}
+            />
+          </motion.div>
+        ) : null}
 
-          {micro === 2 && (
-            <motion.div
-              key="m2"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              className="space-y-8"
-            >
-              <div className="grid sm:grid-cols-2 gap-4 max-w-md mx-auto">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-white/80 text-center">Partenza</p>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full h-14 justify-center rounded-2xl text-base"
-                      >
-                        <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
-                        {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 rounded-xl" align="center">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(d) => {
-                          setStartDate(d);
-                          if (d) {
-                            const ret = addDays(d, 7);
-                            setEndDate(ret);
-                            onChange({
-                              startDate: format(d, 'yyyy-MM-dd'),
-                              endDate: format(ret, 'yyyy-MM-dd'),
-                            });
-                          }
-                        }}
-                        disabled={{ before: new Date() }}
-                        classNames={{ today: 'rounded-md text-foreground' }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-white/80 text-center">Ritorno</p>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full h-14 justify-center rounded-2xl text-base"
-                        disabled={!startDate}
-                      >
-                        <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
-                        {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 rounded-xl" align="center">
-                      <Calendar
-                        key={startDate?.toISOString() ?? 'no-start'}
-                        mode="single"
-                        selected={endDate}
-                        defaultMonth={startDate}
-                        onSelect={(d) => {
-                          setEndDate(d);
-                          if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
-                        }}
-                        disabled={{ before: startDate || new Date() }}
-                        classNames={{ today: 'rounded-md text-foreground' }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-white/80 text-center">Durata (struttura itinerario)</p>
-                <div className="flex justify-center gap-2">
-                  {([5, 7, 10] as const).map((n) => {
-                    const active =
-                      Boolean(startDate && endDate) &&
-                      differenceInCalendarDays(endDate!, startDate!) + 1 === n;
-                    return (
-                    <button
-                      key={n}
-                      type="button"
-                      className={cn(
-                        'rounded-full border px-4 py-2 text-sm font-medium',
-                        active
-                          ? 'border-accent bg-white text-slate-900 ring-2 ring-accent/40'
-                          : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
-                      )}
-                      onClick={() => {
-                        const start = startDate ?? addDays(new Date(), 14);
-                        const end = addDays(start, n - 1);
-                        const startIso = format(start, 'yyyy-MM-dd');
-                        setStartDate(start);
-                        setEndDate(end);
+        {phase === 'when' ? (
+          <motion.div key="when" {...phaseMotion} className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)]"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Partenza
+                    </p>
+                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
+                      <CalendarIcon className="h-5 w-5 text-accent" />
+                      {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                    </p>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 rounded-xl" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(d) => {
+                      setStartDate(d);
+                      if (d) {
+                        const span = activeDuration && activeDuration > 1 ? activeDuration : 7;
+                        const ret = addDays(d, span - 1);
+                        setEndDate(ret);
                         onChange({
-                          startDate: startIso,
-                          endDate: format(end, 'yyyy-MM-dd'),
-                          days: remapComposerDaysToDuration(draft.days, n, startIso),
+                          startDate: format(d, 'yyyy-MM-dd'),
+                          endDate: format(ret, 'yyyy-MM-dd'),
                         });
-                      }}
-                    >
-                      {n} giorni
-                    </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-white/85 text-center">
-                  Accorciando i giorni togliamo le tappe secondarie. Arrivo e partenza restano.
-                </p>
-              </div>
+                      }
+                    }}
+                    disabled={{ before: new Date() }}
+                    classNames={{ today: 'rounded-md text-foreground' }}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={!startDate}
+                    className="rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)] disabled:opacity-50"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Ritorno
+                    </p>
+                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
+                      <CalendarIcon className="h-5 w-5 text-accent" />
+                      {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                    </p>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 rounded-xl" align="end">
+                  <Calendar
+                    key={startDate?.toISOString() ?? 'no-start'}
+                    mode="single"
+                    selected={endDate}
+                    defaultMonth={startDate}
+                    onSelect={(d) => {
+                      setEndDate(d);
+                      if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
+                    }}
+                    disabled={{ before: startDate || new Date() }}
+                    classNames={{ today: 'rounded-md text-foreground' }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
-              <div className="space-y-3 max-w-md mx-auto">
-                <p className="text-sm font-medium text-white/80 text-center">Da dove parti?</p>
-                {/* Layout come ba5c42a: GPS + campo città affiancati */}
-                <div className="flex flex-col sm:flex-row gap-2">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {DURATION_CARDS.map((card) => (
+                <PhotoChoiceCard
+                  key={card.n}
+                  cover={card.cover}
+                  kicker={card.kicker}
+                  title={card.title}
+                  body={card.body}
+                  active={activeDuration === card.n}
+                  onClick={() => applyDuration(card.n)}
+                />
+              ))}
+            </div>
+            <p className="text-center text-xs text-white/75">
+              Accorciando i giorni togliamo le tappe secondarie. Arrivo e partenza restano.
+            </p>
+          </motion.div>
+        ) : null}
+
+        {phase === 'from' ? (
+          <motion.div key="from" {...phaseMotion}>
+            <div className="relative overflow-hidden rounded-[2rem] shadow-[0_28px_60px_-32px_rgba(0,0,0,0.75)]">
+              <div className="relative h-[280px] sm:h-[320px]">
+                <Image
+                  src={FROM_COVER}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/15" />
+              </div>
+              <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-8">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+                  Gate di partenza
+                </p>
+                <h3 className="mt-1 font-display text-3xl font-semibold text-white">
+                  {draft.organizerOrigin?.city ?? 'Da dove voli?'}
+                </h3>
+                {draft.organizerOrigin ? (
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-white/80">
+                    <MapPin className="h-4 w-4 text-accent" />
+                    {draft.organizerOrigin.city}
+                    {draft.organizerOrigin.iata ? ` · ${draft.organizerOrigin.iata}` : ''}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-white/75">GPS o città. Da qui partono i voli.</p>
+                )}
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-xl shrink-0"
+                    className="h-12 shrink-0 rounded-2xl"
                     onClick={detectOrigin}
                     disabled={geoLoading}
                   >
@@ -413,8 +562,8 @@ export function ComposerLandingStep({
                     Usa la mia posizione
                   </Button>
                   <Input
-                    placeholder="Oppure digita la città (Invio)"
-                    className="h-11 rounded-xl composer-field"
+                    placeholder="Oppure digita la città"
+                    className="h-12 rounded-2xl composer-field"
                     value={originCityInput}
                     onChange={(e) => setOriginCityInput(e.target.value)}
                     onBlur={() => applyOriginCity(originCityInput)}
@@ -426,78 +575,60 @@ export function ComposerLandingStep({
                     }}
                   />
                 </div>
-                {draft.organizerOrigin && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-white/70">
-                    <MapPin className="h-4 w-4 text-accent shrink-0" />
-                    <span className="truncate">
-                      {draft.organizerOrigin.city}
-                      {draft.organizerOrigin.iata
-                        ? ` · ${draft.organizerOrigin.iata}`
-                        : ''}
-                    </span>
-                  </div>
-                )}
               </div>
-            </motion.div>
-          )}
+            </div>
+          </motion.div>
+        ) : null}
 
-          {micro === 3 && (
-            <motion.div
-              key="m3"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              className="space-y-8"
-            >
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
-                <Input
-                  className="h-14 rounded-2xl composer-field text-lg"
-                  value={draft.title}
-                  onChange={(e) => {
-                    titleTouched.current = true;
-                    onChange({ title: e.target.value });
-                  }}
-                  placeholder="Es. Viaggio in Sicilia e a Dubai"
-                />
-              </div>
+        {phase === 'who' ? (
+          <motion.div key="who" {...phaseMotion} className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
+              <Input
+                className="h-14 rounded-2xl composer-field text-lg"
+                value={draft.title}
+                onChange={(e) => {
+                  titleTouched.current = true;
+                  onChange({ title: e.target.value });
+                }}
+                placeholder="Es. Viaggio in Sicilia e a Dubai"
+              />
+            </div>
 
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-white/80">Chi parte?</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['solo', 'group'] as const).map((mode) => {
-                    const Icon = mode === 'solo' ? User : Users;
-                    const active = draft.planningMode === mode;
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() =>
-                          onChange({
-                            planningMode: mode,
-                            minParticipants: mode === 'solo' ? 4 : 2,
-                            maxParticipants: mode === 'solo' ? 8 : 8,
-                          })
-                        }
-                        className={`rounded-2xl border-2 p-5 text-left transition-all ${
-                          active
-                            ? 'border-accent bg-accent/15 text-white'
-                            : 'border-white/15 text-white/70 hover:border-white/30'
-                        }`}
-                      >
-                        <Icon className={`h-6 w-6 mb-2 ${active ? 'text-accent' : ''}`} />
-                        <p className="font-semibold">{mode === 'solo' ? 'Solo' : 'Con amici'}</p>
-                        <p className="text-xs text-white/50 mt-1">
-                          {mode === 'solo'
-                            ? 'Organizzi per te, aperto ad altri viaggiatori'
-                            : 'Viaggio privato tra amici — invito via link'}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PhotoChoiceCard
+                cover={WHO_COVERS.solo}
+                kicker="Aperto"
+                title="Solo"
+                body="Organizzi per te. Poi si uniscono gli altri."
+                active={draft.planningMode === 'solo'}
+                className="min-h-[240px]"
+                onClick={() =>
+                  onChange({
+                    planningMode: 'solo',
+                    minParticipants: 4,
+                    maxParticipants: 8,
+                  })
+                }
+              />
+              <PhotoChoiceCard
+                cover={WHO_COVERS.group}
+                kicker="Privato"
+                title="Con amici"
+                body="Solo chi inviti tu. Link, basta."
+                active={draft.planningMode === 'group'}
+                className="min-h-[240px]"
+                onClick={() =>
+                  onChange({
+                    planningMode: 'group',
+                    minParticipants: 2,
+                    maxParticipants: 8,
+                  })
+                }
+              />
+            </div>
 
+            <div className="composer-panel rounded-3xl p-5">
               <div className="grid grid-cols-2 gap-3">
                 <label className="space-y-1.5">
                   <p className="text-sm font-medium text-white/80">Posti minimi</p>
@@ -526,51 +657,45 @@ export function ComposerLandingStep({
                   />
                 </label>
               </div>
-              <p className="text-xs text-white/45">
+              <p className="mt-3 text-xs text-white/55">
                 Garanzia di partenza attiva finché non si raggiunge il minimo.
               </p>
-            </motion.div>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <div className="mt-8 flex items-center justify-between gap-4">
+        <Button
+          type="button"
+          variant="ghost"
+          className="rounded-full text-white hover:text-slate-900"
+          disabled={phase === 'dest' && !onBack}
+          onClick={goBack}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Indietro
+        </Button>
+
+        <Button
+          type="button"
+          size="lg"
+          className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
+          disabled={!canNext}
+          onClick={goNext}
+        >
+          {phase === 'who' ? (
+            <>
+              <BookOpen className="mr-2 h-5 w-5" />
+              Inizia a comporre
+            </>
+          ) : (
+            <>
+              Avanti
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </>
           )}
-        </AnimatePresence>
-
-        <div className="flex items-center justify-between gap-4 mt-10 pt-8 border-t border-white/10">
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded-full text-white hover:text-slate-900"
-            disabled={micro === 1 && !onBack}
-            onClick={() => {
-              if (micro === 1) {
-                onBack?.();
-                return;
-              }
-              setMicro((m) => Math.max(1, m - 1));
-            }}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Indietro
-          </Button>
-
-          <Button
-            type="button"
-            size="lg"
-            className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
-            disabled={!canNext}
-            onClick={goNext}
-          >
-            {micro === 3 ? (
-              <>
-                <BookOpen className="mr-2 h-5 w-5" />
-                Inizia a comporre
-              </>
-            ) : (
-              <>
-                Avanti
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </div>
+        </Button>
       </div>
 
       <PlannerQuickSetupSheet
