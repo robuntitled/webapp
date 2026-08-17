@@ -18,7 +18,8 @@ export function Footer({ company }: FooterProps) {
               <span className="font-display text-xl font-semibold">{company.tradeName}</span>
             </div>
             <p className="text-sm text-primary-foreground/70 leading-relaxed">
-              Viaggi di gruppo nel mondo — raccontati da chi li vive e li fotografa.
+              Trova viaggi aperti, crea itinerari con l&apos;AI e coordina la crew — tutto in un
+              posto.
             </p>
             <p className="text-sm text-primary-foreground/60 mt-4">
               Privacy:{' '}
