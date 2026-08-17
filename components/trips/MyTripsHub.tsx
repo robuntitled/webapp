@@ -268,7 +268,7 @@ function EmptyPanel({
         Unisciti ai viaggi degli amici dalla dashboard — zero pianificazione.
       </p>
       <Button asChild variant="secondary" className="mt-6 rounded-full">
-          <Link href="/dashboard">Parti</Link>
+          <Link href="/dashboard">Esplora</Link>
       </Button>
     </div>
   );

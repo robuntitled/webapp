@@ -6,7 +6,7 @@ import { getUserProfile } from '@/lib/data/users';
 import { isMeaningfulComposerDraft } from '@/lib/composer/draft-utils';
 
 type CreateTripPageProps = {
-  searchParams: Promise<{ resume?: string; new?: string }>;
+  searchParams: Promise<{ resume?: string; new?: string; template?: string }>;
 };
 
 export default async function CreateTripPage({ searchParams }: CreateTripPageProps) {
@@ -18,6 +18,7 @@ export default async function CreateTripPage({ searchParams }: CreateTripPagePro
   const params = await searchParams;
   const resume = params.resume === '1' || params.resume === 'true';
   const forceNew = params.new === '1' || params.new === 'true';
+  const templateId = params.template?.trim() || undefined;
 
   const [profile, plannerProfile, savedDraft] = await Promise.all([
     getUserProfile(session.user.id),
@@ -40,9 +41,10 @@ export default async function CreateTripPage({ searchParams }: CreateTripPagePro
           : (plannerProfile ?? null)
       }
       initialDraft={canResume ? (savedDraft?.draft ?? null) : null}
-      initialStep={canResume ? savedDraft!.currentStep : 'landing'}
+      initialStep={canResume ? savedDraft!.currentStep : 'source'}
       resumeDraft={canResume}
       forceNew={forceNew && !canResume}
+      initialTemplateId={!canResume ? templateId : undefined}
     />
   );
 }

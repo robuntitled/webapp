@@ -22,6 +22,8 @@ type TripBookingPanelProps = {
   isAuthenticated: boolean;
   composerItinerary?: ComposerDayRow[] | null;
   className?: string;
+  locked?: boolean;
+  lockReason?: string;
 };
 
 const TABS: { id: BookingTab; label: string; icon: typeof Plane }[] = [
@@ -53,6 +55,8 @@ export function TripBookingPanel({
   isAuthenticated,
   composerItinerary,
   className,
+  locked = false,
+  lockReason,
 }: TripBookingPanelProps) {
   const [tab, setTab] = useState<BookingTab>('hotel');
 
@@ -121,8 +125,15 @@ export function TripBookingPanel({
         <p className="mt-1 text-xs text-muted-foreground">
           Tariffe live sul contesto di questo viaggio.
         </p>
+        {locked ? (
+          <p className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+            {lockReason ?? 'Prenotazione servizi disponibile a gruppo formato.'}
+          </p>
+        ) : null}
       </div>
 
+      {locked ? null : (
+        <>
       <div className="flex gap-1 border-b border-border/40 px-3 pt-2">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
@@ -211,6 +222,8 @@ export function TripBookingPanel({
           </div>
         )}
       </div>
+        </>
+      )}
     </section>
   );
 }

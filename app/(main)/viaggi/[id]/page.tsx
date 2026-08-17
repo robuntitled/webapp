@@ -28,6 +28,17 @@ import { resolveUserTripRole } from '@/lib/trips/roles';
 import type { TripParticipantRole } from '@/lib/trips/roles';
 import { formatTripDate, formatAgeRange, getTripStatus } from '@/lib/utils/trip';
 import { CakeSlice, CalendarDays, MapPin, Users, ArrowLeft } from 'lucide-react';
+import {
+  canBookTripServices,
+  departureGuaranteeCopy,
+  formationLabel,
+  isClosingSoon,
+} from '@/lib/trips/formation';
+import {
+  estimateParticipantCashbackEur,
+  formatCreatorCashback,
+  formatParticipantCashback,
+} from '@/lib/commerce/cashback';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +57,10 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   const imageUrl = trip.imageUrl || DEFAULT_TRIP_IMAGE;
   const status = getTripStatus(trip.startDate, trip.endDate);
+  const canBook = canBookTripServices(trip);
+  const closingSoon = isClosingSoon(trip);
+  const estimatedCashback = estimateParticipantCashbackEur(Number(trip.price) || 0);
+  const lockReason = departureGuaranteeCopy(trip);
   const isCreator = session?.user?.id === trip.creator?.id;
   const participant = trip.trip_participants?.find((p) => p.user_id === session?.user?.id);
   const isParticipant = !!participant;
@@ -92,6 +107,12 @@ export default async function TripDetailPage({ params }: PageProps) {
               {status.text}
             </Badge>
             <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm">
+              {formationLabel(trip)}
+            </Badge>
+            {closingSoon ? (
+              <Badge className="bg-amber-500/90 text-white border-0">In chiusura</Badge>
+            ) : null}
+            <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm">
               {trip.planningMode === 'solo' ? '🧳 Solo (aperto al gruppo)' : '🎉 Con gli amici'}
             </Badge>
           </div>
@@ -118,7 +139,7 @@ export default async function TripDetailPage({ params }: PageProps) {
       </div>
 
       <div className="container mx-auto px-4 py-10 max-w-6xl -mt-6 relative z-10">
-        <TripBookingCtaStrip className="mb-6" />
+        {canBook ? <TripBookingCtaStrip className="mb-6" /> : null}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 space-y-8">
@@ -150,6 +171,18 @@ export default async function TripDetailPage({ params }: PageProps) {
                     <Users className="h-4 w-4 shrink-0 text-accent" />
                     {trip.minParticipants}–{trip.maxParticipants} partecipanti
                   </div>
+                  <p className="rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                    {lockReason}
+                  </p>
+                  <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs">
+                    <span className="text-muted-foreground">Cashback stimato</span>
+                    <span className="font-medium tabular-nums">
+                      {estimatedCashback > 0 ? `~${estimatedCashback}€` : formatParticipantCashback()}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Creator {formatCreatorCashback()} · partecipante {formatParticipantCashback()}
+                  </p>
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <CakeSlice className="h-4 w-4 shrink-0 text-accent" />
                     {formatAgeRange(trip.minAge, trip.maxAge)}
@@ -211,6 +244,12 @@ export default async function TripDetailPage({ params }: PageProps) {
               tripId={trip.id}
               destination={trip.destination}
               composerItinerary={composerItinerary}
+              locked={!canBook}
+              lockReason={
+                canBook
+                  ? undefined
+                  : 'Prenoti voli, hotel e attrazioni solo quando il gruppo è solido.'
+              }
             />
 
             <TripBookingPanel
@@ -229,6 +268,12 @@ export default async function TripDetailPage({ params }: PageProps) {
               adults={Math.min(9, Math.max(1, trip.maxParticipants ?? 2))}
               isAuthenticated={Boolean(session?.user?.id)}
               composerItinerary={composerItinerary}
+              locked={!canBook}
+              lockReason={
+                canBook
+                  ? undefined
+                  : 'I servizi si prenotano dopo che il gruppo ha raggiunto il minimo posti.'
+              }
             />
           </div>
         </div>

@@ -10,6 +10,9 @@ import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { type Session } from 'next-auth';
 import { Button } from '@/components/ui/button';
 import { explainEmptyDiscover, filterDiscoverResults } from '@/lib/trips/discover-search';
+import { isClosingSoon } from '@/lib/trips/formation';
+import { TRIP_TEMPLATES } from '@/lib/composer/trip-templates';
+import { cn } from '@/lib/utils';
 
 export default function DashboardClient({
   initialTrips,
@@ -41,6 +44,9 @@ export default function DashboardClient({
     [initialTrips, defaultFilters, userId]
   );
 
+  const closing = useMemo(() => results.filter((t) => isClosingSoon(t)).slice(0, 6), [results]);
+  const featuredSeeds = TRIP_TEMPLATES.filter((t) => t.featured);
+
   const emptyReason = useMemo(() => {
     if (results.length > 0) return null;
     return explainEmptyDiscover(initialTrips, userId);
@@ -51,18 +57,17 @@ export default function DashboardClient({
       <div className="container mx-auto px-4 pt-10 mb-8 text-center max-w-3xl">
         <ScrollReveal variant="decor">
           <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
-            Meno WhatsApp, più viaggio
+            Esplora / Unisciti
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
           <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-            Quando vuoi partire?
+            Trova un viaggio già in formazione
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
           <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-            Destinazione, date, mappa. I filtri restano in alto. Apri un viaggio e trovi il carrello
-            servizi.
+            In evidenza, in chiusura, filtri e mappa. Prenoti i servizi solo quando il gruppo è solido.
           </p>
         </ScrollReveal>
         {session?.user && (
@@ -79,30 +84,64 @@ export default function DashboardClient({
 
       <TripDiscoverSearchBar variant="compact" priceBounds={priceBounds} />
 
-      <div className="container mx-auto px-4 mt-8 max-w-7xl">
-        <div className="mb-6">
-          <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
-            Viaggi sulla mappa
-          </h2>
-          <p className="mt-1 text-sm text-white/55">
-            {results.length}{' '}
-            {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
-          </p>
-        </div>
+      <div className="container mx-auto px-4 mt-8 max-w-7xl space-y-10">
+        <section>
+          <h2 className="font-display text-xl md:text-2xl font-semibold text-white">In evidenza</h2>
+          <p className="mt-1 text-sm text-white/55">Seed anti cold-start — template pronti da lanciare.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredSeeds.map((tpl) => (
+              <Link
+                key={tpl.id}
+                href={`/dashboard/crea?new=1&template=${encodeURIComponent(tpl.id)}`}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 hover:border-white/25"
+              >
+                <div className={cn('mb-3 h-12 rounded-xl bg-gradient-to-br', tpl.gradient)} />
+                <p className="font-medium text-white">
+                  {tpl.emoji} {tpl.label}
+                </p>
+                <p className="mt-1 text-xs text-white/50">{tpl.vibe}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-        <DiscoverResultsSplit
-          trips={results}
-          session={session}
-          emptyBody={
-            emptyReason === 'own-solo-only'
-              ? 'I viaggi che organizzi tu non compaiono qui — esci e accedi con un altro account, o invita amici al tuo viaggio.'
-              : emptyReason === 'no-solo'
-                ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
-                : emptyReason === 'past-or-full'
-                  ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
-                  : 'Prova a modificare i filtri di ricerca.'
-          }
-        />
+        {closing.length > 0 ? (
+          <section>
+            <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+              In chiusura
+            </h2>
+            <p className="mt-1 text-sm text-white/55">Pochi posti o partenza vicina — FOMO utile.</p>
+            <div className="mt-4">
+              <DiscoverResultsSplit trips={closing} session={session} />
+            </div>
+          </section>
+        ) : null}
+
+        <section>
+          <div className="mb-6">
+            <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+              Tutti i viaggi
+            </h2>
+            <p className="mt-1 text-sm text-white/55">
+              {results.length}{' '}
+              {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
+            </p>
+          </div>
+
+          <DiscoverResultsSplit
+            trips={results}
+            session={session}
+            emptyBody={
+              emptyReason === 'own-solo-only'
+                ? 'I viaggi che organizzi tu non compaiono qui — esci e accedi con un altro account, o invita amici al tuo viaggio.'
+                : emptyReason === 'no-solo'
+                  ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
+                  : emptyReason === 'past-or-full'
+                    ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
+                    : 'Prova a modificare i filtri di ricerca.'
+            }
+          />
+        </section>
       </div>
     </div>
   );

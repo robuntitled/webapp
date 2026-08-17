@@ -33,6 +33,8 @@ type TripServicesCartProps = {
   destination: string;
   composerItinerary?: ComposerDayRow[] | null;
   className?: string;
+  locked?: boolean;
+  lockReason?: string;
 };
 
 export function TripServicesCart({
@@ -40,6 +42,8 @@ export function TripServicesCart({
   destination,
   composerItinerary,
   className,
+  locked = false,
+  lockReason,
 }: TripServicesCartProps) {
   const planned = useMemo(() => {
     const fromItinerary = servicesFromItinerary(tripId, composerItinerary);
@@ -78,6 +82,11 @@ export function TripServicesCart({
           Ogni voce è un acquisto diverso (voli, hotel, attività). Unisci, poi vai al checkout del
           partner.
         </p>
+        {locked ? (
+          <p className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+            {lockReason ?? 'Prenoti i servizi solo a gruppo formato.'}
+          </p>
+        ) : null}
       </div>
 
       <ul className="divide-y divide-border/40">
@@ -99,7 +108,9 @@ export function TripServicesCart({
               {typeof item.price === 'number' ? (
                 <span className="shrink-0 text-sm font-semibold tabular-nums">{item.price}€</span>
               ) : null}
-              {added ? (
+              {locked ? (
+                <span className="shrink-0 text-[11px] text-muted-foreground">In attesa</span>
+              ) : added ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -136,7 +147,11 @@ export function TripServicesCart({
             {total > 0 ? ` · ${total}€` : ''}
           </p>
         </div>
-        {cart.items.length === 0 ? (
+        {locked ? (
+          <p className="text-xs text-muted-foreground">
+            Il checkout si sblocca quando il gruppo raggiunge il minimo posti.
+          </p>
+        ) : cart.items.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Aggiungi voli, hotel o attività. Poi apri il checkout di ciascun servizio.
           </p>

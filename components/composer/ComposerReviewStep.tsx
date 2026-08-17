@@ -7,6 +7,7 @@ import { BLOCK_META, getBlockDisplayPrice, getBlockDisplayTitle } from '@/lib/co
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { estimateTripBudget, formatComposerDayLabel } from '@/lib/composer/days';
+import { formatCreatorCashback, formatParticipantCashback } from '@/lib/commerce/cashback';
 import type { ComposerDraft } from '@/types/composer';
 import { TripMap } from '@/components/maps/TripMap';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
@@ -88,8 +89,9 @@ export function ComposerReviewStep({
                 Controlla e pubblica
               </h2>
               <p className="max-w-xl text-sm text-white/55">
-                Verifica itinerario e budget. Dopo la pubblicazione il viaggio apparirà in I Miei
-                Viaggi e sarà visibile in Scopri.
+                Verifica itinerario e budget. Pubblicando resta “In formazione” con garanzia di
+                partenza fino al minimo posti. Cashback creator {formatCreatorCashback()},
+                partecipanti {formatParticipantCashback()}.
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -116,7 +118,7 @@ export function ComposerReviewStep({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {publishing ? 'Pubblicazione…' : 'Pubblica il Viaggio'}
+                {publishing ? 'Pubblicazione…' : 'Pubblica in formazione'}
               </Button>
             </div>
           </div>
@@ -133,7 +135,7 @@ export function ComposerReviewStep({
             <div className="space-y-4 p-6 md:p-8">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Pronto per la pubblicazione
+                Pronto · stato “In formazione”
               </div>
               <div>
                 <h3 className="font-display text-2xl font-semibold text-white md:text-3xl">
@@ -166,6 +168,11 @@ export function ComposerReviewStep({
           <StatPill icon={MapPin} label="Tappe" value={`${blockCount}`} />
           <StatPill icon={Wallet} label="Budget stimato" value={`~${budget}€ / persona`} />
         </div>
+
+        <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/65">
+          Garanzia di partenza fino a {draft.minParticipants ?? 4} posti. Servizi (voli, hotel,
+          attrazioni) prenotabili solo a gruppo formato.
+        </p>
 
         {publishIssues.length > 0 && (
           <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-4">
@@ -251,7 +258,7 @@ export function ComposerReviewStep({
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {publishing ? 'Pubblicazione…' : 'Pubblica il Viaggio'}
+            {publishing ? 'Pubblicazione…' : 'Pubblica in formazione'}
           </Button>
         </div>
       </div>

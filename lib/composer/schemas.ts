@@ -43,12 +43,20 @@ export const publishComposerSchema = z
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     planningMode: z.enum(['solo', 'group']),
     maxParticipants: z.number().int().min(1).max(99),
+    minParticipants: z.number().int().min(1).max(99).optional(),
     imageUrl: z.string().url().optional().or(z.literal('')),
     days: z.array(daySchema).min(1),
   })
   .refine((d) => new Date(d.endDate) >= new Date(d.startDate), {
     message: 'La data di fine deve essere dopo l\'inizio',
     path: ['endDate'],
-  });
+  })
+  .refine(
+    (d) => !d.minParticipants || d.maxParticipants >= d.minParticipants,
+    {
+      message: 'I posti max devono essere almeno il minimo',
+      path: ['maxParticipants'],
+    }
+  );
 
 export type PublishComposerInput = z.infer<typeof publishComposerSchema>;

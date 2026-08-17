@@ -15,6 +15,7 @@ export const TRIP_LIST_SELECT = `
   maxAge: max_age,
   planningMode: planning_mode,
   imageUrl: image_url,
+  status,
   creator_id,
   creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image),
   trip_participants(user_id, role)
@@ -31,6 +32,7 @@ export const TRIP_DETAIL_SELECT = `
   planningMode: planning_mode,
   composerVersion: composer_version,
   imageUrl: image_url,
+  status,
   creator_id,
   creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image),
   trip_participants(user_id, role, user:users!trip_participants_user_id_fkey(id, username, first_name, last_name, image))
@@ -101,6 +103,7 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
       planningMode: planning_mode,
       composerVersion: composer_version,
       imageUrl: image_url,
+      status,
       creator_id,
       creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image)
     `

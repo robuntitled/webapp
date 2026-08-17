@@ -302,7 +302,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
             name="minParticipants"
             type="number"
             placeholder="Min. Partecipanti"
-            defaultValue={initialTrip?.minParticipants ?? (planningMode === 'solo' ? 1 : 2)}
+            defaultValue={initialTrip?.minParticipants ?? (planningMode === 'solo' ? 4 : 2)}
             key={`min-${planningMode}`}
             required
             min="1"

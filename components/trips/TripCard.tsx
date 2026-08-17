@@ -25,6 +25,7 @@ import {
   isTripParticipant,
   canJoinTrip,
 } from '@/lib/trips/display';
+import { formationLabel, isClosingSoon } from '@/lib/trips/formation';
 import { isPhoneGateError, PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
 export type { TripWithRelations } from '@/types/trip';
@@ -152,6 +153,15 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
             >
               {spotsLabel}
             </Badge>
+            {isClosingSoon(trip) ? (
+              <Badge className="bg-amber-500/90 text-white border-0 backdrop-blur-sm text-[10px]">
+                In chiusura
+              </Badge>
+            ) : (
+              <Badge className="bg-black/50 text-white border-white/20 backdrop-blur-sm text-[10px]">
+                {formationLabel(trip)}
+              </Badge>
+            )}
             {participant && !creator && (
               <Badge className="bg-emerald-600/90 text-white border-0 backdrop-blur-sm text-[10px]">
                 🏖️ Relax
@@ -238,7 +248,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                     {joinPending ? 'Invio...' : (
                       <>
                         <LogIn className="mr-1.5 h-3.5 w-3.5" />
-                        Ci sto! 🏖️
+                        Unisciti al viaggio
                       </>
                     )}
                   </Button>
@@ -282,7 +292,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                   ) : (
                     <>
                       <LogIn className="h-4 w-4" />
-                      Chiedi di unirti — modalità relax 🏖️
+                      Unisciti al viaggio
                     </>
                   )}
                 </Button>

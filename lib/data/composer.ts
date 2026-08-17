@@ -21,31 +21,38 @@ export async function publishComposerTrip(
   const coverImage =
     input.imageUrl || (await pickTripCoverImage(input.destination));
 
-  const { data: trip, error: tripError } = await supabaseAdmin
+  const tripRow = {
+    title: input.title,
+    destination: input.destination,
+    start_date: input.startDate,
+    end_date: input.endDate,
+    description,
+    image_url: coverImage,
+    price,
+    min_participants:
+      input.minParticipants ?? (input.planningMode === 'solo' ? 4 : 2),
+    max_participants: Math.max(2, input.maxParticipants),
+    min_age: 18,
+    max_age: 999,
+    planning_mode: input.planningMode,
+    composer_version: 1,
+    status: 'forming' as const,
+    creator_id: userId,
+  };
+
+  let { data: trip, error: tripError } = await supabaseAdmin
     .from('trips')
-    .insert({
-      title: input.title,
-      destination: input.destination,
-      start_date: input.startDate,
-      end_date: input.endDate,
-      description,
-      image_url: coverImage,
-      price,
-      min_participants: input.planningMode === 'solo' ? 1 : 2,
-      // Almeno 2 posti in solo: l'organizzatore non deve riempire da solo il viaggio
-      max_participants:
-        input.planningMode === 'solo'
-          ? Math.max(2, input.maxParticipants)
-          : Math.max(2, input.maxParticipants),
-      min_age: 18,
-      max_age: 999,
-      planning_mode: input.planningMode,
-      composer_version: 1,
-      status: 'published',
-      creator_id: userId,
-    })
+    .insert(tripRow)
     .select('id')
     .single();
+
+  if (tripError && /status/i.test(tripError.message)) {
+    ({ data: trip, error: tripError } = await supabaseAdmin
+      .from('trips')
+      .insert({ ...tripRow, status: 'published' })
+      .select('id')
+      .single());
+  }
 
   if (tripError || !trip) {
     throw new Error(tripError?.message ?? 'Creazione viaggio fallita');

@@ -67,9 +67,8 @@ export function TripDetailActions({
       toast.success(
         result.status === 'already_pending'
           ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
-          : 'Richiesta inviata. Intanto prepara voli e hotel nel carrello.'
+          : 'Richiesta inviata. Prenoti i servizi quando il gruppo è formato.'
       );
-      document.getElementById('carrello')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     router.refresh();
   };
@@ -151,7 +150,7 @@ export function TripDetailActions({
         localStatus !== 'rejected' && (
           <Button onClick={handleJoin} disabled={joinPending}>
             <LogIn className="mr-2 h-4 w-4" />
-            {joinPending ? 'Invio richiesta…' : 'Chiedi di partecipare'}
+            {joinPending ? 'Invio richiesta…' : 'Unisciti al viaggio'}
           </Button>
         )}
     </div>

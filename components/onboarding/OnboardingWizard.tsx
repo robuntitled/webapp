@@ -196,25 +196,25 @@ function IntentStep({
         Due strade
       </p>
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
-        Crei o parti?
+        Crea o esplora?
       </h1>
       <p className="mt-4 max-w-md text-base text-white/70">
-        Dillo subito. Da qui il sito si piega su di te — non il contrario.
+        Due percorsi. Stesso motore di prenotazione, ma i servizi si sbloccano a gruppo formato.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <IntentCard
           active={value === 'create'}
           icon={PenLine}
-          title="Lo creo io"
-          body="Destinazione, crew, giorni e mappa. Pubblichi: gli altri prenotano il tuo viaggio."
+          title="CREA UN VIAGGIO"
+          body="Template, config, editor e mappa. Pubblichi in formazione: gli altri si uniscono."
           onClick={() => onSelect('create')}
         />
         <IntentCard
           active={value === 'book'}
           icon={Ticket}
-          title="Prenoto un posto"
-          body="Viaggi già pronti. Mappa, date, filtri. Voli hotel attività nel carrello."
+          title="ESPLORA / UNISCITI"
+          body="Filtri, in evidenza, FOMO. Unisciti. Prenoti voli e hotel solo a gruppo formato."
           onClick={() => onSelect('book')}
         />
       </div>

@@ -40,6 +40,7 @@ type ComposerLandingStepProps = {
   draft: ComposerDraft;
   onChange: (patch: Partial<ComposerDraft>) => void;
   onStart: () => void;
+  onBack?: () => void;
   profileCity?: string | null;
   profileCountry?: string | null;
 };
@@ -48,6 +49,7 @@ export function ComposerLandingStep({
   draft,
   onChange,
   onStart,
+  onBack,
   profileCity,
   profileCountry,
 }: ComposerLandingStepProps) {
@@ -350,6 +352,31 @@ export function ComposerLandingStep({
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-white/80 text-center">Durata (struttura itinerario)</p>
+                <div className="flex justify-center gap-2">
+                  {([5, 7, 10] as const).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white hover:border-accent/50"
+                      onClick={() => {
+                        const start = startDate ?? addDays(new Date(), 14);
+                        const end = addDays(start, n - 1);
+                        setStartDate(start);
+                        setEndDate(end);
+                        onChange({
+                          startDate: format(start, 'yyyy-MM-dd'),
+                          endDate: format(end, 'yyyy-MM-dd'),
+                        });
+                      }}
+                    >
+                      {n} giorni
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-3 max-w-md mx-auto">
                 <p className="text-sm font-medium text-white/80 text-center">Da dove parti?</p>
                 {/* Layout come ba5c42a: GPS + campo città affiancati */}
@@ -431,7 +458,8 @@ export function ComposerLandingStep({
                         onClick={() =>
                           onChange({
                             planningMode: mode,
-                            maxParticipants: mode === 'solo' ? 4 : 8,
+                            minParticipants: mode === 'solo' ? 4 : 2,
+                            maxParticipants: mode === 'solo' ? 8 : 8,
                           })
                         }
                         className={`rounded-2xl border-2 p-5 text-left transition-all ${
@@ -452,6 +480,38 @@ export function ComposerLandingStep({
                   })}
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1.5">
+                  <p className="text-sm font-medium text-white/80">Posti minimi</p>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={20}
+                    className="h-12 rounded-2xl composer-field text-white"
+                    value={draft.minParticipants ?? 4}
+                    onChange={(e) =>
+                      onChange({ minParticipants: Math.max(2, Number(e.target.value) || 2) })
+                    }
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <p className="text-sm font-medium text-white/80">Posti max</p>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={40}
+                    className="h-12 rounded-2xl composer-field text-white"
+                    value={draft.maxParticipants}
+                    onChange={(e) =>
+                      onChange({ maxParticipants: Math.max(2, Number(e.target.value) || 2) })
+                    }
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-white/45">
+                Garanzia di partenza attiva finché non si raggiunge il minimo.
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -461,8 +521,14 @@ export function ComposerLandingStep({
             type="button"
             variant="ghost"
             className="rounded-full text-white/70 hover:text-white"
-            disabled={micro === 1}
-            onClick={() => setMicro((m) => Math.max(1, m - 1))}
+            disabled={micro === 1 && !onBack}
+            onClick={() => {
+              if (micro === 1) {
+                onBack?.();
+                return;
+              }
+              setMicro((m) => Math.max(1, m - 1));
+            }}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Indietro

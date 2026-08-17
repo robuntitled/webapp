@@ -26,14 +26,7 @@ export const createTripSchema = z
   .refine((data) => data.maxAge >= data.minAge, {
     message: 'L\'età massima deve essere >= all\'età minima',
     path: ['maxAge'],
-  })
-  .refine(
-    (data) => data.planningMode !== 'solo' || data.minParticipants === 1,
-    {
-      message: 'In modalità solo il minimo deve essere 1',
-      path: ['minParticipants'],
-    }
-  );
+  });
 
 export const updateTripSchema = createTripSchema;
 

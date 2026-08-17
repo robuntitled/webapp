@@ -69,6 +69,7 @@ export type ComposerDraft = {
   endDate: string;
   planningMode: 'solo' | 'group';
   maxParticipants: number;
+  minParticipants?: number;
   /** Partenza di chi organizza il viaggio */
   organizerOrigin?: ComposerOrigin;
   /** Partenze amici (gruppo) — ognuno dal proprio aeroporto vicino */

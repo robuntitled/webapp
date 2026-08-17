@@ -39,6 +39,7 @@ export type TripWithRelations = {
   maxAge: number;
   planningMode?: TripPlanningMode;
   composerVersion?: number | null;
+  status?: 'draft' | 'forming' | 'confirmed' | 'published' | 'archived' | null;
   /** Presente dal DB; usato se la relation `creator` non risolve. */
   creator_id?: string | null;
   creator: TripCreator | null;

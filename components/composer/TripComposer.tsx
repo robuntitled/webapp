@@ -11,7 +11,14 @@ import { ComposerAssistantDock } from '@/components/composer/ComposerAssistantDo
 import { ComposerLandingStep } from '@/components/composer/ComposerLandingStep';
 import { ComposerPlanStep } from '@/components/composer/ComposerPlanStep';
 import { ComposerReviewStep } from '@/components/composer/ComposerReviewStep';
+import { ComposerSourceStep } from '@/components/composer/ComposerSourceStep';
 import { buildComposerDays } from '@/lib/composer/days';
+import { addDays, format } from 'date-fns';
+import {
+  draftFromTripTemplate,
+  findTripTemplate,
+  type TripTemplate,
+} from '@/lib/composer/trip-templates';
 import {
   clearComposerDraft,
   saveComposerDraft,
@@ -34,7 +41,8 @@ const EMPTY_DRAFT: ComposerDraft = {
   startDate: '',
   endDate: '',
   planningMode: 'solo',
-  maxParticipants: 4,
+  maxParticipants: 8,
+  minParticipants: 4,
   days: [],
 };
 
@@ -48,6 +56,7 @@ type TripComposerProps = {
   resumeDraft?: boolean;
   /** Nuovo viaggio: non ripristinare localStorage / bozza cloud */
   forceNew?: boolean;
+  initialTemplateId?: string;
 };
 
 function mergeDraft(
@@ -67,9 +76,10 @@ export function TripComposer({
   profileCountry,
   initialPlannerProfile,
   initialDraft,
-  initialStep = 'landing',
+  initialStep = 'source',
   resumeDraft = false,
   forceNew = false,
+  initialTemplateId,
 }: TripComposerProps = {}) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -96,8 +106,22 @@ export function TripComposer({
 
     if (forceNew) {
       clearComposerLocalSession();
-      setDraft(mergeDraft(EMPTY_DRAFT, null, initialPlannerProfile));
-      setStep('landing');
+      const template = initialTemplateId ? findTripTemplate(initialTemplateId) : undefined;
+      if (template) {
+        const start = format(addDays(new Date(), 21), 'yyyy-MM-dd');
+        const partial = draftFromTripTemplate(template, start);
+        setDraft(
+          mergeDraft(
+            EMPTY_DRAFT,
+            { ...partial, minParticipants: 4, maxParticipants: 8, plannerProfile: initialPlannerProfile ?? undefined },
+            initialPlannerProfile
+          )
+        );
+        setStep('landing');
+      } else {
+        setDraft(mergeDraft(EMPTY_DRAFT, initialDraft, initialPlannerProfile));
+        setStep(normalizeWizardStep(initialStep === 'landing' ? 'source' : initialStep));
+      }
       setHydrated(true);
       return;
     }
@@ -114,7 +138,7 @@ export function TripComposer({
       setStep(local.step);
     }
     setHydrated(true);
-  }, [resumeDraft, forceNew, initialDraft, initialPlannerProfile, initialStep]);
+  }, [resumeDraft, forceNew, initialDraft, initialPlannerProfile, initialStep, initialTemplateId]);
 
   const scheduleCloudSave = useCallback(
     (nextDraft: ComposerDraft, nextStep: ComposerWizardStep, profile: PlannerProfile) => {
@@ -147,6 +171,25 @@ export function TripComposer({
   const patchDraft = useCallback((patch: Partial<ComposerDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  const applyTemplate = (template: TripTemplate) => {
+    const start =
+      draft.startDate || format(addDays(new Date(), 21), 'yyyy-MM-dd');
+    const partial = draftFromTripTemplate(template, start);
+    setDraft(
+      mergeDraft(
+        EMPTY_DRAFT,
+        {
+          ...partial,
+          minParticipants: 4,
+          maxParticipants: 8,
+          plannerProfile,
+        },
+        plannerProfile
+      )
+    );
+    setStep('landing');
+  };
 
   const goToCompose = () => {
     if (!draft.startDate || !draft.endDate) return;
@@ -183,7 +226,7 @@ export function TripComposer({
 
       clearComposerLocalSession();
       await clearComposerDraft().catch(() => undefined);
-      toast.success('Viaggio lanciato! 🚀 Ora invita la crew.');
+      toast.success('Pubblicato in formazione. La garanzia resta attiva fino al minimo posti.');
       router.push(`/viaggi/${data.tripId}`);
     } catch {
       toast.error('Errore di rete');
@@ -257,6 +300,25 @@ export function TripComposer({
         )}
 
         <AnimatePresence mode="wait">
+          {step === 'source' && (
+            <motion.div
+              key="source"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="container mx-auto flex-1 overflow-y-auto px-4 py-8"
+            >
+              <ComposerSourceStep
+                onScratch={() => {
+                  setDraft(mergeDraft(EMPTY_DRAFT, { plannerProfile }, plannerProfile));
+                  setStep('landing');
+                }}
+                onTemplate={applyTemplate}
+                onCustomize={applyTemplate}
+              />
+            </motion.div>
+          )}
+
           {step === 'landing' && (
             <motion.div
               key="landing"
@@ -269,6 +331,7 @@ export function TripComposer({
                 draft={draft}
                 onChange={patchDraft}
                 onStart={goToCompose}
+                onBack={() => setStep('source')}
                 profileCity={profileCity}
                 profileCountry={profileCountry}
               />

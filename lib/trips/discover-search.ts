@@ -82,6 +82,7 @@ export function isBookableDiscoverTrip(
   trip: TripWithRelations,
   userId?: string | null
 ): boolean {
+  if (trip.status === 'draft' || trip.status === 'archived') return false;
   if (!isDiscoverableSoloTrip(trip, userId)) return false;
 
   const today = todayDateOnlyUtcMs();

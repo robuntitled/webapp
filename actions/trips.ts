@@ -51,6 +51,7 @@ export async function createTrip(formData: FormData) {
       {
         ...toTripRecord(parsed),
         creator_id: session.user.id,
+        status: 'forming',
       },
     ])
     .select('id')
