@@ -44,6 +44,8 @@ type TripDiscoverSearchBarProps = {
   onChange: (next: DiscoverSearchFilters) => void;
   onSubmit?: () => void;
   priceBounds: { min: number; max: number };
+  /** sticky = barra sotto la nav; inline = nel hero */
+  variant?: 'sticky' | 'inline';
 };
 
 function Chip({
@@ -76,6 +78,7 @@ export function TripDiscoverSearchBar({
   onChange,
   onSubmit,
   priceBounds,
+  variant = 'sticky',
 }: TripDiscoverSearchBarProps) {
   const patch = (partial: Partial<DiscoverSearchFilters>) =>
     onChange({ ...filters, ...partial });
@@ -84,10 +87,18 @@ export function TripDiscoverSearchBar({
     onSubmit?.();
   };
 
+  const inline = variant === 'inline';
+
   return (
-    <div className="sticky top-16 z-30 border-b border-white/10 bg-[#070b12]/75 backdrop-blur-xl">
-      <div className="container mx-auto max-w-6xl px-4 py-3">
-        <div className="flex flex-col gap-2 rounded-2xl bg-white p-2 shadow-lg sm:flex-row sm:items-center">
+    <div
+      className={
+        inline
+          ? 'w-full'
+          : 'sticky top-16 z-30 border-b border-white/10 bg-[#070b12]/75 backdrop-blur-xl'
+      }
+    >
+      <div className={inline ? 'w-full' : 'container mx-auto max-w-6xl px-4 py-3'}>
+        <div className="flex flex-col gap-2 rounded-2xl bg-white p-1.5 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.55)] sm:flex-row sm:items-center sm:p-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -172,9 +183,9 @@ export function TripDiscoverSearchBar({
           </Button>
         </div>
 
-        <div className="mt-2 flex items-start gap-2 overflow-x-auto pb-1">
-          <SlidersHorizontal className="mt-1.5 h-3.5 w-3.5 shrink-0 text-white/70" />
-          <div className="flex flex-wrap gap-1.5">
+        <div className={cn('mt-3 flex items-center gap-2 overflow-x-auto pb-0.5', inline && 'justify-center')}>
+          <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-white/55" />
+          <div className="flex flex-nowrap gap-1.5">
             {DURATION_CHIPS.map((chip) => (
               <Chip
                 key={chip.id}

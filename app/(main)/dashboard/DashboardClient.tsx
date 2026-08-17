@@ -1,8 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { TripDiscoverSearchBar } from '@/components/dashboard/TripDiscoverSearchBar';
 import { DiscoverResultsSplit } from '@/components/dashboard/DiscoverResultsSplit';
 import type { TripWithRelations } from '@/types/trip';
@@ -13,9 +11,6 @@ import {
   filterDiscoverResults,
   type DiscoverSearchFilters,
 } from '@/lib/trips/discover-search';
-import { isClosingSoon, isGroupSolid } from '@/lib/trips/formation';
-import { TRIP_TEMPLATES } from '@/lib/composer/trip-templates';
-import { coverForDestination } from '@/lib/composer/destination-covers';
 
 export default function DashboardClient({
   initialTrips,
@@ -43,116 +38,54 @@ export default function DashboardClient({
     [initialTrips, filters, userId]
   );
 
-  const closing = useMemo(() => results.filter((t) => isClosingSoon(t)).slice(0, 6), [results]);
-  const seedTrips = useMemo(
-    () => results.filter((t) => !isGroupSolid(t)).slice(0, 4),
-    [results]
-  );
-  const featuredSeeds = TRIP_TEMPLATES.filter((t) => t.featured);
-
   const scrollToResults = () => {
     document.getElementById('risultati')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
     <div className="relative z-0 pb-24">
-      <TripDiscoverSearchBar
-        filters={filters}
-        onChange={setFilters}
-        onSubmit={scrollToResults}
-        priceBounds={priceBounds}
-      />
-
-      <div className="container mx-auto max-w-3xl px-4 pb-8 pt-10 text-center">
+      <div className="container mx-auto max-w-4xl px-4 pb-8 pt-14 text-center md:pt-20">
         <ScrollReveal variant="decor">
-          <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-accent">
+          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.22em] text-accent">
             Esplora
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
-          <h1 className="mx-auto max-w-xl text-center font-display text-4xl font-semibold leading-[1.1] text-white md:text-6xl">
-            Il gruppo c’è già. Manca tu.
+          <h1 className="mx-auto font-display text-[clamp(1.35rem,4.1vw,2.65rem)] font-semibold leading-none tracking-tight text-white sm:whitespace-nowrap">
+            Il gruppo c’è già. Manchi solo tu.
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
-          <p className="mx-auto mt-4 max-w-lg text-center text-lg text-white/90">
-            Viaggi in formazione, prezzi veri, zero markup da tour operator. Prenoti solo quando si
-            parte.
+          <p className="mx-auto mt-3 font-display text-[clamp(0.95rem,2.2vw,1.2rem)] leading-none text-white/90 sm:whitespace-nowrap">
+            Zero tour operator. Prenoti quando vuoi.
           </p>
         </ScrollReveal>
+
+        <div className="mx-auto mt-8 max-w-3xl text-left">
+          <TripDiscoverSearchBar
+            variant="inline"
+            filters={filters}
+            onChange={setFilters}
+            onSubmit={scrollToResults}
+            priceBounds={priceBounds}
+          />
+        </div>
       </div>
 
-      <div id="risultati" className="container mx-auto mt-2 max-w-7xl scroll-mt-36 space-y-10 px-4">
-        <section>
-          <h2 className="text-center font-display text-xl font-semibold text-white md:text-2xl">
-            In evidenza
-          </h2>
-          <p className="mt-1 text-center text-sm text-white/85">
-            Modelli pronti e viaggi che si stanno riempiendo.
-          </p>
-          {seedTrips.length > 0 ? (
-            <div className="mt-4">
-              <DiscoverResultsSplit trips={seedTrips} session={session} />
-            </div>
-          ) : null}
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredSeeds.map((tpl) => {
-              const cover = coverForDestination(tpl.destinationId);
-              return (
-                <Link
-                  key={tpl.id}
-                  href={`/dashboard/crea?new=1&template=${encodeURIComponent(tpl.id)}`}
-                  className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] hover:border-white/25"
-                >
-                  <div className="relative h-36">
-                    <Image
-                      src={cover}
-                      alt={tpl.label}
-                      fill
-                      sizes="(max-width: 640px) 100vw, 25vw"
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                    <p className="absolute bottom-2 left-3 right-3 font-medium text-white">
-                      {tpl.emoji} {tpl.label}
-                    </p>
-                  </div>
-                  <p className="px-3 py-2 text-xs text-white/80">{tpl.vibe}</p>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        {closing.length > 0 ? (
-          <section>
-            <h2 className="text-center font-display text-xl font-semibold text-white md:text-2xl">
-              In chiusura
-            </h2>
-            <p className="mt-1 text-center text-sm text-white/85">
-              Ultimi posti. Se ti chiama, è adesso.
-            </p>
-            <div className="mt-4">
-              <DiscoverResultsSplit trips={closing} session={session} />
-            </div>
-          </section>
-        ) : null}
-
+      <div id="risultati" className="container mx-auto mt-4 max-w-7xl scroll-mt-24 px-4">
         {results.length > 0 ? (
           <section>
-            <div className="mb-6 text-center">
-              <h2 className="font-display text-xl font-semibold text-white md:text-2xl">
-                Tutti i viaggi
-              </h2>
-              <p className="mt-1 text-sm text-white/85">
-                {results.length}{' '}
-                {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
-              </p>
-            </div>
-
+            <p className="mb-5 text-center text-sm text-white/70">
+              {results.length}{' '}
+              {results.length === 1 ? 'viaggio aperto' : 'viaggi aperti'}
+            </p>
             <DiscoverResultsSplit trips={results} session={session} />
           </section>
-        ) : null}
+        ) : (
+          <p className="py-16 text-center text-sm text-white/60">
+            Nessun viaggio con questi filtri. Prova un’altra meta o allarga le date.
+          </p>
+        )}
       </div>
     </div>
   );
