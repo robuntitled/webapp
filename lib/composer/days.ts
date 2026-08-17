@@ -79,6 +79,55 @@ export function endDateFromDays(days: ComposerDay[]): string {
   return days[days.length - 1].date;
 }
 
+/**
+ * La durata governa la struttura: accorciando si tolgono le tappe secondarie
+ * (giorni centrali con meno blocchi). Arrivo e partenza restano.
+ */
+export function remapComposerDaysToDuration(
+  days: ComposerDay[],
+  durationDays: number,
+  startDate: string
+): ComposerDay[] {
+  const target = Math.max(1, Math.floor(durationDays));
+  const start = parseISO(startDate);
+
+  const stamp = (selected: ComposerDay[]) =>
+    selected.map((day, index) => ({
+      ...day,
+      dayIndex: index + 1,
+      date: format(addDays(start, index), 'yyyy-MM-dd'),
+    }));
+
+  if (days.length === 0) {
+    return buildComposerDays(startDate, format(addDays(start, target - 1), 'yyyy-MM-dd'));
+  }
+
+  if (days.length === target) return stamp(days);
+
+  if (days.length > target) {
+    if (target === 1) return stamp([days[0]]);
+    const first = days[0];
+    const last = days[days.length - 1];
+    const middle = days.slice(1, -1);
+    const keepMiddle = [...middle]
+      .sort((a, b) => b.blocks.length - a.blocks.length || a.dayIndex - b.dayIndex)
+      .slice(0, Math.max(0, target - 2))
+      .sort((a, b) => a.dayIndex - b.dayIndex);
+    return stamp([first, ...keepMiddle, last]);
+  }
+
+  const extra = target - days.length;
+  const head = days.slice(0, -1);
+  const last = days[days.length - 1];
+  const inserted: ComposerDay[] = Array.from({ length: extra }, (_, i) => ({
+    dayIndex: 0,
+    date: '',
+    title: dayTitleForIndex(head.length + i),
+    blocks: [],
+  }));
+  return stamp([...head, ...inserted, last]);
+}
+
 export function formatComposerDayLabel(dateIso: string, dayIndex: number): string {
   const date = parseISO(dateIso);
   return `Giorno ${dayIndex} · ${format(date, 'EEE d MMM', { locale: it })}`;

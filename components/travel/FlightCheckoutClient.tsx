@@ -22,6 +22,8 @@ import {
 } from '@stripe/react-stripe-js';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
+import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
+import { estimateParticipantCashbackEur } from '@/lib/commerce/cashback';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -349,6 +351,7 @@ export function FlightCheckoutClient({
     bookingId: string | null;
     bookingRef: string | null;
     status: string | null;
+    amountEur: number;
   } | null>(null);
 
   const stripePromise = useMemo(() => {
@@ -362,11 +365,13 @@ export function FlightCheckoutClient({
     async (prebookId: string, transactionId: string) => {
       setSubmitting(true);
       try {
+        const amountEur =
+          loadFlightPaymentPending()?.price ?? loadFlightCheckoutDraft()?.price ?? 0;
         const res = await fetch('/api/liteapi/flights/book', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ prebookId, transactionId }),
+          body: JSON.stringify({ prebookId, transactionId, amountEur }),
         });
         const data = (await res.json()) as {
           error?: string;
@@ -382,6 +387,7 @@ export function FlightCheckoutClient({
           bookingId: data.bookingId ?? null,
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
+          amountEur,
         });
         clearFlightCheckoutDraft();
         clearFlightPaymentPending();
@@ -646,6 +652,9 @@ export function FlightCheckoutClient({
             {confirmation.bookingRef || confirmation.bookingId || '—'}
           </p>
         </div>
+        <BookingCashbackNote
+          estimatedEur={estimateParticipantCashbackEur(confirmation.amountEur)}
+        />
         <Button asChild className="w-full rounded-xl bg-primary">
           <Link href="/prenota/voli">Nuova ricerca</Link>
         </Button>

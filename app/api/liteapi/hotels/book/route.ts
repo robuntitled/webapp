@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookHotel } from '@/lib/liteapi/hotel-booking';
+import { recordBookingCashback } from '@/lib/commerce/cashback-ledger';
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
@@ -24,6 +25,8 @@ const schema = z.object({
     )
     .min(1)
     .max(9),
+  tripId: z.string().uuid().optional(),
+  amountEur: z.number().finite().nonnegative().max(1_000_000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -55,6 +58,13 @@ export async function POST(request: Request) {
 
   try {
     const result = await bookHotel(parsed.data);
+    await recordBookingCashback({
+      userId: session.user.id,
+      tripId: parsed.data.tripId,
+      bookingRef: result.bookingRef ?? result.bookingId ?? parsed.data.prebookId,
+      service: 'hotel',
+      amountEur: parsed.data.amountEur ?? 0,
+    });
     return NextResponse.json({
       ok: true,
       bookingId: result.bookingId,

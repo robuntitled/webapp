@@ -6,6 +6,7 @@ import {
   formationLabel,
   isClosingSoon,
   isGroupSolid,
+  lastJoinLabel,
   seatsToMinimum,
 } from '@/lib/trips/formation';
 
@@ -56,5 +57,16 @@ describe('trip formation', () => {
   it('flags FOMO when few seats remain', () => {
     expect(isClosingSoon(trip({ participantCount: 6, maxParticipants: 8 }))).toBe(true);
     expect(isClosingSoon(trip({ participantCount: 1, maxParticipants: 8 }))).toBe(false);
+  });
+
+  it('describes a recent real join', () => {
+    const now = new Date('2026-08-17T18:00:00Z');
+    const label = lastJoinLabel(
+      trip({
+        trip_participants: [{ user_id: 'c1', joinedAt: '2026-08-17T17:40:00Z' }],
+      }),
+      now
+    );
+    expect(label).toContain('minuti fa');
   });
 });

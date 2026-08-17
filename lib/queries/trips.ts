@@ -18,7 +18,7 @@ export const TRIP_LIST_SELECT = `
   status,
   creator_id,
   creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image),
-  trip_participants(user_id, role)
+  trip_participants(user_id, role, joinedAt: joined_at)
 `;
 
 export const TRIP_DETAIL_SELECT = `
@@ -35,7 +35,7 @@ export const TRIP_DETAIL_SELECT = `
   status,
   creator_id,
   creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image),
-  trip_participants(user_id, role, user:users!trip_participants_user_id_fkey(id, username, first_name, last_name, image))
+  trip_participants(user_id, role, joinedAt: joined_at, user:users!trip_participants_user_id_fkey(id, username, first_name, last_name, image))
 `;
 
 type RawTrip = Omit<TripWithRelations, 'isFavorited'>;
@@ -120,7 +120,7 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
   let participants: TripWithRelations['trip_participants'] = [];
   const { data: parts, error: pErr } = await supabaseAdmin
     .from('trip_participants')
-    .select('user_id, role')
+    .select('user_id, role, joined_at')
     .eq('trip_id', tripId);
 
   if (pErr) {
@@ -138,6 +138,7 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
       return {
         user_id: p.user_id as string,
         role: p.role as TripParticipantRole | undefined,
+        joinedAt: (p.joined_at as string | null) ?? null,
         user: u
           ? {
               id: u.id as string,

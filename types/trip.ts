@@ -21,6 +21,7 @@ export type TripParticipantUser = {
 export type TripParticipant = {
   user_id: string;
   role?: TripParticipantRole;
+  joinedAt?: string | null;
   user?: TripParticipantUser | null;
 };
 

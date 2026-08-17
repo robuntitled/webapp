@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
+import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
+import { estimateParticipantCashbackEur } from '@/lib/commerce/cashback';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -135,6 +137,7 @@ export function HotelCheckoutClient({
     bookingId: string | null;
     bookingRef: string | null;
     status: string | null;
+    amountEur: number;
   } | null>(null);
 
   const stripePromise = useMemo(() => {
@@ -174,6 +177,10 @@ export function HotelCheckoutClient({
           holderOverride?.guestFirstName || guestFirstName || hFirst;
         const guestLn =
           holderOverride?.guestLastName || guestLastName || hLast;
+        const amountEur =
+          loadHotelPaymentPending()?.price ??
+          loadHotelOfferDraft()?.totalAmount ??
+          0;
         const res = await fetch('/api/liteapi/hotels/book', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -190,6 +197,7 @@ export function HotelCheckoutClient({
                 occupancyNumber: 1,
               },
             ],
+            amountEur,
           }),
         });
         const data = (await res.json()) as {
@@ -206,6 +214,7 @@ export function HotelCheckoutClient({
           bookingId: data.bookingId ?? null,
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
+          amountEur,
         });
         clearHotelOfferDraft();
         clearHotelPaymentPending();
@@ -359,6 +368,9 @@ export function HotelCheckoutClient({
               ? `ID: ${confirmation.bookingId}`
               : 'Riceverai i dettagli via email.'}
         </p>
+        <BookingCashbackNote
+          estimatedEur={estimateParticipantCashbackEur(confirmation?.amountEur ?? 0)}
+        />
         <Button className="rounded-xl" onClick={() => router.push('/prenota/hotel')}>
           Altre ricerche
         </Button>

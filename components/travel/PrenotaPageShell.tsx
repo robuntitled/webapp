@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { auth } from '@/auth';
 import { PrenotaNavTabs } from '@/components/travel/PrenotaNavTabs';
+import { PrenotaBookableBanner } from '@/components/travel/PrenotaBookableBanner';
+import { fetchBookableTripsForUser } from '@/lib/data/bookable-trips';
 
-export function PrenotaPageShell({
+export async function PrenotaPageShell({
   title,
   subtitle,
   children,
@@ -13,6 +16,9 @@ export function PrenotaPageShell({
   /** Es. stato feature (hotel/attrazioni) */
   badge?: string;
 }) {
+  const session = await auth();
+  const bookable = session?.user?.id ? await fetchBookableTripsForUser(session.user.id) : [];
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background">
       <div className="relative overflow-hidden border-b border-border/70">
@@ -40,7 +46,10 @@ export function PrenotaPageShell({
           </div>
         </div>
       </div>
-      <div className="container mx-auto max-w-6xl px-4 py-4 sm:py-5">{children}</div>
+      <div className="container mx-auto max-w-6xl px-4 py-4 sm:py-5">
+        <PrenotaBookableBanner trips={bookable} />
+        {children}
+      </div>
     </div>
   );
 }

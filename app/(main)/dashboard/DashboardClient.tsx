@@ -10,7 +10,7 @@ import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { type Session } from 'next-auth';
 import { Button } from '@/components/ui/button';
 import { filterDiscoverResults } from '@/lib/trips/discover-search';
-import { isClosingSoon } from '@/lib/trips/formation';
+import { isClosingSoon, isGroupSolid } from '@/lib/trips/formation';
 import { TRIP_TEMPLATES } from '@/lib/composer/trip-templates';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +45,10 @@ export default function DashboardClient({
   );
 
   const closing = useMemo(() => results.filter((t) => isClosingSoon(t)).slice(0, 6), [results]);
+  const seedTrips = useMemo(
+    () => results.filter((t) => !isGroupSolid(t)).slice(0, 4),
+    [results]
+  );
   const featuredSeeds = TRIP_TEMPLATES.filter((t) => t.featured);
 
   return (
@@ -73,6 +77,12 @@ export default function DashboardClient({
                 Crea un viaggio
               </Link>
             </Button>
+            <p className="mt-3 text-sm text-white/85">
+              Creator:{' '}
+              <Link href="/dashboard/creator" className="underline underline-offset-4 text-white">
+                cashback 2%+ nei primi mesi
+              </Link>
+            </p>
           </ScrollReveal>
         )}
       </div>
@@ -82,7 +92,14 @@ export default function DashboardClient({
       <div className="container mx-auto px-4 mt-8 max-w-7xl space-y-10">
         <section>
           <h2 className="font-display text-xl md:text-2xl font-semibold text-white">In evidenza</h2>
-          <p className="mt-1 text-sm text-white/85">Itinerari pronti: lanciali e riempi i posti.</p>
+          <p className="mt-1 text-sm text-white/85">
+            Seed: viaggi già in formazione, più modelli pronti da lanciare.
+          </p>
+          {seedTrips.length > 0 ? (
+            <div className="mt-4">
+              <DiscoverResultsSplit trips={seedTrips} session={session} />
+            </div>
+          ) : null}
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {featuredSeeds.map((tpl) => (
               <Link
@@ -118,7 +135,7 @@ export default function DashboardClient({
               <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
                 Tutti i viaggi
               </h2>
-              <p className="mt-1 text-sm text-white/55">
+              <p className="mt-1 text-sm text-white/85">
                 {results.length}{' '}
                 {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
               </p>

@@ -12,8 +12,8 @@ import { ComposerLandingStep } from '@/components/composer/ComposerLandingStep';
 import { ComposerPlanStep } from '@/components/composer/ComposerPlanStep';
 import { ComposerReviewStep } from '@/components/composer/ComposerReviewStep';
 import { ComposerSourceStep } from '@/components/composer/ComposerSourceStep';
-import { buildComposerDays } from '@/lib/composer/days';
-import { addDays, format } from 'date-fns';
+import { buildComposerDays, remapComposerDaysToDuration } from '@/lib/composer/days';
+import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import {
   draftFromTripTemplate,
   findTripTemplate,
@@ -172,7 +172,7 @@ export function TripComposer({
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const applyTemplate = (template: TripTemplate) => {
+  const applyTemplate = (template: TripTemplate, mode: 'use' | 'customize') => {
     const start =
       draft.startDate || format(addDays(new Date(), 21), 'yyyy-MM-dd');
     const partial = draftFromTripTemplate(template, start);
@@ -188,13 +188,18 @@ export function TripComposer({
         plannerProfile
       )
     );
-    setStep('landing');
+    setStep(mode === 'use' ? 'plan' : 'landing');
   };
 
   const goToCompose = () => {
     if (!draft.startDate || !draft.endDate) return;
-    const days =
+    const duration = Math.max(
+      1,
+      differenceInCalendarDays(parseISO(draft.endDate), parseISO(draft.startDate)) + 1
+    );
+    const base =
       draft.days.length > 0 ? draft.days : buildComposerDays(draft.startDate, draft.endDate);
+    const days = remapComposerDaysToDuration(base, duration, draft.startDate);
     setDraft((prev) => ({ ...prev, days }));
     setStep('plan');
   };
@@ -313,8 +318,8 @@ export function TripComposer({
                   setDraft(mergeDraft(EMPTY_DRAFT, { plannerProfile }, plannerProfile));
                   setStep('landing');
                 }}
-                onTemplate={applyTemplate}
-                onCustomize={applyTemplate}
+                onTemplate={(tpl) => applyTemplate(tpl, 'use')}
+                onCustomize={(tpl) => applyTemplate(tpl, 'customize')}
               />
             </motion.div>
           )}

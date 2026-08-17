@@ -14,6 +14,8 @@ import {
   Snowflake,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
+import { estimateParticipantCashbackEur } from '@/lib/commerce/cashback';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
@@ -191,19 +193,29 @@ function RateCard({
 export function PrenotaCarsClient({
   defaultEmail,
   defaultName,
+  defaultPickup,
+  defaultStartDate,
+  defaultEndDate,
+  tripId,
+  compact = false,
 }: {
   defaultEmail: string;
   defaultName: string;
+  defaultPickup?: string;
+  defaultStartDate?: string;
+  defaultEndDate?: string;
+  tripId?: string;
+  compact?: boolean;
 }) {
   const split = splitName(defaultName);
   const [cacheReady, setCacheReady] = useState(false);
-  const [pickup, setPickup] = useState('');
-  const [dropoff, setDropoff] = useState('');
+  const [pickup, setPickup] = useState(defaultPickup ?? '');
+  const [dropoff, setDropoff] = useState(defaultPickup ?? '');
   const [pickupPlace, setPickupPlace] = useState<PlaceSuggestion | null>(null);
   const [dropoffPlace, setDropoffPlace] = useState<PlaceSuggestion | null>(null);
   const [differentDropoff, setDifferentDropoff] = useState(false);
-  const [startDate, setStartDate] = useState(defaultStart);
-  const [endDate, setEndDate] = useState(defaultEnd);
+  const [startDate, setStartDate] = useState(defaultStartDate ?? defaultStart());
+  const [endDate, setEndDate] = useState(defaultEndDate ?? defaultEnd());
   const [pickupTime, setPickupTime] = useState(DEFAULT_PICKUP);
   const [dropoffTime, setDropoffTime] = useState(DEFAULT_DROPOFF);
   const [driverAge, setDriverAge] = useState(30);
@@ -231,6 +243,10 @@ export function PrenotaCarsClient({
   } | null>(null);
 
   useEffect(() => {
+    if (defaultPickup || defaultStartDate) {
+      setCacheReady(true);
+      return;
+    }
     const cached = loadSearchFormCache<FormCache>('cars');
     if (cached) {
       setPickup(cached.pickup ?? '');
@@ -244,7 +260,7 @@ export function PrenotaCarsClient({
       if (cached.residenceCountryCode) setResidenceCountryCode(cached.residenceCountryCode);
     }
     setCacheReady(true);
-  }, []);
+  }, [defaultPickup, defaultStartDate]);
 
   useEffect(() => {
     if (!cacheReady) return;
@@ -411,6 +427,8 @@ export function PrenotaCarsClient({
           acceptedPolicies: quote.privacyPolicies
             .map((p, i) => (accepted[i] ? p.title : null))
             .filter(Boolean),
+          amountEur: quote.car?.totalAmount,
+          tripId,
         }),
       });
       const data = (await res.json()) as BookResponse;
@@ -447,6 +465,11 @@ export function PrenotaCarsClient({
           Paghi al ritiro dal noleggiatore. Porta documento, patente e la carta usata in sede se
           richiesta.
         </p>
+        <div className="mx-auto mt-3 max-w-md text-left">
+          <BookingCashbackNote
+            estimatedEur={estimateParticipantCashbackEur(quote?.car?.totalAmount ?? 0)}
+          />
+        </div>
         <Button
           type="button"
           className="mt-5 rounded-xl"
@@ -463,7 +486,7 @@ export function PrenotaCarsClient({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn('space-y-4', compact && 'space-y-3')}>
       <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-px shadow-lg shadow-primary/10">
         <div className="rounded-[0.95rem] bg-card px-3 py-3 sm:px-3.5 sm:py-3">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_0.7fr_0.7fr_auto] lg:items-end">

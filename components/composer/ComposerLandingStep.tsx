@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, addDays } from 'date-fns';
+import { format, addDays, differenceInCalendarDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +26,11 @@ import { findDestination } from '@/lib/composer/destinations';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildOrganizerOrigin } from '@/lib/composer/origins';
 import { generateTripTitle } from '@/lib/composer/title-generator';
+import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const MICRO_STEPS = [
   { id: 1, label: 'Destinazione' },
@@ -355,26 +357,41 @@ export function ComposerLandingStep({
               <div className="space-y-2">
                 <p className="text-sm font-medium text-white/80 text-center">Durata (struttura itinerario)</p>
                 <div className="flex justify-center gap-2">
-                  {([5, 7, 10] as const).map((n) => (
+                  {([5, 7, 10] as const).map((n) => {
+                    const active =
+                      Boolean(startDate && endDate) &&
+                      differenceInCalendarDays(endDate!, startDate!) + 1 === n;
+                    return (
                     <button
                       key={n}
                       type="button"
-                      className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white hover:border-accent/50"
+                      className={cn(
+                        'rounded-full border px-4 py-2 text-sm font-medium',
+                        active
+                          ? 'border-accent bg-white text-slate-900 ring-2 ring-accent/40'
+                          : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
+                      )}
                       onClick={() => {
                         const start = startDate ?? addDays(new Date(), 14);
                         const end = addDays(start, n - 1);
+                        const startIso = format(start, 'yyyy-MM-dd');
                         setStartDate(start);
                         setEndDate(end);
                         onChange({
-                          startDate: format(start, 'yyyy-MM-dd'),
+                          startDate: startIso,
                           endDate: format(end, 'yyyy-MM-dd'),
+                          days: remapComposerDaysToDuration(draft.days, n, startIso),
                         });
                       }}
                     >
                       {n} giorni
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-white/85 text-center">
+                  Accorciando i giorni togliamo le tappe secondarie. Arrivo e partenza restano.
+                </p>
               </div>
 
               <div className="space-y-3 max-w-md mx-auto">

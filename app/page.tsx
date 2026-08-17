@@ -229,13 +229,13 @@ export default function LoginPage() {
           </ScrollReveal>
           <ScrollReveal variant="title">
             <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
-              Parti con qualcuno. Non da solo.
+              Il viaggio di gruppo, senza tour operator.
             </h1>
           </ScrollReveal>
           <ScrollReveal variant="title" stagger={1}>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-white/90">
-              Crea un viaggio o unisciti a uno già in formazione. Voli e hotel si prenotano quando il
-              gruppo è solido.
+              Organizzalo in autonomia, prenota a prezzi di mercato, spendi meno. Una parte torna
+              con il cashback.
             </p>
           </ScrollReveal>
           <ul className="mt-10 max-w-md space-y-3 text-sm text-white/88">

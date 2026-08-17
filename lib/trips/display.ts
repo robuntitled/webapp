@@ -8,13 +8,13 @@ export const PLANNING_MODE_META: Record<
     label: 'Solo (aperto al gruppo)',
     shortLabel: 'Solo',
     emoji: '🧳',
-    description: 'Organizzato da una persona — altri possono unirsi dopo.',
+    description: 'Organizzato da una persona — altri possono unirsi.',
   },
   group: {
     label: 'Con gli amici',
     shortLabel: 'Gruppo',
     emoji: '🎉',
-    description: 'Viaggio tra amici — entra in modalità relax.',
+    description: 'Viaggio tra amici, con posti da riempire insieme.',
   },
 };
 

@@ -33,7 +33,10 @@ import {
   departureGuaranteeCopy,
   formationLabel,
   isClosingSoon,
+  joinDeadlineLabel,
+  lastJoinLabel,
 } from '@/lib/trips/formation';
+import { getPublicProfile } from '@/lib/data/public-profile';
 import {
   estimateParticipantCashbackEur,
   formatCreatorCashback,
@@ -61,6 +64,8 @@ export default async function TripDetailPage({ params }: PageProps) {
   const closingSoon = isClosingSoon(trip);
   const estimatedCashback = estimateParticipantCashbackEur(Number(trip.price) || 0);
   const lockReason = departureGuaranteeCopy(trip);
+  const recentJoin = lastJoinLabel(trip);
+  const deadline = joinDeadlineLabel(trip);
   const isCreator = session?.user?.id === trip.creator?.id;
   const participant = trip.trip_participants?.find((p) => p.user_id === session?.user?.id);
   const isParticipant = !!participant;
@@ -74,11 +79,12 @@ export default async function TripDetailPage({ params }: PageProps) {
   const composerItinerary =
     (trip.composerVersion ?? 0) >= 1 ? await fetchComposerItinerary(trip.id) : null;
 
-  const [joinRequests, myJoinRequestStatus] = await Promise.all([
+  const [joinRequests, myJoinRequestStatus, creatorProfile] = await Promise.all([
     canManageRequests ? listPendingJoinRequestsForTrip(trip.id) : Promise.resolve([]),
     session?.user?.id && !isCreator && !isParticipant
       ? getJoinRequestStatus(trip.id, session.user.id)
       : Promise.resolve(null),
+    trip.creator ? getPublicProfile(trip.creator.id) : Promise.resolve(null),
   ]);
 
   return (
@@ -174,6 +180,12 @@ export default async function TripDetailPage({ params }: PageProps) {
                   <p className="rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
                     {lockReason}
                   </p>
+                  {recentJoin ? (
+                    <p className="text-xs font-medium text-foreground">{recentJoin}</p>
+                  ) : null}
+                  {deadline ? (
+                    <p className="text-xs font-medium text-foreground">{deadline}</p>
+                  ) : null}
                   <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs">
                     <span className="text-muted-foreground">Cashback stimato</span>
                     <span className="font-medium tabular-nums">
@@ -204,7 +216,11 @@ export default async function TripDetailPage({ params }: PageProps) {
                         mode="both"
                         size="md"
                         className="w-full rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5 hover:bg-muted/40"
-                        subtitle="Vedi profilo pubblico"
+                        subtitle={
+                          creatorProfile?.ratingAvg
+                            ? `${creatorProfile.ratingAvg}/5 · ${creatorProfile.ratingCount} recensioni`
+                            : 'Vedi profilo pubblico'
+                        }
                       />
                     </div>
                     <TripCrewPeek
@@ -267,6 +283,8 @@ export default async function TripDetailPage({ params }: PageProps) {
               }
               adults={Math.min(9, Math.max(1, trip.maxParticipants ?? 2))}
               isAuthenticated={Boolean(session?.user?.id)}
+              bookerEmail={session?.user?.email ?? ''}
+              bookerName={session?.user?.name ?? ''}
               composerItinerary={composerItinerary}
               locked={!canBook}
               lockReason={

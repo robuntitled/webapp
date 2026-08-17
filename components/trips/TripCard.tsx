@@ -25,7 +25,7 @@ import {
   isTripParticipant,
   canJoinTrip,
 } from '@/lib/trips/display';
-import { formationLabel, isClosingSoon } from '@/lib/trips/formation';
+import { formationLabel, isClosingSoon, lastJoinLabel } from '@/lib/trips/formation';
 import { isPhoneGateError, PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
 export type { TripWithRelations } from '@/types/trip';
@@ -66,6 +66,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
   const creator = isTripCreator(trip, userId);
   const participant = isTripParticipant(trip, userId) || optimisticJoined;
   const joinable = canJoinTrip(trip, userId) && !optimisticJoined && !requestSent;
+  const recentJoin = lastJoinLabel(trip);
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -216,6 +217,9 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
               </span>
               <span className="text-xs">da {trip.price}€/persona</span>
             </div>
+            {recentJoin ? (
+              <p className="text-xs font-medium text-foreground">{recentJoin}</p>
+            ) : null}
           </div>
         </CardContent>
 
