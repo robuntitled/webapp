@@ -58,7 +58,7 @@ export async function Navbar() {
                 href="/dashboard/miei-viaggi"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                I miei
+                I miei viaggi
               </Link>
             </>
           )}

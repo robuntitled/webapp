@@ -12,7 +12,7 @@ export default async function PrenotaHotelPage() {
   return (
     <PrenotaPageShell
       title="Hotel"
-      subtitle="Confronta tariffe per città e date, poi completa ospiti e pagamento."
+      subtitle="Notti giuste, prezzo vero. Confronta e prenota."
       badge="Prenotabile"
     >
       <LiteApiHotelSearch defaultAdults={1} cacheKey="hotels" />

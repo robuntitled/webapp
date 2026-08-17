@@ -56,7 +56,7 @@ export function PlaceSearchInput({
 
   return (
     <div className="relative">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
+      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
       <Input
         className={className}
         value={query}

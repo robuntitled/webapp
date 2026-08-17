@@ -12,7 +12,7 @@ export default async function PrenotaAutoPage() {
   return (
     <PrenotaPageShell
       title="Noleggio auto"
-      subtitle="Cerca per città o aeroporto, confronta le tariffe e prenota in-app. Pagamento al ritiro sul noleggiatore."
+      subtitle="Città o aeroporto, tariffe chiare, pagamento al ritiro."
       badge="Duffel"
     >
       <PrenotaCarsClient

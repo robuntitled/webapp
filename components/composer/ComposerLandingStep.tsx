@@ -239,10 +239,10 @@ export function ComposerLandingStep({
         }
         subtitle={
           micro === 1
-            ? 'Una o più mete. Poi date, crew, mappa e pubblicazione.'
+            ? 'Una o più mete. Poi date, compagni, mappa.'
             : micro === 2
-              ? 'Finestra di viaggio e la tua base di partenza.'
-              : 'Solo (aperto) o con gli amici. Poi componi i giorni sulla mappa.'
+              ? 'Quanto dura, quando parti, da dove voli.'
+              : 'Da solo (aperto) o con gli amici. Poi componi i giorni.'
         }
       />
 
@@ -294,7 +294,7 @@ export function ComposerLandingStep({
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full h-14 justify-center rounded-2xl composer-field text-white text-base"
+                        className="w-full h-14 justify-center rounded-2xl text-base"
                       >
                         <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
                         {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
@@ -327,7 +327,7 @@ export function ComposerLandingStep({
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full h-14 justify-center rounded-2xl composer-field text-white text-base"
+                        className="w-full h-14 justify-center rounded-2xl text-base"
                         disabled={!startDate}
                       >
                         <CalendarIcon className="mr-2 h-5 w-5 text-accent" />
@@ -384,7 +384,7 @@ export function ComposerLandingStep({
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-xl composer-field text-white shrink-0"
+                    className="rounded-xl shrink-0"
                     onClick={detectOrigin}
                     disabled={geoLoading}
                   >
@@ -397,7 +397,7 @@ export function ComposerLandingStep({
                   </Button>
                   <Input
                     placeholder="Oppure digita la città (Invio)"
-                    className="h-11 rounded-xl composer-field text-white"
+                    className="h-11 rounded-xl composer-field"
                     value={originCityInput}
                     onChange={(e) => setOriginCityInput(e.target.value)}
                     onBlur={() => applyOriginCity(originCityInput)}
@@ -435,7 +435,7 @@ export function ComposerLandingStep({
               <div className="space-y-3">
                 <p className="text-sm font-medium text-white/80">Titolo del viaggio</p>
                 <Input
-                  className="h-14 rounded-2xl composer-field text-white text-lg"
+                  className="h-14 rounded-2xl composer-field text-lg"
                   value={draft.title}
                   onChange={(e) => {
                     titleTouched.current = true;
@@ -488,7 +488,7 @@ export function ComposerLandingStep({
                     type="number"
                     min={2}
                     max={20}
-                    className="h-12 rounded-2xl composer-field text-white"
+                    className="h-12 rounded-2xl composer-field"
                     value={draft.minParticipants ?? 4}
                     onChange={(e) =>
                       onChange({ minParticipants: Math.max(2, Number(e.target.value) || 2) })
@@ -501,7 +501,7 @@ export function ComposerLandingStep({
                     type="number"
                     min={2}
                     max={40}
-                    className="h-12 rounded-2xl composer-field text-white"
+                    className="h-12 rounded-2xl composer-field"
                     value={draft.maxParticipants}
                     onChange={(e) =>
                       onChange({ maxParticipants: Math.max(2, Number(e.target.value) || 2) })
@@ -520,7 +520,7 @@ export function ComposerLandingStep({
           <Button
             type="button"
             variant="ghost"
-            className="rounded-full text-white/70 hover:text-white"
+            className="rounded-full text-white hover:text-slate-900"
             disabled={micro === 1 && !onBack}
             onClick={() => {
               if (micro === 1) {

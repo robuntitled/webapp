@@ -26,7 +26,7 @@ export function PrenotaPageShell({
               Prenota
             </p>
             {badge ? (
-              <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground/90">
+              <span className="rounded-full border border-accent/40 bg-accent px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
                 {badge}
               </span>
             ) : null}

@@ -12,7 +12,7 @@ export default async function PrenotaVoliPage() {
   return (
     <PrenotaPageShell
       title="Voli"
-      subtitle="Cerca da città, aeroporto o paese. Destinazione libera — poi verifica, paga e conferma."
+      subtitle="Cerca, confronta, conferma. Poi il gruppo parte insieme."
       badge="Prenotabile"
     >
       <PrenotaFlightsClient />

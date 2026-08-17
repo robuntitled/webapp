@@ -18,13 +18,13 @@ export function ComposerSourceStep({
 }: ComposerSourceStepProps) {
   return (
     <div className="mx-auto max-w-3xl pb-16">
-      <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Percorso crea</p>
+      <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Crea</p>
       <h1 className="mt-3 font-display text-4xl font-semibold text-white md:text-5xl">
-        Come lo costruisci?
+        Parti da una base. Poi è tuo.
       </h1>
-      <p className="mt-4 max-w-xl text-white/70">
-        I template sono la via principale: itinerario già strutturato, poi lo adatti. Da zero solo se
-        vuoi il controllo totale.
+      <p className="mt-4 max-w-xl text-white/90">
+        I template sono la via veloce: itinerario già disegnato, tu lo adatti. Da zero solo se vuoi
+        ogni tappa.
       </p>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -43,7 +43,7 @@ export function ComposerSourceStep({
         <Button
           type="button"
           variant="outline"
-          className="rounded-full border-white/15 bg-white/5 text-white hover:bg-white/10"
+          className="rounded-full"
           onClick={onScratch}
         >
           Crea da zero
@@ -57,11 +57,11 @@ export function ComposerSourceStep({
             className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"
           >
             <div className={cn('mb-4 h-16 rounded-2xl bg-gradient-to-br', tpl.gradient)} />
-            <p className="text-xs uppercase tracking-wider text-white/45">{tpl.region}</p>
+            <p className="text-xs uppercase tracking-wider text-white/80">{tpl.region}</p>
             <h3 className="mt-1 font-display text-xl font-semibold text-white">
               {tpl.emoji} {tpl.label}
             </h3>
-            <p className="mt-1 text-sm text-white/60">{tpl.vibe}</p>
+            <p className="mt-1 text-sm text-white/85">{tpl.vibe}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -75,7 +75,7 @@ export function ComposerSourceStep({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="rounded-full border-white/15 text-white hover:bg-white/10"
+                className="rounded-full"
                 onClick={() => onCustomize(tpl)}
               >
                 Modifica
@@ -108,7 +108,7 @@ function ModeHint({
     >
       <Icon className={cn('h-4 w-4', featured ? 'text-accent' : 'text-white/50')} />
       <p className="mt-2 text-sm font-semibold text-white">{title}</p>
-      <p className="mt-0.5 text-xs text-white/55">{body}</p>
+      <p className="mt-0.5 text-xs text-white/80">{body}</p>
     </div>
   );
 }

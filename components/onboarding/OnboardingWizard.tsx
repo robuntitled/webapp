@@ -34,19 +34,19 @@ const KEYWORD_COPY: Record<
 > = {
   trip_type: {
     title: 'Che viaggio sei?',
-    subtitle: 'Scegli fino a tre. Da qui in poi le proposte ti assomigliano.',
+    subtitle: 'Fino a tre. Da qui le proposte ti assomigliano.',
     min: 1,
     max: 3,
   },
   setting: {
     title: 'Natura o città?',
-    subtitle: 'L’ambiente in cui ti senti a casa quando parti.',
+    subtitle: 'L’ambiente in cui ti senti a casa, quando parti.',
     min: 1,
     max: 3,
   },
   experience: {
     title: 'Cosa ti accende?',
-    subtitle: 'Esperienze vere, non brochure. Puoi sceglierne più di una.',
+    subtitle: 'Esperienze vere. Puoi sceglierne più di una.',
     min: 1,
     max: 4,
   },
@@ -193,28 +193,28 @@ function IntentStep({
   return (
     <div>
       <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-accent">
-        Due strade
+        Prima scelta
       </p>
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
-        Crea o esplora?
+        Crei, o ti unisci?
       </h1>
-      <p className="mt-4 max-w-md text-base text-white/70">
-        Due percorsi. Stesso motore di prenotazione, ma i servizi si sbloccano a gruppo formato.
+      <p className="mt-4 max-w-md text-base text-white/90">
+        Due strade. I servizi si prenotano solo quando il gruppo è formato.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <IntentCard
           active={value === 'create'}
           icon={PenLine}
-          title="CREA UN VIAGGIO"
-          body="Template, config, editor e mappa. Pubblichi in formazione: gli altri si uniscono."
+          title="Crea un viaggio"
+          body="Parti da un template, pubblica in formazione, riempi i posti."
           onClick={() => onSelect('create')}
         />
         <IntentCard
           active={value === 'book'}
           icon={Ticket}
-          title="ESPLORA / UNISCITI"
-          body="Filtri, in evidenza, FOMO. Unisciti. Prenoti voli e hotel solo a gruppo formato."
+          title="Esplora e unisciti"
+          body="Scegli un viaggio, unisciti, prenota quando il gruppo è pronto."
           onClick={() => onSelect('book')}
         />
       </div>
@@ -251,7 +251,7 @@ function IntentCard({
         <Icon className="h-5 w-5" />
       </span>
       <h2 className="mt-4 font-display text-2xl font-semibold text-white">{title}</h2>
-      <p className="mt-2 text-sm leading-relaxed text-white/65">{body}</p>
+      <p className="mt-2 text-sm leading-relaxed text-white/85">{body}</p>
     </button>
   );
 }
@@ -293,7 +293,7 @@ function KeywordStep({
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
         {copy.title}
       </h1>
-      <p className="mt-4 max-w-md text-base text-white/70">{copy.subtitle}</p>
+      <p className="mt-4 max-w-md text-base text-white/90">{copy.subtitle}</p>
 
       <div className="mt-8 flex flex-wrap gap-2">
         {options.map((opt) => {
@@ -395,8 +395,8 @@ function HomeStep({
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
         Da dove parti di solito?
       </h1>
-      <p className="mt-4 max-w-md text-base text-white/70">
-        La tua base. Così ti proponiamo prima ciò che è vicino e sostenibile.
+      <p className="mt-4 max-w-md text-base text-white/90">
+        La tua base. Da lì partono proposte vicine e sostenibili.
       </p>
 
       <div className="mt-8 space-y-3">
@@ -421,7 +421,7 @@ function HomeStep({
         <Button
           type="button"
           variant="outline"
-          className="rounded-full border-white/15 bg-white/[0.04] text-white hover:bg-white/10"
+          className="rounded-full"
           onClick={useGeo}
           disabled={geoLoading}
         >
@@ -470,7 +470,7 @@ function StepNav({
       <Button
         type="button"
         variant="ghost"
-        className="rounded-full text-white/70 hover:text-white"
+        className="rounded-full text-white hover:text-slate-900"
         onClick={onBack}
       >
         <ArrowLeft className="h-4 w-4" />

@@ -229,19 +229,20 @@ export default function LoginPage() {
           </ScrollReveal>
           <ScrollReveal variant="title">
             <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
-              Viaggia insieme. Organizza meglio.
+              Parti con qualcuno. Non da solo.
             </h1>
           </ScrollReveal>
           <ScrollReveal variant="title" stagger={1}>
-            <p className="mt-6 max-w-md text-lg leading-relaxed text-white/75">
-              Scopri viaggi di gruppo, crea itinerari con l’AI e prenota i voli nello stesso posto.
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-white/90">
+              Crea un viaggio o unisciti a uno già in formazione. Voli e hotel si prenotano quando il
+              gruppo è solido.
             </p>
           </ScrollReveal>
-          <ul className="mt-10 max-w-md space-y-3 text-sm text-white/70">
+          <ul className="mt-10 max-w-md space-y-3 text-sm text-white/88">
             {[
-              { Icon: Users, text: 'Unisciti a crew aperte o invita i tuoi amici' },
-              { Icon: Map, text: 'Componi il giorno per giorno su mappa con l’AI' },
-              { Icon: Plane, text: 'Prenota i voli; hotel e luoghi a supporto del viaggio' },
+              { Icon: Users, text: 'Unisciti a un viaggio in formazione, o lancialo tu' },
+              { Icon: Map, text: 'Costruisci i giorni sulla mappa, con l’AI se vuoi' },
+              { Icon: Plane, text: 'Prenota i servizi solo quando si parte davvero' },
             ].map(({ Icon, text }, i) => (
               <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
                 <div className="flex items-start gap-3">
@@ -265,7 +266,7 @@ export default function LoginPage() {
               </ScrollReveal>
               <ScrollReveal variant="title" stagger={1}>
                 <p className="mb-3 text-sm leading-relaxed text-muted-foreground lg:hidden">
-                  Viaggi di gruppo, itinerari AI e prenotazione voli — in un solo posto.
+                  Crea un viaggio o unisciti. Prenoti quando il gruppo è pronto.
                 </p>
               </ScrollReveal>
               <ScrollReveal variant="title">
@@ -276,8 +277,8 @@ export default function LoginPage() {
               <ScrollReveal variant="card" stagger={1}>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   {isRegisterMode
-                    ? 'Inizia a organizzare o unirti a un viaggio'
-                    : 'Accedi per scoprire, creare e prenotare'}
+                    ? 'Due minuti. Poi scegli: creare o unirti.'
+                    : 'Accedi e scegli: creare un viaggio o unirti a uno.'}
                 </p>
               </ScrollReveal>
             </div>
@@ -411,7 +412,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full h-11 rounded-xl text-base font-medium"
               >
-                {isLoading ? 'Caricamento...' : isRegisterMode ? 'Registrati' : 'Accedi'}
+                {isLoading ? 'Un attimo…' : isRegisterMode ? 'Registrati' : 'Accedi'}
               </Button>
             </form>
 

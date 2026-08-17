@@ -57,7 +57,7 @@
   --secondary: oklch(0.96 0.015 95);
   --secondary-foreground: oklch(0.28 0.04 250);
   --muted: oklch(0.96 0.01 95);
-  --muted-foreground: oklch(0.5 0.03 250);
+  --muted-foreground: oklch(0.38 0.03 250);
   --accent: oklch(0.68 0.16 45);
   --accent-foreground: oklch(0.99 0.01 95);
   --destructive: oklch(0.55 0.22 25);
@@ -91,7 +91,7 @@
   --secondary: oklch(0.26 0.03 250);
   --secondary-foreground: oklch(0.97 0.005 95);
   --muted: oklch(0.26 0.03 250);
-  --muted-foreground: oklch(0.65 0.03 250);
+  --muted-foreground: oklch(0.82 0.02 95);
   --accent: oklch(0.72 0.15 45);
   --accent-foreground: oklch(0.16 0.025 250);
   --destructive: oklch(0.65 0.2 25);
@@ -104,12 +104,19 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-size: 16px;
+  }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   }
   h1, h2, h3 {
     font-family: var(--font-display), Georgia, serif;
-    @apply tracking-tight;
+    @apply tracking-tight text-balance;
+  }
+  p, li, label, input, textarea, button, select {
+    font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   }
 }
 
@@ -212,8 +219,13 @@
   }
 
   .composer-field {
-    background: oklch(0.16 0.03 250);
-    border-color: oklch(1 0 0 / 20%);
+    background: #fff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .composer-field::placeholder {
+    color: #64748b !important;
   }
 
   .composer-field:focus-visible {

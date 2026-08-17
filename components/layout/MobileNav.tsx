@@ -17,7 +17,7 @@ const LINKS = [
   { href: '/prenota/attrazioni', label: 'Servizi · Attrazioni', auth: true },
   { href: '/prenota/attivita', label: 'Servizi · Attività', auth: true },
   { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
-  { href: '/dashboard/miei-viaggi', label: 'I miei', auth: true },
+  { href: '/dashboard/miei-viaggi', label: 'I miei viaggi', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];
 

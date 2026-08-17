@@ -12,7 +12,7 @@ export default async function PrenotaAttivitaPage() {
   return (
     <PrenotaPageShell
       title="Attività"
-      subtitle="Tour ed esperienze prenotabili via Viator. Apri sul sito partner per completare la prenotazione."
+      subtitle="Tour ed esperienze. Completi sul partner."
       badge="Affiliate"
     >
       <PrenotaActivitiesClient />

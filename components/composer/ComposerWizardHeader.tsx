@@ -42,7 +42,7 @@ export function ComposerWizardHeader({
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-sm text-white/70"
+        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-sm text-white/90"
       >
         <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
         {progressLabel}
@@ -75,7 +75,7 @@ export function ComposerWizardHeader({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-white/55 max-w-xl mx-auto text-base leading-relaxed"
+          className="text-white/90 max-w-xl mx-auto text-base leading-relaxed"
         >
           {subtitle}
         </motion.p>

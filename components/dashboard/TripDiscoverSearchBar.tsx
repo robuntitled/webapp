@@ -84,16 +84,16 @@ export function TripDiscoverSearchBar({
         <div className={`flex flex-col gap-3 ${isCompact ? 'md:flex-row md:items-center' : 'space-y-5'}`}>
           <div className={`relative ${isCompact ? 'flex-1 min-w-0' : ''}`}>
             <Search
-              className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${
+              className={`absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 ${
                 isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4'
               }`}
             />
             <Input
               type="text"
-              placeholder="Destinazione o organizzatore..."
+              placeholder="Destinazione o chi organizza…"
               className={
                 isCompact
-                  ? 'h-9 pl-9 pr-8 rounded-lg text-sm bg-white/5 border-white/10'
+                  ? 'h-9 pl-9 pr-8 rounded-lg text-sm'
                   : 'h-12 pl-10 pr-10 rounded-xl text-base'
               }
               value={searchTerm}
@@ -121,7 +121,7 @@ export function TripDiscoverSearchBar({
                 variant="outline"
                 className={
                   isCompact
-                    ? 'h-9 rounded-lg text-xs font-normal shrink-0 border-white/10 bg-white/5'
+                    ? 'h-9 rounded-lg text-xs font-normal shrink-0'
                     : 'h-11 w-full justify-start rounded-xl font-normal'
                 }
               >
@@ -164,7 +164,7 @@ export function TripDiscoverSearchBar({
           )}
 
           {isCompact && (
-            <span className="hidden lg:inline text-xs text-white/45 tabular-nums shrink-0">
+            <span className="hidden lg:inline text-xs text-white/85 tabular-nums shrink-0">
               {priceRange[0]}–{priceRange[1]}€
             </span>
           )}

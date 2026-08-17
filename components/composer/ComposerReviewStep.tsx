@@ -88,10 +88,10 @@ export function ComposerReviewStep({
               <h2 className="font-display text-xl font-semibold tracking-tight text-white md:text-2xl">
                 Controlla e pubblica
               </h2>
-              <p className="max-w-xl text-sm text-white/55">
-                Verifica itinerario e budget. Pubblicando resta “In formazione” con garanzia di
-                partenza fino al minimo posti. Cashback creator {formatCreatorCashback()},
-                partecipanti {formatParticipantCashback()}.
+              <p className="max-w-xl text-sm text-white/90">
+                Controlla itinerario e budget. Esce “In formazione”: la partenza è garantita al
+                minimo posti. Cashback: tu {formatCreatorCashback()}, chi si unisce{' '}
+                {formatParticipantCashback()}.
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -99,7 +99,7 @@ export function ComposerReviewStep({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                className="rounded-full"
                 onClick={onBack}
                 disabled={publishing}
               >
@@ -241,7 +241,7 @@ export function ComposerReviewStep({
           <Button
             type="button"
             variant="outline"
-            className="flex-1 rounded-full border-white/20 bg-white/5 text-white"
+            className="flex-1 rounded-full"
             onClick={onBack}
             disabled={publishing}
           >

@@ -106,7 +106,7 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
           {step === 'phone' ? (
             <>
               <div className="space-y-2">
-                <Label htmlFor="gate-phone" className="text-white/70">
+                <Label htmlFor="gate-phone" className="text-white">
                   Cellulare (con WhatsApp)
                 </Label>
                 <Input
@@ -116,7 +116,7 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
                   placeholder="+39 333 1234567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="h-11 rounded-xl border-white/15 bg-white/5 text-white"
+                  className="h-11 rounded-xl"
                 />
               </div>
               <Button
@@ -132,7 +132,7 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="gate-otp" className="text-white/70">
+                <Label htmlFor="gate-otp" className="text-white">
                   Codice (valido 24 ore)
                 </Label>
                 <Input
@@ -142,7 +142,7 @@ export function PhoneVerifyGate({ open, onOpenChange, onVerified }: PhoneVerifyG
                   placeholder="123456"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="h-11 rounded-xl border-white/15 bg-white/5 text-white"
+                  className="h-11 rounded-xl"
                   maxLength={8}
                 />
                 <p className="text-[11px] text-white/40">

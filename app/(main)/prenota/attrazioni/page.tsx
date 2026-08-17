@@ -18,7 +18,7 @@ export default async function PrenotaAttrazioniPage() {
   return (
     <PrenotaPageShell
       title="Attrazioni"
-      subtitle="Biglietti e tour singoli per monumenti e luoghi. Apri su Viator per prenotare."
+      subtitle="Biglietti e tour. Apri su Viator e prenota."
       badge="Affiliate"
     >
       <PrenotaAttractionsClient />

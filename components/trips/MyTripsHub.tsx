@@ -62,8 +62,8 @@ const SECTIONS: {
   },
   {
     id: 'relax',
-    label: 'Modalità relax',
-    description: 'Ti sei unito alla crew',
+    label: 'Mi sono unito',
+    description: 'Viaggi in cui sei in crew',
     icon: Palmtree,
     accent: 'hub-accent-teal',
   },
@@ -263,10 +263,10 @@ function EmptyPanel({
   return (
     <div className="hub-empty py-16 px-6 text-center">
       <Palmtree className="h-10 w-10 text-muted-foreground/40 mx-auto mb-4" />
-      <p className="font-medium text-foreground">Nessun viaggio in relax</p>
-      <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
-        Unisciti ai viaggi degli amici dalla dashboard — zero pianificazione.
-      </p>
+        <p className="font-medium text-foreground">Non sei ancora in un viaggio</p>
+        <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
+          Esplora i viaggi in formazione e unisciti. Zero da organizzare.
+        </p>
       <Button asChild variant="secondary" className="mt-6 rounded-full">
           <Link href="/dashboard">Esplora</Link>
       </Button>

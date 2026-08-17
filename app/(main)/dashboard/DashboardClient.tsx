@@ -52,17 +52,17 @@ export default function DashboardClient({
       <div className="container mx-auto px-4 pt-10 mb-8 text-center max-w-3xl">
         <ScrollReveal variant="decor">
           <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
-            Esplora / Unisciti
+            Esplora
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
           <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-            Trova un viaggio già in formazione
+            Qualcuno parte già. Unisciti.
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
-          <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-            In evidenza, in chiusura, filtri e mappa. Prenoti i servizi solo quando il gruppo è solido.
+          <p className="mt-4 text-lg text-white/90 max-w-2xl mx-auto">
+            Scegli un viaggio in evidenza o in chiusura. Prenoti voli e hotel solo a gruppo formato.
           </p>
         </ScrollReveal>
         {session?.user && (
@@ -82,7 +82,7 @@ export default function DashboardClient({
       <div className="container mx-auto px-4 mt-8 max-w-7xl space-y-10">
         <section>
           <h2 className="font-display text-xl md:text-2xl font-semibold text-white">In evidenza</h2>
-          <p className="mt-1 text-sm text-white/55">Seed anti cold-start — template pronti da lanciare.</p>
+          <p className="mt-1 text-sm text-white/85">Itinerari pronti: lanciali e riempi i posti.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {featuredSeeds.map((tpl) => (
               <Link
@@ -94,7 +94,7 @@ export default function DashboardClient({
                 <p className="font-medium text-white">
                   {tpl.emoji} {tpl.label}
                 </p>
-                <p className="mt-1 text-xs text-white/50">{tpl.vibe}</p>
+                <p className="mt-1 text-xs text-white/80">{tpl.vibe}</p>
               </Link>
             ))}
           </div>
@@ -105,7 +105,7 @@ export default function DashboardClient({
             <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
               In chiusura
             </h2>
-            <p className="mt-1 text-sm text-white/55">Pochi posti o partenza vicina — FOMO utile.</p>
+            <p className="mt-1 text-sm text-white/85">Pochi posti o partenza vicina. Decidi ora.</p>
             <div className="mt-4">
               <DiscoverResultsSplit trips={closing} session={session} />
             </div>

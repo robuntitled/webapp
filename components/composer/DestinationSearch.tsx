@@ -186,7 +186,7 @@ export function DestinationSearch({
           }`}
         >
           <div className="relative flex items-center">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               ref={inputRef}
               type="text"
@@ -195,7 +195,7 @@ export function DestinationSearch({
               onFocus={() => setFocused(true)}
               onBlur={() => setTimeout(() => setFocused(false), 180)}
               placeholder="Cerca qualsiasi luogo — città, paese, isola…"
-              className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-12 text-sm text-white outline-none transition focus:border-amber-400/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-amber-400/15 placeholder:text-white/35"
+              className="h-12 w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-12 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-slate-500"
               autoComplete="off"
             />
             {loading && (
