@@ -604,6 +604,15 @@ export function findAirportByIata(iata: string): AirportInfo | null {
   return def ? toAirportInfo(def) : null;
 }
 
+/** ROM → FCO, CIA. FCO resta FCO. */
+export function expandOriginIata(code: string): string[] {
+  const iata = code.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(iata)) return [];
+  const metro = AIRPORTS.filter((a) => a.cityIata === iata).map((a) => a.iata);
+  if (metro.length > 0) return metro;
+  return [iata];
+}
+
 /** Aeroporti che servono una città (match esatto su nome città o alias). */
 export function findAirportsForCity(city: string): AirportInfo[] {
   const q = normalize(city);

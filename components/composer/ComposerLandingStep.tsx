@@ -13,22 +13,20 @@ import {
   ArrowRight,
   BookOpen,
   CalendarIcon,
-  Loader2,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
 import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
-import { originFromRankedAirport } from '@/lib/composer/origins';
+import { buildOrganizerOrigin, originFromPlace } from '@/lib/composer/origins';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { resolveDestinationIata } from '@/lib/travel/iata';
-import type { RankedOriginAirport } from '@/lib/composer/origin-airport-rank';
+import { placeDisplayValue, resolvePlaceExact, type PlaceSuggestion } from '@/lib/travel/airport-catalog';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import type { ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -167,28 +165,15 @@ export function ComposerLandingStep({
   onStart,
   onBack,
   profileCity,
-  profileCountry: _profileCountry,
+  profileCountry,
 }: ComposerLandingStepProps) {
   const [plannerOpen, setPlannerOpen] = useState(false);
-  const [originCityInput, setOriginCityInput] = useState(
-    draft.organizerOrigin?.city ?? profileCity?.trim() ?? ''
-  );
-  const [airportHits, setAirportHits] = useState<RankedOriginAirport[]>([]);
-  const [airportLoading, setAirportLoading] = useState(false);
-  const [airportSearched, setAirportSearched] = useState(false);
   const titleTouched = useRef(false);
-  const profileOriginApplied = useRef(false);
-  const airportAbort = useRef<AbortController | null>(null);
+  const originApplied = useRef(false);
   const startedWithDest = useRef(Boolean(draft.destination?.trim()));
   const [phase, setPhase] = useState<ConfigPhase>(() =>
     draft.destination?.trim() ? 'when' : 'dest'
   );
-
-  useEffect(() => {
-    if (profileOriginApplied.current || originCityInput.trim() || !profileCity?.trim()) return;
-    profileOriginApplied.current = true;
-    setOriginCityInput(profileCity.trim());
-  }, [originCityInput, profileCity]);
 
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
@@ -199,9 +184,6 @@ export function ComposerLandingStep({
 
   const selectedDestinations = getDraftDestinations(draft);
   const destCover = draft.destination ? coverForDestination(draft.destination) : null;
-  const destPoint = selectedDestinations[0] ?? draft.destinationMeta;
-  const selectedIataRef = useRef(draft.organizerOrigin?.iata);
-  selectedIataRef.current = draft.organizerOrigin?.iata;
 
   const handleDestinationsChange = (destinations: DestinationMeta[]) => {
     const labels = destinations.map((d) => d.label);
@@ -275,7 +257,7 @@ export function ComposerLandingStep({
           ? {
               label: 'Da dove',
               title: 'Da dove voli?',
-              subtitle: 'Tre scali LiteAPI per questa tratta. Prenota da qui.',
+              subtitle: 'Partenza dal tuo scalo. Meta e date già dentro.',
               micro: startedWithDest.current ? 2 : 3,
               total: startedWithDest.current ? 3 : 4,
             }
@@ -287,88 +269,41 @@ export function ComposerLandingStep({
               total: startedWithDest.current ? 3 : 4,
             };
 
-  const pickAirport = (airport: RankedOriginAirport) => {
-    onChange({ organizerOrigin: originFromRankedAirport(airport) });
-  };
-
-  const searchOriginAirports = useCallback(
-    async (opts: { q?: string; lat?: number; lng?: number }) => {
-      const q = (opts.q ?? '').trim();
-      if (q.length < 2 && (opts.lat == null || opts.lng == null)) {
-        setAirportHits([]);
-        setAirportSearched(false);
-        return;
-      }
-
-      airportAbort.current?.abort();
-      const ac = new AbortController();
-      airportAbort.current = ac;
-      setAirportLoading(true);
-
-      try {
-        const qs = new URLSearchParams();
-        if (q.length >= 2) qs.set('q', q);
-        if (opts.lat != null && opts.lng != null) {
-          qs.set('lat', String(opts.lat));
-          qs.set('lng', String(opts.lng));
-        }
-        if (draft.destination) qs.set('destination', draft.destination);
-        if (destPoint?.lat != null) qs.set('destinationLat', String(destPoint.lat));
-        if (destPoint?.lng != null) qs.set('destinationLng', String(destPoint.lng));
-        if (destPoint?.country) qs.set('destinationCountry', destPoint.country);
-
-        const res = await fetch(`/api/composer/origin-airports?${qs}`, { signal: ac.signal });
-        const data = (await res.json()) as {
-          airports?: RankedOriginAirport[];
-          queryLabel?: string;
-          error?: string;
-        };
-        if (!res.ok) {
-          toast.error(data.error ?? 'Ricerca aeroporti non disponibile');
-          return;
-        }
-
-        const airports = data.airports ?? [];
-        setAirportHits(airports);
-        setAirportSearched(true);
-        if (data.queryLabel && q.length < 2) setOriginCityInput(data.queryLabel);
-
-        const currentIata = selectedIataRef.current;
-        const stillInList = Boolean(
-          currentIata && airports.some((a) => a.iata === currentIata)
-        );
-        if (!stillInList && airports[0]) {
-          onChange({ organizerOrigin: originFromRankedAirport(airports[0]) });
-        }
-      } catch (e) {
-        if ((e as { name?: string }).name === 'AbortError') return;
-        toast.error('Ricerca aeroporti non disponibile');
-      } finally {
-        if (airportAbort.current === ac) setAirportLoading(false);
-      }
-    },
-    [destPoint?.country, destPoint?.lat, destPoint?.lng, draft.destination, onChange]
-  );
-
   useEffect(() => {
-    if (phase !== 'from') return;
-    const q = originCityInput.trim();
-    if (q.length < 2) {
-      setAirportHits([]);
-      setAirportSearched(false);
+    if (phase !== 'from' || originApplied.current) return;
+    if (draft.organizerOrigin?.iata) {
+      originApplied.current = true;
       return;
     }
-    const t = setTimeout(() => {
-      void searchOriginAirports({ q });
-    }, 380);
-    return () => clearTimeout(t);
-  }, [phase, originCityInput, searchOriginAirports]);
+    originApplied.current = true;
+    const city = profileCity?.trim() || profileCountry?.trim() || 'Italia';
+    onChange({ organizerOrigin: buildOrganizerOrigin(city, profileCountry ?? undefined) });
+  }, [draft.organizerOrigin?.iata, onChange, phase, profileCity, profileCountry]);
 
-  useEffect(() => {
-    if (phase !== 'from') return;
-    if (originCityInput.trim().length >= 2) return;
-    setOriginCityInput(profileCity?.trim() || 'Italia');
-  }, [phase, originCityInput, profileCity]);
+  const originPrefill = (() => {
+    const stored = draft.organizerOrigin;
+    if (stored?.iata) {
+      const place = resolvePlaceExact(stored.iata) ?? resolvePlaceExact(stored.city);
+      if (place) return placeDisplayValue(place);
+      return stored.city || stored.iata;
+    }
+    const city = profileCity?.trim();
+    if (city) {
+      const place = resolvePlaceExact(city);
+      if (place) return placeDisplayValue(place);
+      return city;
+    }
+    return profileCountry?.trim() || 'Italia';
+  })();
+
+  const handleOriginChange = useCallback(
+    (place: PlaceSuggestion) => {
+      const next = originFromPlace(place);
+      if (draft.organizerOrigin?.iata === next.iata) return;
+      onChange({ organizerOrigin: next });
+    },
+    [draft.organizerOrigin?.iata, onChange]
+  );
 
   const applyDuration = (n: 5 | 7 | 10) => {
     const start = startDate ?? addDays(new Date(), 14);
@@ -396,7 +331,7 @@ export function ComposerLandingStep({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="mx-auto max-w-3xl pb-24"
+      className="mx-auto max-w-4xl pb-24"
     >
       <ComposerWizardHeader
         step="landing"
@@ -530,61 +465,21 @@ export function ComposerLandingStep({
         ) : null}
 
         {phase === 'from' ? (
-          <motion.div key="from" {...phaseMotion} className="space-y-5">
-            <Input
-              placeholder="Città di partenza"
-              className="h-12 rounded-2xl composer-field"
-              value={originCityInput}
-              onChange={(e) => setOriginCityInput(e.target.value)}
+          <motion.div key="from" {...phaseMotion}>
+            <FlightSearchPanel
+              variant="composer"
+              defaultOrigin={originPrefill}
+              defaultDestination={
+                resolveDestinationIata(draft.destination) ?? draft.destination
+              }
+              defaultStartDate={draft.startDate}
+              defaultEndDate={draft.endDate}
+              defaultAdults={1}
+              defaultTripType="roundtrip"
+              autoSearch
+              cacheKey={null}
+              onOriginChange={handleOriginChange}
             />
-
-            {airportLoading ? (
-              <p className="flex items-center gap-2 text-sm text-white/70">
-                <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                Cerco i 3 scali LiteAPI per questa tratta…
-              </p>
-            ) : null}
-
-            {airportHits.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-3">
-                {airportHits.map((airport) => {
-                  const selected = draft.organizerOrigin?.iata === airport.iata;
-                  return (
-                    <PaperChoiceCard
-                      key={airport.iata}
-                      kicker={airport.recommended ? 'Consigliato' : 'Scalo'}
-                      title={airport.iata}
-                      body={airport.city}
-                      active={selected}
-                      onClick={() => pickAirport(airport)}
-                    />
-                  );
-                })}
-              </div>
-            ) : airportSearched && !airportLoading ? (
-              <p className="text-sm text-white/70">Nessun aeroporto per questa tratta.</p>
-            ) : null}
-
-            {draft.organizerOrigin?.iata && draft.startDate ? (
-              <div className="overflow-hidden rounded-[1.75rem] bg-white p-4 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.55)] sm:p-5">
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Voli LiteAPI
-                </p>
-                <FlightSearchPanel
-                  key={draft.organizerOrigin.iata}
-                  defaultOrigin={draft.organizerOrigin.iata}
-                  defaultDestination={
-                    resolveDestinationIata(draft.destination) ?? draft.destination
-                  }
-                  defaultStartDate={draft.startDate}
-                  defaultEndDate={draft.endDate}
-                  defaultAdults={1}
-                  defaultTripType="roundtrip"
-                  autoSearch
-                  cacheKey="composer-flights"
-                />
-              </div>
-            ) : null}
           </motion.div>
         ) : null}
 

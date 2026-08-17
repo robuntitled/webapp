@@ -1,3 +1,5 @@
+import { expandOriginIata } from '@/lib/travel/airport-catalog';
+
 /** Aeroporti principali per paese — ricerca “partenza: Italia” → multi-IATA. */
 
 export type CountryAirportGroup = {
@@ -139,7 +141,10 @@ export function resolveOriginAirports(
   if (!trimmed) return [];
   const countryAirports = airportsForCountry(trimmed);
   if (countryAirports.length) return countryAirports;
-  if (/^[A-Za-z]{3}$/.test(trimmed)) return [trimmed.toUpperCase()];
+  if (/^[A-Za-z]{3}$/.test(trimmed)) {
+    const expanded = expandOriginIata(trimmed);
+    return expanded.length ? expanded : [trimmed.toUpperCase()];
+  }
   const city = resolveCityIata?.(trimmed);
   return city ? [city.toUpperCase()] : [];
 }

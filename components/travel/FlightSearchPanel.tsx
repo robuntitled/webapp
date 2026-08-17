@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDays, format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -143,6 +143,9 @@ type FlightSearchPanelProps = {
   cacheKey?: SearchCacheKey | null;
   className?: string;
   defaultTripType?: TripType;
+  /** composer: carta bianca sul fondo scuro del crea */
+  variant?: 'default' | 'composer';
+  onOriginChange?: (place: PlaceSuggestion) => void;
 };
 
 type FlightFormCache = {
@@ -237,6 +240,8 @@ export function FlightSearchPanel({
   cacheKey = 'flights',
   className,
   defaultTripType = 'oneway',
+  variant = 'default',
+  onOriginChange,
 }: FlightSearchPanelProps) {
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
@@ -473,6 +478,19 @@ export function FlightSearchPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheReady]);
 
+  const lastOriginKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onOriginChange) return;
+    const place = originPlace ?? resolvePlaceExact(originQuery);
+    if (!place) return;
+    const key = `${place.kind}:${place.code}`;
+    if (lastOriginKey.current === key) return;
+    lastOriginKey.current = key;
+    onOriginChange(place);
+  }, [onOriginChange, originPlace, originQuery]);
+
+  const composer = variant === 'composer';
+
   const originLabel = originPlace ? placeDisplayValue(originPlace) : originQuery;
   const destLabel = destinationPlace
     ? placeDisplayValue(destinationPlace)
@@ -492,10 +510,22 @@ export function FlightSearchPanel({
   })();
 
   return (
-    <div className={cn('space-y-6', className)}>
-      <div className="rounded-3xl bg-gradient-to-br from-[oklch(0.22_0.05_220)] via-primary to-[oklch(0.5_0.1_200)] p-1 shadow-xl shadow-primary/20">
-        <div className="relative z-10 space-y-4 overflow-visible rounded-[1.35rem] bg-card p-4 sm:p-5">
-          <div className="flex flex-wrap gap-2">
+    <div
+      className={cn(
+        'space-y-5',
+        composer &&
+          'rounded-[1.75rem] bg-white p-5 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] ring-1 ring-black/5 sm:p-6',
+        className
+      )}
+    >
+      <div
+        className={cn(
+          'space-y-4',
+          !composer &&
+            'rounded-[1.75rem] bg-white p-4 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)] ring-1 ring-black/5 sm:p-5'
+        )}
+      >
+        <div className="flex flex-wrap gap-2">
             {(
               [
                 ['oneway', 'Solo andata'],
@@ -535,7 +565,9 @@ export function FlightSearchPanel({
                 className={cn(
                   'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
                   tripType === id
-                    ? 'bg-primary text-white'
+                    ? composer
+                      ? 'bg-[#0b1220] text-white'
+                      : 'bg-primary text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 )}
               >
@@ -606,7 +638,12 @@ export function FlightSearchPanel({
                 type="button"
                 onClick={() => void search()}
                 disabled={loading}
-                className="h-12 w-full rounded-xl bg-primary px-6 text-base font-semibold text-white hover:bg-primary/90 lg:w-auto"
+                className={cn(
+                  'h-12 w-full px-6 text-base font-semibold text-white lg:w-auto',
+                  composer
+                    ? 'rounded-full bg-[#0b1220] hover:bg-[#0b1220]/90'
+                    : 'rounded-xl bg-primary hover:bg-primary/90'
+                )}
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -617,7 +654,6 @@ export function FlightSearchPanel({
               </Button>
             </div>
           </div>
-        </div>
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -656,15 +692,15 @@ export function FlightSearchPanel({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="min-w-[240px] rounded-xl border-slate-700 bg-[#2a2f36] p-1.5 text-white shadow-2xl"
+                className="min-w-[240px] rounded-2xl border-slate-200 bg-white p-1.5 text-slate-900 shadow-xl"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <DropdownMenuItem
                     key={opt.id}
                     onClick={() => setSort(opt.id)}
                     className={cn(
-                      'cursor-pointer rounded-lg px-3 py-2.5 text-sm text-white focus:bg-primary focus:text-white',
-                      sort === opt.id && 'bg-white/10'
+                      'cursor-pointer rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:bg-slate-100 focus:text-slate-900',
+                      sort === opt.id && 'bg-slate-100'
                     )}
                   >
                     <span className="flex w-4 shrink-0 items-center justify-center">
@@ -680,8 +716,8 @@ export function FlightSearchPanel({
       </div>
 
       {loading && !offers && (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-sm text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <div className="flex items-center justify-center gap-2 rounded-2xl bg-slate-50 py-14 text-sm text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin text-accent" />
           Cerchiamo i voli migliori…
         </div>
       )}
@@ -693,7 +729,7 @@ export function FlightSearchPanel({
       )}
 
       {tripType === 'roundtrip' && offers && offers.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3">
           <button
             type="button"
             onClick={() => {
@@ -766,10 +802,10 @@ export function FlightSearchPanel({
             return (
               <li
                 key={`${o.offerId}-${pickStep}`}
-                className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                className="overflow-hidden rounded-3xl bg-slate-50/80 ring-1 ring-slate-100 transition hover:bg-white hover:ring-slate-200"
               >
-                <div className="border-b border-slate-100 px-4 py-2 sm:px-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+                <div className="border-b border-slate-100/80 px-4 py-2 sm:px-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     {tripType === 'roundtrip'
                       ? pickStep === 'outbound'
                         ? 'Andata'
@@ -817,7 +853,7 @@ export function FlightSearchPanel({
 
                   <div className="flex flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                     <div className="text-right">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-primary">
+                      <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
                         {o.price.toLocaleString('it-IT', {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 2,
@@ -832,7 +868,12 @@ export function FlightSearchPanel({
                     </div>
                     <Button
                       type="button"
-                      className="rounded-xl bg-primary px-5 font-semibold hover:bg-primary/90"
+                      className={cn(
+                        'px-5 font-semibold',
+                        composer
+                          ? 'rounded-full bg-[#0b1220] hover:bg-[#0b1220]/90'
+                          : 'rounded-xl bg-primary hover:bg-primary/90'
+                      )}
                       onClick={() => {
                         if (tripType === 'roundtrip' && pickStep === 'outbound') {
                           if (!o.hasReturn) {

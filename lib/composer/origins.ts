@@ -1,4 +1,5 @@
 import { defaultOriginIata, originFromCityLabel } from '@/lib/travel/origin-iata';
+import { placeDisplayValue, primaryAirportsForCountry, type PlaceSuggestion } from '@/lib/travel/airport-catalog';
 import type { ComposerDraft, ComposerOrigin } from '@/types/composer';
 import type { RankedOriginAirport } from '@/lib/composer/origin-airport-rank';
 
@@ -27,6 +28,32 @@ export function originFromRankedAirport(
     iata: airport.iata,
     role,
     airportName: airport.name,
+  };
+}
+
+export function originFromPlace(
+  place: PlaceSuggestion,
+  role: ComposerOrigin['role'] = 'organizer'
+): ComposerOrigin {
+  if (place.kind === 'country') {
+    const hub = primaryAirportsForCountry(place.code, 1)[0];
+    const iata = hub?.iata ?? defaultOriginIata();
+    return {
+      id: createOriginId(),
+      label: place.label,
+      city: hub?.city ?? place.label,
+      iata,
+      role,
+      airportName: hub?.name,
+    };
+  }
+  return {
+    id: createOriginId(),
+    label: placeDisplayValue(place),
+    city: place.label,
+    iata: place.code,
+    role,
+    airportName: place.kind === 'airport' ? place.sublabel : undefined,
   };
 }
 

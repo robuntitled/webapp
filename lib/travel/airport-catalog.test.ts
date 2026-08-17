@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { searchPlaceSuggestions } from '@/lib/travel/airport-catalog';
+import { expandOriginIata, searchPlaceSuggestions } from '@/lib/travel/airport-catalog';
 
 describe('searchPlaceSuggestions', () => {
   it('trova Egitto e aeroporti', () => {
@@ -24,5 +24,15 @@ describe('searchPlaceSuggestions', () => {
     expect(hits.some((h) => h.kind === 'city' && h.label === 'Ancona')).toBe(
       true
     );
+  });
+});
+
+describe('expandOriginIata', () => {
+  it('espande ROM negli scali di Roma', () => {
+    expect(expandOriginIata('ROM')).toEqual(['FCO', 'CIA']);
+  });
+
+  it('lascia FCO come scalo singolo', () => {
+    expect(expandOriginIata('FCO')).toEqual(['FCO']);
   });
 });
