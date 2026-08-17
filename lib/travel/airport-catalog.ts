@@ -212,6 +212,12 @@ const COUNTRIES: CountryDef[] = [
     aliases: ['malta', 'mt'],
     airports: ['MLA'],
   },
+  {
+    code: 'MV',
+    label: 'Maldive',
+    aliases: ['maldive', 'maldives', 'mv', 'male'],
+    airports: ['MLE'],
+  },
 ];
 
 const AIRPORTS: AirportDef[] = [
@@ -298,6 +304,7 @@ const AIRPORTS: AirportDef[] = [
   { iata: 'DMK', name: 'Don Mueang', city: 'Bangkok', countryCode: 'TH', countryLabel: 'Thailandia' },
   { iata: 'HKT', name: 'Phuket Intl', city: 'Phuket', countryCode: 'TH', countryLabel: 'Thailandia' },
   { iata: 'CNX', name: 'Chiang Mai', city: 'Chiang Mai', countryCode: 'TH', countryLabel: 'Thailandia' },
+  { iata: 'MLE', name: 'Velana Intl', city: 'Malé', countryCode: 'MV', countryLabel: 'Maldive', aliases: ['male', 'maldive'] },
   { iata: 'DXB', name: 'Dubai Intl', city: 'Dubai', countryCode: 'AE', countryLabel: 'Emirati Arabi' },
   { iata: 'AUH', name: 'Abu Dhabi Intl', city: 'Abu Dhabi', countryCode: 'AE', countryLabel: 'Emirati Arabi' },
   { iata: 'SHJ', name: 'Sharjah', city: 'Sharjah', countryCode: 'AE', countryLabel: 'Emirati Arabi' },

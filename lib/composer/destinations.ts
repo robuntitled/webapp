@@ -1,7 +1,15 @@
 import type { ComposerDestination } from '@/types/composer';
 import type { PlaceResult } from '@/lib/places/types';
 import type { DestinationMeta } from '@/types/composer';
+import {
+  CONTINENT_COUNTRIES,
+  DESTINATION_REGIONS,
+  findContinentCountry,
+} from '@/lib/composer/continent-countries';
 
+export { DESTINATION_REGIONS, CONTINENT_COUNTRIES };
+
+/** Mete in evidenza (template + griglia Tutte). I paesi per continente stanno in CONTINENT_COUNTRIES. */
 export const COMPOSER_DESTINATIONS: ComposerDestination[] = [
   { id: 'thailandia', label: 'Thailandia', emoji: '🇹🇭', region: 'Asia', vibe: 'Spiagge + street food', gradient: 'from-teal-600/80 via-emerald-500/60 to-amber-400/50', lat: 13.7563, lng: 100.5018 },
   { id: 'bali', label: 'Bali', emoji: '🇮🇩', region: 'Asia', vibe: 'Risaie e templi', gradient: 'from-emerald-700/80 via-lime-500/50 to-amber-300/40', lat: -8.4095, lng: 115.1889 },
@@ -16,9 +24,9 @@ export const COMPOSER_DESTINATIONS: ComposerDestination[] = [
   { id: 'new-york', label: 'New York', emoji: '🇺🇸', region: 'Americhe', vibe: 'City che non dorme', gradient: 'from-slate-700/80 via-indigo-600/50 to-amber-400/40', lat: 40.7128, lng: -74.006 },
   { id: 'messico', label: 'Messico', emoji: '🇲🇽', region: 'Americhe', vibe: 'Cenote e tacos', gradient: 'from-emerald-600/70 via-lime-500/40 to-orange-500/50', lat: 19.4326, lng: -99.1332 },
   { id: 'maldive', label: 'Maldive', emoji: '🇲🇻', region: 'Asia', vibe: 'Paradiso tropicale', gradient: 'from-cyan-400/80 via-teal-300/50 to-sky-200/40', lat: 4.1755, lng: 73.5093 },
-  { id: 'sicilia', label: 'Sicilia', emoji: '🇮🇹', region: 'Italia', vibe: 'Mare e granita', gradient: 'from-orange-500/70 via-amber-400/40 to-sky-500/50', lat: 37.5079, lng: 14.0934 },
-  { id: 'sardegna', label: 'Sardegna', emoji: '🇮🇹', region: 'Italia', vibe: 'Calette segrete', gradient: 'from-teal-500/70 via-cyan-400/40 to-emerald-300/50', lat: 40.1209, lng: 9.0129 },
-  { id: 'canarie', label: 'Canarie', emoji: '🇪🇸', region: 'Europa', vibe: 'Sole tutto l\'anno', gradient: 'from-yellow-500/70 via-orange-400/40 to-blue-500/50', lat: 28.2916, lng: -16.6291 },
+  { id: 'sicilia', label: 'Sicilia', emoji: '🇮🇹', region: 'Europa', vibe: 'Mare e granita', gradient: 'from-orange-500/70 via-amber-400/40 to-sky-500/50', lat: 37.5079, lng: 14.0934 },
+  { id: 'sardegna', label: 'Sardegna', emoji: '🇮🇹', region: 'Europa', vibe: 'Calette segrete', gradient: 'from-teal-500/70 via-cyan-400/40 to-emerald-300/50', lat: 40.1209, lng: 9.0129 },
+  { id: 'canarie', label: 'Canarie', emoji: '🇪🇸', region: 'Europa', vibe: "Sole tutto l'anno", gradient: 'from-yellow-500/70 via-orange-400/40 to-blue-500/50', lat: 28.2916, lng: -16.6291 },
   { id: 'vietnam', label: 'Vietnam', emoji: '🇻🇳', region: 'Asia', vibe: 'Baia e pho', gradient: 'from-green-600/70 via-emerald-400/40 to-teal-500/50', lat: 10.8231, lng: 106.6297 },
   { id: 'australia', label: 'Australia', emoji: '🇦🇺', region: 'Oceania', vibe: 'Surf e koala', gradient: 'from-sky-600/70 via-blue-400/40 to-amber-300/50', lat: -33.8688, lng: 151.2093 },
   { id: 'parigi', label: 'Parigi', emoji: '🇫🇷', region: 'Europa', vibe: 'Arte e boulevard', gradient: 'from-indigo-600/70 via-rose-400/40 to-amber-300/50', lat: 48.8566, lng: 2.3522 },
@@ -29,12 +37,11 @@ export const COMPOSER_DESTINATIONS: ComposerDestination[] = [
   { id: 'corea', label: 'Corea del Sud', emoji: '🇰🇷', region: 'Asia', vibe: 'K-culture e street food', gradient: 'from-violet-600/70 via-fuchsia-400/40 to-sky-400/50', lat: 37.5665, lng: 126.978 },
 ];
 
-export const DESTINATION_REGIONS = [...new Set(COMPOSER_DESTINATIONS.map((d) => d.region))];
-
 export function filterDestinations(query: string): ComposerDestination[] {
   const q = query.trim().toLowerCase();
+  const pool = [...COMPOSER_DESTINATIONS, ...CONTINENT_COUNTRIES];
   if (!q) return COMPOSER_DESTINATIONS;
-  return COMPOSER_DESTINATIONS.filter(
+  return pool.filter(
     (d) =>
       d.label.toLowerCase().includes(q) ||
       d.region.toLowerCase().includes(q) ||
@@ -44,19 +51,24 @@ export function filterDestinations(query: string): ComposerDestination[] {
 
 export function findDestination(idOrLabel: string): ComposerDestination | undefined {
   const key = idOrLabel.trim().toLowerCase();
-  return COMPOSER_DESTINATIONS.find(
-    (d) => d.id === key || d.label.toLowerCase() === key
+  return (
+    COMPOSER_DESTINATIONS.find((d) => d.id === key || d.label.toLowerCase() === key) ??
+    findContinentCountry(idOrLabel)
   );
 }
 
 export function featuredToMeta(dest: ComposerDestination): DestinationMeta {
+  const country =
+    dest.region === dest.label
+      ? dest.label
+      : findContinentCountry(dest.label)?.label ?? dest.label;
   return {
     label: dest.label,
     lat: dest.lat,
     lng: dest.lng,
     subtitle: dest.region,
-    placeTypeLabel: dest.region === 'Italia' ? 'Regione' : 'Destinazione',
-    country: dest.region === 'Italia' ? 'Italia' : dest.region,
+    placeTypeLabel: dest.region,
+    country,
   };
 }
 

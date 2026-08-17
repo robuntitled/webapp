@@ -40,6 +40,41 @@ describe('rankOriginAirports', () => {
     expect(ranked.find((a) => a.iata === 'AOI')?.score).toBeGreaterThan(ranked[0]!.score);
   });
 
+  it('drops metro codes like ROM and returns at most 3 airports', () => {
+    const rom = {
+      iata: 'ROM',
+      name: 'Rome – All Airports',
+      city: 'Rome',
+      country: 'Italy',
+      lat: 41.8,
+      lon: 12.2,
+    };
+    const ranked = rankOriginAirports({
+      airports: [aoi, fco, mxp, rom],
+      origin: altidona,
+      destination: { lat: -33.8688, lng: 151.2093 },
+    });
+    expect(ranked.every((a) => a.iata !== 'ROM')).toBe(true);
+    expect(ranked.length).toBeLessThanOrEqual(3);
+  });
+
+  it('does not treat every International airport as a long-haul hub', () => {
+    const psa = {
+      iata: 'PSA',
+      name: 'Pisa International Airport',
+      city: 'Pisa',
+      country: 'Italy',
+      lat: 43.6839,
+      lon: 10.3927,
+    };
+    const ranked = rankOriginAirports({
+      airports: [aoi, fco, psa],
+      origin: altidona,
+      destination: { lat: 4.1755, lng: 73.5093 },
+    });
+    expect(ranked[0]?.iata).toBe('FCO');
+  });
+
   it('picks the nearest regional airport for a short European hop', () => {
     const ranked = rankOriginAirports({
       airports: [aoi, fco, mxp],

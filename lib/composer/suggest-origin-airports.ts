@@ -46,9 +46,8 @@ async function extraQueries(
   const cc = originCountry?.toUpperCase();
   const extras: string[] = [];
   if (cc === 'IT' || !cc) {
-    extras.push(...ITALY_NEAR_QUERIES);
     if (haul === 'long') extras.push(...ITALY_HUB_QUERIES);
-    else extras.push('FCO');
+    else extras.push(...ITALY_NEAR_QUERIES, 'FCO');
   } else {
     const group = COUNTRY_AIRPORTS.find((g) => g.code === cc);
     extras.push(...(group?.airports.slice(0, 3) ?? []));

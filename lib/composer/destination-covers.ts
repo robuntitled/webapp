@@ -49,11 +49,49 @@ export const DESTINATION_COVERS: Record<string, string> = {
   peru: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?auto=format&fit=crop&w=1200&q=80',
   corea:
     'https://images.unsplash.com/photo-1546874177-9e66410726e6?auto=format&fit=crop&w=1200&q=80',
+  francia:
+    'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
+  germania:
+    'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=1200&q=80',
+  cina: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80',
+  india:
+    'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=1200&q=80',
+  brasile:
+    'https://images.unsplash.com/photo-1483729558449-99ef03a8b130?auto=format&fit=crop&w=1200&q=80',
+  italia:
+    'https://images.unsplash.com/photo-1516483638261-f4dbaf036ca3?auto=format&fit=crop&w=1200&q=80',
+  'stati-uniti':
+    'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=1200&q=80',
+  'nuova-zelanda':
+    'https://images.unsplash.com/photo-1469521669194-babb45599def?auto=format&fit=crop&w=1200&q=80',
+  egitto:
+    'https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=1200&q=80',
+  turchia:
+    'https://images.unsplash.com/photo-1524231757912-21f4fe64c7e2?auto=format&fit=crop&w=1200&q=80',
 };
+
+const TRAVEL_PHOTO_POOL = [
+  'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1530789253388-582c481c54b0?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1523906834658-6e24ef23b743?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
+];
 
 export function coverForDestination(idOrLabel: string): string {
   const dest = findDestination(idOrLabel);
   if (dest && DESTINATION_COVERS[dest.id]) return DESTINATION_COVERS[dest.id];
   const key = idOrLabel.trim().toLowerCase();
-  return DESTINATION_COVERS[key] ?? DEFAULT_TRIP_IMAGE;
+  if (DESTINATION_COVERS[key]) return DESTINATION_COVERS[key];
+  const seed = dest?.id ?? key;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return TRAVEL_PHOTO_POOL[hash % TRAVEL_PHOTO_POOL.length] ?? DEFAULT_TRIP_IMAGE;
 }

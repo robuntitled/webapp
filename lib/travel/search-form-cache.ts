@@ -13,7 +13,8 @@ export type SearchCacheKey =
   | 'transfer'
   | 'cars'
   | 'trip-flights'
-  | 'trip-hotels';
+  | 'trip-hotels'
+  | 'composer-flights';
 
 export function loadSearchFormCache<T>(key: SearchCacheKey): T | null {
   if (typeof window === 'undefined') return null;

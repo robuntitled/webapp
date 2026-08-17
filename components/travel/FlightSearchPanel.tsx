@@ -140,9 +140,9 @@ type FlightSearchPanelProps = {
   defaultAdults?: number;
   /** Default false: niente ricerca automatica */
   autoSearch?: boolean;
-  /** sessionStorage key; null = non salvare */
   cacheKey?: SearchCacheKey | null;
   className?: string;
+  defaultTripType?: TripType;
 };
 
 type FlightFormCache = {
@@ -236,11 +236,12 @@ export function FlightSearchPanel({
   autoSearch = false,
   cacheKey = 'flights',
   className,
+  defaultTripType = 'oneway',
 }: FlightSearchPanelProps) {
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
 
-  const [tripType, setTripType] = useState<TripType>('oneway');
+  const [tripType, setTripType] = useState<TripType>(defaultTripType);
   const [originQuery, setOriginQuery] = useState(defaultOrigin);
   const [destinationQuery, setDestinationQuery] = useState(defaultDestination);
   const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(() =>
@@ -284,6 +285,22 @@ export function FlightSearchPanel({
     }
     setCacheReady(true);
   }, [cacheKey]);
+
+  useEffect(() => {
+    if (!cacheReady) return;
+    if (defaultOrigin) {
+      setOriginQuery(defaultOrigin);
+      setOriginPlace(resolvePlaceExact(defaultOrigin));
+    }
+    if (defaultDestination) {
+      setDestinationQuery(defaultDestination);
+      setDestinationPlace(resolvePlaceExact(defaultDestination));
+    }
+    if (defaultStartDate) setStartDate(defaultStartDate);
+    if (defaultEndDate) setEndDate(defaultEndDate);
+    if (defaultTripType) setTripType(defaultTripType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync trip context into the OTA form
+  }, [cacheReady, defaultOrigin, defaultDestination, defaultStartDate, defaultEndDate, defaultTripType]);
 
   useEffect(() => {
     if (!cacheKey || !cacheReady) return;

@@ -84,11 +84,31 @@ const REGIONAL_IATA = new Set([
   'GRS',
 ]);
 
-export function airportSize(iata: string, name: string): AirportSize {
+const METRO_IATA = new Set([
+  'ROM',
+  'MIL',
+  'LON',
+  'PAR',
+  'NYC',
+  'TYO',
+  'OSA',
+  'SEL',
+  'BUE',
+  'RIO',
+  'STO',
+  'REK',
+  'CHI',
+  'WAS',
+  'BJS',
+  'SHA',
+  'BER',
+  'MOW',
+]);
+
+export function airportSize(iata: string, _name: string): AirportSize {
   const code = iata.trim().toUpperCase();
   if (LONG_HAUL_HUBS.has(code)) return 'hub';
   if (REGIONAL_IATA.has(code)) return 'regional';
-  if (/international/i.test(name)) return 'hub';
   return 'medium';
 }
 
@@ -111,7 +131,13 @@ export function rankOriginAirports(params: {
   );
 
   const ranked = params.airports
-    .filter((a) => a.iata && Number.isFinite(a.lat) && Number.isFinite(a.lon))
+    .filter((a) => {
+      const code = a.iata.trim().toUpperCase();
+      if (!code || code.length !== 3) return false;
+      if (METRO_IATA.has(code)) return false;
+      if (/all airports/i.test(a.name)) return false;
+      return Number.isFinite(a.lat) && Number.isFinite(a.lon);
+    })
     .map((airport) => {
       const size = airportSize(airport.iata, airport.name);
       const distanceKm = params.origin
@@ -148,5 +174,5 @@ export function rankOriginAirports(params: {
     .sort((a, b) => a.score - b.score);
 
   if (ranked[0]) ranked[0].recommended = true;
-  return ranked.slice(0, 8);
+  return ranked.slice(0, 3);
 }

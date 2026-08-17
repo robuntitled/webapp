@@ -12,17 +12,15 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
-  CalendarIcon,
   Loader2,
-  MapPin,
-  Navigation,
-  Plane,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
 import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { originFromRankedAirport } from '@/lib/composer/origins';
+import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
+import { resolveDestinationIata } from '@/lib/travel/iata';
 import type { RankedOriginAirport } from '@/lib/composer/origin-airport-rank';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
@@ -44,16 +42,17 @@ const WHO_COVERS = {
 const FROM_COVER =
   'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=80';
 
-function airportSizeLabel(size: RankedOriginAirport['size']) {
-  if (size === 'hub') return 'Hub';
-  if (size === 'regional') return 'Regionale';
-  return 'Nazionale';
-}
+const AIRPORT_COVERS = [
+  FROM_COVER,
+  'https://images.unsplash.com/photo-1570710891163-6d3b5c47248b?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1542296332-2e4473faf093?auto=format&fit=crop&w=900&q=80',
+];
 
-function formatAirportKm(km: number | null) {
-  if (km == null) return null;
-  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
-}
+const DATE_COVERS = {
+  start:
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
+  end: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=900&q=80',
+};
 
 const DURATION_CARDS = [
   {
@@ -90,6 +89,7 @@ function PhotoChoiceCard({
   title,
   body,
   className,
+  as = 'button',
 }: {
   cover: string;
   active?: boolean;
@@ -98,13 +98,15 @@ function PhotoChoiceCard({
   title: string;
   body?: string;
   className?: string;
+  as?: 'button' | 'div';
 }) {
+  const Comp = as;
   return (
-    <button
-      type="button"
+    <Comp
       onClick={onClick}
       className={cn(
         'group relative min-h-[196px] overflow-hidden rounded-3xl text-left shadow-[0_24px_50px_-28px_rgba(0,0,0,0.7)] transition duration-300',
+        as === 'button' ? 'cursor-pointer' : '',
         active
           ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220] scale-[1.01]'
           : 'ring-1 ring-white/12 hover:ring-white/30',
@@ -128,7 +130,7 @@ function PhotoChoiceCard({
         <p className="font-display text-2xl font-semibold text-white">{title}</p>
         {body ? <p className="mt-1 text-sm leading-snug text-white/82">{body}</p> : null}
       </div>
-    </button>
+    </Comp>
   );
 }
 
@@ -150,7 +152,6 @@ export function ComposerLandingStep({
   profileCountry: _profileCountry,
 }: ComposerLandingStepProps) {
   const [plannerOpen, setPlannerOpen] = useState(false);
-  const [geoLoading, setGeoLoading] = useState(false);
   const [originCityInput, setOriginCityInput] = useState(
     draft.organizerOrigin?.city ?? profileCity?.trim() ?? ''
   );
@@ -248,7 +249,7 @@ export function ComposerLandingStep({
         ? {
             label: 'Quando',
             title: 'Quando parti?',
-            subtitle: 'Date e durata. L’itinerario si piega ai giorni che scegli.',
+              subtitle: 'Date e durata. Tre ritmi. L’itinerario si piega a te.',
             micro: startedWithDest.current ? 1 : 2,
             total: startedWithDest.current ? 3 : 4,
           }
@@ -256,8 +257,7 @@ export function ComposerLandingStep({
           ? {
               label: 'Da dove',
               title: 'Da dove voli?',
-              subtitle:
-                'Cerca città o aeroporto. Per l’Australia (e le lunghe) scegliamo un hub, non il regionale sotto casa.',
+              subtitle: 'Tre scali LiteAPI per questa tratta. Prenota da qui.',
               micro: startedWithDest.current ? 2 : 3,
               total: startedWithDest.current ? 3 : 4,
             }
@@ -346,65 +346,11 @@ export function ComposerLandingStep({
     return () => clearTimeout(t);
   }, [phase, originCityInput, searchOriginAirports]);
 
-  const detectNearbyAirports = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocalizzazione non supportata');
-      return;
-    }
-    setGeoLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          await searchOriginAirports({
-            q: originCityInput.trim() || undefined,
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        } finally {
-          setGeoLoading(false);
-        }
-      },
-      async (err) => {
-        if (err.code !== err.PERMISSION_DENIED) {
-          try {
-            const res = await fetch('/api/geo/approx');
-            if (res.ok) {
-              const data = (await res.json()) as {
-                city?: string | null;
-                lat?: number | null;
-                lng?: number | null;
-              };
-              if (data.lat != null && data.lng != null) {
-                if (data.city?.trim()) setOriginCityInput(data.city.trim());
-                await searchOriginAirports({
-                  q: data.city?.trim() || originCityInput.trim() || undefined,
-                  lat: data.lat,
-                  lng: data.lng,
-                });
-                setGeoLoading(false);
-                return;
-              }
-              if (data.city?.trim()) {
-                setOriginCityInput(data.city.trim());
-                await searchOriginAirports({ q: data.city.trim() });
-                setGeoLoading(false);
-                return;
-              }
-            }
-          } catch {
-            // ignore
-          }
-        }
-        setGeoLoading(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          toast.error('Permesso posizione negato');
-        } else {
-          toast.error('Posizione non disponibile — cerca città o aeroporto');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 12000 }
-    );
-  };
+  useEffect(() => {
+    if (phase !== 'from') return;
+    if (originCityInput.trim().length >= 2) return;
+    setOriginCityInput(profileCity?.trim() || 'Italia');
+  }, [phase, originCityInput, profileCity]);
 
   const applyDuration = (n: 5 | 7 | 10) => {
     const start = startDate ?? addDays(new Date(), 14);
@@ -449,7 +395,7 @@ export function ComposerLandingStep({
           animate={{ opacity: 1, y: 0 }}
           className="composer-destination-pill mb-6 flex items-center gap-3 overflow-hidden px-2 py-2"
         >
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl">
+          <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-2xl">
             {destCover ? (
               <Image src={destCover} alt="" fill sizes="48px" className="object-cover" />
             ) : null}
@@ -480,17 +426,15 @@ export function ComposerLandingStep({
             <div className="grid gap-3 sm:grid-cols-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)]"
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Partenza
-                    </p>
-                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
-                      <CalendarIcon className="h-5 w-5 text-accent" />
-                      {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                    </p>
+                  <button type="button" className="text-left">
+                    <PhotoChoiceCard
+                      as="div"
+                      cover={destCover ?? DATE_COVERS.start}
+                      kicker="Partenza"
+                      title={startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                      body="Il giorno in cui decolla il gruppo."
+                      className="min-h-[168px] w-full"
+                    />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 rounded-xl" align="start">
@@ -516,18 +460,15 @@ export function ComposerLandingStep({
               </Popover>
               <Popover>
                 <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    disabled={!startDate}
-                    className="rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)] disabled:opacity-50"
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Ritorno
-                    </p>
-                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
-                      <CalendarIcon className="h-5 w-5 text-accent" />
-                      {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                    </p>
+                  <button type="button" disabled={!startDate} className="text-left disabled:opacity-50">
+                    <PhotoChoiceCard
+                      as="div"
+                      cover={DATE_COVERS.end}
+                      kicker="Ritorno"
+                      title={endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                      body="Chiudi il giro. Stesso gate."
+                      className="min-h-[168px] w-full"
+                    />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 rounded-xl" align="end">
@@ -567,129 +508,61 @@ export function ComposerLandingStep({
         ) : null}
 
         {phase === 'from' ? (
-          <motion.div key="from" {...phaseMotion} className="space-y-4">
-            <div className="relative overflow-hidden rounded-[2rem] shadow-[0_28px_60px_-32px_rgba(0,0,0,0.75)]">
-              <div className="relative h-[240px] sm:h-[280px]">
-                <Image
-                  src={FROM_COVER}
-                  alt=""
-                  fill
-                  sizes="(max-width: 768px) 100vw, 768px"
-                  className="object-cover"
-                  priority
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/15" />
-              </div>
-              <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-8">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
-                  Gate di partenza
-                </p>
-                <h3 className="mt-1 font-display text-3xl font-semibold text-white">
-                  {draft.organizerOrigin?.airportName ??
-                    draft.organizerOrigin?.city ??
-                    'Da dove voli?'}
-                </h3>
-                {draft.organizerOrigin?.iata ? (
-                  <p className="mt-1 flex items-center gap-1.5 text-sm text-white/80">
-                    <Plane className="h-4 w-4 text-accent" />
-                    {draft.organizerOrigin.city} · {draft.organizerOrigin.iata}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm text-white/75">
-                    Cerca aeroporti vicini. Il consigliato pesa distanza e tipo di tratta.
-                  </p>
-                )}
-                <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 shrink-0 rounded-2xl"
-                    onClick={detectNearbyAirports}
-                    disabled={geoLoading || airportLoading}
-                  >
-                    {geoLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Navigation className="mr-2 h-4 w-4 text-accent" />
-                    )}
-                    Aeroporti vicini
-                  </Button>
-                  <Input
-                    placeholder="Città o aeroporto"
-                    className="h-12 rounded-2xl composer-field"
-                    value={originCityInput}
-                    onChange={(e) => setOriginCityInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void searchOriginAirports({ q: originCityInput.trim() });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
+          <motion.div key="from" {...phaseMotion} className="space-y-5">
+            <Input
+              placeholder="Città di partenza"
+              className="h-12 rounded-2xl composer-field"
+              value={originCityInput}
+              onChange={(e) => setOriginCityInput(e.target.value)}
+            />
 
             {airportLoading ? (
               <p className="flex items-center gap-2 text-sm text-white/70">
                 <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                Cerco gli aeroporti giusti per questa tratta…
+                Cerco i 3 scali LiteAPI per questa tratta…
               </p>
             ) : null}
 
             {airportHits.length > 0 ? (
-              <ul className="space-y-2">
-                {airportHits.map((airport) => {
-                  const km = formatAirportKm(airport.distanceKm);
+              <div className="grid gap-3 sm:grid-cols-3">
+                {airportHits.map((airport, i) => {
                   const selected = draft.organizerOrigin?.iata === airport.iata;
                   return (
-                    <li key={airport.iata}>
-                      <button
-                        type="button"
-                        onClick={() => pickAirport(airport)}
-                        className={cn(
-                          'w-full rounded-2xl bg-white px-4 py-3.5 text-left shadow-[0_16px_36px_-24px_rgba(0,0,0,0.55)] transition',
-                          selected
-                            ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220]'
-                            : 'ring-1 ring-black/5 hover:ring-accent/40'
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
-                              <span className="font-mono text-accent">{airport.iata}</span>
-                              <span className="truncate">{airport.name}</span>
-                              {airport.recommended ? (
-                                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-                                  Consigliato
-                                </span>
-                              ) : null}
-                            </p>
-                            <p className="mt-0.5 text-sm text-slate-600">
-                              {airport.city}
-                              {km ? ` · ${km}` : ''}
-                              {` · ${airportSizeLabel(airport.size)}`}
-                            </p>
-                            <p className="mt-1 text-xs leading-snug text-slate-500">
-                              {airport.reason}
-                            </p>
-                          </div>
-                          <MapPin
-                            className={cn(
-                              'mt-0.5 h-4 w-4 shrink-0',
-                              selected ? 'text-accent' : 'text-slate-300'
-                            )}
-                          />
-                        </div>
-                      </button>
-                    </li>
+                    <PhotoChoiceCard
+                      key={airport.iata}
+                      cover={AIRPORT_COVERS[i] ?? FROM_COVER}
+                      kicker={airport.recommended ? 'Consigliato' : airport.iata}
+                      title={airport.iata}
+                      body={`${airport.city}${airport.recommended ? ' · il più conveniente per questa meta' : ''}`}
+                      active={selected}
+                      onClick={() => pickAirport(airport)}
+                    />
                   );
                 })}
-              </ul>
+              </div>
             ) : airportSearched && !airportLoading ? (
-              <p className="text-sm text-white/70">
-                Nessun aeroporto per questa ricerca. Prova una città più grande.
-              </p>
+              <p className="text-sm text-white/70">Nessun aeroporto per questa tratta.</p>
+            ) : null}
+
+            {draft.organizerOrigin?.iata && draft.startDate ? (
+              <div className="overflow-hidden rounded-[1.75rem] bg-white p-4 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.55)] sm:p-5">
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Voli LiteAPI
+                </p>
+                <FlightSearchPanel
+                  key={draft.organizerOrigin.iata}
+                  defaultOrigin={draft.organizerOrigin.iata}
+                  defaultDestination={
+                    resolveDestinationIata(draft.destination) ?? draft.destination
+                  }
+                  defaultStartDate={draft.startDate}
+                  defaultEndDate={draft.endDate}
+                  defaultAdults={1}
+                  defaultTripType="roundtrip"
+                  autoSearch
+                  cacheKey="composer-flights"
+                />
+              </div>
             ) : null}
           </motion.div>
         ) : null}
