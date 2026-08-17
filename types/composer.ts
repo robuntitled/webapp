@@ -79,6 +79,8 @@ export type ComposerDraft = {
   /** Budget indicativo opzionale (landing) */
   budgetHint?: number;
   days: ComposerDay[];
+  /** Copertina scelta da Pexels in pubblicazione */
+  imageUrl?: string;
 };
 
 export type ComposerDestination = {

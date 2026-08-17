@@ -2,12 +2,28 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import type { TripWithRelations } from '@/types/trip';
-import { isDiscoverableSoloTrip, isOpenSoloTrip, isTripCreator } from '@/lib/trips/display';
+import { findDestination } from '@/lib/composer/destinations';
+import { getSpotsLeft, isDiscoverableSoloTrip, isOpenSoloTrip, isTripCreator } from '@/lib/trips/display';
+import { isClosingSoon, isGroupSolid } from '@/lib/trips/formation';
+
+export type DurationFilter = 'any' | 'weekend' | 'week' | 'long';
+export type StatusFilter = 'any' | 'forming' | 'closing' | 'last';
 
 export type DiscoverSearchFilters = {
   searchTerm: string;
   dateRange: DateRange | undefined;
   priceRange: [number, number];
+  duration: DurationFilter;
+  status: StatusFilter;
+  region: string;
+};
+
+export const EMPTY_DISCOVER_FILTERS: Omit<DiscoverSearchFilters, 'priceRange'> = {
+  searchTerm: '',
+  dateRange: undefined,
+  duration: 'any',
+  status: 'any',
+  region: '',
 };
 
 /** Confronta date YYYY-MM-DD senza shift timezone. */
@@ -37,11 +53,18 @@ export function formatDiscoverDateRangeLabel(range: DateRange | undefined): stri
   return `${format(range.from, 'd MMM yyyy', { locale: it })} – ${format(range.to, 'd MMM yyyy', { locale: it })}`;
 }
 
+export function tripDurationDays(trip: Pick<TripWithRelations, 'startDate' | 'endDate'>): number {
+  const start = toDateOnlyUtcMs(trip.startDate);
+  const end = toDateOnlyUtcMs(trip.endDate);
+  if (start == null || end == null) return 0;
+  return Math.round((end - start) / 86_400_000) + 1;
+}
+
 export function tripMatchesDiscoverFilters(
   trip: TripWithRelations,
   filters: DiscoverSearchFilters
 ): boolean {
-  const { searchTerm, dateRange, priceRange } = filters;
+  const { searchTerm, dateRange, priceRange, duration, status, region } = filters;
   const q = searchTerm.trim().toLowerCase();
 
   const textMatch =
@@ -65,12 +88,30 @@ export function tripMatchesDiscoverFilters(
   const price = Number(trip.price);
   const safePrice = Number.isFinite(price) ? price : 0;
   const minP = Number.isFinite(priceRange[0]) ? priceRange[0] : 0;
-  // Se max non è sensato, non filtrare per tetto
   const maxP =
     Number.isFinite(priceRange[1]) && priceRange[1] > 0 ? priceRange[1] : Number.MAX_SAFE_INTEGER;
   const priceMatch = safePrice >= minP && safePrice <= maxP;
 
-  return textMatch && dateMatch && priceMatch;
+  const days = tripDurationDays(trip);
+  const durationMatch =
+    duration === 'any' ||
+    days === 0 ||
+    (duration === 'weekend' && days <= 4) ||
+    (duration === 'week' && days >= 5 && days <= 8) ||
+    (duration === 'long' && days >= 9);
+
+  const count = trip.participantCount ?? 0;
+  const left = getSpotsLeft(Number(trip.maxParticipants) || 0, count);
+  const statusMatch =
+    status === 'any' ||
+    (status === 'forming' && !isGroupSolid(trip)) ||
+    (status === 'closing' && isClosingSoon(trip)) ||
+    (status === 'last' && left > 0 && left <= 3);
+
+  const tripRegion = findDestination(trip.destination)?.region ?? '';
+  const regionMatch = !region || tripRegion === region || trip.destination.toLowerCase().includes(region.toLowerCase());
+
+  return textMatch && dateMatch && priceMatch && durationMatch && statusMatch && regionMatch;
 }
 
 /**
@@ -132,6 +173,9 @@ export function buildDiscoverSearchParams(filters: DiscoverSearchFilters): URLSe
   }
   params.set('priceMin', String(filters.priceRange[0]));
   params.set('priceMax', String(filters.priceRange[1]));
+  if (filters.duration !== 'any') params.set('duration', filters.duration);
+  if (filters.status !== 'any') params.set('status', filters.status);
+  if (filters.region) params.set('region', filters.region);
   return params;
 }
 
@@ -143,6 +187,15 @@ export function parseDiscoverSearchParams(searchParams: URLSearchParams): Discov
   const priceMin = priceMinRaw != null ? Number(priceMinRaw) : 0;
   // Default molto alto se assente — evita di tagliare viaggi costosi
   const priceMax = priceMaxRaw != null ? Number(priceMaxRaw) : 100_000;
+
+  const durationRaw = searchParams.get('duration');
+  const duration: DurationFilter =
+    durationRaw === 'weekend' || durationRaw === 'week' || durationRaw === 'long'
+      ? durationRaw
+      : 'any';
+  const statusRaw = searchParams.get('status');
+  const status: StatusFilter =
+    statusRaw === 'forming' || statusRaw === 'closing' || statusRaw === 'last' ? statusRaw : 'any';
 
   return {
     searchTerm: searchParams.get('q') ?? '',
@@ -156,5 +209,8 @@ export function parseDiscoverSearchParams(searchParams: URLSearchParams): Discov
       Number.isFinite(priceMin) ? priceMin : 0,
       Number.isFinite(priceMax) && priceMax > 0 ? priceMax : 100_000,
     ],
+    duration,
+    status,
+    region: searchParams.get('region') ?? '',
   };
 }

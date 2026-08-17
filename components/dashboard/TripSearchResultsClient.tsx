@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { TripDiscoverSearchBar } from '@/components/dashboard/TripDiscoverSearchBar';
@@ -11,6 +11,7 @@ import {
   explainEmptyDiscover,
   filterDiscoverResults,
   parseDiscoverSearchParams,
+  type DiscoverSearchFilters,
 } from '@/lib/trips/discover-search';
 
 export function TripSearchResultsClient({
@@ -30,10 +31,11 @@ export function TripSearchResultsClient({
     return { min: 0, max };
   }, [initialTrips]);
 
-  const filters = useMemo(
-    () => parseDiscoverSearchParams(new URLSearchParams(searchParams.toString())),
-    [searchParams]
-  );
+  const [filters, setFilters] = useState<DiscoverSearchFilters>(() => {
+    const parsed = parseDiscoverSearchParams(new URLSearchParams(searchParams.toString()));
+    const max = parsed.priceRange[1] >= 50_000 ? priceBounds.max : parsed.priceRange[1];
+    return { ...parsed, priceRange: [parsed.priceRange[0], max] };
+  });
 
   const results = useMemo(
     () => filterDiscoverResults(initialTrips, filters, userId),
@@ -48,13 +50,13 @@ export function TripSearchResultsClient({
   return (
     <div className="min-h-[calc(100vh-4rem)]">
       <TripDiscoverSearchBar
-        variant="compact"
-        initialFilters={filters}
+        filters={filters}
+        onChange={setFilters}
         priceBounds={priceBounds}
       />
 
       <div className="container mx-auto px-4 py-8 pb-24 max-w-7xl">
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <h1 className="font-display text-2xl md:text-3xl font-semibold text-white">
             Viaggi sulla mappa
           </h1>
@@ -78,13 +80,12 @@ export function TripSearchResultsClient({
           }
         />
 
-        {results.length === 0 ? (
-          <div className="mt-4 text-center">
-            <Link href="/dashboard" className="text-sm text-accent hover:underline">
-              Torna alla ricerca
-            </Link>
-          </div>
-        ) : null}
+        <p className="mt-10 text-center text-sm text-white/50">
+          Vuoi lanciare tu?{' '}
+          <Link href="/dashboard/crea?new=1" className="text-white underline underline-offset-4">
+            Parti da un template
+          </Link>
+        </p>
       </div>
     </div>
   );

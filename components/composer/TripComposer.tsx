@@ -374,6 +374,7 @@ export function TripComposer({
                 publishing={publishing}
                 onBack={() => setStep('plan')}
                 onPublish={() => void publish()}
+                onChange={patchDraft}
               />
             </motion.div>
           )}

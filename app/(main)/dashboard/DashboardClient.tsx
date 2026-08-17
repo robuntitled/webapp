@@ -1,18 +1,21 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { TripDiscoverSearchBar } from '@/components/dashboard/TripDiscoverSearchBar';
 import { DiscoverResultsSplit } from '@/components/dashboard/DiscoverResultsSplit';
 import type { TripWithRelations } from '@/types/trip';
-import { Plus } from 'lucide-react';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { type Session } from 'next-auth';
-import { Button } from '@/components/ui/button';
-import { filterDiscoverResults } from '@/lib/trips/discover-search';
+import {
+  EMPTY_DISCOVER_FILTERS,
+  filterDiscoverResults,
+  type DiscoverSearchFilters,
+} from '@/lib/trips/discover-search';
 import { isClosingSoon, isGroupSolid } from '@/lib/trips/formation';
 import { TRIP_TEMPLATES } from '@/lib/composer/trip-templates';
-import { cn } from '@/lib/utils';
+import { coverForDestination } from '@/lib/composer/destination-covers';
 
 export default function DashboardClient({
   initialTrips,
@@ -30,18 +33,14 @@ export default function DashboardClient({
     return { min: 0, max };
   }, [initialTrips]);
 
-  const defaultFilters = useMemo(
-    () => ({
-      searchTerm: '',
-      dateRange: undefined,
-      priceRange: [priceBounds.min, priceBounds.max] as [number, number],
-    }),
-    [priceBounds]
-  );
+  const [filters, setFilters] = useState<DiscoverSearchFilters>(() => ({
+    ...EMPTY_DISCOVER_FILTERS,
+    priceRange: [priceBounds.min, priceBounds.max],
+  }));
 
   const results = useMemo(
-    () => filterDiscoverResults(initialTrips, defaultFilters, userId),
-    [initialTrips, defaultFilters, userId]
+    () => filterDiscoverResults(initialTrips, filters, userId),
+    [initialTrips, filters, userId]
   );
 
   const closing = useMemo(() => results.filter((t) => isClosingSoon(t)).slice(0, 6), [results]);
@@ -51,49 +50,45 @@ export default function DashboardClient({
   );
   const featuredSeeds = TRIP_TEMPLATES.filter((t) => t.featured);
 
+  const scrollToResults = () => {
+    document.getElementById('risultati')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div className="relative z-0 pb-24">
-      <div className="container mx-auto px-4 pt-10 mb-8 text-center max-w-3xl">
+      <TripDiscoverSearchBar
+        filters={filters}
+        onChange={setFilters}
+        onSubmit={scrollToResults}
+        priceBounds={priceBounds}
+      />
+
+      <div className="container mx-auto max-w-3xl px-4 pb-8 pt-10 text-center">
         <ScrollReveal variant="decor">
-          <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
+          <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-accent">
             Esplora
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
-          <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-            Qualcuno parte già. Unisciti.
+          <h1 className="mx-auto max-w-xl text-center font-display text-4xl font-semibold leading-[1.1] text-white md:text-6xl">
+            Il gruppo c’è già. Manca tu.
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
-          <p className="mt-4 text-lg text-white/90 max-w-2xl mx-auto">
-            Scegli un viaggio in evidenza o in chiusura. Prenoti voli e hotel solo a gruppo formato.
+          <p className="mx-auto mt-4 max-w-lg text-center text-lg text-white/90">
+            Viaggi in formazione, prezzi veri, zero markup da tour operator. Prenoti solo quando si
+            parte.
           </p>
         </ScrollReveal>
-        {session?.user && (
-          <ScrollReveal variant="card" stagger={2}>
-            <Button asChild className="mt-6 rounded-full gap-2">
-              <Link href="/dashboard/crea?new=1">
-                <Plus className="h-4 w-4" />
-                Crea un viaggio
-              </Link>
-            </Button>
-            <p className="mt-3 text-sm text-white/85">
-              Creator:{' '}
-              <Link href="/dashboard/creator" className="underline underline-offset-4 text-white">
-                cashback 2%+ nei primi mesi
-              </Link>
-            </p>
-          </ScrollReveal>
-        )}
       </div>
 
-      <TripDiscoverSearchBar variant="compact" priceBounds={priceBounds} />
-
-      <div className="container mx-auto px-4 mt-8 max-w-7xl space-y-10">
+      <div id="risultati" className="container mx-auto mt-2 max-w-7xl scroll-mt-36 space-y-10 px-4">
         <section>
-          <h2 className="font-display text-xl md:text-2xl font-semibold text-white">In evidenza</h2>
-          <p className="mt-1 text-sm text-white/85">
-            Seed: viaggi già in formazione, più modelli pronti da lanciare.
+          <h2 className="text-center font-display text-xl font-semibold text-white md:text-2xl">
+            In evidenza
+          </h2>
+          <p className="mt-1 text-center text-sm text-white/85">
+            Modelli pronti e viaggi che si stanno riempiendo.
           </p>
           {seedTrips.length > 0 ? (
             <div className="mt-4">
@@ -101,28 +96,42 @@ export default function DashboardClient({
             </div>
           ) : null}
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredSeeds.map((tpl) => (
-              <Link
-                key={tpl.id}
-                href={`/dashboard/crea?new=1&template=${encodeURIComponent(tpl.id)}`}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 hover:border-white/25"
-              >
-                <div className={cn('mb-3 h-12 rounded-xl bg-gradient-to-br', tpl.gradient)} />
-                <p className="font-medium text-white">
-                  {tpl.emoji} {tpl.label}
-                </p>
-                <p className="mt-1 text-xs text-white/80">{tpl.vibe}</p>
-              </Link>
-            ))}
+            {featuredSeeds.map((tpl) => {
+              const cover = coverForDestination(tpl.destinationId);
+              return (
+                <Link
+                  key={tpl.id}
+                  href={`/dashboard/crea?new=1&template=${encodeURIComponent(tpl.id)}`}
+                  className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] hover:border-white/25"
+                >
+                  <div className="relative h-36">
+                    <Image
+                      src={cover}
+                      alt={tpl.label}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 25vw"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                    <p className="absolute bottom-2 left-3 right-3 font-medium text-white">
+                      {tpl.emoji} {tpl.label}
+                    </p>
+                  </div>
+                  <p className="px-3 py-2 text-xs text-white/80">{tpl.vibe}</p>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
         {closing.length > 0 ? (
           <section>
-            <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+            <h2 className="text-center font-display text-xl font-semibold text-white md:text-2xl">
               In chiusura
             </h2>
-            <p className="mt-1 text-sm text-white/85">Pochi posti o partenza vicina. Decidi ora.</p>
+            <p className="mt-1 text-center text-sm text-white/85">
+              Ultimi posti. Se ti chiama, è adesso.
+            </p>
             <div className="mt-4">
               <DiscoverResultsSplit trips={closing} session={session} />
             </div>
@@ -131,8 +140,8 @@ export default function DashboardClient({
 
         {results.length > 0 ? (
           <section>
-            <div className="mb-6">
-              <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+            <div className="mb-6 text-center">
+              <h2 className="font-display text-xl font-semibold text-white md:text-2xl">
                 Tutti i viaggi
               </h2>
               <p className="mt-1 text-sm text-white/85">

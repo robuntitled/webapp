@@ -1,5 +1,6 @@
 import { addDays, format, parseISO } from 'date-fns';
 import { COMPOSER_DESTINATIONS, featuredToMeta } from '@/lib/composer/destinations';
+import { coverForDestination } from '@/lib/composer/destination-covers';
 import { DAY_TEMPLATES } from '@/lib/composer/day-templates';
 import { createBlockId } from '@/lib/composer/blocks';
 import { inferTimeSlotForType } from '@/lib/composer/time-slots';
@@ -107,5 +108,6 @@ export function draftFromTripTemplate(
     minParticipants: 4,
     maxParticipants: 8,
     days,
+    imageUrl: coverForDestination(template.destinationId),
   };
 }

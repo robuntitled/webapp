@@ -12,6 +12,7 @@ import type { ComposerDraft } from '@/types/composer';
 import { TripMap } from '@/components/maps/TripMap';
 import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
+import { TripCoverPicker } from '@/components/trips/TripCoverPicker';
 import {
   AlertTriangle,
   CalendarDays,
@@ -29,6 +30,7 @@ type ComposerReviewStepProps = {
   publishing: boolean;
   onBack: () => void;
   onPublish: () => void;
+  onChange?: (patch: Partial<ComposerDraft>) => void;
 };
 
 function StatPill({
@@ -58,6 +60,7 @@ export function ComposerReviewStep({
   publishing,
   onBack,
   onPublish,
+  onChange,
 }: ComposerReviewStepProps) {
   const budget = estimateTripBudget(draft.days);
   const blockCount = draft.days.reduce((n, d) => n + d.blocks.length, 0);
@@ -173,6 +176,16 @@ export function ComposerReviewStep({
           Garanzia di partenza fino a {draft.minParticipants ?? 4} posti. Servizi (voli, hotel,
           attrazioni) prenotabili solo a gruppo formato.
         </p>
+
+        {onChange ? (
+        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <TripCoverPicker
+            destination={draft.destination}
+            value={draft.imageUrl}
+            onChange={(imageUrl) => onChange({ imageUrl })}
+          />
+        </section>
+        ) : null}
 
         {publishIssues.length > 0 && (
           <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-4">
