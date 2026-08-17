@@ -29,6 +29,9 @@ type TripBookingPanelProps = {
   className?: string;
   locked?: boolean;
   lockReason?: string;
+  /** `search` = solo widget, tab controllato dal hub. */
+  mode?: 'full' | 'search';
+  tab?: BookingTab;
 };
 
 const TABS: { id: BookingTab; label: string; icon: typeof Plane }[] = [
@@ -66,8 +69,12 @@ export function TripBookingPanel({
   className,
   locked = false,
   lockReason,
+  mode = 'full',
+  tab: tabProp,
 }: TripBookingPanelProps) {
-  const [tab, setTab] = useState<BookingTab>('hotel');
+  const [tabState, setTabState] = useState<BookingTab>(tabProp ?? 'hotel');
+  const tab = tabProp ?? tabState;
+  const searchOnly = mode === 'search';
 
   const city = useMemo(() => guessCityFromDestination(destination), [destination]);
 
@@ -106,7 +113,7 @@ export function TripBookingPanel({
   }, [composerItinerary]);
 
   const selectTab = useCallback((next: BookingTab) => {
-    setTab(next);
+    if (!tabProp) setTabState(next);
     const hash =
       next === 'voli'
         ? 'prenota-voli'
@@ -118,17 +125,100 @@ export function TripBookingPanel({
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `#${hash}`);
     }
-  }, []);
+  }, [tabProp]);
 
   useEffect(() => {
+    if (searchOnly) return;
     const apply = () => {
       const fromHash = parseHashTab(window.location.hash);
-      if (fromHash) setTab(fromHash);
+      if (fromHash) setTabState(fromHash);
     };
     apply();
     window.addEventListener('hashchange', apply);
     return () => window.removeEventListener('hashchange', apply);
-  }, []);
+  }, [searchOnly]);
+
+  const searchBody = !isAuthenticated ? (
+    <div className="space-y-3 rounded-2xl border border-dashed border-border/70 px-4 py-5 text-center">
+      <p className="text-sm text-muted-foreground">Accedi per cercare e prenotare.</p>
+      <Button asChild className="rounded-full">
+        <Link href={`/?callbackUrl=${encodeURIComponent(`/viaggi/${tripId}#prenota`)}`}>
+          Accedi
+        </Link>
+      </Button>
+    </div>
+  ) : tab === 'voli' ? (
+    <TripFlightBookSearch
+      destination={destination}
+      startDate={startDate}
+      endDate={endDate}
+      adults={Math.min(9, Math.max(1, adults))}
+    />
+  ) : tab === 'hotel' ? (
+    <LiteApiHotelSearch
+      defaultCity={city}
+      defaultCheckin={startDate}
+      defaultCheckout={endDate}
+      defaultAdults={1}
+      cacheKey="trip-hotels"
+      compact
+      preferredHotelIds={savedHotelIds}
+    />
+  ) : tab === 'auto' ? (
+    <PrenotaCarsClient
+      defaultEmail={bookerEmail}
+      defaultName={bookerName}
+      defaultPickup={city}
+      defaultStartDate={startDate}
+      defaultEndDate={endDate}
+      tripId={tripId}
+      compact
+    />
+  ) : (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        {searchOnly
+          ? 'Cerca altri biglietti. Quelle salvate stanno sopra.'
+          : 'Le attività dell’itinerario. Il checkout ticket partner arriverà dopo; per ora puoi cercare biglietti esterni.'}
+      </p>
+      {searchOnly ? null : activityStops.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
+          Nessuna attività nell’itinerario ancora.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {activityStops.map((stop) => (
+            <li
+              key={stop.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{stop.title}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Giorno {stop.dayIndex} · {stop.dayDate}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="shrink-0 rounded-full">
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(
+                    `biglietti ${stop.title} ${destination}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Cerca
+                </a>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  if (searchOnly) {
+    return <div className={cn('space-y-3', className)}>{searchBody}</div>;
+  }
 
   return (
     <section
@@ -171,105 +261,25 @@ export function TripBookingPanel({
 
       {locked ? null : (
         <>
-      <div className="flex gap-1 border-b border-border/40 px-3 pt-2">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => selectTab(id)}
-            className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2 py-2.5 text-xs font-semibold transition',
-              tab === id
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="p-4 sm:p-5">
-        {!isAuthenticated ? (
-          <div className="space-y-3 rounded-2xl border border-dashed border-border/70 px-4 py-5 text-center">
-            <p className="text-sm text-muted-foreground">
-              Accedi per cercare e prenotare.
-            </p>
-            <Button asChild className="rounded-full">
-              <Link href={`/?callbackUrl=${encodeURIComponent(`/viaggi/${tripId}#prenota`)}`}>
-                Accedi
-              </Link>
-            </Button>
+          <div className="flex gap-1 border-b border-border/40 px-3 pt-2">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => selectTab(id)}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2 py-2.5 text-xs font-semibold transition',
+                  tab === id
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
-        ) : tab === 'voli' ? (
-          <TripFlightBookSearch
-            destination={destination}
-            startDate={startDate}
-            endDate={endDate}
-            adults={Math.min(9, Math.max(1, adults))}
-          />
-        ) : tab === 'hotel' ? (
-          <LiteApiHotelSearch
-            defaultCity={city}
-            defaultCheckin={startDate}
-            defaultCheckout={endDate}
-            defaultAdults={1}
-            cacheKey="trip-hotels"
-            compact
-            preferredHotelIds={savedHotelIds}
-          />
-        ) : tab === 'auto' ? (
-          <PrenotaCarsClient
-            defaultEmail={bookerEmail}
-            defaultName={bookerName}
-            defaultPickup={city}
-            defaultStartDate={startDate}
-            defaultEndDate={endDate}
-            tripId={tripId}
-            compact
-          />
-        ) : (
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Le attività dell’itinerario. Il checkout ticket partner arriverà dopo; per ora
-              puoi cercare biglietti esterni.
-            </p>
-            {activityStops.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
-                Nessuna attività nell’itinerario ancora.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {activityStops.map((stop) => (
-                  <li
-                    key={stop.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{stop.title}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Giorno {stop.dayIndex} · {stop.dayDate}
-                      </p>
-                    </div>
-                    <Button asChild variant="outline" size="sm" className="shrink-0 rounded-full">
-                      <a
-                        href={`https://www.google.com/search?q=${encodeURIComponent(
-                          `biglietti ${stop.title} ${destination}`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Cerca
-                      </a>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+          <div className="p-4 sm:p-5">{searchBody}</div>
         </>
       )}
     </section>

@@ -29,6 +29,7 @@ type SavedTripBookablesProps = {
   adults?: number;
   variant?: 'dark' | 'light';
   allowCheckout?: boolean;
+  layout?: 'list' | 'cards' | 'rail';
 };
 
 export function SavedTripBookables({
@@ -38,6 +39,7 @@ export function SavedTripBookables({
   adults = 1,
   variant = 'light',
   allowCheckout = true,
+  layout = 'list',
 }: SavedTripBookablesProps) {
   const router = useRouter();
   if (!picks.length) return null;
@@ -116,6 +118,67 @@ export function SavedTripBookables({
     }
     toast.message('Questa tappa è sulla mappa, ma non è prenotabile da LiteAPI/Viator.');
   };
+
+  if (layout === 'cards' || layout === 'rail') {
+    return (
+      <ul
+        className={
+          layout === 'rail'
+            ? 'grid auto-cols-[minmax(220px,260px)] grid-flow-col gap-3 overflow-x-auto pb-1'
+            : 'grid gap-3 sm:grid-cols-2'
+        }
+      >
+        {picks.map((pick) => {
+          const Icon = kindIcon(pick.kind);
+          const canBookThis = allowCheckout && isCheckoutBookable(pick);
+          return (
+            <li
+              key={pick.id}
+              className="overflow-hidden rounded-2xl border border-border/50 bg-muted/10 shadow-[0_12px_28px_-22px_rgba(15,23,42,0.45)]"
+            >
+              <div className="relative h-28 bg-muted">
+                {pick.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pick.photoUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950">
+                    <Icon className="h-8 w-8 text-accent" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <p className="absolute bottom-2 left-3 right-3 truncate font-display text-base font-semibold text-white">
+                  {pick.title}
+                </p>
+              </div>
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+                <p className="min-w-0 truncate text-[11px] text-muted-foreground">
+                  {providerLabel(pick)}
+                  {pick.price != null ? ` · ${pick.price}€` : ''}
+                  {pick.dayIndex ? ` · G${pick.dayIndex}` : ''}
+                </p>
+                {canBookThis ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 shrink-0 rounded-full"
+                    onClick={() => book(pick)}
+                  >
+                    Prenota
+                  </Button>
+                ) : (
+                  <span className="shrink-0 text-[11px] font-medium text-primary">Salvato</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
 
   return (
     <div className="space-y-3">

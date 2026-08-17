@@ -122,7 +122,7 @@ export function TripExperienceHub({
           destination={destination}
           pins={pins}
           activeDayIndex={activeDayIndex}
-          className="h-[220px] w-full sm:h-[280px] md:h-[320px]"
+          className="h-[180px] w-full sm:h-[220px] md:h-[240px]"
           onPinClick={(pin) => {
             const day = days.find((d) => d.day_index === pin.dayIndex);
             if (day) setOpenDayId(day.id);
