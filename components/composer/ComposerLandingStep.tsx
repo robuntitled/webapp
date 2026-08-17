@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays, differenceInCalendarDays } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -16,12 +16,14 @@ import {
   Loader2,
   MapPin,
   Navigation,
+  Plane,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
 import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
-import { buildOrganizerOrigin } from '@/lib/composer/origins';
+import { originFromRankedAirport } from '@/lib/composer/origins';
+import type { RankedOriginAirport } from '@/lib/composer/origin-airport-rank';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import { coverForDestination } from '@/lib/composer/destination-covers';
@@ -41,6 +43,17 @@ const WHO_COVERS = {
 
 const FROM_COVER =
   'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=80';
+
+function airportSizeLabel(size: RankedOriginAirport['size']) {
+  if (size === 'hub') return 'Hub';
+  if (size === 'regional') return 'Regionale';
+  return 'Nazionale';
+}
+
+function formatAirportKm(km: number | null) {
+  if (km == null) return null;
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+}
 
 const DURATION_CARDS = [
   {
@@ -134,38 +147,29 @@ export function ComposerLandingStep({
   onStart,
   onBack,
   profileCity,
-  profileCountry,
+  profileCountry: _profileCountry,
 }: ComposerLandingStepProps) {
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
-  const [originCityInput, setOriginCityInput] = useState(draft.organizerOrigin?.city ?? '');
+  const [originCityInput, setOriginCityInput] = useState(
+    draft.organizerOrigin?.city ?? profileCity?.trim() ?? ''
+  );
+  const [airportHits, setAirportHits] = useState<RankedOriginAirport[]>([]);
+  const [airportLoading, setAirportLoading] = useState(false);
+  const [airportSearched, setAirportSearched] = useState(false);
   const titleTouched = useRef(false);
   const profileOriginApplied = useRef(false);
+  const airportAbort = useRef<AbortController | null>(null);
   const startedWithDest = useRef(Boolean(draft.destination?.trim()));
   const [phase, setPhase] = useState<ConfigPhase>(() =>
     draft.destination?.trim() ? 'when' : 'dest'
   );
 
   useEffect(() => {
-    setOriginCityInput(draft.organizerOrigin?.city ?? '');
-  }, [draft.organizerOrigin?.city]);
-
-  // Prefill da profilo se manca origin
-  useEffect(() => {
-    if (profileOriginApplied.current || draft.organizerOrigin || !profileCity?.trim()) return;
+    if (profileOriginApplied.current || originCityInput.trim() || !profileCity?.trim()) return;
     profileOriginApplied.current = true;
-    const origin = buildOrganizerOrigin(profileCity, profileCountry ?? undefined);
-    onChange({ organizerOrigin: origin });
-    setOriginCityInput(origin.city);
-  }, [draft.organizerOrigin, profileCity, profileCountry, onChange]);
-
-  const applyOriginCity = (city: string, country?: string) => {
-    const trimmed = city.trim();
-    if (!trimmed) return;
-    const origin = buildOrganizerOrigin(trimmed, country);
-    onChange({ organizerOrigin: origin });
-    setOriginCityInput(origin.city);
-  };
+    setOriginCityInput(profileCity.trim());
+  }, [originCityInput, profileCity]);
 
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
@@ -176,6 +180,9 @@ export function ComposerLandingStep({
 
   const selectedDestinations = getDraftDestinations(draft);
   const destCover = draft.destination ? coverForDestination(draft.destination) : null;
+  const destPoint = selectedDestinations[0] ?? draft.destinationMeta;
+  const selectedIataRef = useRef(draft.organizerOrigin?.iata);
+  selectedIataRef.current = draft.organizerOrigin?.iata;
 
   const handleDestinationsChange = (destinations: DestinationMeta[]) => {
     const labels = destinations.map((d) => d.label);
@@ -198,7 +205,7 @@ export function ComposerLandingStep({
       : phase === 'when'
         ? Boolean(startDate && endDate && endDate >= startDate)
         : phase === 'from'
-          ? Boolean(draft.organizerOrigin?.city)
+          ? Boolean(draft.organizerOrigin?.iata)
           : Boolean(draft.title.trim());
 
   const goNext = () => {
@@ -249,7 +256,8 @@ export function ComposerLandingStep({
           ? {
               label: 'Da dove',
               title: 'Da dove voli?',
-              subtitle: 'La tua città. Da qui partono i voli del gruppo.',
+              subtitle:
+                'Cerca città o aeroporto. Per l’Australia (e le lunghe) scegliamo un hub, non il regionale sotto casa.',
               micro: startedWithDest.current ? 2 : 3,
               total: startedWithDest.current ? 3 : 4,
             }
@@ -261,40 +269,84 @@ export function ComposerLandingStep({
               total: startedWithDest.current ? 3 : 4,
             };
 
-  /** Come in ba5c42a: reverse Nominatim; prova prima API server (User-Agent valido). */
-  const resolveCoordsToOrigin = async (latitude: number, longitude: number) => {
-    try {
-      const res = await fetch(
-        `/api/places/reverse?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}`
-      );
-      const data = (await res.json()) as {
-        place?: { label: string; country?: string };
-      };
-      if (res.ok && data.place?.label) {
-        return buildOrganizerOrigin(data.place.label, data.place.country);
-      }
-    } catch {
-      // fallback client come ba5c42a
-    }
-
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=it`
-    );
-    const data = (await res.json()) as {
-      address?: { city?: string; town?: string; village?: string; country?: string };
-      display_name?: string;
-    };
-    const city =
-      data.address?.city ?? data.address?.town ?? data.address?.village ?? 'La tua città';
-    const label = data.display_name?.split(',')[0] ?? city;
-    return buildOrganizerOrigin(label, data.address?.country);
+  const pickAirport = (airport: RankedOriginAirport) => {
+    onChange({ organizerOrigin: originFromRankedAirport(airport) });
   };
 
-  /**
-   * Flusso GPS come ba5c42a: getCurrentPosition + high accuracy.
-   * Permissions-Policy resta geolocation=(self) (in ba5c42a era =() e andava bloccata).
-   */
-  const detectOrigin = () => {
+  const searchOriginAirports = useCallback(
+    async (opts: { q?: string; lat?: number; lng?: number }) => {
+      const q = (opts.q ?? '').trim();
+      if (q.length < 2 && (opts.lat == null || opts.lng == null)) {
+        setAirportHits([]);
+        setAirportSearched(false);
+        return;
+      }
+
+      airportAbort.current?.abort();
+      const ac = new AbortController();
+      airportAbort.current = ac;
+      setAirportLoading(true);
+
+      try {
+        const qs = new URLSearchParams();
+        if (q.length >= 2) qs.set('q', q);
+        if (opts.lat != null && opts.lng != null) {
+          qs.set('lat', String(opts.lat));
+          qs.set('lng', String(opts.lng));
+        }
+        if (draft.destination) qs.set('destination', draft.destination);
+        if (destPoint?.lat != null) qs.set('destinationLat', String(destPoint.lat));
+        if (destPoint?.lng != null) qs.set('destinationLng', String(destPoint.lng));
+        if (destPoint?.country) qs.set('destinationCountry', destPoint.country);
+
+        const res = await fetch(`/api/composer/origin-airports?${qs}`, { signal: ac.signal });
+        const data = (await res.json()) as {
+          airports?: RankedOriginAirport[];
+          queryLabel?: string;
+          error?: string;
+        };
+        if (!res.ok) {
+          toast.error(data.error ?? 'Ricerca aeroporti non disponibile');
+          return;
+        }
+
+        const airports = data.airports ?? [];
+        setAirportHits(airports);
+        setAirportSearched(true);
+        if (data.queryLabel && q.length < 2) setOriginCityInput(data.queryLabel);
+
+        const currentIata = selectedIataRef.current;
+        const stillInList = Boolean(
+          currentIata && airports.some((a) => a.iata === currentIata)
+        );
+        if (!stillInList && airports[0]) {
+          onChange({ organizerOrigin: originFromRankedAirport(airports[0]) });
+        }
+      } catch (e) {
+        if ((e as { name?: string }).name === 'AbortError') return;
+        toast.error('Ricerca aeroporti non disponibile');
+      } finally {
+        if (airportAbort.current === ac) setAirportLoading(false);
+      }
+    },
+    [destPoint?.country, destPoint?.lat, destPoint?.lng, draft.destination, onChange]
+  );
+
+  useEffect(() => {
+    if (phase !== 'from') return;
+    const q = originCityInput.trim();
+    if (q.length < 2) {
+      setAirportHits([]);
+      setAirportSearched(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      void searchOriginAirports({ q });
+    }, 380);
+    return () => clearTimeout(t);
+  }, [phase, originCityInput, searchOriginAirports]);
+
+  const detectNearbyAirports = () => {
     if (!navigator.geolocation) {
       toast.error('Geolocalizzazione non supportata');
       return;
@@ -303,40 +355,38 @@ export function ComposerLandingStep({
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const { latitude, longitude } = pos.coords;
-          const origin = await resolveCoordsToOrigin(latitude, longitude);
-          onChange({ organizerOrigin: origin });
-          setOriginCityInput(origin.city);
-          toast.success(`Partenza da ${origin.city}`);
-        } catch {
-          toast.error('Impossibile risolvere la posizione');
+          await searchOriginAirports({
+            q: originCityInput.trim() || undefined,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
         } finally {
           setGeoLoading(false);
         }
       },
       async (err) => {
-        // Fallback rete solo se GPS non disponibile/timeout (non se permesso negato)
         if (err.code !== err.PERMISSION_DENIED) {
           try {
             const res = await fetch('/api/geo/approx');
             if (res.ok) {
               const data = (await res.json()) as {
                 city?: string | null;
-                country?: string | null;
                 lat?: number | null;
                 lng?: number | null;
               };
               if (data.lat != null && data.lng != null) {
-                const origin = await resolveCoordsToOrigin(data.lat, data.lng);
-                onChange({ organizerOrigin: origin });
-                setOriginCityInput(origin.city);
-                toast.success(`Partenza stimata: ${origin.city}`);
+                if (data.city?.trim()) setOriginCityInput(data.city.trim());
+                await searchOriginAirports({
+                  q: data.city?.trim() || originCityInput.trim() || undefined,
+                  lat: data.lat,
+                  lng: data.lng,
+                });
                 setGeoLoading(false);
                 return;
               }
               if (data.city?.trim()) {
-                applyOriginCity(data.city, data.country ?? undefined);
-                toast.success(`Partenza stimata: ${data.city.trim()}`);
+                setOriginCityInput(data.city.trim());
+                await searchOriginAirports({ q: data.city.trim() });
                 setGeoLoading(false);
                 return;
               }
@@ -349,7 +399,7 @@ export function ComposerLandingStep({
         if (err.code === err.PERMISSION_DENIED) {
           toast.error('Permesso posizione negato');
         } else {
-          toast.error('Posizione non disponibile — inserisci la città a mano');
+          toast.error('Posizione non disponibile — cerca città o aeroporto');
         }
       },
       { enableHighAccuracy: true, timeout: 12000 }
@@ -517,9 +567,9 @@ export function ComposerLandingStep({
         ) : null}
 
         {phase === 'from' ? (
-          <motion.div key="from" {...phaseMotion}>
+          <motion.div key="from" {...phaseMotion} className="space-y-4">
             <div className="relative overflow-hidden rounded-[2rem] shadow-[0_28px_60px_-32px_rgba(0,0,0,0.75)]">
-              <div className="relative h-[280px] sm:h-[320px]">
+              <div className="relative h-[240px] sm:h-[280px]">
                 <Image
                   src={FROM_COVER}
                   alt=""
@@ -535,48 +585,112 @@ export function ComposerLandingStep({
                   Gate di partenza
                 </p>
                 <h3 className="mt-1 font-display text-3xl font-semibold text-white">
-                  {draft.organizerOrigin?.city ?? 'Da dove voli?'}
+                  {draft.organizerOrigin?.airportName ??
+                    draft.organizerOrigin?.city ??
+                    'Da dove voli?'}
                 </h3>
-                {draft.organizerOrigin ? (
+                {draft.organizerOrigin?.iata ? (
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-white/80">
-                    <MapPin className="h-4 w-4 text-accent" />
-                    {draft.organizerOrigin.city}
-                    {draft.organizerOrigin.iata ? ` · ${draft.organizerOrigin.iata}` : ''}
+                    <Plane className="h-4 w-4 text-accent" />
+                    {draft.organizerOrigin.city} · {draft.organizerOrigin.iata}
                   </p>
                 ) : (
-                  <p className="mt-1 text-sm text-white/75">GPS o città. Da qui partono i voli.</p>
+                  <p className="mt-1 text-sm text-white/75">
+                    Cerca aeroporti vicini. Il consigliato pesa distanza e tipo di tratta.
+                  </p>
                 )}
                 <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
                     variant="outline"
                     className="h-12 shrink-0 rounded-2xl"
-                    onClick={detectOrigin}
-                    disabled={geoLoading}
+                    onClick={detectNearbyAirports}
+                    disabled={geoLoading || airportLoading}
                   >
                     {geoLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Navigation className="mr-2 h-4 w-4 text-accent" />
                     )}
-                    Usa la mia posizione
+                    Aeroporti vicini
                   </Button>
                   <Input
-                    placeholder="Oppure digita la città"
+                    placeholder="Città o aeroporto"
                     className="h-12 rounded-2xl composer-field"
                     value={originCityInput}
                     onChange={(e) => setOriginCityInput(e.target.value)}
-                    onBlur={() => applyOriginCity(originCityInput)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        applyOriginCity(originCityInput);
+                        void searchOriginAirports({ q: originCityInput.trim() });
                       }
                     }}
                   />
                 </div>
               </div>
             </div>
+
+            {airportLoading ? (
+              <p className="flex items-center gap-2 text-sm text-white/70">
+                <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                Cerco gli aeroporti giusti per questa tratta…
+              </p>
+            ) : null}
+
+            {airportHits.length > 0 ? (
+              <ul className="space-y-2">
+                {airportHits.map((airport) => {
+                  const km = formatAirportKm(airport.distanceKm);
+                  const selected = draft.organizerOrigin?.iata === airport.iata;
+                  return (
+                    <li key={airport.iata}>
+                      <button
+                        type="button"
+                        onClick={() => pickAirport(airport)}
+                        className={cn(
+                          'w-full rounded-2xl bg-white px-4 py-3.5 text-left shadow-[0_16px_36px_-24px_rgba(0,0,0,0.55)] transition',
+                          selected
+                            ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220]'
+                            : 'ring-1 ring-black/5 hover:ring-accent/40'
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+                              <span className="font-mono text-accent">{airport.iata}</span>
+                              <span className="truncate">{airport.name}</span>
+                              {airport.recommended ? (
+                                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                                  Consigliato
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="mt-0.5 text-sm text-slate-600">
+                              {airport.city}
+                              {km ? ` · ${km}` : ''}
+                              {` · ${airportSizeLabel(airport.size)}`}
+                            </p>
+                            <p className="mt-1 text-xs leading-snug text-slate-500">
+                              {airport.reason}
+                            </p>
+                          </div>
+                          <MapPin
+                            className={cn(
+                              'mt-0.5 h-4 w-4 shrink-0',
+                              selected ? 'text-accent' : 'text-slate-300'
+                            )}
+                          />
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : airportSearched && !airportLoading ? (
+              <p className="text-sm text-white/70">
+                Nessun aeroporto per questa ricerca. Prova una città più grande.
+              </p>
+            ) : null}
           </motion.div>
         ) : null}
 

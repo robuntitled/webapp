@@ -1,5 +1,6 @@
 import { defaultOriginIata, originFromCityLabel } from '@/lib/travel/origin-iata';
 import type { ComposerDraft, ComposerOrigin } from '@/types/composer';
+import type { RankedOriginAirport } from '@/lib/composer/origin-airport-rank';
 
 export function createOriginId(): string {
   return `org_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -13,6 +14,20 @@ export function buildOrganizerOrigin(city: string, country?: string): ComposerOr
 export function buildCrewOrigin(city: string, country?: string): ComposerOrigin {
   const { label, city: resolvedCity, iata } = originFromCityLabel(city, country);
   return { id: createOriginId(), label, city: resolvedCity, iata, role: 'crew' };
+}
+
+export function originFromRankedAirport(
+  airport: RankedOriginAirport,
+  role: ComposerOrigin['role'] = 'organizer'
+): ComposerOrigin {
+  return {
+    id: createOriginId(),
+    label: `${airport.city} · ${airport.iata}`,
+    city: airport.city,
+    iata: airport.iata,
+    role,
+    airportName: airport.name,
+  };
 }
 
 export function collectOrigins(

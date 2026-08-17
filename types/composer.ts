@@ -57,6 +57,7 @@ export type ComposerOrigin = {
   city: string;
   iata: string;
   role: 'organizer' | 'crew';
+  airportName?: string;
 };
 
 export type ComposerBookableProvider = 'liteapi' | 'viator' | 'google';
