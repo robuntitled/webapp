@@ -9,7 +9,7 @@ import { Plus } from 'lucide-react';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { type Session } from 'next-auth';
 import { Button } from '@/components/ui/button';
-import { explainEmptyDiscover, filterDiscoverResults } from '@/lib/trips/discover-search';
+import { filterDiscoverResults } from '@/lib/trips/discover-search';
 import { isClosingSoon } from '@/lib/trips/formation';
 import { TRIP_TEMPLATES } from '@/lib/composer/trip-templates';
 import { cn } from '@/lib/utils';
@@ -46,11 +46,6 @@ export default function DashboardClient({
 
   const closing = useMemo(() => results.filter((t) => isClosingSoon(t)).slice(0, 6), [results]);
   const featuredSeeds = TRIP_TEMPLATES.filter((t) => t.featured);
-
-  const emptyReason = useMemo(() => {
-    if (results.length > 0) return null;
-    return explainEmptyDiscover(initialTrips, userId);
-  }, [results.length, initialTrips, userId]);
 
   return (
     <div className="relative z-0 pb-24">
@@ -117,31 +112,21 @@ export default function DashboardClient({
           </section>
         ) : null}
 
-        <section>
-          <div className="mb-6">
-            <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
-              Tutti i viaggi
-            </h2>
-            <p className="mt-1 text-sm text-white/55">
-              {results.length}{' '}
-              {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
-            </p>
-          </div>
+        {results.length > 0 ? (
+          <section>
+            <div className="mb-6">
+              <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+                Tutti i viaggi
+              </h2>
+              <p className="mt-1 text-sm text-white/55">
+                {results.length}{' '}
+                {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
+              </p>
+            </div>
 
-          <DiscoverResultsSplit
-            trips={results}
-            session={session}
-            emptyBody={
-              emptyReason === 'own-solo-only'
-                ? 'I viaggi che organizzi tu non compaiono qui — esci e accedi con un altro account, o invita amici al tuo viaggio.'
-                : emptyReason === 'no-solo'
-                  ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
-                  : emptyReason === 'past-or-full'
-                    ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
-                    : 'Prova a modificare i filtri di ricerca.'
-            }
-          />
-        </section>
+            <DiscoverResultsSplit trips={results} session={session} />
+          </section>
+        ) : null}
       </div>
     </div>
   );
