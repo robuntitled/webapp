@@ -74,7 +74,7 @@ export default function LoginPage() {
     setOauthLoading(provider);
     try {
       await signIn(provider, {
-        callbackUrl: `${window.location.origin}/dashboard`,
+        callbackUrl: `${window.location.origin}/onboarding`,
       });
     } catch {
       setError('Accesso non riuscito. Riprova tra poco.');
@@ -145,7 +145,7 @@ export default function LoginPage() {
 
         const result = await signIn('credentials', { email, password, redirect: false });
         if (result?.ok) {
-          router.push('/dashboard');
+          router.push('/onboarding');
         } else {
           setError('Registrazione riuscita. Prova ad accedere dopo aver verificato l’email.');
         }
@@ -177,7 +177,7 @@ export default function LoginPage() {
         } else if (result?.error) {
           setError('Email o password non validi. Riprova.');
         } else if (result?.ok) {
-          router.push('/dashboard');
+          router.push('/onboarding');
         }
       } catch {
         setError('Si è verificato un errore inaspettato.');

@@ -33,13 +33,17 @@ export const authConfig = {
       return handleOAuthSignIn(user, account);
     },
     async jwt({ token, trigger, session }) {
-      // Aggiornamento consenso privacy da client (session.update)
-      if (trigger === 'update' && session?.privacyConsentAccepted !== undefined) {
-        if (isJwtInvalid(token)) {
-          return token;
+      // Aggiornamento da client (session.update) dopo GDPR / onboarding
+      if (trigger === 'update' && session && !isJwtInvalid(token)) {
+        if (session.privacyConsentAccepted !== undefined) {
+          token.privacyConsentAccepted = session.privacyConsentAccepted;
         }
-        token.privacyConsentAccepted = session.privacyConsentAccepted;
-        // Riconvalida comunque su DB (account potrebbe essere stato cancellato)
+        if (session.onboardingCompleted !== undefined) {
+          token.onboardingCompleted = session.onboardingCompleted;
+        }
+        if (session.travelIntent !== undefined) {
+          token.travelIntent = session.travelIntent;
+        }
         return populateJwtToken(token);
       }
       return populateJwtToken(token);

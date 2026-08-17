@@ -2,10 +2,10 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { TripCard } from '@/components/trips/TripCard';
 import { TripDiscoverSearchBar } from '@/components/dashboard/TripDiscoverSearchBar';
+import { DiscoverResultsSplit } from '@/components/dashboard/DiscoverResultsSplit';
 import type { TripWithRelations } from '@/types/trip';
-import { Compass, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { type Session } from 'next-auth';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,8 @@ export default function DashboardClient({
   }, [results.length, initialTrips, userId]);
 
   return (
-    <div className="relative z-0 container mx-auto px-4 pt-10 pb-24">
-      <div className="text-center max-w-3xl mx-auto mb-10">
+    <div className="relative z-0 pb-24">
+      <div className="container mx-auto px-4 pt-10 mb-8 text-center max-w-3xl">
         <ScrollReveal variant="decor">
           <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">
             Meno WhatsApp, più viaggio
@@ -56,71 +56,53 @@ export default function DashboardClient({
         </ScrollReveal>
         <ScrollReveal variant="title">
           <h1 className="font-display text-4xl md:text-6xl font-semibold text-white leading-tight">
-            Trova un viaggio e unisciti in modalità relax
+            Quando vuoi partire?
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
           <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-            Cerca viaggi aperti a cui unirti. Gli inviti tra amici arrivano via WhatsApp — qui
-            compaiono solo i viaggi organizzati da una persona.
+            Destinazione, date, mappa. I filtri restano in alto. Apri un viaggio e trovi il carrello
+            servizi.
           </p>
         </ScrollReveal>
         {session?.user && (
           <ScrollReveal variant="card" stagger={2}>
             <Button asChild className="mt-6 rounded-full gap-2">
-              <Link href="/dashboard/crea">
+              <Link href="/dashboard/crea?new=1">
                 <Plus className="h-4 w-4" />
-                Organizza il tuo viaggio
+                Crea un viaggio
               </Link>
             </Button>
           </ScrollReveal>
         )}
       </div>
 
-      <ScrollReveal variant="card">
-        <TripDiscoverSearchBar variant="hero" priceBounds={priceBounds} />
-      </ScrollReveal>
+      <TripDiscoverSearchBar variant="compact" priceBounds={priceBounds} />
 
-      <div className="mt-12 max-w-6xl mx-auto">
-        <ScrollReveal variant="title">
-          <div className="mb-6">
-            <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
-              Viaggi disponibili
-            </h2>
-            <p className="mt-1 text-sm text-white/55">
-              {results.length}{' '}
-              {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
-            </p>
-          </div>
-        </ScrollReveal>
+      <div className="container mx-auto px-4 mt-8 max-w-7xl">
+        <div className="mb-6">
+          <h2 className="font-display text-xl md:text-2xl font-semibold text-white">
+            Viaggi sulla mappa
+          </h2>
+          <p className="mt-1 text-sm text-white/55">
+            {results.length}{' '}
+            {results.length === 1 ? 'viaggio aperto trovato' : 'viaggi aperti trovati'}
+          </p>
+        </div>
 
-        {results.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {results.map((trip, i) => (
-              <ScrollReveal key={trip.id} variant="card" stagger={Math.min(i, 6)}>
-                <TripCard trip={trip} session={session} discover />
-              </ScrollReveal>
-            ))}
-          </div>
-        ) : (
-          <ScrollReveal variant="card">
-            <div className="text-center py-16 px-4 rounded-3xl border border-white/10 bg-white/[0.03]">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/10 mb-5">
-                <Compass className="h-7 w-7 text-accent" />
-              </div>
-              <h3 className="font-display text-xl text-white font-semibold">Nessun viaggio trovato</h3>
-              <p className="mt-2 text-white/60 max-w-md mx-auto text-sm">
-                {emptyReason === 'own-solo-only'
-                  ? 'I viaggi che organizzi tu non compaiono qui — esci e accedi con un altro account, o invita amici al tuo viaggio.'
-                  : emptyReason === 'no-solo'
-                    ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
-                    : emptyReason === 'past-or-full'
-                      ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
-                      : 'Prova a modificare i filtri di ricerca.'}
-              </p>
-            </div>
-          </ScrollReveal>
-        )}
+        <DiscoverResultsSplit
+          trips={results}
+          session={session}
+          emptyBody={
+            emptyReason === 'own-solo-only'
+              ? 'I viaggi che organizzi tu non compaiono qui — esci e accedi con un altro account, o invita amici al tuo viaggio.'
+              : emptyReason === 'no-solo'
+                ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
+                : emptyReason === 'past-or-full'
+                  ? 'I viaggi aperti sono già partiti o al completo. Pubblicane uno con date future e posti liberi.'
+                  : 'Prova a modificare i filtri di ricerca.'
+          }
+        />
       </div>
     </div>
   );

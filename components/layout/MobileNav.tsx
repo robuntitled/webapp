@@ -6,18 +6,18 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LINKS = [
-  { href: '/dashboard', label: 'Scopri' },
-  { href: '/dashboard/crea?new=1', label: 'Organizza', auth: true },
-  { href: '/prenota/voli', label: 'Prenota · Voli', auth: true },
-  { href: '/prenota/hotel', label: 'Prenota · Hotel', auth: true },
-  { href: '/prenota/auto', label: 'Prenota · Noleggio auto', auth: true },
-  { href: '/prenota/trasporti/bus', label: 'Prenota · Bus', auth: true },
-  { href: '/prenota/trasporti/treni', label: 'Prenota · Treni', auth: true },
-  { href: '/prenota/trasporti/taxi', label: 'Prenota · Taxi', auth: true },
-  { href: '/prenota/attrazioni', label: 'Prenota · Attrazioni', auth: true },
-  { href: '/prenota/attivita', label: 'Prenota · Attività', auth: true },
+  { href: '/dashboard', label: 'Parti' },
+  { href: '/dashboard/crea?new=1', label: 'Crea', auth: true },
+  { href: '/prenota/voli', label: 'Servizi · Voli', auth: true },
+  { href: '/prenota/hotel', label: 'Servizi · Hotel', auth: true },
+  { href: '/prenota/auto', label: 'Servizi · Noleggio auto', auth: true },
+  { href: '/prenota/trasporti/bus', label: 'Servizi · Bus', auth: true },
+  { href: '/prenota/trasporti/treni', label: 'Servizi · Treni', auth: true },
+  { href: '/prenota/trasporti/taxi', label: 'Servizi · Taxi', auth: true },
+  { href: '/prenota/attrazioni', label: 'Servizi · Attrazioni', auth: true },
+  { href: '/prenota/attivita', label: 'Servizi · Attività', auth: true },
   { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
-  { href: '/dashboard/miei-viaggi', label: 'I Miei Viaggi', auth: true },
+  { href: '/dashboard/miei-viaggi', label: 'I miei', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];
 

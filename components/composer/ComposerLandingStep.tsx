@@ -232,15 +232,15 @@ export function ComposerLandingStep({
           micro === 1
             ? 'Dove andiamo?'
             : micro === 2
-              ? 'Quando partite?'
-              : 'Come lo chiamiamo?'
+              ? 'Quando e da dove?'
+              : 'Con chi parti?'
         }
         subtitle={
           micro === 1
-            ? 'Scegli una o più mete — i suggerimenti seguono le tue preferenze.'
+            ? 'Una o più mete. Poi date, crew, mappa e pubblicazione.'
             : micro === 2
-              ? 'Date e punto di partenza del viaggio.'
-              : 'Titolo e modalità. Voli e hotel li aggiungi dopo.'
+              ? 'Finestra di viaggio e la tua base di partenza.'
+              : 'Solo (aperto) o con gli amici. Poi componi i giorni sulla mappa.'
         }
       />
 

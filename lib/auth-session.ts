@@ -5,6 +5,7 @@ import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const PROTECTED_PATHS = [
+  '/onboarding',
   '/dashboard/crea',
   '/dashboard/miei-viaggi',
   '/dashboard/profilo',
@@ -20,6 +21,8 @@ export const GDPR_PUBLIC_PATHS = [
   '/cookie',
   '/completa-registrazione',
 ];
+
+export const ONBOARDING_PATH = '/onboarding';
 
 function splitDisplayName(name?: string | null, email?: string | null) {
   const trimmed = name?.trim();
@@ -46,6 +49,8 @@ export function invalidateJwtToken(token: JWT): JWT {
     name: undefined,
     picture: undefined,
     privacyConsentAccepted: false,
+    onboardingCompleted: false,
+    travelIntent: null,
     invalid: true,
     invalidAt: Date.now(),
   };
@@ -139,7 +144,9 @@ export async function populateJwtToken(token: JWT): Promise<JWT> {
 
   let query = supabaseAdmin
     .from('users')
-    .select('id, first_name, last_name, image, privacy_consent, email');
+    .select(
+      'id, first_name, last_name, image, privacy_consent, email, onboarding_completed_at, travel_intent'
+    );
 
   if (userId) {
     query = query.eq('id', userId);
@@ -150,8 +157,36 @@ export async function populateJwtToken(token: JWT): Promise<JWT> {
   const { data: dbUser, error } = await query.maybeSingle();
 
   if (error) {
+    const missingCol =
+      typeof error.message === 'string' &&
+      /onboarding_completed_at|travel_intent/i.test(error.message);
+    if (missingCol) {
+      const fallback = supabaseAdmin
+        .from('users')
+        .select('id, first_name, last_name, image, privacy_consent, email');
+      const fbQuery = userId
+        ? fallback.eq('id', userId)
+        : email
+          ? fallback.eq('email', email)
+          : fallback;
+      const { data: fbUser, error: fbError } = await fbQuery.maybeSingle();
+      if (fbError || !fbUser) {
+        console.error('JWT populate user lookup error:', error);
+        return token;
+      }
+      token.invalid = false;
+      token.invalidAt = undefined;
+      token.id = fbUser.id;
+      token.email = fbUser.email ?? email;
+      token.name = `${fbUser.first_name || ''} ${fbUser.last_name || ''}`.trim();
+      token.picture = fbUser.image;
+      token.privacyConsentAccepted = !!fbUser.privacy_consent;
+      token.onboardingCompleted = true;
+      token.travelIntent = null;
+      token.lastUserCheck = Date.now();
+      return token;
+    }
     console.error('JWT populate user lookup error:', error);
-    // Non invalidare su blip di rete/DB
     return token;
   }
 
@@ -167,6 +202,11 @@ export async function populateJwtToken(token: JWT): Promise<JWT> {
   token.name = `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim();
   token.picture = dbUser.image;
   token.privacyConsentAccepted = !!dbUser.privacy_consent;
+  token.onboardingCompleted = Boolean(dbUser.onboarding_completed_at);
+  token.travelIntent =
+    dbUser.travel_intent === 'create' || dbUser.travel_intent === 'book'
+      ? dbUser.travel_intent
+      : null;
   token.lastUserCheck = Date.now();
 
   return token;
@@ -183,6 +223,8 @@ export function populateSession(session: Session, token: JWT): Session {
         email: null,
         image: null,
         privacyConsentAccepted: false,
+        onboardingCompleted: false,
+        travelIntent: null,
       },
       expires: new Date(0).toISOString(),
     };
@@ -194,6 +236,8 @@ export function populateSession(session: Session, token: JWT): Session {
     session.user.email = (token.email as string | null) ?? session.user.email;
     session.user.image = (token.picture as string | null) ?? null;
     session.user.privacyConsentAccepted = !!token.privacyConsentAccepted;
+    session.user.onboardingCompleted = !!token.onboardingCompleted;
+    session.user.travelIntent = token.travelIntent ?? null;
   }
   return session;
 }

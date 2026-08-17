@@ -29,6 +29,7 @@ const MIGRATIONS = [
   'supabase/migrations/021_user_posts.sql',
   'supabase/migrations/022_user_map_location.sql',
   'supabase/migrations/023_post_geo.sql',
+  'supabase/migrations/024_user_onboarding.sql',
 ];
 
 await withPgClient(async (client) => {

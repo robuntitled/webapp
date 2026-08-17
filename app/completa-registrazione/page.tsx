@@ -12,7 +12,7 @@ export default async function CompletaRegistrazionePage() {
     redirect('/');
   }
   if (session.user.privacyConsentAccepted) {
-    redirect('/dashboard');
+    redirect(session.user.onboardingCompleted ? '/dashboard' : '/onboarding');
   }
 
   return (

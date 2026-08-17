@@ -9,6 +9,7 @@ import {
   TripBookingCtaStrip,
   TripBookingPanel,
 } from '@/components/trips/TripBookingPanel';
+import { TripServicesCart } from '@/components/trips/TripServicesCart';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -205,6 +206,12 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </CardContent>
               </Card>
             )}
+
+            <TripServicesCart
+              tripId={trip.id}
+              destination={trip.destination}
+              composerItinerary={composerItinerary}
+            />
 
             <TripBookingPanel
               tripId={trip.id}

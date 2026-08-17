@@ -67,8 +67,9 @@ export function TripDetailActions({
       toast.success(
         result.status === 'already_pending'
           ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
-          : 'Richiesta inviata! L’organizzatore deve accettarla 🤞'
+          : 'Richiesta inviata. Intanto prepara voli e hotel nel carrello.'
       );
+      document.getElementById('carrello')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     router.refresh();
   };

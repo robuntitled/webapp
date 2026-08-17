@@ -24,6 +24,7 @@
     "db:posts": "node scripts/db-exec.mjs supabase/migrations/021_user_posts.sql",
     "db:community-map": "node scripts/db-exec.mjs supabase/migrations/022_user_map_location.sql",
     "db:post-geo": "node scripts/db-exec.mjs supabase/migrations/023_post_geo.sql",
+    "db:onboarding": "node scripts/db-exec.mjs supabase/migrations/024_user_onboarding.sql",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",
     "db:email-verify": "node scripts/db-exec.mjs supabase/migrations/009_email_verification.sql",

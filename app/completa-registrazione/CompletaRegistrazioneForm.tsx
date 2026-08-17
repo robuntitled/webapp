@@ -30,7 +30,7 @@ export function CompletaRegistrazioneForm() {
     try {
       await acceptLegalConsent(marketingAccepted);
       await update({ privacyConsentAccepted: true });
-      router.push('/dashboard');
+      router.push('/onboarding');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore imprevisto');

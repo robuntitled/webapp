@@ -58,7 +58,7 @@ export function TripDiscoverSearchBar({
     <div
       className={
         isCompact
-          ? 'sticky top-0 z-20 border-b border-white/10 bg-[#0a0f1a]/90 backdrop-blur-xl'
+          ? 'sticky top-16 z-20 border-b border-white/10 bg-[#0a0f1a]/90 backdrop-blur-xl'
           : 'glass-panel rounded-3xl p-6 md:p-8 max-w-4xl mx-auto'
       }
     >
