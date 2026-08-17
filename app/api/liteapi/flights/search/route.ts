@@ -4,8 +4,7 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { searchFlightRates } from '@/lib/liteapi/flights';
-import { resolveDestinationIata } from '@/lib/travel/iata';
-import { resolveOriginIata } from '@/lib/travel/origin-iata';
+import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
 
 const schema = z.object({
@@ -59,10 +58,7 @@ export async function GET(request: Request) {
   }
 
   const dest = parsed.data.destination.trim();
-  const destIata =
-    (/^[A-Za-z]{3}$/.test(dest)
-      ? dest.toUpperCase()
-      : resolveDestinationIata(dest) ?? resolveOriginIata(dest)) ?? null;
+  const destIata = resolveFlightDestinationIata(dest);
 
   if (!destIata) {
     return NextResponse.json({

@@ -31,6 +31,7 @@ import {
   resolvePlaceExact,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
+import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { saveFlightCheckoutDraft } from '@/lib/travel/flight-checkout-draft';
 import {
   loadSearchFormCache,
@@ -413,12 +414,12 @@ export function FlightSearchPanel({
         params.set('endDate', effectiveEndDate);
       }
 
-      if (destination.kind === 'country' && destination.multiAirport) {
-        // hub paese: usa primo aeroporto come destinazione città-codice noto via label
-        params.set('destination', destination.label);
-      } else {
-        params.set('destination', destination.code);
-      }
+      params.set(
+        'destination',
+        resolveFlightDestinationIata(destination.code) ??
+          resolveFlightDestinationIata(destination.label) ??
+          destination.code
+      );
 
       if (origin.kind === 'country' && origin.multiAirport) {
         params.set('originCountry', origin.code);
@@ -471,12 +472,24 @@ export function FlightSearchPanel({
     tripType,
   ]);
 
+  const autoSearched = useRef(false);
   useEffect(() => {
-    if (!cacheReady || !autoSearch) return;
-    if (!originQuery.trim() || !destinationQuery.trim() || !startDate) return;
+    if (!cacheReady || !autoSearch || autoSearched.current) return;
+    const origin = ensurePlace(originQuery, originPlace);
+    const destination = ensurePlace(destinationQuery, destinationPlace);
+    if (!origin || !destination || !startDate) return;
+    autoSearched.current = true;
     void search();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cacheReady]);
+  }, [
+    autoSearch,
+    cacheReady,
+    destinationPlace,
+    destinationQuery,
+    originPlace,
+    originQuery,
+    search,
+    startDate,
+  ]);
 
   const lastOriginKey = useRef<string | null>(null);
   useEffect(() => {

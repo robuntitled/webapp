@@ -152,6 +152,7 @@ export type ComposerDestination = {
   gradient: string;
   lat: number;
   lng: number;
+  countryCode?: string;
 };
 
 /** Intenti supportati dall'orchestrator — contratto UI ↔ backend */

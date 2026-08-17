@@ -58,17 +58,20 @@ export function findDestination(idOrLabel: string): ComposerDestination | undefi
 }
 
 export function featuredToMeta(dest: ComposerDestination): DestinationMeta {
+  const countryHit = findContinentCountry(dest.label);
   const country =
     dest.region === dest.label
       ? dest.label
-      : findContinentCountry(dest.label)?.label ?? dest.label;
+      : countryHit?.label ?? dest.label;
   return {
     label: dest.label,
     lat: dest.lat,
     lng: dest.lng,
     subtitle: dest.region,
     placeTypeLabel: dest.region,
+    placeType: countryHit ? 'country' : undefined,
     country,
+    countryCode: dest.countryCode ?? countryHit?.countryCode,
   };
 }
 

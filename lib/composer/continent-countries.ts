@@ -252,6 +252,7 @@ export const CONTINENT_COUNTRIES: ComposerDestination[] = SEED.map(
     gradient: REGION_GRADIENT[region],
     lat,
     lng,
+    countryCode: iso2,
   })
 );
 

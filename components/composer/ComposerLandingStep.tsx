@@ -20,7 +20,8 @@ import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildOrganizerOrigin, originFromPlace } from '@/lib/composer/origins';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
-import { resolveDestinationIata } from '@/lib/travel/iata';
+import { resolveFlightDestinationIata } from '@/lib/travel/iata';
+import { resolveDestinationContext } from '@/lib/composer/destination-context';
 import { placeDisplayValue, resolvePlaceExact, type PlaceSuggestion } from '@/lib/travel/airport-catalog';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
@@ -296,6 +297,12 @@ export function ComposerLandingStep({
     return profileCountry?.trim() || 'Italia';
   })();
 
+  const destPrefill =
+    resolveFlightDestinationIata(
+      resolveDestinationContext(draft.destination, draft.destinationMeta).airport?.iata ??
+        draft.destination
+    ) ?? draft.destination;
+
   const handleOriginChange = useCallback(
     (place: PlaceSuggestion) => {
       const next = originFromPlace(place);
@@ -469,9 +476,7 @@ export function ComposerLandingStep({
             <FlightSearchPanel
               variant="composer"
               defaultOrigin={originPrefill}
-              defaultDestination={
-                resolveDestinationIata(draft.destination) ?? draft.destination
-              }
+              defaultDestination={destPrefill}
               defaultStartDate={draft.startDate}
               defaultEndDate={draft.endDate}
               defaultAdults={1}

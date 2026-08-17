@@ -1,3 +1,10 @@
+import {
+  expandOriginIata,
+  findAirportsForCity,
+  matchCountryOnly,
+  primaryAirportsForCountry,
+} from '@/lib/travel/airport-catalog';
+
 /** Mappa destinazioni comuni (italiano/inglese) → codice IATA aeroporto/città. */
 const DESTINATION_IATA: Record<string, string> = {
   thailandia: 'BKK',
@@ -209,4 +216,32 @@ export function resolveDestinationIata(destination: string): string | null {
   }
 
   return null;
+}
+
+/** Scalo reale per LiteAPI: paese/ISO2/metro → primo aeroporto (AE → DXB, TYO → HND). */
+export function resolveFlightDestinationIata(destination: string): string | null {
+  const trimmed = destination.trim();
+  if (!trimmed) return null;
+
+  if (/^[A-Za-z]{2}$/.test(trimmed)) {
+    return primaryAirportsForCountry(trimmed)[0]?.iata ?? null;
+  }
+
+  if (/^[A-Za-z]{3}$/.test(trimmed)) {
+    const expanded = expandOriginIata(trimmed);
+    return expanded[0] ?? trimmed.toUpperCase();
+  }
+
+  const mapped = resolveDestinationIata(trimmed);
+  if (mapped) {
+    return expandOriginIata(mapped)[0] ?? mapped;
+  }
+
+  const country = matchCountryOnly(trimmed);
+  if (country) {
+    return primaryAirportsForCountry(country.code)[0]?.iata ?? null;
+  }
+
+  const city = trimmed.split(/[,·]/)[0]?.trim() || trimmed;
+  return findAirportsForCity(city)[0]?.iata ?? null;
 }

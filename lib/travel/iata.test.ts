@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveDestinationIata } from '@/lib/travel/iata';
+import { resolveDestinationIata, resolveFlightDestinationIata } from '@/lib/travel/iata';
 
 describe('resolveDestinationIata', () => {
   it('resolves italian country names', () => {
@@ -19,5 +19,22 @@ describe('resolveDestinationIata', () => {
 
   it('returns null for unknown destinations', () => {
     expect(resolveDestinationIata('Città sconosciuta')).toBeNull();
+  });
+});
+
+describe('resolveFlightDestinationIata', () => {
+  it('maps Emirati Arabi and AE to DXB', () => {
+    expect(resolveFlightDestinationIata('Emirati Arabi')).toBe('DXB');
+    expect(resolveFlightDestinationIata('AE')).toBe('DXB');
+  });
+
+  it('maps Paesi Bassi and Cechia via catalog', () => {
+    expect(resolveFlightDestinationIata('Paesi Bassi')).toBe('AMS');
+    expect(resolveFlightDestinationIata('Cechia')).toBe('PRG');
+  });
+
+  it('expands metro TYO to a real airport', () => {
+    expect(resolveFlightDestinationIata('TYO')).toBe('HND');
+    expect(resolveFlightDestinationIata('Giappone')).toBe('HND');
   });
 });
