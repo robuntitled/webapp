@@ -9,7 +9,7 @@ import { useScrollParallax } from '@/hooks/useScrollParallax';
 type HeroBackgroundProps = {
   images: readonly string[];
   alt?: string;
-  overlay?: 'light' | 'dark' | 'gradient';
+  overlay?: 'light' | 'dark' | 'gradient' | 'photo';
   className?: string;
   intervalMs?: number;
   /** Scroll-linked parallax on the hero imagery. */
@@ -45,10 +45,9 @@ export function HeroBackground({
 
   const overlayClass = {
     light: 'bg-white/40',
-    dark: 'bg-slate-950/78',
-    // Più opaco: evita titoli/testi scuri illeggibili sopra le foto
-    gradient:
-      'bg-gradient-to-b from-slate-950/92 via-slate-950/80 to-[#070b12]/96',
+    dark: 'bg-slate-950/50',
+    gradient: 'bg-gradient-to-b from-black/45 via-black/35 to-black/55',
+    photo: 'bg-gradient-to-r from-black/50 via-black/20 to-transparent',
   }[overlay];
 
   const useParallax = parallax && !reduced;

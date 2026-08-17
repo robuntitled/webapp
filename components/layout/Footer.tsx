@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import type { CompanyProfile } from '@/lib/privacy/company';
 
 type FooterProps = {
@@ -7,6 +10,8 @@ type FooterProps = {
 };
 
 export function Footer({ company }: FooterProps) {
+  const pathname = usePathname();
+  if (pathname === '/') return null;
 
   return (
     <footer className="border-t bg-primary text-primary-foreground mt-auto">

@@ -8,6 +8,7 @@ import { mapAuthError } from '@/lib/auth/oauth-errors';
 import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
 import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
 import { HeroBackground } from '@/components/brand/HeroBackground';
+import { LandingDestinations } from '@/components/brand/LandingDestinations';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Plane, Users } from 'lucide-react';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import { formatCreatorCashback, formatParticipantCashback } from '@/lib/commerce/cashback';
+import Link from 'next/link';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
 
@@ -216,29 +219,30 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen">
-      <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="gradient" parallax />
+      <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
-        {/* Brand panel — visibile su desktop */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-end p-12 pb-20">
+        <div className="flex flex-col justify-end px-6 pt-14 pb-6 lg:w-[56%] lg:p-12 lg:pb-20">
           <ScrollReveal variant="decor">
-            <div className="mb-6 flex items-center gap-3">
-              <Image src="/assets/logo.png" alt="" width={48} height={48} className="rounded-xl" />
-              <span className="font-display text-3xl font-semibold text-white">NomadLink</span>
+            <div className="mb-5 flex items-center gap-3">
+              <Image src="/assets/logo.png" alt="" width={44} height={44} className="rounded-xl" />
+              <span className="font-display text-2xl font-semibold text-white drop-shadow lg:text-3xl">
+                NomadLink
+              </span>
             </div>
           </ScrollReveal>
           <ScrollReveal variant="title">
-            <h1 className="max-w-lg font-display text-5xl font-semibold leading-[1.1] text-white xl:text-6xl">
+            <h1 className="max-w-lg font-display text-4xl font-semibold leading-[1.08] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)] sm:text-5xl xl:text-6xl">
               Il viaggio di gruppo, senza tour operator.
             </h1>
           </ScrollReveal>
           <ScrollReveal variant="title" stagger={1}>
-            <p className="mt-6 max-w-md text-lg leading-relaxed text-white/90">
+            <p className="mt-4 max-w-md text-base leading-relaxed text-white drop-shadow sm:text-lg">
               Organizzalo in autonomia, prenota a prezzi di mercato, spendi meno. Una parte torna
               con il cashback.
             </p>
           </ScrollReveal>
-          <ul className="mt-10 max-w-md space-y-3 text-sm text-white/88">
+          <ul className="mt-6 max-w-md space-y-2 text-sm text-white/95">
             {[
               { Icon: Users, text: 'Unisciti a un viaggio in formazione, o lancialo tu' },
               { Icon: Map, text: 'Costruisci i giorni sulla mappa, con l’AI se vuoi' },
@@ -246,47 +250,38 @@ export default function LoginPage() {
             ].map(({ Icon, text }, i) => (
               <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
                 <div className="flex items-start gap-3">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white" />
                   <span>{text}</span>
                 </div>
               </ScrollReveal>
             ))}
           </ul>
+          <LandingDestinations />
+          <p className="mt-4 text-sm text-white/90">
+            Creator {formatCreatorCashback()} · partecipante {formatParticipantCashback()} ·{' '}
+            <Link href="/dashboard" className="underline underline-offset-4">
+              Esplora i viaggi
+            </Link>
+          </p>
         </div>
 
-        {/* Form panel */}
-        <div className="flex flex-1 items-center justify-center px-4 py-16 lg:py-12">
-          <ScrollReveal variant="card" className="w-full max-w-md glass-panel rounded-3xl p-8 space-y-6">
-            <div className="text-center lg:text-left">
-              <ScrollReveal variant="decor">
-                <div className="mb-4 flex items-center justify-center gap-2 lg:hidden">
-                  <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-lg" />
-                  <span className="font-display text-2xl font-semibold">NomadLink</span>
-                </div>
-              </ScrollReveal>
-              <ScrollReveal variant="title" stagger={1}>
-                <p className="mb-3 text-sm leading-relaxed text-muted-foreground lg:hidden">
-                  Crea un viaggio o unisciti. Prenoti quando il gruppo è pronto.
-                </p>
-              </ScrollReveal>
-              <ScrollReveal variant="title">
-                <h2 className="font-display text-2xl font-semibold text-foreground">
-                  {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
-                </h2>
-              </ScrollReveal>
-              <ScrollReveal variant="card" stagger={1}>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  {isRegisterMode
-                    ? 'Due minuti. Poi scegli: creare o unirti.'
-                    : 'Accedi e scegli: creare un viaggio o unirti a uno.'}
-                </p>
-              </ScrollReveal>
+        <div className="flex flex-1 items-start justify-center px-4 pb-16 lg:items-center lg:py-12">
+          <ScrollReveal variant="card" className="w-full max-w-md rounded-3xl border border-white/40 bg-white p-7 shadow-2xl space-y-5 text-slate-900">
+            <div>
+              <h2 className="font-display text-2xl font-semibold text-slate-900">
+                {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
+              </h2>
+              <p className="mt-1.5 text-sm text-slate-600">
+                {isRegisterMode
+                  ? 'Due minuti. Poi scegli: creare o unirti.'
+                  : 'Accedi e scegli: creare un viaggio o unirti a uno.'}
+              </p>
             </div>
 
             <div className="space-y-2">
               <Button
                 variant="outline"
-                className="w-full h-11 rounded-xl bg-background/80"
+                className="w-full h-11 rounded-xl bg-white text-slate-900 border-slate-200"
                 disabled={oauthLoading !== null}
                 onClick={() => void handleOAuthSignIn('google')}
               >
@@ -416,7 +411,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-slate-600">
               {isRegisterMode ? 'Hai già un account?' : 'Non hai un account?'}{' '}
               <button
                 type="button"
@@ -427,10 +422,19 @@ export default function LoginPage() {
                   setTurnstileToken('');
                   setTurnstileKey((k) => k + 1);
                 }}
-                className="font-medium text-primary hover:underline"
+                className="font-medium text-slate-900 underline underline-offset-2"
               >
                 {isRegisterMode ? 'Accedi' : 'Registrati'}
               </button>
+            </p>
+            <p className="text-center text-[11px] text-slate-500">
+              <Link href="/privacy" className="underline underline-offset-2">
+                Privacy
+              </Link>
+              {' · '}
+              <Link href="/termini" className="underline underline-offset-2">
+                Termini
+              </Link>
             </p>
           </ScrollReveal>
         </div>

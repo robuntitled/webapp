@@ -25,21 +25,17 @@ export function CookieBanner() {
     <div
       role="dialog"
       aria-label="Consenso cookie"
-      className="fixed bottom-0 inset-x-0 z-50 border-t bg-white/95 dark:bg-slate-950/95 backdrop-blur p-4 shadow-lg"
+      className="fixed bottom-4 right-4 z-50 max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl"
     >
-      <div className="container mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between max-w-4xl">
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Utilizziamo cookie tecnici necessari al funzionamento del sito (sessione di login).
-          Per maggiori informazioni consulta la{' '}
-          <Link href="/cookie" className="text-blue-600 hover:underline">
-            Cookie Policy
-          </Link>
-          .
-        </p>
-        <Button onClick={accept} className="shrink-0">
-          Accetta
-        </Button>
-      </div>
+      <p className="text-sm text-slate-700">
+        Solo cookie tecnici di sessione.{' '}
+        <Link href="/cookie" className="underline underline-offset-2">
+          Cookie Policy
+        </Link>
+      </p>
+      <Button onClick={accept} size="sm" className="mt-3 rounded-full">
+        Ok
+      </Button>
     </div>
   );
 }
