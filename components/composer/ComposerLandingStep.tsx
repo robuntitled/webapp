@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
+  CalendarIcon,
   Loader2,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
@@ -39,47 +40,64 @@ const WHO_COVERS = {
     'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
 } as const;
 
-const FROM_COVER =
-  'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=80';
-
-const AIRPORT_COVERS = [
-  FROM_COVER,
-  'https://images.unsplash.com/photo-1570710891163-6d3b5c47248b?auto=format&fit=crop&w=900&q=80',
-  'https://images.unsplash.com/photo-1542296332-2e4473faf093?auto=format&fit=crop&w=900&q=80',
-];
-
-const DATE_COVERS = {
-  start:
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
-  end: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=900&q=80',
-};
-
 const DURATION_CARDS = [
   {
     n: 5 as const,
     kicker: 'Ponte',
     title: '5 giorni',
     body: 'Il lungo weekend che vale un viaggio.',
-    cover:
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
   },
   {
     n: 7 as const,
     kicker: 'Settimana',
     title: '7 giorni',
     body: 'Il ritmo giusto. Niente fretta.',
-    cover:
-      'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80',
   },
   {
     n: 10 as const,
     kicker: 'Il giro',
     title: '10 giorni',
     body: 'Ci stai tutto. Zero rimpianti.',
-    cover:
-      'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=900&q=80',
   },
 ];
+
+function PaperChoiceCard({
+  active,
+  onClick,
+  kicker,
+  title,
+  body,
+  className,
+}: {
+  active?: boolean;
+  onClick?: () => void;
+  kicker?: string;
+  title: string;
+  body?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'cursor-pointer rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)]',
+        active
+          ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220]'
+          : 'ring-1 ring-black/5',
+        className
+      )}
+    >
+      {kicker ? (
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          {kicker}
+        </p>
+      ) : null}
+      <p className="mt-2 font-display text-2xl font-semibold text-slate-900">{title}</p>
+      {body ? <p className="mt-1 text-sm leading-snug text-slate-600">{body}</p> : null}
+    </button>
+  );
+}
 
 function PhotoChoiceCard({
   cover,
@@ -426,15 +444,17 @@ export function ComposerLandingStep({
             <div className="grid gap-3 sm:grid-cols-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <button type="button" className="text-left">
-                    <PhotoChoiceCard
-                      as="div"
-                      cover={destCover ?? DATE_COVERS.start}
-                      kicker="Partenza"
-                      title={startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                      body="Il giorno in cui decolla il gruppo."
-                      className="min-h-[168px] w-full"
-                    />
+                  <button
+                    type="button"
+                    className="w-full rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)]"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Partenza
+                    </p>
+                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
+                      <CalendarIcon className="h-5 w-5 text-accent" />
+                      {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                    </p>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 rounded-xl" align="start">
@@ -460,15 +480,18 @@ export function ComposerLandingStep({
               </Popover>
               <Popover>
                 <PopoverTrigger asChild>
-                  <button type="button" disabled={!startDate} className="text-left disabled:opacity-50">
-                    <PhotoChoiceCard
-                      as="div"
-                      cover={DATE_COVERS.end}
-                      kicker="Ritorno"
-                      title={endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                      body="Chiudi il giro. Stesso gate."
-                      className="min-h-[168px] w-full"
-                    />
+                  <button
+                    type="button"
+                    disabled={!startDate}
+                    className="w-full rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)] disabled:opacity-50"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Ritorno
+                    </p>
+                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
+                      <CalendarIcon className="h-5 w-5 text-accent" />
+                      {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                    </p>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 rounded-xl" align="end">
@@ -490,9 +513,8 @@ export function ComposerLandingStep({
 
             <div className="grid gap-3 sm:grid-cols-3">
               {DURATION_CARDS.map((card) => (
-                <PhotoChoiceCard
+                <PaperChoiceCard
                   key={card.n}
-                  cover={card.cover}
                   kicker={card.kicker}
                   title={card.title}
                   body={card.body}
@@ -525,15 +547,14 @@ export function ComposerLandingStep({
 
             {airportHits.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-3">
-                {airportHits.map((airport, i) => {
+                {airportHits.map((airport) => {
                   const selected = draft.organizerOrigin?.iata === airport.iata;
                   return (
-                    <PhotoChoiceCard
+                    <PaperChoiceCard
                       key={airport.iata}
-                      cover={AIRPORT_COVERS[i] ?? FROM_COVER}
-                      kicker={airport.recommended ? 'Consigliato' : airport.iata}
+                      kicker={airport.recommended ? 'Consigliato' : 'Scalo'}
                       title={airport.iata}
-                      body={`${airport.city}${airport.recommended ? ' · il più conveniente per questa meta' : ''}`}
+                      body={airport.city}
                       active={selected}
                       onClick={() => pickAirport(airport)}
                     />
