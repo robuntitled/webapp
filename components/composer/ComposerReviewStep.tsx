@@ -6,15 +6,10 @@ import { Button } from '@/components/ui/button';
 import { BLOCK_META, getBlockDisplayPrice, getBlockDisplayTitle } from '@/lib/composer/blocks';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { estimateTripBudget, formatComposerDayLabel } from '@/lib/composer/days';
+import { formatComposerDayLabel } from '@/lib/composer/days';
 import { formatCreatorCashback, formatParticipantCashback } from '@/lib/commerce/cashback';
 import type { ComposerDraft } from '@/types/composer';
-import { TripMap } from '@/components/maps/TripMap';
-import { buildPinsFromDraft } from '@/lib/maps/pins';
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
-import { TripCoverPicker } from '@/components/trips/TripCoverPicker';
-import { SavedTripBookables } from '@/components/trips/SavedTripBookables';
-import { picksFromDraft } from '@/lib/composer/bookable-picks';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import {
   AlertTriangle,
@@ -25,7 +20,6 @@ import {
   MapPin,
   Route,
   Send,
-  Wallet,
 } from 'lucide-react';
 
 type ComposerReviewStepProps = {
@@ -63,12 +57,8 @@ export function ComposerReviewStep({
   publishing,
   onBack,
   onPublish,
-  onChange,
 }: ComposerReviewStepProps) {
-  const budget = estimateTripBudget(draft.days);
   const blockCount = draft.days.reduce((n, d) => n + d.blocks.length, 0);
-  const pins = buildPinsFromDraft(draft);
-  const bookablePicks = picksFromDraft(draft);
   const publishIssues = validatePublishDraft(draft);
   const canPublish = publishIssues.length === 0;
   const formatShort = (iso: string) => {
@@ -96,7 +86,7 @@ export function ComposerReviewStep({
                 Controlla e pubblica
               </h2>
               <p className="max-w-xl text-sm text-white/90">
-                Controlla itinerario e budget. Esce “In formazione”: il viaggio parte al
+                Controlla l’itinerario. Esce “In formazione”: il viaggio parte al
                 raggiungimento del minimo posti. NomadCredits: tu {formatCreatorCashback()}, chi si
                 unisce {formatParticipantCashback()}.
               </p>
@@ -138,42 +128,27 @@ export function ComposerReviewStep({
         className="container mx-auto max-w-4xl flex-1 space-y-6 px-4 py-8 pb-28"
       >
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02]">
-          <div className="grid gap-0 md:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-4 p-6 md:p-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Pronto · stato “In formazione”
-              </div>
-              <div>
-                <h3 className="font-display text-2xl font-semibold text-white md:text-3xl">
-                  {draft.title || 'Il tuo viaggio'}
-                </h3>
-                <p className="mt-2 flex items-center gap-2 text-sm text-white/65">
-                  <MapPin className="h-4 w-4 shrink-0 text-accent" />
-                  {draft.destination || 'Destinazione da definire'}
-                </p>
-              </div>
+          <div className="space-y-4 p-6 md:p-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Pronto · stato “In formazione”
             </div>
-            {pins.length > 0 ? (
-              <div className="relative min-h-[200px] border-t border-white/10 md:border-l md:border-t-0">
-                <TripMap
-                  destination={draft.destination}
-                  destinationMeta={draft.destinationMeta}
-                  pins={pins}
-                  className="absolute inset-0 h-full w-full"
-                  interactive={false}
-                  showRoute={false}
-                />
-              </div>
-            ) : null}
+            <div>
+              <h3 className="font-display text-2xl font-semibold text-white md:text-3xl">
+                {draft.title || 'Il tuo viaggio'}
+              </h3>
+              <p className="mt-2 flex items-center gap-2 text-sm text-white/65">
+                <MapPin className="h-4 w-4 shrink-0 text-accent" />
+                {draft.destination || 'Destinazione da definire'}
+              </p>
+            </div>
           </div>
         </section>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-3">
           <StatPill icon={CalendarDays} label="Date" value={dateLabel} />
           <StatPill icon={Route} label="Itinerario" value={`${draft.days.length} giorni`} />
           <StatPill icon={MapPin} label="Tappe" value={`${blockCount}`} />
-          <StatPill icon={Wallet} label="Budget stimato" value={`~${budget}€ / persona`} />
         </div>
 
         <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/65">
@@ -185,16 +160,6 @@ export function ComposerReviewStep({
             {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
           </p>
         </div>
-
-        {onChange ? (
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-          <TripCoverPicker
-            destination={draft.destination}
-            value={draft.imageUrl}
-            onChange={(imageUrl) => onChange({ imageUrl })}
-          />
-        </section>
-        ) : null}
 
         {publishIssues.length > 0 && (
           <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-4">
@@ -211,27 +176,6 @@ export function ComposerReviewStep({
             </ul>
           </div>
         )}
-
-        {bookablePicks.length > 0 ? (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <h4 className="font-display text-base font-semibold text-white">
-              Cosa si prenota dopo
-            </h4>
-            <p className="mt-1 text-xs text-white/55">
-              Suggerimenti agganciati (LiteAPI, Viator). {COMPLIANCE_COPY.separateBooking} I must
-              visit restano sulla mappa.
-            </p>
-            <div className="mt-4">
-              <SavedTripBookables
-                picks={bookablePicks}
-                startDate={draft.startDate}
-                endDate={draft.endDate}
-                variant="dark"
-                allowCheckout={false}
-              />
-            </div>
-          </section>
-        ) : null}
 
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]">
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">

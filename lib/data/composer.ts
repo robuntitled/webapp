@@ -3,6 +3,7 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildTripDescriptionFromDays, estimateTripBudget } from '@/lib/composer/days';
 import { pickTripCoverImage } from '@/lib/composer/trip-cover-image';
+import { coverForDestination } from '@/lib/composer/destination-covers';
 import type { PublishComposerInput } from '@/lib/composer/schemas';
 import type { ComposerDay } from '@/types/composer';
 
@@ -19,7 +20,9 @@ export async function publishComposerTrip(
   const price = estimateTripBudget(days);
   const description = buildTripDescriptionFromDays(days, input.destination);
   const coverImage =
-    input.imageUrl || (await pickTripCoverImage(input.destination));
+    input.imageUrl ||
+    coverForDestination(input.destination) ||
+    (await pickTripCoverImage(input.destination));
 
   const tripRow = {
     title: input.title,

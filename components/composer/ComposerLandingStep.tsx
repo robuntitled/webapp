@@ -372,12 +372,12 @@ export function ComposerLandingStep({
 
         {phase === 'when' ? (
           <motion.div key="when" {...phaseMotion} className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 divide-x divide-slate-200 overflow-hidden rounded-3xl bg-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)]">
               <Popover>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="w-full rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)]"
+                    className="px-5 py-5 text-left transition hover:bg-slate-50"
                   >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Partenza
@@ -414,7 +414,7 @@ export function ComposerLandingStep({
                   <button
                     type="button"
                     disabled={!startDate}
-                    className="w-full rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)] disabled:opacity-50"
+                    className="px-5 py-5 text-left transition hover:bg-slate-50 disabled:opacity-50"
                   >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Ritorno
