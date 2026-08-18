@@ -14,7 +14,7 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="Termini di Servizio"
-      lastUpdated={`9 luglio 2026 (v${TERMS_VERSION})`}
+      lastUpdated={`18 agosto 2026 (v${TERMS_VERSION})`}
       notice={<LegalConfigNotice company={company} />}
     >
       <LegalSection title="1. Premessa e operatore del servizio">
@@ -47,15 +47,44 @@ export default function TermsPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection title="4. Contenuti e viaggi">
+      <LegalSection title="4. Natura del servizio: nessun pacchetto turistico">
+        <p className="mb-4 font-medium">
+          {company.tradeName} è uno strumento di pianificazione e community. Non è un&apos;agenzia di
+          viaggi, un tour operator o un organizzatore di pacchetti turistici, e non vende viaggi.
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>
+            <strong>Il &quot;Trip&quot; non è un pacchetto turistico.</strong> È un contenitore di
+            itinerario, gruppo e suggerimenti. Non costituisce un pacchetto né un servizio turistico
+            collegato venduto da {company.tradeName}, e non è un prodotto acquistabile come un unico
+            viaggio.
+          </li>
+          <li>
+            <strong>Ogni servizio è prenotato separatamente con il rispettivo fornitore.</strong>{' '}
+            Voli, hotel, attività e altri servizi hanno ciascuno prezzo, condizioni e contratto
+            propri, stipulati direttamente tra l&apos;utente e il fornitore terzo. Non esiste un
+            prezzo unico del viaggio né un checkout unico.
+          </li>
+          <li>
+            <strong>{company.tradeName} non è responsabile dell&apos;esecuzione dei servizi.</strong>{' '}
+            La fornitura, l&apos;esatta esecuzione, le modifiche, le cancellazioni e i rimborsi di
+            ogni servizio sono di esclusiva responsabilità del fornitore che lo eroga.{' '}
+            {company.tradeName} risponde unicamente del funzionamento della piattaforma (account,
+            gruppo, itinerario, programma punti).
+          </li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="5. Contenuti e viaggi creati dagli utenti">
         <p>
-          L&apos;utente che crea un viaggio ne è responsabile. {company.tradeName} non organizza
-          direttamente i viaggi né garantisce la loro esecuzione. I contenuti pubblicati non devono
-          violare diritti di terzi né norme vigenti.
+          L&apos;utente che crea un viaggio ne è responsabile. {company.tradeName} non organizza i
+          viaggi né garantisce la loro esecuzione o la partenza del gruppo. I contenuti pubblicati
+          non devono violare diritti di terzi né norme vigenti. Gli itinerari possono essere generati
+          o assistiti da strumenti di intelligenza artificiale: vanno sempre verificati dall&apos;utente.
         </p>
       </LegalSection>
 
-      <LegalSection title="5. Dati personali">
+      <LegalSection title="6. Dati personali">
         <p>
           Il trattamento dei dati personali è disciplinato dall&apos;
           <a href="/privacy" className="text-blue-600 hover:underline">
@@ -65,7 +94,7 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Sospensione e cancellazione">
+      <LegalSection title="7. Sospensione e cancellazione">
         <p>
           Possiamo sospendere o chiudere account che violano questi Termini. Puoi cancellare il tuo
           account in qualsiasi momento dalle Impostazioni; la cancellazione comporta la rimozione dei
@@ -73,15 +102,17 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Limitazione di responsabilità">
+      <LegalSection title="8. Limitazione di responsabilità">
         <p>
-          Il servizio è fornito &quot;così com&apos;è&quot;. {company.tradeName} non è responsabile
-          per danni derivanti da viaggi organizzati tra utenti, interruzioni del servizio o contenuti
-          di terzi.
+          Il servizio è fornito &quot;così com&apos;è&quot;. Coerentemente con l&apos;art. 4,{' '}
+          {company.tradeName} non è responsabile per l&apos;esecuzione dei servizi turistici prenotati
+          con i fornitori, per i viaggi creati tra utenti, per interruzioni del servizio o per
+          contenuti di terzi. Ogni reclamo relativo a un servizio va rivolto al fornitore che lo ha
+          erogato.
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Legge applicabile e foro competente">
+      <LegalSection title="9. Legge applicabile e foro competente">
         <p>
           I presenti Termini sono regolati dalla legge italiana. Per le controversie con consumatori
           residenti in Italia si applica il foro del consumatore; negli altri casi, foro di{' '}
@@ -89,7 +120,7 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Contatti">
+      <LegalSection title="10. Contatti">
         <p>
           Per assistenza:{' '}
           <a href={`mailto:${company.supportEmail}`} className="text-blue-600 hover:underline">

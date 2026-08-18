@@ -6,6 +6,7 @@ import {
 } from '@/lib/auth/require-phone-verified';
 import { publishComposerTrip } from '@/lib/data/composer';
 import { publishComposerSchema } from '@/lib/composer/schemas';
+import { awardPoints } from '@/lib/commerce/points-ledger';
 import { revalidatePath } from 'next/cache';
 
 export async function POST(request: Request) {
@@ -27,6 +28,12 @@ export async function POST(request: Request) {
   try {
     await requirePhoneVerified(session.user.id);
     const result = await publishComposerTrip(session.user.id, parsed.data);
+
+    await awardPoints({
+      userId: session.user.id,
+      action: 'create_trip_published',
+      ref: result.tripId,
+    });
 
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/cerca');

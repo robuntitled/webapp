@@ -35,7 +35,10 @@ export default async function CreatorPage() {
         <Button asChild className="mt-10 rounded-full">
           <Link href="/dashboard/crea?new=1">Crea un viaggio</Link>
         </Button>
-        <p className="mt-4 text-sm text-white/85">
+        <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/85">
+          <Link href="/dashboard/punti" className="underline underline-offset-4">
+            I miei NomadPoints
+          </Link>
           <Link href="/dashboard/cashback" className="underline underline-offset-4">
             I miei NomadCredits
           </Link>
