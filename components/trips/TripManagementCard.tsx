@@ -123,14 +123,15 @@ export function TripManagementCard({ trip, variant }: TripManagementCardProps) {
               </div>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-xs text-muted-foreground">da</p>
-              <p className="text-2xl font-bold text-primary tabular-nums">{trip.price}€</p>
+              <p className="text-xs text-muted-foreground">servizi da</p>
+              <p className="text-2xl font-bold text-primary tabular-nums">~{trip.price}€</p>
+              <p className="text-[10px] text-muted-foreground">stima, non pacchetto</p>
             </div>
           </div>
 
           <p className="text-sm text-muted-foreground line-clamp-2">
             {variant === 'organizing'
-              ? 'Tu sei l’organizzatore — apri il viaggio per condividere e gestire la crew.'
+              ? 'Tu sei il creatore — apri il viaggio per condividere e gestire la crew.'
               : `${TRIP_ROLE_META[role].emoji} ${TRIP_ROLE_META[role].description}`}
           </p>
 

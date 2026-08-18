@@ -251,7 +251,7 @@ export function OriginSetupPanel({
         <OriginCard
           origin={draft.organizerOrigin}
           icon={User}
-          subtitle="Tu — organizzatore"
+          subtitle="Tu — creatore"
           onRemove={() => onChange({ organizerOrigin: undefined })}
         />
       ) : (

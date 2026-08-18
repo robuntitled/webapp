@@ -479,7 +479,7 @@ export function ComposerLandingStep({
                 cover={WHO_COVERS.solo}
                 kicker="Aperto"
                 title="Solo"
-                body="Organizzi per te. Poi si uniscono gli altri."
+                body="Crei per te. Poi si uniscono gli altri."
                 active={draft.planningMode === 'solo'}
                 className="min-h-[240px]"
                 onClick={() =>

@@ -66,7 +66,7 @@ export function TripDetailActions({
       setLocalStatus('pending');
       toast.success(
         result.status === 'already_pending'
-          ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
+          ? 'Richiesta già inviata: aspetta la risposta del creatore'
           : 'Richiesta inviata. Prenoti i servizi quando il gruppo è formato.'
       );
     }
@@ -111,7 +111,7 @@ export function TripDetailActions({
         <div className="space-y-2">
           <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm font-medium text-amber-700 dark:text-amber-400">
             <Clock className="h-4 w-4" />
-            Richiesta inviata — in attesa dell’organizzatore
+            Richiesta inviata — in attesa del creatore
           </div>
           <Button
             variant="ghost"
@@ -139,7 +139,7 @@ export function TripDetailActions({
 
       {session?.user && !isCreator && !isParticipant && localStatus === 'rejected' && (
         <div className="rounded-xl border bg-muted/40 px-3 py-2.5 text-center text-sm text-muted-foreground">
-          L’organizzatore ha rifiutato la tua richiesta.
+          Il creatore ha rifiutato la tua richiesta.
         </div>
       )}
 

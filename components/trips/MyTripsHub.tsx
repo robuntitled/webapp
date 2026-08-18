@@ -205,8 +205,8 @@ function TripListItem({
         </p>
       </div>
       <div className="text-right shrink-0 hidden sm:block">
-        <p className="text-xs text-muted-foreground">da</p>
-        <p className="text-lg font-bold text-primary tabular-nums">{trip.price}€</p>
+        <p className="text-xs text-muted-foreground">servizi da</p>
+        <p className="text-lg font-bold text-primary tabular-nums">~{trip.price}€</p>
       </div>
       <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
     </Link>
@@ -237,7 +237,7 @@ function EmptyPanel({
     return (
       <div className="hub-empty py-16 px-6 text-center">
         <Compass className="h-10 w-10 text-muted-foreground/40 mx-auto mb-4" />
-        <p className="font-medium text-foreground">Nessun viaggio organizzato</p>
+        <p className="font-medium text-foreground">Nessun viaggio creato</p>
         <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
           Crea il primo, invita la crew e tieni tutto in un unico posto.
         </p>
@@ -323,7 +323,7 @@ export function MyTripsHub({
             I miei viaggi
           </h1>
           <p className="mt-3 text-white/65 max-w-lg text-base leading-relaxed">
-            Bozze, viaggi che organizzi e modalità relax — tutto in un unico posto.
+            Bozze, viaggi che crei e modalità relax — tutto in un unico posto.
           </p>
         </div>
         <Button asChild size="lg" className="rounded-full shrink-0 gap-2 shadow-lg">

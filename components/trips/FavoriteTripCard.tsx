@@ -67,8 +67,8 @@ export function FavoriteTripCard({
       setRequestSent(true);
       toast.success(
         result.status === 'already_pending'
-          ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
-          : 'Richiesta inviata! L’organizzatore deve accettarla 🤞'
+          ? 'Richiesta già inviata: aspetta la risposta del creatore'
+          : 'Richiesta inviata! Il creatore deve accettarla 🤞'
       );
     }
     router.refresh();

@@ -105,8 +105,8 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
       setRequestSent(true);
       toast.success(
         result.status === 'already_pending'
-          ? 'Richiesta già inviata: aspetta la risposta dell’organizzatore'
-          : 'Richiesta inviata! L’organizzatore deve accettarla 🤞'
+          ? 'Richiesta già inviata: aspetta la risposta del creatore'
+          : 'Richiesta inviata! Il creatore deve accettarla 🤞'
       );
     }
     router.refresh();
@@ -285,7 +285,7 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                 </Button>
               ) : requestSent ? (
                 <Button className="w-full rounded-full" variant="outline" disabled>
-                  ⏳ Richiesta inviata — attendi l’organizzatore
+                  ⏳ Richiesta inviata — attendi il creatore
                 </Button>
               ) : joinable ? (
                 <Button

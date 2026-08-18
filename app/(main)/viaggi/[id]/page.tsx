@@ -227,7 +227,7 @@ export default async function TripDetailPage({ params }: PageProps) {
               <div className="space-y-4 border-t border-border/40 pt-5">
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Organizzato da
+                    Creato da
                   </p>
                   <UserProfileLink
                     userId={trip.creator.id}

@@ -309,7 +309,7 @@ export function PublicProfileView({
             subtitle="Viaggi aperti creati da questa persona"
             icon={<Compass className="h-5 w-5 text-teal-300" />}
             trips={organizedTrips}
-            empty="Nessun viaggio organizzato in programma."
+            empty="Nessun viaggio creato in programma."
           />
 
           <TripSection

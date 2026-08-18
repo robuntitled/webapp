@@ -71,7 +71,7 @@ export function TripSearchResultsClient({
           session={session}
           emptyBody={
             emptyReason === 'own-solo-only'
-              ? 'I viaggi che organizzi tu non compaiono qui. Esci e accedi con un altro account per vederli, oppure invita amici al tuo viaggio.'
+              ? 'I viaggi che crei tu non compaiono qui. Esci e accedi con un altro account per vederli, oppure invita amici al tuo viaggio.'
               : emptyReason === 'no-solo'
                 ? 'Nessun viaggio in modalità «Solo (aperto)». In Crea viaggio scegli «Chi parte? → Solo» e pubblica.'
                 : emptyReason === 'past-or-full'
