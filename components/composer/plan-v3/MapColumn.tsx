@@ -262,6 +262,8 @@ export function MapColumn(props: MapColumnProps) {
         >
           <MapSearchBar
             biasQuery={draft.destinationMeta?.label ?? draft.destination}
+            lat={draft.destinationMeta?.lat}
+            lng={draft.destinationMeta?.lng}
             onSelect={handleSearchSelect}
             compact={!expanded}
             className={expanded ? 'w-full max-w-lg' : 'w-full max-w-sm'}

@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 type MapSearchBarProps = {
   /** Bias opzionale (es. nome destinazione viaggio). */
   biasQuery?: string;
+  /** Bias geografico: centro della meta (risultati vicini prima). */
+  lat?: number;
+  lng?: number;
   onSelect: (place: PlaceResult) => void;
   className?: string;
   compact?: boolean;
@@ -25,6 +28,8 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export function MapSearchBar({
   biasQuery,
+  lat,
+  lng,
   onSelect,
   className,
   compact,
@@ -35,25 +40,32 @@ export function MapSearchBar({
   const [open, setOpen] = useState(false);
   const debounced = useDebounce(query, 320);
 
-  const search = useCallback(async (q: string) => {
-    if (q.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/places/search?q=${encodeURIComponent(q.trim())}`,
-        { credentials: 'same-origin' }
-      );
-      const data = (await res.json()) as { results?: PlaceResult[] };
-      setResults(data.results ?? []);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const search = useCallback(
+    async (q: string) => {
+      if (q.trim().length < 2) {
+        setResults([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ q: q.trim() });
+        if (typeof lat === 'number' && typeof lng === 'number') {
+          params.set('lat', String(lat));
+          params.set('lng', String(lng));
+        }
+        const res = await fetch(`/api/places/search?${params}`, {
+          credentials: 'same-origin',
+        });
+        const data = (await res.json()) as { results?: PlaceResult[] };
+        setResults(data.results ?? []);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [lat, lng]
+  );
 
   useEffect(() => {
     if (!open) return;
