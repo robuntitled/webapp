@@ -53,6 +53,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.pexels.com',
       },
+      // Cover mete per-paese (Wikimedia Commons)
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
       // LiteAPI / Cupid hotel photos
       {
         protocol: 'https',

@@ -52,20 +52,24 @@ function Chip({
   active,
   children,
   onClick,
+  tone = 'onDark',
 }: {
   active: boolean;
   children: ReactNode;
   onClick: () => void;
+  tone?: 'onDark' | 'onLight';
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition',
+        'shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition',
         active
-          ? 'border-slate-900 bg-slate-900 text-white'
-          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+          ? 'border-accent bg-accent text-white shadow-sm'
+          : tone === 'onDark'
+            ? 'border-white/20 bg-white/10 text-white/90 hover:border-white/40'
+            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
       )}
     >
       {children}
@@ -82,6 +86,9 @@ export function TripDiscoverSearchBar({
 }: TripDiscoverSearchBarProps) {
   const patch = (partial: Partial<DiscoverSearchFilters>) =>
     onChange({ ...filters, ...partial });
+
+  const advancedCount =
+    (filters.duration !== 'any' ? 1 : 0) + (filters.region ? 1 : 0);
 
   const handleSearch = () => {
     onSubmit?.();
@@ -183,37 +190,81 @@ export function TripDiscoverSearchBar({
           </Button>
         </div>
 
-        <div className={cn('mt-3 flex items-center gap-2 overflow-x-auto pb-0.5', inline && 'justify-center')}>
-          <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-white/55" />
-          <div className="flex flex-nowrap gap-1.5">
-            {DURATION_CHIPS.map((chip) => (
-              <Chip
-                key={chip.id}
-                active={filters.duration === chip.id}
-                onClick={() => patch({ duration: chip.id })}
+        <div className={cn('mt-3 flex flex-wrap items-center gap-2', inline && 'justify-center')}>
+          {STATUS_CHIPS.map((chip) => (
+            <Chip
+              key={chip.id}
+              active={filters.status === chip.id}
+              onClick={() => patch({ status: chip.id })}
+            >
+              {chip.label}
+            </Chip>
+          ))}
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition',
+                  advancedCount > 0
+                    ? 'border-accent bg-accent text-white shadow-sm'
+                    : 'border-white/20 bg-white/10 text-white/90 hover:border-white/40'
+                )}
               >
-                {chip.label}
-              </Chip>
-            ))}
-            {STATUS_CHIPS.map((chip) => (
-              <Chip
-                key={chip.id}
-                active={filters.status === chip.id}
-                onClick={() => patch({ status: chip.id })}
-              >
-                {chip.label}
-              </Chip>
-            ))}
-            {DESTINATION_REGIONS.slice(0, 5).map((region) => (
-              <Chip
-                key={region}
-                active={filters.region === region}
-                onClick={() => patch({ region: filters.region === region ? '' : region })}
-              >
-                {region}
-              </Chip>
-            ))}
-          </div>
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtri
+                {advancedCount > 0 ? (
+                  <span className="ml-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-white/25 px-1 text-xs tabular-nums">
+                    {advancedCount}
+                  </span>
+                ) : null}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 rounded-2xl p-4" align={inline ? 'center' : 'end'}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Durata
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {DURATION_CHIPS.map((chip) => (
+                  <Chip
+                    key={chip.id}
+                    tone="onLight"
+                    active={filters.duration === chip.id}
+                    onClick={() => patch({ duration: chip.id })}
+                  >
+                    {chip.label}
+                  </Chip>
+                ))}
+              </div>
+
+              <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Regione
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {DESTINATION_REGIONS.map((region) => (
+                  <Chip
+                    key={region}
+                    tone="onLight"
+                    active={filters.region === region}
+                    onClick={() => patch({ region: filters.region === region ? '' : region })}
+                  >
+                    {region}
+                  </Chip>
+                ))}
+              </div>
+
+              {advancedCount > 0 ? (
+                <button
+                  type="button"
+                  className="mt-4 text-sm font-medium text-accent hover:underline"
+                  onClick={() => patch({ duration: 'any', region: '' })}
+                >
+                  Azzera filtri
+                </button>
+              ) : null}
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </div>

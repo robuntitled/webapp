@@ -1,5 +1,6 @@
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import { findDestination } from '@/lib/composer/destinations';
+import { GENERATED_DESTINATION_COVERS } from '@/lib/composer/destination-covers.generated';
 
 /** Copertine Unsplash per i template seed (Pexels resta la scelta in creazione). */
 export const DESTINATION_COVERS: Record<string, string> = {
@@ -87,9 +88,17 @@ const TRAVEL_PHOTO_POOL = [
 
 export function coverForDestination(idOrLabel: string): string {
   const dest = findDestination(idOrLabel);
-  if (dest && DESTINATION_COVERS[dest.id]) return DESTINATION_COVERS[dest.id];
   const key = idOrLabel.trim().toLowerCase();
+
+  // 1) Cover generate per-paese (uniche e pertinenti al luogo, via Wikipedia).
+  if (dest && GENERATED_DESTINATION_COVERS[dest.id]) return GENERATED_DESTINATION_COVERS[dest.id];
+  if (GENERATED_DESTINATION_COVERS[key]) return GENERATED_DESTINATION_COVERS[key];
+
+  // 2) Cover curate (città/isole non presenti nella lista paesi).
+  if (dest && DESTINATION_COVERS[dest.id]) return DESTINATION_COVERS[dest.id];
   if (DESTINATION_COVERS[key]) return DESTINATION_COVERS[key];
+
+  // 3) Fallback deterministico dal pool.
   const seed = dest?.id ?? key;
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;

@@ -33,9 +33,12 @@ type ConfigPhase = 'dest' | 'when' | 'from' | 'who';
 
 const WHO_COVERS = {
   solo: 'https://images.unsplash.com/photo-1504150558240-0b4fd8946624?auto=format&fit=crop&w=900&q=80',
-  group:
+  open: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=900&q=80',
+  friends:
     'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
 } as const;
+
+type Audience = 'solo' | 'open' | 'friends';
 
 const DURATION_CARDS = [
   {
@@ -262,7 +265,7 @@ export function ComposerLandingStep({
           : {
               label: 'Con chi',
               title: 'Con chi parti?',
-              subtitle: 'Aperto al mondo, o solo con chi inviti tu.',
+              subtitle: 'Da solo, con una crew aperta o solo con chi inviti tu.',
               micro: startedWithDest.current ? 3 : 4,
               total: startedWithDest.current ? 3 : 4,
             };
@@ -301,6 +304,23 @@ export function ComposerLandingStep({
     initial: { opacity: 0, x: 18 },
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -18 },
+  };
+
+  const audience: Audience =
+    draft.planningMode === 'group'
+      ? 'friends'
+      : (draft.maxParticipants ?? 8) <= 1
+        ? 'solo'
+        : 'open';
+
+  const setAudience = (next: Audience) => {
+    if (next === 'solo') {
+      onChange({ planningMode: 'solo', minParticipants: 1, maxParticipants: 1 });
+    } else if (next === 'open') {
+      onChange({ planningMode: 'solo', minParticipants: 4, maxParticipants: 8 });
+    } else {
+      onChange({ planningMode: 'group', minParticipants: 2, maxParticipants: 8 });
+    }
   };
 
   return (
@@ -474,72 +494,75 @@ export function ComposerLandingStep({
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <PhotoChoiceCard
                 cover={WHO_COVERS.solo}
-                kicker="Aperto"
+                kicker="Solo"
                 title="Solo"
-                body="Crei per te. Poi si uniscono gli altri."
-                active={draft.planningMode === 'solo'}
+                body="Viaggi da solo. Nessun gruppo, nessun posto da riempire."
+                active={audience === 'solo'}
                 className="min-h-[240px]"
-                onClick={() =>
-                  onChange({
-                    planningMode: 'solo',
-                    minParticipants: 4,
-                    maxParticipants: 8,
-                  })
-                }
+                onClick={() => setAudience('solo')}
               />
               <PhotoChoiceCard
-                cover={WHO_COVERS.group}
+                cover={WHO_COVERS.open}
+                kicker="Aperto"
+                title="Trova la crew"
+                body="Pubblichi e si uniscono viaggiatori come te."
+                active={audience === 'open'}
+                className="min-h-[240px]"
+                onClick={() => setAudience('open')}
+              />
+              <PhotoChoiceCard
+                cover={WHO_COVERS.friends}
                 kicker="Privato"
                 title="Con amici"
-                body="Solo chi inviti tu. Link, basta."
-                active={draft.planningMode === 'group'}
+                body="Solo chi inviti tu, con un link."
+                active={audience === 'friends'}
                 className="min-h-[240px]"
-                onClick={() =>
-                  onChange({
-                    planningMode: 'group',
-                    minParticipants: 2,
-                    maxParticipants: 8,
-                  })
-                }
+                onClick={() => setAudience('friends')}
               />
             </div>
 
-            <div className="composer-panel rounded-3xl p-5">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="space-y-1.5">
-                  <p className="text-sm font-medium text-white/80">Posti minimi</p>
-                  <Input
-                    type="number"
-                    min={2}
-                    max={20}
-                    className="h-12 rounded-2xl composer-field"
-                    value={draft.minParticipants ?? 4}
-                    onChange={(e) =>
-                      onChange({ minParticipants: Math.max(2, Number(e.target.value) || 2) })
-                    }
-                  />
-                </label>
-                <label className="space-y-1.5">
-                  <p className="text-sm font-medium text-white/80">Posti max</p>
-                  <Input
-                    type="number"
-                    min={2}
-                    max={40}
-                    className="h-12 rounded-2xl composer-field"
-                    value={draft.maxParticipants}
-                    onChange={(e) =>
-                      onChange({ maxParticipants: Math.max(2, Number(e.target.value) || 2) })
-                    }
-                  />
-                </label>
+            {audience !== 'solo' ? (
+              <div className="composer-panel rounded-3xl p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="space-y-1.5">
+                    <p className="text-sm font-medium text-white/80">Posti minimi</p>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={20}
+                      className="h-12 rounded-2xl composer-field"
+                      value={draft.minParticipants ?? 4}
+                      onChange={(e) =>
+                        onChange({ minParticipants: Math.max(2, Number(e.target.value) || 2) })
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1.5">
+                    <p className="text-sm font-medium text-white/80">Posti max</p>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={40}
+                      className="h-12 rounded-2xl composer-field"
+                      value={draft.maxParticipants}
+                      onChange={(e) =>
+                        onChange({ maxParticipants: Math.max(2, Number(e.target.value) || 2) })
+                      }
+                    />
+                  </label>
+                </div>
+                <p className="mt-3 text-xs text-white/55">
+                  Il viaggio parte al raggiungimento del minimo posti.
+                </p>
               </div>
-              <p className="mt-3 text-xs text-white/55">
-                Garanzia di partenza attiva finché non si raggiunge il minimo.
+            ) : (
+              <p className="text-center text-xs text-white/55">
+                Viaggio solo tuo. Potrai comunque aprirlo alla crew più avanti.
               </p>
-            </div>
+            )}
           </motion.div>
         ) : null}
       </AnimatePresence>

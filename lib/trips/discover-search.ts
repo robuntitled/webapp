@@ -135,13 +135,36 @@ export function isBookableDiscoverTrip(
   return start >= today;
 }
 
+/**
+ * Viaggi elencabili in Esplora: come i prenotabili, ma includono anche i
+ * viaggi aperti creati da te (per vederli pubblicati e gestirli). Il "Solo puro"
+ * (max 1 posto) resta fuori: è privato, solo tuo.
+ */
+export function isDiscoverListableTrip(
+  trip: TripWithRelations,
+  userId?: string | null
+): boolean {
+  if (trip.status === 'draft' || trip.status === 'archived') return false;
+  if (!isOpenSoloTrip(trip)) return false;
+  if ((Number(trip.maxParticipants) || 0) <= 1) return false;
+
+  const today = todayDateOnlyUtcMs();
+  const end = toDateOnlyUtcMs(trip.endDate);
+  const start = toDateOnlyUtcMs(trip.startDate);
+  const future = end != null ? end >= today : start == null || start >= today;
+  if (!future) return false;
+
+  if (isTripCreator(trip, userId)) return true;
+  return isDiscoverableSoloTrip(trip, userId);
+}
+
 export function filterDiscoverResults(
   trips: TripWithRelations[],
   filters: DiscoverSearchFilters,
   userId?: string | null
 ): TripWithRelations[] {
   return trips
-    .filter((trip) => isBookableDiscoverTrip(trip, userId))
+    .filter((trip) => isDiscoverListableTrip(trip, userId))
     .filter((trip) => tripMatchesDiscoverFilters(trip, filters));
 }
 

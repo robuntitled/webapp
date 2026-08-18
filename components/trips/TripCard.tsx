@@ -309,11 +309,18 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                     Accedi per partecipare
                   </Link>
                 </Button>
+              ) : creator ? (
+                <Button asChild className="w-full rounded-full gap-2" variant="secondary">
+                  <Link href={tripHref}>
+                    <ArrowRight className="h-4 w-4" />
+                    Il tuo viaggio — gestisci
+                  </Link>
+                </Button>
               ) : full ? (
                 <Button className="w-full rounded-full" variant="outline" disabled>
                   Viaggio al completo
                 </Button>
-              ) : creator ? null : null}
+              ) : null}
             </div>
           )}
         </CardFooter>

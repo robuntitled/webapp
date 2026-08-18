@@ -29,9 +29,8 @@ export async function publishComposerTrip(
     description,
     image_url: coverImage,
     price,
-    min_participants:
-      input.minParticipants ?? (input.planningMode === 'solo' ? 4 : 2),
-    max_participants: Math.max(2, input.maxParticipants),
+    min_participants: input.minParticipants ?? (input.planningMode === 'solo' ? 4 : 2),
+    max_participants: Math.max(1, input.maxParticipants),
     min_age: 18,
     max_age: 999,
     planning_mode: input.planningMode,
