@@ -26,6 +26,15 @@ function blockPrice(content: Record<string, unknown>): number | null {
   return null;
 }
 
+/**
+ * LEGAL REVIEW REQUIRED — punto di aggregazione servizi.
+ * Aggregare volo+hotel+attività attorno allo stesso viaggio/date può integrare
+ * l'"agevolazione" di servizi turistici collegati (art. 33 c.1 lett. f e art. 40
+ * D.Lgs. 62/2018). Mantenere: prezzi/fornitori/prenotazioni SEPARATI, nessun
+ * prezzo forfettario, nessun checkout unico, nessuna trasmissione automatica dei
+ * dati del viaggiatore da un servizio all'altro entro 24h (art. 33 c.1 lett. c
+ * punto 2.4). Vedi lib/legal/compliance-copy.ts.
+ */
 export function servicesFromItinerary(
   tripId: string,
   days: ComposerDayRow[] | null | undefined

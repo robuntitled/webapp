@@ -33,6 +33,7 @@ import {
   lastJoinLabel,
 } from '@/lib/trips/formation';
 import { getPublicProfile } from '@/lib/data/public-profile';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import {
   estimateParticipantCashbackEur,
   formatCreatorCashback,
@@ -175,13 +176,18 @@ export default async function TripDetailPage({ params }: PageProps) {
 
         <Card className="overflow-hidden rounded-[1.75rem] border border-border/50 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.35)]">
           <CardContent className="space-y-5 p-6">
-            <div className="flex items-baseline justify-between border-b border-border/40 pb-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Prezzo a persona
-              </span>
-              <span className="font-display text-4xl font-semibold tabular-nums tracking-tight text-primary">
-                {trip.price}€
-              </span>
+            <div className="border-b border-border/40 pb-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Stima servizi a persona
+                </span>
+                <span className="font-display text-4xl font-semibold tabular-nums tracking-tight text-primary">
+                  ~{trip.price}€
+                </span>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                {COMPLIANCE_COPY.priceIsSumOfServices}
+              </p>
             </div>
 
             <div className="space-y-3 text-sm">

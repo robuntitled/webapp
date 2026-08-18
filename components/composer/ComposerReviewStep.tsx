@@ -15,6 +15,7 @@ import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { TripCoverPicker } from '@/components/trips/TripCoverPicker';
 import { SavedTripBookables } from '@/components/trips/SavedTripBookables';
 import { picksFromDraft } from '@/lib/composer/bookable-picks';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import {
   AlertTriangle,
   CalendarDays,
@@ -95,9 +96,9 @@ export function ComposerReviewStep({
                 Controlla e pubblica
               </h2>
               <p className="max-w-xl text-sm text-white/90">
-                Controlla itinerario e budget. Esce “In formazione”: la partenza è garantita al
-                minimo posti. Cashback: tu {formatCreatorCashback()}, chi si unisce{' '}
-                {formatParticipantCashback()}.
+                Controlla itinerario e budget. Esce “In formazione”: il viaggio parte al
+                raggiungimento del minimo posti. NomadCredits: tu {formatCreatorCashback()}, chi si
+                unisce {formatParticipantCashback()}.
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -175,10 +176,15 @@ export function ComposerReviewStep({
           <StatPill icon={Wallet} label="Budget stimato" value={`~${budget}€ / persona`} />
         </div>
 
-        <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/65">
-          Garanzia di partenza fino a {draft.minParticipants ?? 4} posti. Servizi (voli, hotel,
-          attrazioni) prenotabili solo a gruppo formato.
-        </p>
+        <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/65">
+          <p>
+            Il viaggio parte al raggiungimento di {draft.minParticipants ?? 4} partecipanti. I
+            servizi (voli, hotel, attività) si prenotano solo a gruppo formato.
+          </p>
+          <p className="text-xs text-white/45">
+            {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
+          </p>
+        </div>
 
         {onChange ? (
         <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
@@ -212,8 +218,8 @@ export function ComposerReviewStep({
               Cosa si prenota dopo
             </h4>
             <p className="mt-1 text-xs text-white/55">
-              LiteAPI e Viator restano agganciati. Chi si unisce prenota questi, senza altre ricerche.
-              I must visit restano sulla mappa.
+              Suggerimenti agganciati (LiteAPI, Viator). {COMPLIANCE_COPY.separateBooking} I must
+              visit restano sulla mappa.
             </p>
             <div className="mt-4">
               <SavedTripBookables
@@ -231,7 +237,9 @@ export function ComposerReviewStep({
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
             <div>
               <h4 className="font-display text-base font-semibold text-white">Anteprima itinerario</h4>
-              <p className="text-xs text-white/45">Come lo vedranno gli altri viaggiatori</p>
+              <p className="text-xs text-white/45">
+                Come lo vedranno gli altri viaggiatori · {COMPLIANCE_COPY.aiGenerated}
+              </p>
             </div>
           </div>
           <div className="divide-y divide-white/8">

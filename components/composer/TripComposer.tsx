@@ -249,7 +249,7 @@ export function TripComposer({
 
       clearComposerLocalSession();
       await clearComposerDraft().catch(() => undefined);
-      toast.success('Pubblicato in formazione. La garanzia resta attiva fino al minimo posti.');
+      toast.success('Pubblicato in formazione. Il viaggio parte al raggiungimento del minimo posti.');
       router.push(`/viaggi/${data.tripId}`);
     } catch {
       toast.error('Errore di rete');

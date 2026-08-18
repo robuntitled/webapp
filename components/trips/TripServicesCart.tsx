@@ -17,6 +17,7 @@ import {
 } from '@/lib/cart/trip-cart';
 import { defaultTripServices, servicesFromItinerary } from '@/lib/cart/trip-services';
 import type { ComposerDayRow } from '@/lib/data/composer';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
 
 const KIND_ICON: Record<TripCartKind, typeof Plane> = {
@@ -73,14 +74,13 @@ export function TripServicesCart({
     >
       <div className="border-b border-border/40 px-5 py-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Carrello viaggio
+          Servizi suggeriti
         </p>
         <h2 className="mt-0.5 font-display text-xl font-semibold tracking-tight">
           Servizi di questo viaggio
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Ogni voce è un acquisto diverso (voli, hotel, attività). Unisci, poi vai al checkout del
-          partner.
+          {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
         </p>
         {locked ? (
           <p className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
@@ -140,28 +140,36 @@ export function TripServicesCart({
         <div className="flex items-center justify-between">
           <p className="inline-flex items-center gap-2 text-sm font-semibold">
             <ShoppingBag className="h-4 w-4 text-accent" />
-            Riepilogo
+            Servizi selezionati
           </p>
           <p className="text-sm tabular-nums text-muted-foreground">
-            {cart.items.length} {cart.items.length === 1 ? 'voce' : 'voci'}
-            {total > 0 ? ` · ${total}€` : ''}
+            {cart.items.length} {cart.items.length === 1 ? 'servizio' : 'servizi'}
+            {total > 0 ? ` · somma ${total}€` : ''}
           </p>
         </div>
+        {total > 0 ? (
+          <p className="text-[11px] text-muted-foreground">
+            {COMPLIANCE_COPY.priceIsSumOfServices}
+          </p>
+        ) : null}
         {locked ? (
           <p className="text-xs text-muted-foreground">
-            Il checkout si sblocca quando il gruppo raggiunge il minimo posti.
+            Le prenotazioni si aprono quando il gruppo raggiunge il minimo posti.
           </p>
         ) : cart.items.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Aggiungi voli, hotel o attività. Poi apri il checkout di ciascun servizio.
+            Aggiungi voli, hotel o attività. Ogni servizio si prenota separatamente con il suo
+            fornitore.
           </p>
         ) : (
           <div className="space-y-2">
             {cart.items.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs text-muted-foreground">{item.title}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {item.title} · {item.provider}
+                </span>
                 <Button asChild size="sm" className="h-8 shrink-0 rounded-full text-xs">
-                  <Link href={item.checkoutHref}>Prenota</Link>
+                  <Link href={item.checkoutHref}>Prenota con {item.provider}</Link>
                 </Button>
               </div>
             ))}

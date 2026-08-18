@@ -9,7 +9,8 @@ export function PrenotaBookableBanner({ trips }: { trips: TripWithRelations[] })
           Prenoti i servizi dopo che il gruppo è formato.
         </p>
         <p className="mt-1 text-muted-foreground">
-          Cerca tariffe qui, ma conferma dal viaggio con garanzia di partenza attiva.{' '}
+          Cerca tariffe qui, ma prenota dal viaggio quando il gruppo è al minimo. Ogni servizio è
+          separato, con il suo fornitore.{' '}
           <Link href="/dashboard" className="underline underline-offset-2">
             Esplora
           </Link>

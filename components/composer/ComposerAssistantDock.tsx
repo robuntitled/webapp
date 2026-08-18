@@ -141,8 +141,8 @@ export function ComposerAssistantDock({
                 <Sparkles className="h-5 w-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white text-sm">Assistente viaggio</p>
-                <p className="text-xs text-white/55 truncate">Sempre disponibile · fase {step}</p>
+                <p className="font-semibold text-white text-sm">Assistente viaggio AI</p>
+                <p className="text-xs text-white/55 truncate">Risposte generate da AI · verifica sempre</p>
               </div>
               <Button
                 type="button"

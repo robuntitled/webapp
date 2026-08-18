@@ -11,7 +11,7 @@ import {
 import { listCashbackForUser, sumPendingAndEarned } from '@/lib/commerce/cashback-ledger';
 
 export const metadata = {
-  title: 'I miei crediti — NomadLink',
+  title: 'I miei NomadCredits — NomadLink',
 };
 
 export default async function CashbackPage() {
@@ -25,20 +25,21 @@ export default async function CashbackPage() {
     <div className="relative min-h-[calc(100vh-4rem)]">
       <HeroBackground images={[BRAND_IMAGES.heroes.dashboard]} overlay="gradient" />
       <div className="relative z-10 container mx-auto max-w-2xl px-4 py-16">
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Cashback</p>
-        <h1 className="mt-3 font-display text-4xl font-semibold text-white">I miei crediti</h1>
+        <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">NomadCredits</p>
+        <h1 className="mt-3 font-display text-4xl font-semibold text-white">I miei NomadCredits</h1>
         <p className="mt-4 text-lg text-white/90">
           Partecipante {formatParticipantCashback()} · Creator {formatCreatorCashback()} nei primi
-          mesi. Il credito resta in attesa fino al viaggio (clawback se cancelli).
+          mesi. Sono uno sconto sui prossimi servizi via NomadLink: non denaro, non convertibili, non
+          trasferibili. Restano in attesa fino al viaggio (annullati se cancelli).
         </p>
         <p className="mt-6 font-display text-5xl font-semibold tabular-nums text-white">
           {total.toFixed(2)} €
         </p>
-        <p className="mt-1 text-sm text-white/80">in attesa o maturato</p>
+        <p className="mt-1 text-sm text-white/80">valore sconto in attesa o maturato</p>
 
         {rows.length === 0 ? (
           <p className="mt-8 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
-            Nessun credito ancora. Prenota i servizi da un viaggio con gruppo formato.
+            Nessun NomadCredit ancora. Prenota i servizi da un viaggio con gruppo formato.
           </p>
         ) : (
           <ul className="mt-8 space-y-2">

@@ -215,7 +215,9 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                 <Users className="h-3.5 w-3.5" />
                 {participantCount}/{trip.maxParticipants} in crew
               </span>
-              <span className="text-xs">da {trip.price}€/persona</span>
+              <span className="text-xs" title="Stima dei servizi, non un prezzo pacchetto">
+                servizi da ~{trip.price}€/persona
+              </span>
             </div>
             {recentJoin ? (
               <p className="text-xs font-medium text-foreground">{recentJoin}</p>

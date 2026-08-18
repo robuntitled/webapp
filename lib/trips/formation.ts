@@ -1,5 +1,6 @@
 import { differenceInCalendarDays, differenceInMinutes, subDays } from 'date-fns';
 import { getParticipantCount, getSpotsLeft } from '@/lib/trips/display';
+import { groupThresholdCopy } from '@/lib/legal/compliance-copy';
 import type { TripWithRelations } from '@/types/trip';
 
 export type TripLifecycleStatus = 'draft' | 'forming' | 'confirmed' | 'published' | 'archived';
@@ -19,6 +20,11 @@ export function seatsToMinimum(trip: TripWithRelations): number {
   return Math.max(0, tripMinSeats(trip) - count);
 }
 
+/**
+ * "Soglia del gruppo" (ex "garanzia di partenza"): NON è un'obbligazione di viaggio
+ * di NomadLink. È attiva finché il gruppo non raggiunge il minimo. Vedi
+ * lib/legal/compliance-copy.ts e art. 41 D.Lgs. 62/2018.
+ */
 export function departureGuaranteeActive(trip: TripWithRelations): boolean {
   return !isGroupSolid(trip);
 }
@@ -45,11 +51,7 @@ export function formationLabel(trip: TripWithRelations): string {
 }
 
 export function departureGuaranteeCopy(trip: TripWithRelations): string {
-  const min = tripMinSeats(trip);
-  if (isGroupSolid(trip)) {
-    return 'Garanzia di partenza attiva: il gruppo ha raggiunto il minimo.';
-  }
-  return `Garanzia di partenza: il viaggio parte al raggiungimento di ${min} posti.`;
+  return groupThresholdCopy(tripMinSeats(trip), isGroupSolid(trip));
 }
 
 export function lastJoinAt(trip: TripWithRelations): Date | null {

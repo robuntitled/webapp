@@ -1,3 +1,12 @@
+/**
+ * NomadCredits — programma loyalty, NON denaro.
+ * Per restare fuori (o ai margini) del DPR 430/2001 i crediti sono inquadrati come
+ * sconto sui prossimi servizi prenotati tramite NomadLink (stessa insegna,
+ * art. 6 lett. c-bis DPR 430/2001): non acquistabili, non convertibili in denaro,
+ * non trasferibili, con scadenza. Vedi docs/NOMADCREDITS-REGOLAMENTO.md.
+ */
+export const NOMAD_CREDITS_LABEL = 'NomadCredits';
+
 export const CASHBACK = {
   creatorLaunchMin: 0.02,
   participantMin: 0.012,
