@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { TRIP_TEMPLATES, type TripTemplate } from '@/lib/composer/trip-templates';
@@ -9,6 +10,27 @@ type ComposerSourceStepProps = {
   onScratch: () => void;
   onTemplate: (template: TripTemplate) => void;
 };
+
+/** Copertina resiliente: se la foto non carica, resta il gradiente + emoji (mai il "?"). */
+function TemplateCover({ tpl }: { tpl: TripTemplate }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="absolute inset-0" style={{ background: tpl.gradient }}>
+      {!failed ? (
+        <Image
+          src={coverForDestination(tpl.destinationId)}
+          alt={tpl.label}
+          fill
+          sizes="(max-width: 640px) 100vw, 50vw"
+          className="object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-5xl">{tpl.emoji}</div>
+      )}
+    </div>
+  );
+}
 
 export function ComposerSourceStep({ onScratch, onTemplate }: ComposerSourceStepProps) {
   return (
@@ -33,20 +55,13 @@ export function ComposerSourceStep({ onScratch, onTemplate }: ComposerSourceStep
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {TRIP_TEMPLATES.map((tpl) => {
-          const cover = coverForDestination(tpl.destinationId);
           return (
             <article
               key={tpl.id}
               className="overflow-hidden rounded-3xl border border-white/10 bg-black/30 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
             >
               <div className="relative h-44">
-                <Image
-                  src={cover}
-                  alt={tpl.label}
-                  fill
-                  sizes="(max-width: 640px) 100vw, 50vw"
-                  className="object-cover"
-                />
+                <TemplateCover tpl={tpl} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
                   {tpl.region}
