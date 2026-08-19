@@ -233,8 +233,8 @@ export function ComposerLandingStep({
   );
   const [legIndex, setLegIndex] = useState(0);
   const [visitPicks, setVisitPicks] = useState<string[]>([]);
-  const [dateMode, setDateMode] = useState<'flex' | 'exact'>('flex');
-  const [maxDays, setMaxDays] = useState<7 | 10 | 12>(10);
+  const [dateMode, setDateMode] = useState<'flex' | 'exact'>('exact');
+  const [maxDays, setMaxDays] = useState(10);
   const [windowFrom, setWindowFrom] = useState<Date>(() => addDays(new Date(), 21));
   const [windowTo, setWindowTo] = useState<Date>(() => addDays(new Date(), 81));
   const [combo, setCombo] = useState<CheapComboView | null>(null);
@@ -346,16 +346,16 @@ export function ComposerLandingStep({
           ? {
               label: 'Ordine',
               title: 'Quale meta visiti per prima?',
-              subtitle: 'Tocca in ordine. Poi scegli quanti giorni e la finestra.',
+              subtitle: 'Tocca in ordine. Poi scegli le date.',
               micro: startedWithDest.current ? 1 : 2,
               total: microTotal,
             }
           : phase === 'when'
             ? {
                 label: 'Quando',
-                title: orderNeeded ? 'Quanti giorni hai?' : 'Quando parti?',
+                title: 'Quando parti?',
                 subtitle: orderNeeded
-                  ? 'Max giorni e una finestra. Troviamo la combo voli più conveniente.'
+                  ? 'Scegli le date, o lascia una finestra: troviamo la combo più conveniente.'
                   : 'Date e durata. Tre ritmi. L’itinerario si piega a te.',
                 micro: startedWithDest.current
                   ? orderNeeded
@@ -649,8 +649,8 @@ export function ComposerLandingStep({
                 <div className="flex justify-center gap-2">
                   {(
                     [
-                      ['flex', 'Date flessibili'],
                       ['exact', 'Ho già le date'],
+                      ['flex', 'Date flessibili'],
                     ] as const
                   ).map(([id, label]) => (
                     <button
@@ -674,21 +674,6 @@ export function ComposerLandingStep({
 
                 {dateMode === 'flex' ? (
                   <>
-                    <div className="grid gap-2.5 sm:grid-cols-3">
-                      {FLEX_DURATION_CARDS.map((card) => (
-                        <GlassChoiceCard
-                          key={card.n}
-                          kicker={card.kicker}
-                          title={card.title}
-                          body={card.body}
-                          active={maxDays === card.n}
-                          onClick={() => {
-                            setMaxDays(card.n);
-                            setCombo(null);
-                          }}
-                        />
-                      ))}
-                    </div>
                     <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
                       <Popover>
                         <PopoverTrigger asChild>
@@ -742,6 +727,68 @@ export function ComposerLandingStep({
                           />
                         </PopoverContent>
                       </Popover>
+                    </div>
+                    <div className="space-y-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                        Quanti giorni
+                      </p>
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3 py-2.5">
+                          <button
+                            type="button"
+                            aria-label="Meno giorni"
+                            onClick={() => {
+                              setMaxDays((n) => Math.max(5, n - 1));
+                              setCombo(null);
+                            }}
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl font-semibold text-white hover:bg-white/16"
+                          >
+                            −
+                          </button>
+                          <div className="min-w-0 flex-1 text-center">
+                            <input
+                              type="number"
+                              min={5}
+                              max={21}
+                              inputMode="numeric"
+                              value={maxDays}
+                              onChange={(e) => {
+                                const raw = Number(e.target.value);
+                                if (!Number.isFinite(raw)) return;
+                                setMaxDays(Math.min(21, Math.max(1, Math.round(raw))));
+                                setCombo(null);
+                              }}
+                              onBlur={() => setMaxDays((n) => Math.min(21, Math.max(5, n)))}
+                              className="w-full bg-transparent text-center font-display text-2xl font-semibold tabular-nums text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                            <p className="text-xs text-white/45">giorni · da 5 a 21</p>
+                          </div>
+                          <button
+                            type="button"
+                            aria-label="Più giorni"
+                            onClick={() => {
+                              setMaxDays((n) => Math.min(21, n + 1));
+                              setCombo(null);
+                            }}
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl font-semibold text-white hover:bg-white/16"
+                          >
+                            +
+                          </button>
+                      </div>
+                      <div className="grid gap-2.5 sm:grid-cols-3">
+                        {FLEX_DURATION_CARDS.map((card) => (
+                          <GlassChoiceCard
+                            key={card.n}
+                            kicker={card.kicker}
+                            title={card.title}
+                            body={card.body}
+                            active={maxDays === card.n}
+                            onClick={() => {
+                              setMaxDays(card.n);
+                              setCombo(null);
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <Button
                       type="button"
