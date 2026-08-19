@@ -23,9 +23,9 @@ describe('resolveDestinationIata', () => {
 });
 
 describe('resolveFlightDestinationIata', () => {
-  it('maps Emirati Arabi and AE to DXB', () => {
-    expect(resolveFlightDestinationIata('Emirati Arabi')).toBe('DXB');
-    expect(resolveFlightDestinationIata('AE')).toBe('DXB');
+  it('maps Kenya to NBO', () => {
+    expect(resolveFlightDestinationIata('Kenya')).toBe('NBO');
+    expect(resolveFlightDestinationIata('Nairobi')).toBe('NBO');
   });
 
   it('maps Paesi Bassi and Cechia via catalog', () => {

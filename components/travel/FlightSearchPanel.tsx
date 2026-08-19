@@ -244,7 +244,19 @@ function AirlineBadge({
 
 function ensurePlace(query: string, selected: PlaceSuggestion | null): PlaceSuggestion | null {
   if (selected) return selected;
-  return resolvePlaceExact(query);
+  const exact = resolvePlaceExact(query);
+  if (exact) return exact;
+  const iata = resolveFlightDestinationIata(query);
+  if (!iata) return null;
+  return {
+    id: `resolved:${iata}`,
+    kind: 'city',
+    label: query.trim(),
+    sublabel: iata,
+    code: iata,
+    countryCode: '',
+    countryLabel: query.trim(),
+  };
 }
 
 export function FlightSearchPanel({
@@ -402,11 +414,19 @@ export function FlightSearchPanel({
     const destination = ensurePlace(destinationQuery, destinationPlace);
 
     if (!origin) {
-      toast.error('Seleziona la partenza dall’elenco suggerito');
+      toast.error(
+        hideSearchForm
+          ? 'Partenza non riconosciuta. Torna indietro e riprova.'
+          : 'Seleziona la partenza dall’elenco suggerito'
+      );
       return;
     }
     if (!destination) {
-      toast.error('Seleziona la destinazione dall’elenco suggerito');
+      toast.error(
+        hideSearchForm
+          ? 'Destinazione non riconosciuta per i voli. Prova un’altra meta.'
+          : 'Seleziona la destinazione dall’elenco suggerito'
+      );
       return;
     }
     if (!startDate) {

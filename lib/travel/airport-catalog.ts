@@ -135,6 +135,12 @@ const COUNTRIES: CountryDef[] = [
     airports: ['DXB', 'AUH', 'SHJ'],
   },
   {
+    code: 'KE',
+    label: 'Kenya',
+    aliases: ['kenya', 'ke', 'nairobi'],
+    airports: ['NBO', 'MBA'],
+  },
+  {
     code: 'TR',
     label: 'Turchia',
     aliases: ['turchia', 'turkey', 'tr'],
@@ -308,6 +314,8 @@ const AIRPORTS: AirportDef[] = [
   { iata: 'DXB', name: 'Dubai Intl', city: 'Dubai', countryCode: 'AE', countryLabel: 'Emirati Arabi' },
   { iata: 'AUH', name: 'Abu Dhabi Intl', city: 'Abu Dhabi', countryCode: 'AE', countryLabel: 'Emirati Arabi' },
   { iata: 'SHJ', name: 'Sharjah', city: 'Sharjah', countryCode: 'AE', countryLabel: 'Emirati Arabi' },
+  { iata: 'NBO', name: 'Jomo Kenyatta', city: 'Nairobi', countryCode: 'KE', countryLabel: 'Kenya', aliases: ['kenya'] },
+  { iata: 'MBA', name: 'Moi Intl', city: 'Mombasa', countryCode: 'KE', countryLabel: 'Kenya' },
   { iata: 'IST', name: 'Istanbul Airport', city: 'Istanbul', countryCode: 'TR', countryLabel: 'Turchia', aliases: ['istanbul'] },
   { iata: 'SAW', name: 'Sabiha Gökçen', city: 'Istanbul', countryCode: 'TR', countryLabel: 'Turchia' },
   { iata: 'AYT', name: 'Antalya', city: 'Antalya', countryCode: 'TR', countryLabel: 'Turchia' },
