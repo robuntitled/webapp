@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Globe2, Search, Sparkles, X } from 'lucide-react';
@@ -16,7 +16,30 @@ import {
 } from '@/lib/composer/destination-suggestions';
 import { searchMajorPlaces, type MajorPlaceHit } from '@/lib/composer/major-places';
 import type { ComposerDestination, DestinationMeta } from '@/types/composer';
+import type { PlaceResult } from '@/lib/places/types';
 import type { PlannerProfile } from '@/types/planner';
+
+/** Tipi luogo ammessi dal fallback live: nazioni + grandi centri, no vie/POI. */
+const GEOCODE_PLACE_TYPES = new Set([
+  'country',
+  'city',
+  'town',
+  'municipality',
+  'administrative',
+  'island',
+  'archipelago',
+  'state',
+  'region',
+  'county',
+]);
+
+function normalizeLabel(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '');
+}
 
 type DestinationSearchProps = {
   selectedDestinations: DestinationMeta[];
@@ -54,6 +77,58 @@ export function DestinationSearch({
     () => (query.trim().length >= 2 ? searchMajorPlaces(query.trim()) : []),
     [query]
   );
+
+  const [remoteHits, setRemoteHits] = useState<MajorPlaceHit[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+
+  // Fallback live: copre qualsiasi città reale (es. Firenze) non in lista curata.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 3) {
+      setRemoteHits([]);
+      setRemoteLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRemoteLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`, {
+          credentials: 'same-origin',
+        });
+        const data = (await res.json()) as { results?: PlaceResult[] };
+        if (cancelled) return;
+        const hits: MajorPlaceHit[] = (data.results ?? [])
+          .filter((r) => GEOCODE_PLACE_TYPES.has(r.placeType))
+          .map((r) => ({
+            kind: r.placeType === 'country' ? ('country' as const) : ('city' as const),
+            label: r.label,
+            lat: r.lat,
+            lng: r.lng,
+            country: r.country,
+            countryCode: r.countryCode,
+            subtitle: r.subtitle || r.country || '',
+            placeType: r.placeType,
+            placeTypeLabel: r.placeTypeLabel,
+          }));
+        setRemoteHits(hits);
+      } catch {
+        if (!cancelled) setRemoteHits([]);
+      } finally {
+        if (!cancelled) setRemoteLoading(false);
+      }
+    }, 320);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query]);
+
+  const mergedHits = useMemo(() => {
+    const seen = new Set(searchHits.map((h) => normalizeLabel(h.label)));
+    const extra = remoteHits.filter((h) => !seen.has(normalizeLabel(h.label)));
+    return [...searchHits, ...extra].slice(0, 10);
+  }, [searchHits, remoteHits]);
 
   const showDropdown = focused && query.trim().length >= 2;
 
@@ -160,10 +235,12 @@ export function DestinationSearch({
               className="absolute z-50 mt-2 max-h-[min(420px,60vh)] w-full overflow-y-auto rounded-2xl border border-white/10 bg-[#0c1220]/95 shadow-2xl shadow-black/40 backdrop-blur-xl"
             >
               <div className="p-2">
-                {searchHits.length === 0 ? (
-                  <p className="px-3 py-4 text-sm text-white/70">Nessun risultato trovato</p>
+                {mergedHits.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-white/70">
+                    {remoteLoading ? 'Cerco…' : 'Nessun risultato trovato'}
+                  </p>
                 ) : (
-                  searchHits.map((place) => {
+                  mergedHits.map((place) => {
                     const Icon = place.kind === 'country' ? Globe2 : Building2;
                     const already = selectedDestinations.some((d) => d.label === place.label);
                     return (

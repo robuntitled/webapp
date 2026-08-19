@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, addDays, differenceInCalendarDays } from 'date-fns';
+import { format, addDays, differenceInCalendarDays, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -284,6 +284,41 @@ export function ComposerLandingStep({
     draft.destinationMeta
   );
 
+  // Tratte volo: un paese per volo. Con più stati servono più voli, ognuno
+  // prenotato separatamente (Italia → A → B → … → Italia).
+  const legCountries = (() => {
+    const dests = getDraftDestinations(draft);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const d of dests) {
+      const country = tripDestinationCountryLabel(d.label, d);
+      const key = country.trim().toLowerCase();
+      if (country && key !== 'italia' && !seen.has(key)) {
+        seen.add(key);
+        out.push(country);
+      }
+    }
+    return out.length ? out : destCountry ? [destCountry] : [];
+  })();
+
+  const flightLegs = (() => {
+    if (legCountries.length === 0) return [];
+    const points = ['Italia', ...legCountries, 'Italia'];
+    return points.slice(0, -1).map((from, i) => ({ from, to: points[i + 1] }));
+  })();
+
+  const legDepartureDate = (index: number, total: number): string => {
+    if (!draft.startDate) return '';
+    if (total <= 1) return draft.startDate;
+    const start = parseISO(draft.startDate);
+    const end = draft.endDate ? parseISO(draft.endDate) : addDays(start, 7);
+    const span = Math.max(0, differenceInCalendarDays(end, start));
+    const day = Math.round((index * span) / (total - 1));
+    return format(addDays(start, day), 'yyyy-MM-dd');
+  };
+
+  const multiLeg = legCountries.length > 1;
+
   const applyDuration = (n: 5 | 7 | 10) => {
     const start = startDate ?? addDays(new Date(), 14);
     const end = addDays(start, n - 1);
@@ -461,21 +496,51 @@ export function ComposerLandingStep({
         ) : null}
 
         {phase === 'from' ? (
-          <motion.div key="from" {...phaseMotion}>
-            <FlightSearchPanel
-              key={`${draft.startDate}-${draft.endDate}-${destCountry}`}
-              variant="composer"
-              hideSearchForm
-              defaultOrigin="Italia"
-              defaultDestination={destCountry}
-              defaultStartDate={draft.startDate}
-              defaultEndDate={draft.endDate}
-              defaultAdults={1}
-              defaultTripType="roundtrip"
-              autoSearch
-              cacheKey={null}
-              onEditDates={() => setPhase('when')}
-            />
+          <motion.div key="from" {...phaseMotion} className="space-y-5">
+            {multiLeg ? (
+              <>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70">
+                  Più stati, più voli. Trovi una tratta per meta: prenoti ogni
+                  volo separatamente, col suo fornitore.
+                </div>
+                {flightLegs.map((leg, i) => (
+                  <div key={`${leg.from}-${leg.to}-${i}`} className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent/80">
+                      Volo {i + 1} di {flightLegs.length} · {leg.from} → {leg.to}
+                    </p>
+                    <FlightSearchPanel
+                      key={`${draft.startDate}-${draft.endDate}-${leg.from}-${leg.to}`}
+                      variant="composer"
+                      hideSearchForm
+                      defaultOrigin={leg.from}
+                      defaultDestination={leg.to}
+                      defaultStartDate={legDepartureDate(i, flightLegs.length)}
+                      defaultAdults={1}
+                      defaultTripType="oneway"
+                      autoSearch
+                      autoSearchDelayMs={i * 900}
+                      cacheKey={null}
+                      onEditDates={() => setPhase('when')}
+                    />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <FlightSearchPanel
+                key={`${draft.startDate}-${draft.endDate}-${destCountry}`}
+                variant="composer"
+                hideSearchForm
+                defaultOrigin="Italia"
+                defaultDestination={destCountry}
+                defaultStartDate={draft.startDate}
+                defaultEndDate={draft.endDate}
+                defaultAdults={1}
+                defaultTripType="roundtrip"
+                autoSearch
+                cacheKey={null}
+                onEditDates={() => setPhase('when')}
+              />
+            )}
           </motion.div>
         ) : null}
 

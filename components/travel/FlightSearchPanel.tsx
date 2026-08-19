@@ -141,6 +141,8 @@ type FlightSearchPanelProps = {
   defaultAdults?: number;
   /** Default false: niente ricerca automatica */
   autoSearch?: boolean;
+  /** Ritardo prima dell'auto-ricerca: evita chiamate LiteAPI concorrenti (mete multiple). */
+  autoSearchDelayMs?: number;
   cacheKey?: SearchCacheKey | null;
   className?: string;
   defaultTripType?: TripType;
@@ -241,6 +243,7 @@ export function FlightSearchPanel({
   defaultEndDate = '',
   defaultAdults = 1,
   autoSearch = false,
+  autoSearchDelayMs = 0,
   cacheKey = 'flights',
   className,
   defaultTripType = 'oneway',
@@ -450,6 +453,7 @@ export function FlightSearchPanel({
       if (!res.ok) {
         toast.error(data.error ?? 'Ricerca voli fallita', { duration: 7000 });
         setOffers(null);
+        setMessage(data.error ?? 'Ricerca voli non riuscita. Riprova.');
         return;
       }
 
@@ -463,6 +467,7 @@ export function FlightSearchPanel({
     } catch {
       toast.error('Errore di rete');
       setOffers(null);
+      setMessage('Errore di rete. Riprova.');
     } finally {
       setLoading(false);
     }
@@ -484,8 +489,10 @@ export function FlightSearchPanel({
     const destination = ensurePlace(destinationQuery, destinationPlace);
     if (!origin || !destination || !startDate) return;
     autoSearched.current = true;
-    void search();
+    const t = setTimeout(() => void search(), Math.max(0, autoSearchDelayMs));
+    return () => clearTimeout(t);
   }, [
+    autoSearchDelayMs,
     autoSearch,
     cacheReady,
     destinationPlace,
@@ -777,9 +784,30 @@ export function FlightSearchPanel({
         </div>
       )}
 
-      {message && !loading && (
+      {message && !loading && !hideSearchForm && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {message}
+        </div>
+      )}
+
+      {hideSearchForm && !loading && (!offers || offers.length === 0) && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-50 px-4 py-10 text-center">
+          <p className="max-w-sm text-sm text-slate-600">
+            {message ?? 'Pronto a cercare i voli per questa tratta.'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => void search()}
+            className={cn(
+              'px-6 font-semibold text-white',
+              composer
+                ? 'rounded-full bg-[#0b1220] hover:bg-[#0b1220]/90'
+                : 'rounded-xl bg-primary hover:bg-primary/90'
+            )}
+          >
+            <Search className="mr-2 h-4 w-4" />
+            {message ? 'Riprova' : 'Cerca voli'}
+          </Button>
         </div>
       )}
 
