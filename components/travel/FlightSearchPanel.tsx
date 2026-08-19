@@ -152,6 +152,10 @@ type FlightSearchPanelProps = {
   /** Nasconde il form OTA: tratta e date arrivano dal viaggio */
   hideSearchForm?: boolean;
   onEditDates?: () => void;
+  /** Composer: salva l'offerta senza aprire il checkout. */
+  onOfferSelect?: (offer: FlightOfferView) => void;
+  selectedOfferId?: string | null;
+  selectLabel?: string;
 };
 
 type FlightFormCache = {
@@ -197,11 +201,13 @@ function AirlineBadge({
   code,
   logo,
   flightNumber,
+  dark,
 }: {
   name: string | null;
   code?: string | null;
   logo?: string | null;
   flightNumber?: string | null;
+  dark?: boolean;
 }) {
   const label = name || (code ? `Compagnia ${code}` : 'Compagnia aerea');
   const initials =
@@ -214,7 +220,10 @@ function AirlineBadge({
         <img
           src={logo}
           alt=""
-          className="h-10 w-10 shrink-0 rounded-xl border border-slate-100 bg-slate-50 object-contain p-1"
+          className={cn(
+            'h-10 w-10 shrink-0 rounded-xl object-contain p-1',
+            dark ? 'border border-white/15 bg-white/10' : 'border border-slate-100 bg-slate-50'
+          )}
         />
       ) : (
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0b3d91] text-xs font-bold text-white">
@@ -222,8 +231,10 @@ function AirlineBadge({
         </div>
       )}
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-slate-900">{label}</p>
-        <p className="truncate text-[11px] text-slate-500">
+        <p className={cn('truncate text-sm font-semibold', dark ? 'text-white' : 'text-slate-900')}>
+          {label}
+        </p>
+        <p className={cn('truncate text-[11px]', dark ? 'text-white/45' : 'text-slate-500')}>
           {[code, flightNumber].filter(Boolean).join(' · ') || '—'}
         </p>
       </div>
@@ -251,6 +262,9 @@ export function FlightSearchPanel({
   onOriginChange,
   hideSearchForm = false,
   onEditDates,
+  onOfferSelect,
+  selectedOfferId,
+  selectLabel,
 }: FlightSearchPanelProps) {
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
@@ -549,7 +563,7 @@ export function FlightSearchPanel({
       className={cn(
         'space-y-5',
         composer &&
-          'rounded-[1.75rem] bg-white p-5 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] ring-1 ring-black/5 sm:p-6',
+          'composer-panel rounded-[1.25rem] p-4 sm:p-5',
         className
       )}
     >
@@ -694,19 +708,36 @@ export function FlightSearchPanel({
       ) : (
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <p
+              className={cn(
+                'text-[11px] font-semibold uppercase tracking-[0.18em]',
+                composer ? 'text-white/45' : 'text-slate-500'
+              )}
+            >
               Tratta
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold text-slate-900">
+            <p
+              className={cn(
+                'mt-1 font-display text-xl font-semibold',
+                composer ? 'text-white' : 'text-slate-900'
+              )}
+            >
               {originLabel} → {destLabel}
             </p>
-            <p className="mt-1 text-sm text-slate-500">{dateSummary}</p>
+            <p className={cn('mt-1 text-sm', composer ? 'text-white/55' : 'text-slate-500')}>
+              {dateSummary}
+            </p>
           </div>
           {onEditDates ? (
             <button
               type="button"
               onClick={onEditDates}
-              className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900"
+              className={cn(
+                'text-sm font-semibold underline underline-offset-4',
+                composer
+                  ? 'text-white/80 decoration-white/25 hover:text-white hover:decoration-white'
+                  : 'text-slate-900 decoration-slate-300 hover:decoration-slate-900'
+              )}
             >
               Cambia date del viaggio
             </button>
@@ -738,18 +769,23 @@ export function FlightSearchPanel({
 
         {offers && offers.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-medium text-slate-500">
+            <p className={cn('text-xs font-medium', composer ? 'text-white/50' : 'text-slate-500')}>
               {offers.length} offerte
             </p>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                  className={cn(
+                    'inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold shadow-sm transition',
+                    composer
+                      ? 'border-white/15 bg-white/8 text-white hover:bg-white/12'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                  )}
                 >
-                  <ArrowDownWideNarrow className="h-3.5 w-3.5 text-primary" />
+                  <ArrowDownWideNarrow className={cn('h-3.5 w-3.5', composer ? 'text-accent' : 'text-primary')} />
                   {sortLabel}
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  <ChevronDown className={cn('h-3.5 w-3.5', composer ? 'text-white/40' : 'text-slate-400')} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -778,7 +814,12 @@ export function FlightSearchPanel({
       </div>
 
       {loading && !offers && (
-        <div className="flex items-center justify-center gap-2 rounded-2xl bg-slate-50 py-14 text-sm text-slate-500">
+        <div
+          className={cn(
+            'flex items-center justify-center gap-2 rounded-2xl py-10 text-sm',
+            composer ? 'bg-white/[0.04] text-white/60' : 'bg-slate-50 py-14 text-slate-500'
+          )}
+        >
           <Loader2 className="h-5 w-5 animate-spin text-accent" />
           Cerchiamo i voli migliori…
         </div>
@@ -791,8 +832,13 @@ export function FlightSearchPanel({
       )}
 
       {hideSearchForm && !loading && (!offers || offers.length === 0) && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-50 px-4 py-10 text-center">
-          <p className="max-w-sm text-sm text-slate-600">
+        <div
+          className={cn(
+            'flex flex-col items-center gap-3 rounded-2xl px-4 py-8 text-center',
+            composer ? 'bg-white/[0.04]' : 'bg-slate-50 py-10'
+          )}
+        >
+          <p className={cn('max-w-sm text-sm', composer ? 'text-white/65' : 'text-slate-600')}>
             {message ?? 'Pronto a cercare i voli per questa tratta.'}
           </p>
           <Button
@@ -801,7 +847,7 @@ export function FlightSearchPanel({
             className={cn(
               'px-6 font-semibold text-white',
               composer
-                ? 'rounded-full bg-[#0b1220] hover:bg-[#0b1220]/90'
+                ? 'rounded-full bg-accent text-[#0b1220] hover:bg-accent/90'
                 : 'rounded-xl bg-primary hover:bg-primary/90'
             )}
           >
@@ -812,7 +858,12 @@ export function FlightSearchPanel({
       )}
 
       {tripType === 'roundtrip' && offers && offers.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3">
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3',
+            composer ? 'bg-white/[0.05]' : 'bg-slate-50'
+          )}
+        >
           <button
             type="button"
             onClick={() => {
@@ -823,13 +874,15 @@ export function FlightSearchPanel({
             className={cn(
               'rounded-full px-3 py-1.5 text-xs font-semibold transition',
               pickStep === 'outbound'
-                ? 'bg-primary text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-accent text-[#0b1220]'
+                : composer
+                  ? 'bg-white/8 text-white/70 hover:bg-white/12'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             )}
           >
             1. Andata
           </button>
-          <span className="text-slate-300">→</span>
+          <span className={composer ? 'text-white/30' : 'text-slate-300'}>→</span>
           <button
             type="button"
             disabled={!selectedOutboundKey}
@@ -837,19 +890,21 @@ export function FlightSearchPanel({
             className={cn(
               'rounded-full px-3 py-1.5 text-xs font-semibold transition',
               pickStep === 'return'
-                ? 'bg-primary text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40'
+                ? 'bg-accent text-[#0b1220]'
+                : composer
+                  ? 'bg-white/8 text-white/70 hover:bg-white/12 disabled:opacity-40'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40'
             )}
           >
             2. Ritorno
           </button>
           {selectedOutboundOffer ? (
-            <p className="ml-auto text-xs text-slate-500">
+            <p className={cn('ml-auto text-xs', composer ? 'text-white/50' : 'text-slate-500')}>
               Andata {formatTime(selectedOutboundOffer.departureAt)}{' '}
               {selectedOutboundOffer.origin}→{selectedOutboundOffer.destination}
             </p>
           ) : (
-            <p className="ml-auto text-xs text-slate-500">
+            <p className={cn('ml-auto text-xs', composer ? 'text-white/50' : 'text-slate-500')}>
               Seleziona prima l’andata, poi il ritorno
             </p>
           )}
@@ -881,19 +936,39 @@ export function FlightSearchPanel({
               ? o.returnDurationMinutes
               : o.durationMinutes;
             const stops = showReturn ? o.returnStops ?? 0 : o.stops;
+            const saved = selectedOfferId === o.offerId;
 
             return (
               <li
                 key={`${o.offerId}-${pickStep}`}
-                className="overflow-hidden rounded-3xl bg-slate-50/80 ring-1 ring-slate-100 transition hover:bg-white hover:ring-slate-200"
+                className={cn(
+                  'overflow-hidden rounded-2xl ring-1 transition',
+                  composer
+                    ? saved
+                      ? 'bg-accent/12 ring-accent/50'
+                      : 'bg-white/[0.04] ring-white/10 hover:bg-white/[0.07] hover:ring-white/20'
+                    : 'rounded-3xl bg-slate-50/80 ring-slate-100 hover:bg-white hover:ring-slate-200'
+                )}
               >
-                <div className="border-b border-slate-100/80 px-4 py-2 sm:px-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {tripType === 'roundtrip'
-                      ? pickStep === 'outbound'
-                        ? 'Andata'
-                        : 'Ritorno'
-                      : 'Volo'}
+                <div
+                  className={cn(
+                    'border-b px-4 py-2 sm:px-5',
+                    composer ? 'border-white/8' : 'border-slate-100/80'
+                  )}
+                >
+                  <p
+                    className={cn(
+                      'text-[11px] font-semibold uppercase tracking-[0.18em]',
+                      composer ? 'text-white/45' : 'text-slate-500'
+                    )}
+                  >
+                    {saved
+                      ? 'Salvata per il gruppo'
+                      : tripType === 'roundtrip'
+                        ? pickStep === 'outbound'
+                          ? 'Andata'
+                          : 'Ritorno'
+                        : 'Volo'}
                   </p>
                 </div>
                 <div className="grid gap-4 p-4 sm:grid-cols-[200px_1fr_150px] sm:items-center sm:p-5">
@@ -902,50 +977,105 @@ export function FlightSearchPanel({
                     code={airlineCode}
                     logo={airlineLogo}
                     flightNumber={flightNumber}
+                    dark={composer}
                   />
 
                   <div className="flex items-center gap-3 sm:gap-5">
                     <div className="min-w-[64px] text-center">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
+                      <p
+                        className={cn(
+                          'font-display text-2xl font-semibold tabular-nums',
+                          composer ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {formatTime(dep)}
                       </p>
-                      <p className="text-xs font-semibold text-slate-500">{from}</p>
+                      <p
+                        className={cn(
+                          'text-xs font-semibold',
+                          composer ? 'text-white/50' : 'text-slate-500'
+                        )}
+                      >
+                        {from}
+                      </p>
                     </div>
 
                     <div className="min-w-[96px] flex-1 px-1">
-                      <p className="mb-1 flex items-center justify-center gap-1 text-[11px] text-slate-500">
+                      <p
+                        className={cn(
+                          'mb-1 flex items-center justify-center gap-1 text-[11px]',
+                          composer ? 'text-white/45' : 'text-slate-500'
+                        )}
+                      >
                         <Clock3 className="h-3 w-3" />
                         {formatDuration(duration)}
                       </p>
-                      <div className="relative h-px bg-slate-200">
-                        <Plane className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90 text-primary" />
+                      <div className={cn('relative h-px', composer ? 'bg-white/15' : 'bg-slate-200')}>
+                        <Plane
+                          className={cn(
+                            'absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90',
+                            composer ? 'text-accent' : 'text-primary'
+                          )}
+                        />
                       </div>
-                      <p className="mt-1 text-center text-[11px] font-medium text-slate-500">
+                      <p
+                        className={cn(
+                          'mt-1 text-center text-[11px] font-medium',
+                          composer ? 'text-white/50' : 'text-slate-500'
+                        )}
+                      >
                         {stopsLabel(stops)}
                         {o.cabinClass ? ` · ${o.cabinClass}` : ''}
                       </p>
                     </div>
 
                     <div className="min-w-[64px] text-center">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
+                      <p
+                        className={cn(
+                          'font-display text-2xl font-semibold tabular-nums',
+                          composer ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {formatTime(arr)}
                       </p>
-                      <p className="text-xs font-semibold text-slate-500">{to}</p>
+                      <p
+                        className={cn(
+                          'text-xs font-semibold',
+                          composer ? 'text-white/50' : 'text-slate-500'
+                        )}
+                      >
+                        {to}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-row items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                  <div
+                    className={cn(
+                      'flex flex-row items-center justify-between gap-3 border-t pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0',
+                      composer ? 'border-white/8' : 'border-slate-100'
+                    )}
+                  >
                     <div className="text-right">
-                      <p className="font-display text-2xl font-semibold tabular-nums text-slate-900">
+                      <p
+                        className={cn(
+                          'font-display text-2xl font-semibold tabular-nums',
+                          composer ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {o.price.toLocaleString('it-IT', {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 2,
                         })}
-                        <span className="ml-1 text-sm font-medium text-slate-500">
+                        <span
+                          className={cn(
+                            'ml-1 text-sm font-medium',
+                            composer ? 'text-white/50' : 'text-slate-500'
+                          )}
+                        >
                           {o.currency}
                         </span>
                       </p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className={cn('text-[11px]', composer ? 'text-white/40' : 'text-slate-400')}>
                         {tripType === 'roundtrip' ? 'andata + ritorno' : 'a persona'}
                       </p>
                     </div>
@@ -954,7 +1084,9 @@ export function FlightSearchPanel({
                       className={cn(
                         'px-5 font-semibold',
                         composer
-                          ? 'rounded-full bg-[#0b1220] hover:bg-[#0b1220]/90'
+                          ? saved
+                            ? 'rounded-full bg-white/12 text-white hover:bg-white/18'
+                            : 'rounded-full bg-accent text-[#0b1220] hover:bg-accent/90'
                           : 'rounded-xl bg-primary hover:bg-primary/90'
                       )}
                       onClick={() => {
@@ -976,6 +1108,11 @@ export function FlightSearchPanel({
 
                         if (tripType === 'roundtrip' && !o.hasReturn) {
                           toast.error('Seleziona un’offerta con andata e ritorno');
+                          return;
+                        }
+
+                        if (onOfferSelect) {
+                          onOfferSelect(o);
                           return;
                         }
 
@@ -1021,9 +1158,10 @@ export function FlightSearchPanel({
                     >
                       {tripType === 'roundtrip' && pickStep === 'outbound'
                         ? 'Scegli andata'
-                        : tripType === 'roundtrip'
-                          ? 'Scegli ritorno'
-                          : 'Seleziona'}
+                        : saved
+                          ? 'Salvata'
+                          : selectLabel ??
+                            (tripType === 'roundtrip' ? 'Scegli ritorno' : 'Seleziona')}
                     </Button>
                   </div>
                 </div>

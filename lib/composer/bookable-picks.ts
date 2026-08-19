@@ -113,12 +113,22 @@ function contentFromPick(pick: ComposerBookablePick): Record<string, unknown> {
 }
 
 function upsertFlight(days: ComposerDay[], pick: ComposerBookablePick): ComposerDay[] {
-  const first = days[0];
-  if (!first) return days;
-  const existing = first.blocks.find((b) => b.type === 'flight' && b.content.returnLeg !== true);
+  const target =
+    days.find((d) => d.dayIndex === (pick.dayIndex ?? 1)) ?? days[0];
+  if (!target) return days;
+
+  const existing = target.blocks.find((b) => {
+    if (b.type !== 'flight') return false;
+    if (pick.offerId && str(b.content.offerId) === pick.offerId) return true;
+    return (
+      str(b.content.origin) === (pick.origin ?? null) &&
+      str(b.content.destination) === (pick.destinationIata ?? null)
+    );
+  });
+
   if (existing) {
-    return days.map((day, i) =>
-      i !== 0
+    return days.map((day) =>
+      day.dayIndex !== target.dayIndex
         ? day
         : {
             ...day,
@@ -130,8 +140,13 @@ function upsertFlight(days: ComposerDay[], pick: ComposerBookablePick): Composer
           }
     );
   }
-  const block = createEmptyBlock('flight', first.blocks.length, contentFromPick(pick));
-  return days.map((day, i) => (i !== 0 ? day : { ...day, blocks: [block, ...day.blocks] }));
+
+  const block = createEmptyBlock('flight', target.blocks.length, contentFromPick(pick));
+  return days.map((day) =>
+    day.dayIndex !== target.dayIndex
+      ? day
+      : { ...day, blocks: [block, ...day.blocks] }
+  );
 }
 
 function upsertHotel(days: ComposerDay[], pick: ComposerBookablePick): ComposerDay[] {

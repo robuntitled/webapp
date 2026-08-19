@@ -24,14 +24,17 @@ const GEOCODE_PLACE_TYPES = new Set([
   'country',
   'city',
   'town',
-  'municipality',
-  'administrative',
   'island',
   'archipelago',
-  'state',
-  'region',
-  'county',
 ]);
+
+const PLACE_TYPE_RANK: Record<string, number> = {
+  country: 0,
+  city: 1,
+  town: 2,
+  island: 3,
+  archipelago: 4,
+};
 
 function normalizeLabel(value: string): string {
   return value
@@ -98,8 +101,14 @@ export function DestinationSearch({
         });
         const data = (await res.json()) as { results?: PlaceResult[] };
         if (cancelled) return;
+        const qn = normalizeLabel(q);
         const hits: MajorPlaceHit[] = (data.results ?? [])
           .filter((r) => GEOCODE_PLACE_TYPES.has(r.placeType))
+          .filter((r) => {
+            const label = normalizeLabel(r.label);
+            const country = normalizeLabel(r.country ?? '');
+            return label.includes(qn) || country.includes(qn);
+          })
           .map((r) => ({
             kind: r.placeType === 'country' ? ('country' as const) : ('city' as const),
             label: r.label,
@@ -125,10 +134,31 @@ export function DestinationSearch({
   }, [query]);
 
   const mergedHits = useMemo(() => {
-    const seen = new Set(searchHits.map((h) => normalizeLabel(h.label)));
-    const extra = remoteHits.filter((h) => !seen.has(normalizeLabel(h.label)));
-    return [...searchHits, ...extra].slice(0, 10);
-  }, [searchHits, remoteHits]);
+    const q = normalizeLabel(query);
+    const pooled = [...searchHits, ...remoteHits].sort((a, b) => {
+      const as = normalizeLabel(a.label).startsWith(q) ? 0 : 1;
+      const bs = normalizeLabel(b.label).startsWith(q) ? 0 : 1;
+      if (as !== bs) return as - bs;
+      const ar = PLACE_TYPE_RANK[a.placeType ?? ''] ?? 9;
+      const br = PLACE_TYPE_RANK[b.placeType ?? ''] ?? 9;
+      if (ar !== br) return ar - br;
+      if (a.kind !== b.kind) return a.kind === 'country' ? -1 : 1;
+      const aIt = (a.country ?? '').toLowerCase() === 'italia' ? 0 : 1;
+      const bIt = (b.country ?? '').toLowerCase() === 'italia' ? 0 : 1;
+      if (aIt !== bIt) return aIt - bIt;
+      return a.label.localeCompare(b.label, 'it');
+    });
+
+    const seen = new Set<string>();
+    const unique: MajorPlaceHit[] = [];
+    for (const hit of pooled) {
+      const key = normalizeLabel(hit.label);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      unique.push(hit);
+    }
+    return unique.slice(0, 6);
+  }, [query, searchHits, remoteHits]);
 
   const showDropdown = focused && query.trim().length >= 2;
 

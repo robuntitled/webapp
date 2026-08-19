@@ -19,17 +19,25 @@ import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupS
 import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader';
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildOrganizerOrigin } from '@/lib/composer/origins';
-import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
-import { tripDestinationCountryLabel } from '@/lib/composer/destination-context';
+import { FlightSearchPanel, type FlightOfferView } from '@/components/travel/FlightSearchPanel';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import { coverForDestination } from '@/lib/composer/destination-covers';
-import type { ComposerDraft, DestinationMeta } from '@/types/composer';
+import { mergeBookablePicks } from '@/lib/composer/bookable-picks';
+import {
+  buildFlightLegs,
+  hasWideCountry,
+  legKindLabel,
+  needsVisitOrder,
+  staySlices,
+} from '@/lib/composer/flight-route';
+import type { ComposerBookablePick, ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { toast } from 'sonner';
 
-type ConfigPhase = 'dest' | 'when' | 'from' | 'who';
+type ConfigPhase = 'dest' | 'when' | 'order' | 'from' | 'who';
 
 const WHO_COVERS = {
   solo: 'https://images.unsplash.com/photo-1504150558240-0b4fd8946624?auto=format&fit=crop&w=900&q=80',
@@ -61,7 +69,7 @@ const DURATION_CARDS = [
   },
 ];
 
-function PaperChoiceCard({
+function GlassChoiceCard({
   active,
   onClick,
   kicker,
@@ -81,20 +89,20 @@ function PaperChoiceCard({
       type="button"
       onClick={onClick}
       className={cn(
-        'cursor-pointer rounded-3xl bg-white px-5 py-5 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)] transition hover:shadow-[0_22px_48px_-20px_rgba(0,0,0,0.6)]',
+        'cursor-pointer rounded-2xl border px-4 py-3.5 text-left transition',
         active
-          ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220]'
-          : 'ring-1 ring-black/5',
+          ? 'border-accent/70 bg-accent/15 shadow-[0_0_0_1px_rgba(245,158,11,0.25)]'
+          : 'border-white/12 bg-white/[0.05] hover:border-white/22 hover:bg-white/[0.08]',
         className
       )}
     >
       {kicker ? (
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
           {kicker}
         </p>
       ) : null}
-      <p className="mt-2 font-display text-2xl font-semibold text-slate-900">{title}</p>
-      {body ? <p className="mt-1 text-sm leading-snug text-slate-600">{body}</p> : null}
+      <p className="mt-1 font-display text-lg font-semibold text-white">{title}</p>
+      {body ? <p className="mt-0.5 text-xs leading-snug text-white/60">{body}</p> : null}
     </button>
   );
 }
@@ -175,6 +183,8 @@ export function ComposerLandingStep({
   const [phase, setPhase] = useState<ConfigPhase>(() =>
     draft.destination?.trim() ? 'when' : 'dest'
   );
+  const [legIndex, setLegIndex] = useState(0);
+  const [visitPicks, setVisitPicks] = useState<string[]>([]);
 
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
@@ -185,6 +195,9 @@ export function ComposerLandingStep({
 
   const selectedDestinations = getDraftDestinations(draft);
   const destCover = draft.destination ? coverForDestination(draft.destination) : null;
+  const orderNeeded = needsVisitOrder(selectedDestinations);
+  const extraSteps = (startedWithDest.current ? 0 : 1) + (orderNeeded ? 1 : 0);
+  const microTotal = 3 + extraSteps;
 
   const handleDestinationsChange = (destinations: DestinationMeta[]) => {
     const labels = destinations.map((d) => d.label);
@@ -206,9 +219,11 @@ export function ComposerLandingStep({
       ? selectedDestinations.length > 0
       : phase === 'when'
         ? Boolean(startDate && endDate && endDate >= startDate)
-        : phase === 'from'
-          ? Boolean(draft.organizerOrigin?.iata)
-          : Boolean(draft.title.trim());
+        : phase === 'order'
+          ? visitPicks.length === selectedDestinations.length && selectedDestinations.length >= 2
+          : phase === 'from'
+            ? Boolean(draft.organizerOrigin?.iata)
+            : Boolean(draft.title.trim());
 
   const goNext = () => {
     if (phase === 'when' && startDate && endDate) {
@@ -218,9 +233,22 @@ export function ComposerLandingStep({
       });
     }
     if (phase === 'dest') setPhase('when');
-    else if (phase === 'when') setPhase('from');
-    else if (phase === 'from') setPhase('who');
-    else onStart();
+    else if (phase === 'when') {
+      setVisitPicks([]);
+      setPhase(orderNeeded ? 'order' : 'from');
+    }
+    else if (phase === 'order') {
+      setLegIndex(0);
+      setPhase('from');
+    } else if (phase === 'from') {
+      const legs = buildFlightLegs(
+        selectedDestinations,
+        draft.startDate,
+        draft.endDate
+      );
+      if (legIndex < legs.length - 1) setLegIndex((i) => i + 1);
+      else setPhase('who');
+    } else onStart();
   };
 
   const goBack = () => {
@@ -233,8 +261,16 @@ export function ComposerLandingStep({
       else setPhase('dest');
       return;
     }
-    if (phase === 'from') setPhase('when');
-    else setPhase('from');
+    if (phase === 'order') {
+      setPhase('when');
+      return;
+    }
+    if (phase === 'from') {
+      if (legIndex > 0) setLegIndex((i) => i - 1);
+      else setPhase(orderNeeded ? 'order' : 'when');
+      return;
+    }
+    setPhase('from');
   };
 
   const header =
@@ -242,33 +278,42 @@ export function ComposerLandingStep({
       ? {
           label: 'Mete',
           title: 'Dove andiamo?',
-          subtitle: 'Una o più mete. Poi date, partenza, compagni.',
+          subtitle: 'Una o più mete. Poi date, ordine, voli.',
           micro: 1,
-          total: 4,
+          total: microTotal,
         }
       : phase === 'when'
         ? {
             label: 'Quando',
             title: 'Quando parti?',
-              subtitle: 'Date e durata. Tre ritmi. L’itinerario si piega a te.',
+            subtitle: 'Date e durata. Tre ritmi. L’itinerario si piega a te.',
             micro: startedWithDest.current ? 1 : 2,
-            total: startedWithDest.current ? 3 : 4,
+            total: microTotal,
           }
-        : phase === 'from'
+        : phase === 'order'
           ? {
-              label: 'Da dove',
-              title: 'Da dove voli?',
-              subtitle: 'Sempre dall’Italia. Verso il paese della meta. Date del viaggio.',
+              label: 'Ordine',
+              title: 'Quale meta visiti per prima?',
+              subtitle: 'Tocca in ordine. Così i voli seguono il giro, uno dopo l’altro.',
               micro: startedWithDest.current ? 2 : 3,
-              total: startedWithDest.current ? 3 : 4,
+              total: microTotal,
             }
-          : {
-              label: 'Con chi',
-              title: 'Con chi parti?',
-              subtitle: 'Da solo, con una crew aperta o solo con chi inviti tu.',
-              micro: startedWithDest.current ? 3 : 4,
-              total: startedWithDest.current ? 3 : 4,
-            };
+          : phase === 'from'
+            ? {
+                label: 'Voli',
+                title: 'I voli del giro',
+                subtitle:
+                  'Ogni tratta a sé. La salvi per il gruppo: ognuno prenota dopo, dal fornitore.',
+                micro: startedWithDest.current ? (orderNeeded ? 3 : 2) : orderNeeded ? 4 : 3,
+                total: microTotal,
+              }
+            : {
+                label: 'Con chi',
+                title: 'Con chi parti?',
+                subtitle: 'Da solo, con una crew aperta o solo con chi inviti tu.',
+                micro: microTotal,
+                total: microTotal,
+              };
 
   useEffect(() => {
     if (phase !== 'from') return;
@@ -279,45 +324,92 @@ export function ComposerLandingStep({
     onChange({ organizerOrigin: next });
   }, [draft.organizerOrigin?.city, draft.organizerOrigin?.iata, onChange, phase]);
 
-  const destCountry = tripDestinationCountryLabel(
-    draft.destination,
-    draft.destinationMeta
+  const destCountry = selectedDestinations[0]?.label ?? draft.destination;
+
+  const flightLegs = buildFlightLegs(
+    selectedDestinations,
+    draft.startDate || (startDate ? format(startDate, 'yyyy-MM-dd') : ''),
+    draft.endDate || (endDate ? format(endDate, 'yyyy-MM-dd') : '')
   );
+  const currentLeg = flightLegs[Math.min(legIndex, Math.max(0, flightLegs.length - 1))];
+  const stays = staySlices(
+    draft.startDate || (startDate ? format(startDate, 'yyyy-MM-dd') : ''),
+    draft.endDate || (endDate ? format(endDate, 'yyyy-MM-dd') : ''),
+    selectedDestinations.length
+  );
+  const showInternalNote = hasWideCountry(selectedDestinations);
 
-  // Tratte volo: un paese per volo. Con più stati servono più voli, ognuno
-  // prenotato separatamente (Italia → A → B → … → Italia).
-  const legCountries = (() => {
-    const dests = getDraftDestinations(draft);
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (const d of dests) {
-      const country = tripDestinationCountryLabel(d.label, d);
-      const key = country.trim().toLowerCase();
-      if (country && key !== 'italia' && !seen.has(key)) {
-        seen.add(key);
-        out.push(country);
-      }
-    }
-    return out.length ? out : destCountry ? [destCountry] : [];
-  })();
-
-  const flightLegs = (() => {
-    if (legCountries.length === 0) return [];
-    const points = ['Italia', ...legCountries, 'Italia'];
-    return points.slice(0, -1).map((from, i) => ({ from, to: points[i + 1] }));
-  })();
-
-  const legDepartureDate = (index: number, total: number): string => {
-    if (!draft.startDate) return '';
-    if (total <= 1) return draft.startDate;
-    const start = parseISO(draft.startDate);
-    const end = draft.endDate ? parseISO(draft.endDate) : addDays(start, 7);
-    const span = Math.max(0, differenceInCalendarDays(end, start));
-    const day = Math.round((index * span) / (total - 1));
-    return format(addDays(start, day), 'yyyy-MM-dd');
+  const pickFlight = (offer: FlightOfferView) => {
+    if (!currentLeg) return;
+    const pick: ComposerBookablePick = {
+      id: `flight-${currentLeg.id}`,
+      kind: 'flight',
+      provider: 'liteapi',
+      title: `${offer.origin} → ${offer.destination}`,
+      price: offer.price,
+      currency: offer.currency,
+      dayIndex: currentLeg.dayIndex,
+      offerId: offer.offerId,
+      origin: offer.origin,
+      destinationIata: offer.destination,
+      airline: offer.airline,
+      airlineCode: offer.airlineCode,
+      airlineLogo: offer.airlineLogo,
+      departureAt: offer.departureAt,
+      arrivalAt: offer.arrivalAt,
+      durationMinutes: offer.durationMinutes,
+      stops: offer.stops ?? null,
+      flightNumber: offer.flightNumber,
+      cabinClass: offer.cabinClass,
+      hasReturn: Boolean(offer.hasReturn),
+      returnOrigin: offer.returnOrigin,
+      returnDestination: offer.returnDestination,
+      returnAirline: offer.returnAirline,
+      returnAirlineCode: offer.returnAirlineCode,
+      returnAirlineLogo: offer.returnAirlineLogo,
+      returnDepartureAt: offer.returnDepartureAt,
+      returnArrivalAt: offer.returnArrivalAt,
+      returnDurationMinutes: offer.returnDurationMinutes,
+      returnStops: offer.returnStops,
+      returnFlightNumber: offer.returnFlightNumber,
+      adults: 1,
+    };
+    const withoutLeg = (draft.bookablePicks ?? []).filter((p) => p.id !== pick.id);
+    onChange({ bookablePicks: mergeBookablePicks(withoutLeg, [pick]) });
+    toast.success('Tratta salvata per il gruppo', {
+      description: 'Chi si unisce la trova già pronta. Prenota dopo, dal fornitore.',
+    });
+    if (legIndex < flightLegs.length - 1) setLegIndex((i) => i + 1);
   };
 
-  const multiLeg = legCountries.length > 1;
+  const selectedOfferId =
+    (draft.bookablePicks ?? []).find((p) => p.id === `flight-${currentLeg?.id}`)?.offerId ??
+    null;
+
+  const destKey = (d: DestinationMeta) => d.osmId ?? `${d.label}-${d.lat}-${d.lng}`;
+
+  const applyVisitOrder = (keys: string[]) => {
+    if (keys.length !== selectedDestinations.length) return;
+    const byKey = new Map(selectedDestinations.map((d) => [destKey(d), d]));
+    const ordered = keys
+      .map((k) => byKey.get(k))
+      .filter((d): d is DestinationMeta => Boolean(d));
+    if (ordered.length === selectedDestinations.length) {
+      handleDestinationsChange(ordered);
+    }
+  };
+
+  const pickVisitSlot = (dest: DestinationMeta) => {
+    const key = destKey(dest);
+    if (visitPicks.includes(key)) {
+      const next = visitPicks.slice(0, visitPicks.indexOf(key));
+      setVisitPicks(next);
+      return;
+    }
+    const next = [...visitPicks, key];
+    setVisitPicks(next);
+    applyVisitOrder(next);
+  };
 
   const applyDuration = (n: 5 | 7 | 10) => {
     const start = startDate ?? addDays(new Date(), 14);
@@ -407,18 +499,18 @@ export function ComposerLandingStep({
 
         {phase === 'when' ? (
           <motion.div key="when" {...phaseMotion} className="space-y-6">
-            <div className="grid grid-cols-2 divide-x divide-slate-200 overflow-hidden rounded-3xl bg-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)]">
+            <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
               <Popover>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="px-5 py-5 text-left transition hover:bg-slate-50"
+                    className="px-4 py-3.5 text-left transition hover:bg-white/[0.06]"
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
                       Partenza
                     </p>
-                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
-                      <CalendarIcon className="h-5 w-5 text-accent" />
+                    <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                      <CalendarIcon className="h-4 w-4 text-accent" />
                       {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
                     </p>
                   </button>
@@ -449,13 +541,13 @@ export function ComposerLandingStep({
                   <button
                     type="button"
                     disabled={!startDate}
-                    className="px-5 py-5 text-left transition hover:bg-slate-50 disabled:opacity-50"
+                    className="px-4 py-3.5 text-left transition hover:bg-white/[0.06] disabled:opacity-50"
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
                       Ritorno
                     </p>
-                    <p className="mt-2 flex items-center gap-2 font-display text-2xl font-semibold text-slate-900">
-                      <CalendarIcon className="h-5 w-5 text-accent" />
+                    <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                      <CalendarIcon className="h-4 w-4 text-accent" />
                       {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
                     </p>
                   </button>
@@ -477,9 +569,9 @@ export function ComposerLandingStep({
               </Popover>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-2.5 sm:grid-cols-3">
               {DURATION_CARDS.map((card) => (
-                <PaperChoiceCard
+                <GlassChoiceCard
                   key={card.n}
                   kicker={card.kicker}
                   title={card.title}
@@ -495,35 +587,136 @@ export function ComposerLandingStep({
           </motion.div>
         ) : null}
 
+        {phase === 'order' ? (
+          <motion.div key="order" {...phaseMotion} className="space-y-5">
+            <p className="text-center text-sm text-white/65">
+              {visitPicks.length === 0
+                ? 'Prima tappa: tocca la meta da cui vuoi iniziare.'
+                : visitPicks.length < selectedDestinations.length
+                  ? `Poi? Tocca la tappa ${visitPicks.length + 1}.`
+                  : 'Giro pronto. Le date si spezzano su queste tappe.'}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {selectedDestinations.map((dest) => {
+                const key = destKey(dest);
+                const rank = visitPicks.indexOf(key);
+                const cover = coverForDestination(dest.label);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => pickVisitSlot(dest)}
+                    className={cn(
+                      'group relative min-h-[180px] overflow-hidden rounded-2xl text-left transition',
+                      rank >= 0
+                        ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#0b1220]'
+                        : 'ring-1 ring-white/12 hover:ring-white/30'
+                    )}
+                  >
+                    {cover ? (
+                      <Image
+                        src={cover}
+                        alt=""
+                        fill
+                        sizes="(max-width: 640px) 100vw, 33vw"
+                        className="object-cover transition duration-700 group-hover:scale-105"
+                      />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+                    <div className="relative z-10 flex h-full min-h-[180px] flex-col justify-end p-4">
+                      {rank >= 0 ? (
+                        <span className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
+                          Tappa {rank + 1}
+                        </span>
+                      ) : null}
+                      <p className="font-display text-xl font-semibold text-white">{dest.label}</p>
+                      {dest.subtitle ? (
+                        <p className="mt-0.5 text-xs text-white/70">{dest.subtitle}</p>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {visitPicks.length === selectedDestinations.length && stays.length > 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/70">
+                {selectedDestinations.map((d, i) => {
+                  const slice = stays[i];
+                  if (!slice) return null;
+                  return (
+                    <span key={destKey(d)}>
+                      {i > 0 ? ' · ' : null}
+                      <span className="font-semibold text-white">{d.label}</span>{' '}
+                      {format(parseISO(slice.start), 'd MMM', { locale: it })}–
+                      {format(parseISO(slice.end), 'd MMM', { locale: it })}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
+            {visitPicks.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setVisitPicks([])}
+                className="mx-auto block text-xs text-white/45 underline underline-offset-4 hover:text-white/80"
+              >
+                Ricomincia l’ordine
+              </button>
+            ) : null}
+          </motion.div>
+        ) : null}
+
         {phase === 'from' ? (
-          <motion.div key="from" {...phaseMotion} className="space-y-5">
-            {multiLeg ? (
-              <>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70">
-                  Più stati, più voli. Trovi una tratta per meta: prenoti ogni
-                  volo separatamente, col suo fornitore.
-                </div>
+          <motion.div key="from" {...phaseMotion} className="space-y-4">
+            {flightLegs.length > 1 ? (
+              <div className="flex gap-1.5">
                 {flightLegs.map((leg, i) => (
-                  <div key={`${leg.from}-${leg.to}-${i}`} className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent/80">
-                      Volo {i + 1} di {flightLegs.length} · {leg.from} → {leg.to}
-                    </p>
-                    <FlightSearchPanel
-                      key={`${draft.startDate}-${draft.endDate}-${leg.from}-${leg.to}`}
-                      variant="composer"
-                      hideSearchForm
-                      defaultOrigin={leg.from}
-                      defaultDestination={leg.to}
-                      defaultStartDate={legDepartureDate(i, flightLegs.length)}
-                      defaultAdults={1}
-                      defaultTripType="oneway"
-                      autoSearch
-                      autoSearchDelayMs={i * 900}
-                      cacheKey={null}
-                      onEditDates={() => setPhase('when')}
-                    />
-                  </div>
+                  <button
+                    key={leg.id}
+                    type="button"
+                    onClick={() => setLegIndex(i)}
+                    className={cn(
+                      'h-1.5 flex-1 rounded-full transition',
+                      i === legIndex ? 'bg-accent' : i < legIndex ? 'bg-accent/50' : 'bg-white/15'
+                    )}
+                    aria-label={`Volo ${i + 1}`}
+                  />
                 ))}
+              </div>
+            ) : null}
+
+            {currentLeg ? (
+              <>
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                      {legKindLabel(currentLeg.kind)}
+                      {flightLegs.length > 1
+                        ? ` · ${legIndex + 1} di ${flightLegs.length}`
+                        : null}
+                    </p>
+                    <p className="mt-1 font-display text-xl font-semibold text-white">
+                      {currentLeg.from} → {currentLeg.to}
+                    </p>
+                  </div>
+                </div>
+                <FlightSearchPanel
+                  key={currentLeg.id}
+                  variant="composer"
+                  hideSearchForm
+                  defaultOrigin={currentLeg.from}
+                  defaultDestination={currentLeg.to}
+                  defaultStartDate={currentLeg.date}
+                  defaultEndDate={currentLeg.endDate}
+                  defaultAdults={1}
+                  defaultTripType={currentLeg.tripType}
+                  autoSearch
+                  cacheKey={null}
+                  onEditDates={() => setPhase('when')}
+                  onOfferSelect={pickFlight}
+                  selectedOfferId={selectedOfferId}
+                  selectLabel="Salva per il gruppo"
+                />
               </>
             ) : (
               <FlightSearchPanel
@@ -539,8 +732,22 @@ export function ComposerLandingStep({
                 autoSearch
                 cacheKey={null}
                 onEditDates={() => setPhase('when')}
+                onOfferSelect={pickFlight}
+                selectedOfferId={selectedOfferId}
+                selectLabel="Salva per il gruppo"
               />
             )}
+
+            <p className="text-center text-xs text-white/50">
+              Non prenoti ora. La tratta resta sul viaggio: chi si unisce la prenota dal
+              fornitore, stessa offerta.
+            </p>
+            {showInternalNote ? (
+              <p className="text-center text-xs text-white/45">
+                Voli interni nella stessa meta (es. isole) li aggiungi dopo, giorno per
+                giorno, se ti servono.
+              </p>
+            ) : null}
           </motion.div>
         ) : null}
 
@@ -655,6 +862,11 @@ export function ComposerLandingStep({
             <>
               <BookOpen className="mr-2 h-5 w-5" />
               Inizia a comporre
+            </>
+          ) : phase === 'from' && currentLeg && legIndex < flightLegs.length - 1 ? (
+            <>
+              Prossima tratta
+              <ArrowRight className="ml-2 h-4 w-4" />
             </>
           ) : (
             <>
