@@ -91,6 +91,8 @@ function contentFromPick(pick: ComposerBookablePick): Record<string, unknown> {
     nights: pick.checkIn && pick.checkOut ? undefined : pick.kind === 'hotel' ? 1 : undefined,
     origin: pick.origin ?? undefined,
     destination: pick.destinationIata ?? undefined,
+    from: pick.origin ?? undefined,
+    to: pick.destinationIata ?? undefined,
     airline: pick.airline ?? undefined,
     airlineCode: pick.airlineCode ?? undefined,
     airlineLogo: pick.airlineLogo ?? undefined,

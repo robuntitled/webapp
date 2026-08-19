@@ -9,12 +9,18 @@ function allBlocks(days: ComposerDay[]) {
   return days.flatMap((d) => d.blocks);
 }
 
+function text(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function flightIsComplete(block: { content: Record<string, unknown> }): boolean {
-  const title = String(block.content.title ?? '').trim();
-  const from = String(block.content.from ?? block.content.pickupAddress ?? '').trim();
-  const departureTime = String(block.content.departureTime ?? block.content.time ?? '').trim();
-  const arrivalTime = String(block.content.arrivalTime ?? '').trim();
-  return Boolean(title && from && departureTime && arrivalTime);
+  const c = block.content;
+  const title = text(c.title);
+  const from = text(c.from) || text(c.origin) || text(c.originLabel) || text(c.pickupAddress);
+  const departureTime = text(c.departureTime) || text(c.departureAt) || text(c.time);
+  const arrivalTime = text(c.arrivalTime) || text(c.arrivalAt);
+  const savedOffer = Boolean(text(c.offerId) && (text(c.origin) || from) && text(c.destination));
+  return Boolean(title && from && ((departureTime && arrivalTime) || savedOffer));
 }
 
 /**
