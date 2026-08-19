@@ -80,31 +80,15 @@ export function staySlices(
   return slices;
 }
 
-export function buildFlightLegs(
-  destinations: DestinationMeta[],
-  startDate: string,
-  endDate: string
-): FlightLeg[] {
-  if (!startDate) return [];
+export function hopPlan(
+  destinations: DestinationMeta[]
+): Array<{ from: string; to: string; kind: FlightLegKind }> {
   const dests = destinations.filter((d) => countryOf(d).toLowerCase() !== 'italia');
   if (dests.length === 0) return [];
-
   if (dests.length === 1) {
     const to = stopLabel(dests[0]);
-    return [
-      {
-        id: `rt-${to}`,
-        from: ITALY,
-        to,
-        date: startDate,
-        endDate,
-        kind: 'outbound',
-        tripType: 'roundtrip',
-        dayIndex: 1,
-      },
-    ];
+    return [{ from: ITALY, to, kind: 'outbound' }];
   }
-
   const points = dests.map(stopLabel);
   const hops: Array<{ from: string; to: string; kind: FlightLegKind }> = [
     { from: ITALY, to: points[0], kind: 'outbound' },
@@ -117,14 +101,60 @@ export function buildFlightLegs(
     });
   }
   hops.push({ from: points[points.length - 1], to: ITALY, kind: 'return' });
+  return hops;
+}
+
+export function sampleStartDates(
+  windowStart: string,
+  windowEnd: string,
+  maxDays: number,
+  maxSamples = 8
+): string[] {
+  const start = parseISO(windowStart);
+  const latestStart = addDays(parseISO(windowEnd), -(maxDays - 1));
+  if (latestStart < start) return [format(start, 'yyyy-MM-dd')];
+  const span = differenceInCalendarDays(latestStart, start);
+  if (span <= 0) return [format(start, 'yyyy-MM-dd')];
+  const step = Math.max(3, Math.ceil(span / Math.max(1, maxSamples - 1)));
+  const out: string[] = [];
+  for (let offset = 0; offset <= span && out.length < maxSamples; offset += step) {
+    out.push(format(addDays(start, offset), 'yyyy-MM-dd'));
+  }
+  const last = format(latestStart, 'yyyy-MM-dd');
+  if (!out.includes(last) && out.length < maxSamples) out.push(last);
+  return out;
+}
+
+export function buildFlightLegs(
+  destinations: DestinationMeta[],
+  startDate: string,
+  endDate: string
+): FlightLeg[] {
+  if (!startDate) return [];
+  const hops = hopPlan(destinations);
+  if (hops.length === 0) return [];
+
+  if (hops.length === 1) {
+    return [
+      {
+        id: `rt-${hops[0].to}`,
+        from: hops[0].from,
+        to: hops[0].to,
+        date: startDate,
+        endDate,
+        kind: hops[0].kind,
+        tripType: 'roundtrip',
+        dayIndex: 1,
+      },
+    ];
+  }
 
   const start = parseISO(startDate);
   const end = endDate ? parseISO(endDate) : addDays(start, 7);
   const span = Math.max(0, differenceInCalendarDays(end, start));
 
   return hops.map((hop, i) => {
-    const dayOffset =
-      hops.length <= 1 ? 0 : Math.round((i * span) / (hops.length - 1));
+    const dayOffset = hops.length <= 1 ? 0 : Math.round((i * span) / (hops.length - 1));
     const date = format(addDays(start, dayOffset), 'yyyy-MM-dd');
     return {
       id: `${hop.from}-${hop.to}-${i}`,

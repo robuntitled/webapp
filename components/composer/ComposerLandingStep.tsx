@@ -13,6 +13,8 @@ import {
   ArrowRight,
   BookOpen,
   CalendarIcon,
+  Loader2,
+  Search,
 } from 'lucide-react';
 import { DestinationSearch } from '@/components/composer/DestinationSearch';
 import { PlannerQuickSetupSheet } from '@/components/composer/PlannerQuickSetupSheet';
@@ -29,7 +31,6 @@ import {
   hasWideCountry,
   legKindLabel,
   needsVisitOrder,
-  staySlices,
 } from '@/lib/composer/flight-route';
 import type { ComposerBookablePick, ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
@@ -68,6 +69,53 @@ const DURATION_CARDS = [
     body: 'Ci stai tutto. Zero rimpianti.',
   },
 ];
+
+const FLEX_DURATION_CARDS = [
+  {
+    n: 7 as const,
+    kicker: 'Settimana',
+    title: '7 giorni',
+    body: 'Il ritmo giusto.',
+  },
+  {
+    n: 10 as const,
+    kicker: 'Il giro',
+    title: '10 giorni',
+    body: 'Ci stai tutto.',
+  },
+  {
+    n: 12 as const,
+    kicker: 'Ampio',
+    title: '12 giorni',
+    body: 'Tre mete, zero corsa.',
+  },
+];
+
+type CheapComboView = {
+  startDate: string;
+  endDate: string;
+  maxDays: number;
+  total: number;
+  currency: string;
+  samplesTried: number;
+  legs: Array<{
+    from: string;
+    to: string;
+    date: string;
+    kind: string;
+    price: number;
+    currency: string;
+    stops: number;
+    origin: string;
+    destination: string;
+    offerId: string;
+    airline: string | null;
+    departureAt: string | null;
+    arrivalAt: string | null;
+    durationMinutes: number | null;
+    flightNumber: string | null;
+  }>;
+};
 
 function GlassChoiceCard({
   active,
@@ -185,6 +233,12 @@ export function ComposerLandingStep({
   );
   const [legIndex, setLegIndex] = useState(0);
   const [visitPicks, setVisitPicks] = useState<string[]>([]);
+  const [dateMode, setDateMode] = useState<'flex' | 'exact'>('flex');
+  const [maxDays, setMaxDays] = useState<7 | 10 | 12>(10);
+  const [windowFrom, setWindowFrom] = useState<Date>(() => addDays(new Date(), 21));
+  const [windowTo, setWindowTo] = useState<Date>(() => addDays(new Date(), 81));
+  const [combo, setCombo] = useState<CheapComboView | null>(null);
+  const [comboLoading, setComboLoading] = useState(false);
 
   const defaultStart = draft.startDate ? new Date(draft.startDate) : addDays(new Date(), 14);
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
@@ -217,10 +271,12 @@ export function ComposerLandingStep({
   const canNext =
     phase === 'dest'
       ? selectedDestinations.length > 0
-      : phase === 'when'
-        ? Boolean(startDate && endDate && endDate >= startDate)
-        : phase === 'order'
-          ? visitPicks.length === selectedDestinations.length && selectedDestinations.length >= 2
+      : phase === 'order'
+        ? visitPicks.length === selectedDestinations.length && selectedDestinations.length >= 2
+        : phase === 'when'
+          ? orderNeeded && dateMode === 'flex'
+            ? Boolean(combo)
+            : Boolean(startDate && endDate && endDate >= startDate)
           : phase === 'from'
             ? Boolean(draft.organizerOrigin?.iata)
             : Boolean(draft.title.trim());
@@ -232,12 +288,14 @@ export function ComposerLandingStep({
         endDate: format(endDate, 'yyyy-MM-dd'),
       });
     }
-    if (phase === 'dest') setPhase('when');
-    else if (phase === 'when') {
+    if (phase === 'dest') {
       setVisitPicks([]);
-      setPhase(orderNeeded ? 'order' : 'from');
+      setPhase(orderNeeded ? 'order' : 'when');
     }
     else if (phase === 'order') {
+      setCombo(null);
+      setPhase('when');
+    } else if (phase === 'when') {
       setLegIndex(0);
       setPhase('from');
     } else if (phase === 'from') {
@@ -256,18 +314,20 @@ export function ComposerLandingStep({
       onBack?.();
       return;
     }
-    if (phase === 'when') {
+    if (phase === 'order') {
       if (startedWithDest.current) onBack?.();
       else setPhase('dest');
       return;
     }
-    if (phase === 'order') {
-      setPhase('when');
+    if (phase === 'when') {
+      if (orderNeeded) setPhase('order');
+      else if (startedWithDest.current) onBack?.();
+      else setPhase('dest');
       return;
     }
     if (phase === 'from') {
       if (legIndex > 0) setLegIndex((i) => i - 1);
-      else setPhase(orderNeeded ? 'order' : 'when');
+      else setPhase('when');
       return;
     }
     setPhase('from');
@@ -282,22 +342,30 @@ export function ComposerLandingStep({
           micro: 1,
           total: microTotal,
         }
-      : phase === 'when'
-        ? {
-            label: 'Quando',
-            title: 'Quando parti?',
-            subtitle: 'Date e durata. Tre ritmi. L’itinerario si piega a te.',
-            micro: startedWithDest.current ? 1 : 2,
-            total: microTotal,
-          }
         : phase === 'order'
           ? {
               label: 'Ordine',
               title: 'Quale meta visiti per prima?',
-              subtitle: 'Tocca in ordine. Così i voli seguono il giro, uno dopo l’altro.',
-              micro: startedWithDest.current ? 2 : 3,
+              subtitle: 'Tocca in ordine. Poi scegli quanti giorni e la finestra.',
+              micro: startedWithDest.current ? 1 : 2,
               total: microTotal,
             }
+          : phase === 'when'
+            ? {
+                label: 'Quando',
+                title: orderNeeded ? 'Quanti giorni hai?' : 'Quando parti?',
+                subtitle: orderNeeded
+                  ? 'Max giorni e una finestra. Troviamo la combo voli più conveniente.'
+                  : 'Date e durata. Tre ritmi. L’itinerario si piega a te.',
+                micro: startedWithDest.current
+                  ? orderNeeded
+                    ? 2
+                    : 1
+                  : orderNeeded
+                    ? 3
+                    : 2,
+                total: microTotal,
+              }
           : phase === 'from'
             ? {
                 label: 'Voli',
@@ -332,11 +400,6 @@ export function ComposerLandingStep({
     draft.endDate || (endDate ? format(endDate, 'yyyy-MM-dd') : '')
   );
   const currentLeg = flightLegs[Math.min(legIndex, Math.max(0, flightLegs.length - 1))];
-  const stays = staySlices(
-    draft.startDate || (startDate ? format(startDate, 'yyyy-MM-dd') : ''),
-    draft.endDate || (endDate ? format(endDate, 'yyyy-MM-dd') : ''),
-    selectedDestinations.length
-  );
   const showInternalNote = hasWideCountry(selectedDestinations);
 
   const pickFlight = (offer: FlightOfferView) => {
@@ -411,17 +474,99 @@ export function ComposerLandingStep({
     applyVisitOrder(next);
   };
 
-  const applyDuration = (n: 5 | 7 | 10) => {
+  const applyDuration = (n: 5 | 7 | 10 | 12) => {
     const start = startDate ?? addDays(new Date(), 14);
     const end = addDays(start, n - 1);
     const startIso = format(start, 'yyyy-MM-dd');
     setStartDate(start);
     setEndDate(end);
+    if (n === 7 || n === 10 || n === 12) setMaxDays(n);
     onChange({
       startDate: startIso,
       endDate: format(end, 'yyyy-MM-dd'),
       days: remapComposerDaysToDuration(draft.days, n, startIso),
     });
+  };
+
+  const applyCombo = (next: CheapComboView) => {
+    setCombo(next);
+    const start = parseISO(next.startDate);
+    const end = parseISO(next.endDate);
+    setStartDate(start);
+    setEndDate(end);
+    const picks: ComposerBookablePick[] = next.legs.map((leg, i) => ({
+      id: `flight-${leg.from}-${leg.to}-${i}`,
+      kind: 'flight',
+      provider: 'liteapi',
+      title: `${leg.origin} → ${leg.destination}`,
+      price: leg.price,
+      currency: leg.currency,
+      dayIndex: i === 0 ? 1 : undefined,
+      offerId: leg.offerId,
+      origin: leg.origin,
+      destinationIata: leg.destination,
+      airline: leg.airline,
+      departureAt: leg.departureAt,
+      arrivalAt: leg.arrivalAt,
+      durationMinutes: leg.durationMinutes,
+      stops: leg.stops,
+      flightNumber: leg.flightNumber,
+      adults: 1,
+    }));
+    onChange({
+      startDate: next.startDate,
+      endDate: next.endDate,
+      days: remapComposerDaysToDuration(draft.days, next.maxDays, next.startDate),
+      bookablePicks: mergeBookablePicks([], picks),
+    });
+  };
+
+  const findCheapCombo = async () => {
+    setComboLoading(true);
+    setCombo(null);
+    try {
+      const res = await fetch('/api/liteapi/flights/cheap-combo', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinations: selectedDestinations.map((d) => ({
+            label: d.label,
+            lat: d.lat,
+            lng: d.lng,
+            country: d.country,
+            countryCode: d.countryCode,
+            placeType: d.placeType,
+            subtitle: d.subtitle,
+          })),
+          maxDays,
+          windowStart: format(windowFrom, 'yyyy-MM-dd'),
+          windowEnd: format(windowTo, 'yyyy-MM-dd'),
+        }),
+      });
+      const data = (await res.json()) as {
+        found?: boolean;
+        combo?: CheapComboView;
+        message?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? 'Ricerca combo fallita');
+        return;
+      }
+      if (!data.found || !data.combo) {
+        toast.error(data.message ?? 'Nessuna combo in questa finestra');
+        return;
+      }
+      applyCombo(data.combo);
+      toast.success('Combo più conveniente trovata', {
+        description: 'Stime separate per tratta. Prenoti dopo, dal fornitore.',
+      });
+    } catch {
+      toast.error('Errore di rete');
+    } finally {
+      setComboLoading(false);
+    }
   };
 
   const activeDuration =
@@ -499,6 +644,240 @@ export function ComposerLandingStep({
 
         {phase === 'when' ? (
           <motion.div key="when" {...phaseMotion} className="space-y-6">
+            {orderNeeded ? (
+              <>
+                <div className="flex justify-center gap-2">
+                  {(
+                    [
+                      ['flex', 'Date flessibili'],
+                      ['exact', 'Ho già le date'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        setDateMode(id);
+                        if (id === 'flex') setCombo(null);
+                      }}
+                      className={cn(
+                        'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
+                        dateMode === id
+                          ? 'bg-accent text-[#0b1220]'
+                          : 'bg-white/8 text-white/70 hover:bg-white/12'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {dateMode === 'flex' ? (
+                  <>
+                    <div className="grid gap-2.5 sm:grid-cols-3">
+                      {FLEX_DURATION_CARDS.map((card) => (
+                        <GlassChoiceCard
+                          key={card.n}
+                          kicker={card.kicker}
+                          title={card.title}
+                          body={card.body}
+                          active={maxDays === card.n}
+                          onClick={() => {
+                            setMaxDays(card.n);
+                            setCombo(null);
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                              Partire dal
+                            </p>
+                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                              <CalendarIcon className="h-4 w-4 text-accent" />
+                              {format(windowFrom, 'd MMM yyyy', { locale: it })}
+                            </p>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 rounded-xl" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={windowFrom}
+                            onSelect={(d) => {
+                              if (!d) return;
+                              setWindowFrom(d);
+                              if (windowTo < d) setWindowTo(addDays(d, 60));
+                              setCombo(null);
+                            }}
+                            disabled={{ before: new Date() }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                              Tornare entro
+                            </p>
+                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                              <CalendarIcon className="h-4 w-4 text-accent" />
+                              {format(windowTo, 'd MMM yyyy', { locale: it })}
+                            </p>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 rounded-xl" align="end">
+                          <Calendar
+                            mode="single"
+                            selected={windowTo}
+                            defaultMonth={windowFrom}
+                            onSelect={(d) => {
+                              if (!d) return;
+                              setWindowTo(d);
+                              setCombo(null);
+                            }}
+                            disabled={{ before: addDays(windowFrom, maxDays - 1) }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => void findCheapCombo()}
+                      disabled={comboLoading}
+                      className="h-12 w-full rounded-full bg-accent text-base font-semibold text-[#0b1220] hover:bg-accent/90"
+                    >
+                      {comboLoading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="mr-2 h-4 w-4" />
+                      )}
+                      {comboLoading ? 'Cerchiamo le date migliori…' : 'Trova la combo più conveniente'}
+                    </Button>
+                    {combo ? (
+                      <div className="space-y-3 rounded-2xl border border-white/12 bg-white/[0.05] p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                          Stima più conveniente · {combo.maxDays} giorni
+                        </p>
+                        <p className="font-display text-xl font-semibold text-white">
+                          {format(parseISO(combo.startDate), 'd MMM', { locale: it })} –{' '}
+                          {format(parseISO(combo.endDate), 'd MMM yyyy', { locale: it })}
+                        </p>
+                        <ul className="space-y-2">
+                          {combo.legs.map((leg) => (
+                            <li
+                              key={`${leg.from}-${leg.to}-${leg.date}`}
+                              className="flex items-center justify-between gap-3 text-sm text-white/80"
+                            >
+                              <span>
+                                {leg.from} → {leg.to}
+                                <span className="ml-2 text-xs text-white/45">
+                                  {format(parseISO(leg.date), 'd MMM', { locale: it })}
+                                  {leg.stops > 0 ? ` · ${leg.stops} scalo` : ' · diretto'}
+                                </span>
+                              </span>
+                              <span className="tabular-nums text-white">
+                                {leg.price.toLocaleString('it-IT')} {leg.currency}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="flex items-baseline justify-between border-t border-white/10 pt-3 text-sm">
+                          <span className="text-white/50">Somma stime (non un pacchetto)</span>
+                          <span className="font-display text-2xl font-semibold text-white">
+                            {combo.total.toLocaleString('it-IT')} {combo.currency}
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-center text-xs text-white/50">
+                        Proviamo alcune partenze nella finestra. Ogni volo resta una tratta a sé.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                              Partenza
+                            </p>
+                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                              <CalendarIcon className="h-4 w-4 text-accent" />
+                              {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                            </p>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 rounded-xl" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={(d) => {
+                              setStartDate(d);
+                              if (d) {
+                                const ret = addDays(d, maxDays - 1);
+                                setEndDate(ret);
+                                onChange({
+                                  startDate: format(d, 'yyyy-MM-dd'),
+                                  endDate: format(ret, 'yyyy-MM-dd'),
+                                });
+                              }
+                            }}
+                            disabled={{ before: new Date() }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={!startDate}
+                            className="px-4 py-3.5 text-left hover:bg-white/[0.06] disabled:opacity-50"
+                          >
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                              Ritorno
+                            </p>
+                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                              <CalendarIcon className="h-4 w-4 text-accent" />
+                              {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                            </p>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 rounded-xl" align="end">
+                          <Calendar
+                            mode="single"
+                            selected={endDate}
+                            defaultMonth={startDate}
+                            onSelect={(d) => {
+                              setEndDate(d);
+                              if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
+                            }}
+                            disabled={{ before: startDate || new Date() }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="grid gap-2.5 sm:grid-cols-3">
+                      {FLEX_DURATION_CARDS.map((card) => (
+                        <GlassChoiceCard
+                          key={card.n}
+                          kicker={card.kicker}
+                          title={card.title}
+                          body={card.body}
+                          active={activeDuration === card.n}
+                          onClick={() => applyDuration(card.n)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
             <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
               <Popover>
                 <PopoverTrigger asChild>
@@ -584,6 +963,8 @@ export function ComposerLandingStep({
             <p className="text-center text-xs text-white/75">
               Accorciando i giorni togliamo le tappe secondarie. Arrivo e partenza restano.
             </p>
+              </>
+            )}
           </motion.div>
         ) : null}
 
@@ -594,7 +975,7 @@ export function ComposerLandingStep({
                 ? 'Prima tappa: tocca la meta da cui vuoi iniziare.'
                 : visitPicks.length < selectedDestinations.length
                   ? `Poi? Tocca la tappa ${visitPicks.length + 1}.`
-                  : 'Giro pronto. Le date si spezzano su queste tappe.'}
+                  : 'Giro pronto. Ora scegli i giorni e la finestra.'}
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
               {selectedDestinations.map((dest) => {
@@ -638,21 +1019,10 @@ export function ComposerLandingStep({
                 );
               })}
             </div>
-            {visitPicks.length === selectedDestinations.length && stays.length > 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/70">
-                {selectedDestinations.map((d, i) => {
-                  const slice = stays[i];
-                  if (!slice) return null;
-                  return (
-                    <span key={destKey(d)}>
-                      {i > 0 ? ' · ' : null}
-                      <span className="font-semibold text-white">{d.label}</span>{' '}
-                      {format(parseISO(slice.start), 'd MMM', { locale: it })}–
-                      {format(parseISO(slice.end), 'd MMM', { locale: it })}
-                    </span>
-                  );
-                })}
-              </div>
+            {visitPicks.length === selectedDestinations.length ? (
+              <p className="text-center text-xs text-white/50">
+                Avanti: max giorni e quando puoi partire. Troviamo noi la combo.
+              </p>
             ) : null}
             {visitPicks.length > 0 ? (
               <button

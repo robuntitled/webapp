@@ -1,0 +1,151 @@
+import 'server-only';
+
+import { addDays, format, parseISO } from 'date-fns';
+import { buildFlightLegs, sampleStartDates } from '@/lib/composer/flight-route';
+import { searchFlightRates, type LiteApiFlightOffer } from '@/lib/liteapi/flights';
+import { resolveFlightDestinationIata } from '@/lib/travel/iata';
+import { defaultOriginIata } from '@/lib/travel/origin-iata';
+import type { DestinationMeta } from '@/types/composer';
+
+export type CheapComboLeg = {
+  from: string;
+  to: string;
+  date: string;
+  kind: string;
+  price: number;
+  currency: string;
+  stops: number;
+  origin: string;
+  destination: string;
+  offerId: string;
+  airline: string | null;
+  departureAt: string | null;
+  arrivalAt: string | null;
+  durationMinutes: number | null;
+  flightNumber: string | null;
+};
+
+export type CheapComboResult = {
+  startDate: string;
+  endDate: string;
+  maxDays: number;
+  total: number;
+  currency: string;
+  samplesTried: number;
+  legs: CheapComboLeg[];
+};
+
+function italyOrigin(): string {
+  return defaultOriginIata() || 'FCO';
+}
+
+function originForHop(fromLabel: string): { originIata?: string; originCountry?: string } {
+  if (fromLabel.trim().toLowerCase() === 'italia') {
+    return { originIata: italyOrigin() };
+  }
+  const iata = resolveFlightDestinationIata(fromLabel);
+  return iata ? { originIata: iata } : { originIata: fromLabel };
+}
+
+async function cheapestOnDate(
+  from: string,
+  to: string,
+  date: string
+): Promise<LiteApiFlightOffer | null> {
+  const origin = originForHop(from);
+  const dest = resolveFlightDestinationIata(to) ?? to;
+  const { offers } = await searchFlightRates({
+    originIata: origin.originIata,
+    originCountry: origin.originCountry,
+    destination: dest,
+    departureDate: date,
+    tripType: 'oneway',
+    adults: 1,
+    currency: 'EUR',
+  });
+  return offers[0] ?? null;
+}
+
+async function mapPool<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out: R[] = [];
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const idx = i;
+      i += 1;
+      out[idx] = await fn(items[idx]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return out;
+}
+
+export async function findCheapestCombo(params: {
+  destinations: DestinationMeta[];
+  maxDays: number;
+  windowStart: string;
+  windowEnd: string;
+}): Promise<CheapComboResult | null> {
+  const maxDays = Math.min(21, Math.max(5, Math.round(params.maxDays)));
+  const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 8);
+  if (starts.length === 0 || params.destinations.length < 2) return null;
+
+  type Sample = { start: string; end: string; quotes: Array<CheapComboLeg | null> };
+  const samples: Sample[] = [];
+
+  for (const start of starts) {
+    const end = format(addDays(parseISO(start), maxDays - 1), 'yyyy-MM-dd');
+    const legs = buildFlightLegs(params.destinations, start, end);
+    const quotes = await mapPool(legs, 3, async (leg) => {
+      const offer = await cheapestOnDate(leg.from, leg.to, leg.date);
+      if (!offer) return null;
+      return {
+        from: leg.from,
+        to: leg.to,
+        date: leg.date,
+        kind: leg.kind,
+        price: offer.price,
+        currency: offer.currency,
+        stops: offer.stops,
+        origin: offer.origin,
+        destination: offer.destination,
+        offerId: offer.offerId,
+        airline: offer.airline,
+        departureAt: offer.departureAt,
+        arrivalAt: offer.arrivalAt,
+        durationMinutes: offer.durationMinutes,
+        flightNumber: offer.flightNumber,
+      } satisfies CheapComboLeg;
+    });
+    samples.push({ start, end, quotes });
+  }
+
+  const complete = samples.filter((s) => s.quotes.every(Boolean)) as Array<{
+    start: string;
+    end: string;
+    quotes: CheapComboLeg[];
+  }>;
+  if (complete.length === 0) return null;
+
+  complete.sort(
+    (a, b) =>
+      a.quotes.reduce((sum, l) => sum + l.price, 0) -
+      b.quotes.reduce((sum, l) => sum + l.price, 0)
+  );
+  const best = complete[0];
+  const total = Math.round(best.quotes.reduce((sum, l) => sum + l.price, 0) * 100) / 100;
+
+  return {
+    startDate: best.start,
+    endDate: best.end,
+    maxDays,
+    total,
+    currency: best.quotes[0]?.currency ?? 'EUR',
+    samplesTried: starts.length,
+    legs: best.quotes,
+  };
+}
