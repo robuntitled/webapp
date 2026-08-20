@@ -110,7 +110,9 @@ export async function GET(request: Request) {
         ? undefined
         : originsSearched.length > 1
           ? `Nessun volo trovato da ${originsSearched.slice(0, 6).join(', ')}${originsSearched.length > 6 ? '…' : ''} verso ${destinationIata}. Prova altre date.`
-          : `Nessun volo trovato per questa tratta. Prova altre date o aeroporti.`,
+          : originsSearched.length === 1
+            ? `Nessun volo trovato da ${originsSearched[0]} verso ${destinationIata}. Prova altre date.`
+            : `Origine non riconosciuta. Scegli un aeroporto (es. Nairobi NBO).`,
     });
   } catch (e) {
     if (e instanceof LiteApiError) {

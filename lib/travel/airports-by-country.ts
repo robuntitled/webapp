@@ -1,4 +1,4 @@
-import { expandOriginIata } from '@/lib/travel/airport-catalog';
+import { airportsInCountry, expandOriginIata } from '@/lib/travel/airport-catalog';
 
 /** Aeroporti principali per paese — ricerca “partenza: Italia” → multi-IATA. */
 
@@ -128,8 +128,11 @@ export function normalizeCountryCode(input: string): string | null {
 
 export function airportsForCountry(country: string): string[] {
   const code = normalizeCountryCode(country);
-  if (!code) return [];
-  return COUNTRY_AIRPORTS.find((c) => c.code === code)?.airports ?? [];
+  if (code) {
+    const ranked = COUNTRY_AIRPORTS.find((c) => c.code === code)?.airports;
+    if (ranked?.length) return ranked;
+  }
+  return airportsInCountry(country).map((p) => p.code);
 }
 
 /** Se input è paese → lista aeroporti; se IATA/città → singolo. */

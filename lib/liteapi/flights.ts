@@ -757,11 +757,20 @@ export async function searchFlightRates(params: {
     return { offers: [], destinationIata: '', originsSearched: [] };
   }
 
-  const origins = params.originCountry
+  const resolvedOrigins = params.originCountry
     ? airportsForCountry(params.originCountry)
     : resolveOriginAirports(params.originIata || defaultOriginIata(), (label) =>
         resolveOriginIata(label) ?? resolveDestinationIata(label)
       );
+  const fallbackOrigin = params.originCountry
+    ? resolveIataFlexible(params.originCountry)
+    : null;
+  const origins =
+    resolvedOrigins.length > 0
+      ? resolvedOrigins
+      : fallbackOrigin
+        ? [fallbackOrigin]
+        : [];
 
   if (!origins.length) {
     return { offers: [], destinationIata, originsSearched: [] };
