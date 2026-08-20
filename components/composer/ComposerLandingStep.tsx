@@ -22,6 +22,7 @@ import { ComposerWizardHeader } from '@/components/composer/ComposerWizardHeader
 import { syncDestinationFields, getDraftDestinations } from '@/lib/composer/draft-destinations';
 import { buildOrganizerOrigin } from '@/lib/composer/origins';
 import { FlightSearchPanel, type FlightOfferView } from '@/components/travel/FlightSearchPanel';
+import { FlightOfferCard } from '@/components/travel/FlightOfferCard';
 import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import { coverForDestination } from '@/lib/composer/destination-covers';
@@ -31,6 +32,7 @@ import {
   hasWideCountry,
   legKindLabel,
   needsVisitOrder,
+  type FlightLegKind,
 } from '@/lib/composer/flight-route';
 import type { ComposerBookablePick, ComposerDraft, DestinationMeta } from '@/types/composer';
 import type { PlannerProfile } from '@/types/planner';
@@ -99,10 +101,12 @@ type CheapComboView = {
   currency: string;
   samplesTried: number;
   legs: Array<{
+    id: string;
     from: string;
     to: string;
     date: string;
-    kind: string;
+    kind: FlightLegKind;
+    dayIndex: number;
     price: number;
     currency: string;
     stops: number;
@@ -110,6 +114,9 @@ type CheapComboView = {
     destination: string;
     offerId: string;
     airline: string | null;
+    airlineCode: string | null;
+    airlineLogo: string | null;
+    cabinClass: string | null;
     departureAt: string | null;
     arrivalAt: string | null;
     durationMinutes: number | null;
@@ -494,30 +501,71 @@ export function ComposerLandingStep({
     const end = parseISO(next.endDate);
     setStartDate(start);
     setEndDate(end);
-    const picks: ComposerBookablePick[] = next.legs.map((leg, i) => ({
-      id: `flight-${leg.from}-${leg.to}-${i}`,
+    onChange({
+      startDate: next.startDate,
+      endDate: next.endDate,
+      days: remapComposerDaysToDuration(draft.days, next.maxDays, next.startDate),
+      bookablePicks: (draft.bookablePicks ?? []).filter((p) => p.kind !== 'flight'),
+    });
+  };
+
+  const saveComboLeg = (leg: CheapComboView['legs'][number]) => {
+    const pick: ComposerBookablePick = {
+      id: `flight-${leg.id}`,
       kind: 'flight',
       provider: 'liteapi',
       title: `${leg.origin} → ${leg.destination}`,
       price: leg.price,
       currency: leg.currency,
-      dayIndex: i === 0 ? 1 : undefined,
+      dayIndex: leg.dayIndex,
       offerId: leg.offerId,
       origin: leg.origin,
       destinationIata: leg.destination,
       airline: leg.airline,
+      airlineCode: leg.airlineCode,
+      airlineLogo: leg.airlineLogo,
       departureAt: leg.departureAt,
       arrivalAt: leg.arrivalAt,
       durationMinutes: leg.durationMinutes,
       stops: leg.stops,
       flightNumber: leg.flightNumber,
+      cabinClass: leg.cabinClass,
+      adults: 1,
+    };
+    const withoutLeg = (draft.bookablePicks ?? []).filter((p) => p.id !== pick.id);
+    onChange({ bookablePicks: mergeBookablePicks(withoutLeg, [pick]) });
+    toast.success('Tratta salvata per il gruppo', {
+      description: 'Chi si unisce la trova già pronta. Prenota dopo, dal fornitore.',
+    });
+  };
+
+  const saveAllComboLegs = (next: CheapComboView) => {
+    const picks: ComposerBookablePick[] = next.legs.map((leg) => ({
+      id: `flight-${leg.id}`,
+      kind: 'flight',
+      provider: 'liteapi',
+      title: `${leg.origin} → ${leg.destination}`,
+      price: leg.price,
+      currency: leg.currency,
+      dayIndex: leg.dayIndex,
+      offerId: leg.offerId,
+      origin: leg.origin,
+      destinationIata: leg.destination,
+      airline: leg.airline,
+      airlineCode: leg.airlineCode,
+      airlineLogo: leg.airlineLogo,
+      departureAt: leg.departureAt,
+      arrivalAt: leg.arrivalAt,
+      durationMinutes: leg.durationMinutes,
+      stops: leg.stops,
+      flightNumber: leg.flightNumber,
+      cabinClass: leg.cabinClass,
       adults: 1,
     }));
-    onChange({
-      startDate: next.startDate,
-      endDate: next.endDate,
-      days: remapComposerDaysToDuration(draft.days, next.maxDays, next.startDate),
-      bookablePicks: mergeBookablePicks([], picks),
+    const withoutFlights = (draft.bookablePicks ?? []).filter((p) => p.kind !== 'flight');
+    onChange({ bookablePicks: mergeBookablePicks(withoutFlights, picks) });
+    toast.success('Combo salvata per il gruppo', {
+      description: 'Ogni tratta resta a sé. Prenoti dopo, dal fornitore.',
     });
   };
 
@@ -804,39 +852,69 @@ export function ComposerLandingStep({
                       {comboLoading ? 'Cerchiamo le date migliori…' : 'Trova la combo più conveniente'}
                     </Button>
                     {combo ? (
-                      <div className="space-y-3 rounded-2xl border border-white/12 bg-white/[0.05] p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
-                          Stima più conveniente · {combo.maxDays} giorni
-                        </p>
-                        <p className="font-display text-xl font-semibold text-white">
-                          {format(parseISO(combo.startDate), 'd MMM', { locale: it })} –{' '}
-                          {format(parseISO(combo.endDate), 'd MMM yyyy', { locale: it })}
-                        </p>
-                        <ul className="space-y-2">
-                          {combo.legs.map((leg) => (
-                            <li
-                              key={`${leg.from}-${leg.to}-${leg.date}`}
-                              className="flex items-center justify-between gap-3 text-sm text-white/80"
-                            >
-                              <span>
-                                {leg.from} → {leg.to}
-                                <span className="ml-2 text-xs text-white/45">
-                                  {format(parseISO(leg.date), 'd MMM', { locale: it })}
-                                  {leg.stops > 0 ? ` · ${leg.stops} scalo` : ' · diretto'}
-                                </span>
-                              </span>
-                              <span className="tabular-nums text-white">
-                                {leg.price.toLocaleString('it-IT')} {leg.currency}
-                              </span>
-                            </li>
-                          ))}
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                            Stima più conveniente · {combo.maxDays} giorni
+                          </p>
+                          <p className="mt-1 font-display text-xl font-semibold text-white">
+                            {format(parseISO(combo.startDate), 'd MMM', { locale: it })} –{' '}
+                            {format(parseISO(combo.endDate), 'd MMM yyyy', { locale: it })}
+                          </p>
+                        </div>
+                        <ul className="space-y-3">
+                          {combo.legs.map((leg) => {
+                            const saved = (draft.bookablePicks ?? []).some(
+                              (p) => p.id === `flight-${leg.id}` || p.offerId === leg.offerId
+                            );
+                            return (
+                              <li key={leg.id}>
+                                <FlightOfferCard
+                                  dark
+                                  offer={{
+                                    offerId: leg.offerId,
+                                    price: leg.price,
+                                    currency: leg.currency,
+                                    origin: leg.origin,
+                                    destination: leg.destination,
+                                    airline: leg.airline,
+                                    airlineCode: leg.airlineCode,
+                                    airlineLogo: leg.airlineLogo,
+                                    flightNumber: leg.flightNumber,
+                                    departureAt: leg.departureAt,
+                                    arrivalAt: leg.arrivalAt,
+                                    durationMinutes: leg.durationMinutes,
+                                    stops: leg.stops,
+                                    cabinClass: leg.cabinClass,
+                                  }}
+                                  kicker={`${legKindLabel(leg.kind)} · ${format(parseISO(leg.date), 'd MMM', { locale: it })}`}
+                                  saved={saved}
+                                  actionLabel={saved ? 'Salvata' : 'Salva per il gruppo'}
+                                  onAction={() => saveComboLeg(leg)}
+                                />
+                              </li>
+                            );
+                          })}
                         </ul>
-                        <p className="flex items-baseline justify-between border-t border-white/10 pt-3 text-sm">
+                        <div className="flex items-baseline justify-between rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3 text-sm">
                           <span className="text-white/50">Somma stime (non un pacchetto)</span>
                           <span className="font-display text-2xl font-semibold text-white">
                             {combo.total.toLocaleString('it-IT')} {combo.currency}
                           </span>
-                        </p>
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={() => saveAllComboLegs(combo)}
+                          className="h-12 w-full rounded-full bg-accent text-base font-semibold text-[#0b1220] hover:bg-accent/90"
+                        >
+                          {combo.legs.every((leg) =>
+                            (draft.bookablePicks ?? []).some(
+                              (p) => p.id === `flight-${leg.id}` || p.offerId === leg.offerId
+                            )
+                          )
+                            ? 'Combo salvata'
+                            : 'Salva tutta la combo'}
+                        </Button>
                       </div>
                     ) : (
                       <p className="text-center text-xs text-white/50">

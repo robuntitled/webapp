@@ -9,9 +9,7 @@ import {
   ArrowRightLeft,
   Check,
   ChevronDown,
-  Clock3,
   Loader2,
-  Plane,
   Search,
   Users,
 } from 'lucide-react';
@@ -38,6 +36,7 @@ import {
   saveSearchFormCache,
   type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
+import { FlightOfferCard } from '@/components/travel/FlightOfferCard';
 import { cn } from '@/lib/utils';
 
 type FlightSort = 'best' | 'cheapest' | 'fastest' | 'departure';
@@ -178,68 +177,6 @@ function formatTime(iso?: string | null): string {
     return '—';
   }
   return format(new Date(d), 'HH:mm');
-}
-
-function formatDuration(mins?: number | null): string {
-  if (mins == null || mins <= 0) return '—';
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h <= 0) return `${m}m`;
-  if (m <= 0) return `${h}h`;
-  return `${h}h ${m}m`;
-}
-
-function stopsLabel(stops?: number): string {
-  if (stops == null) return '';
-  if (stops <= 0) return 'Diretto';
-  if (stops === 1) return '1 scalo';
-  return `${stops} scali`;
-}
-
-function AirlineBadge({
-  name,
-  code,
-  logo,
-  flightNumber,
-  dark,
-}: {
-  name: string | null;
-  code?: string | null;
-  logo?: string | null;
-  flightNumber?: string | null;
-  dark?: boolean;
-}) {
-  const label = name || (code ? `Compagnia ${code}` : 'Compagnia aerea');
-  const initials =
-    (code || label).replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || 'FL';
-
-  return (
-    <div className="flex items-center gap-2.5 min-w-0">
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={logo}
-          alt=""
-          className={cn(
-            'h-10 w-10 shrink-0 rounded-xl object-contain p-1',
-            dark ? 'border border-white/15 bg-white/10' : 'border border-slate-100 bg-slate-50'
-          )}
-        />
-      ) : (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0b3d91] text-xs font-bold text-white">
-          {initials}
-        </div>
-      )}
-      <div className="min-w-0">
-        <p className={cn('truncate text-sm font-semibold', dark ? 'text-white' : 'text-slate-900')}>
-          {label}
-        </p>
-        <p className={cn('truncate text-[11px]', dark ? 'text-white/45' : 'text-slate-500')}>
-          {[code, flightNumber].filter(Boolean).join(' · ') || '—'}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 function ensurePlace(query: string, selected: PlaceSuggestion | null): PlaceSuggestion | null {
@@ -959,232 +896,109 @@ export function FlightSearchPanel({
             const saved = selectedOfferId === o.offerId;
 
             return (
-              <li
-                key={`${o.offerId}-${pickStep}`}
-                className={cn(
-                  'overflow-hidden rounded-2xl ring-1 transition',
-                  composer
-                    ? saved
-                      ? 'bg-accent/12 ring-accent/50'
-                      : 'bg-white/[0.04] ring-white/10 hover:bg-white/[0.07] hover:ring-white/20'
-                    : 'rounded-3xl bg-slate-50/80 ring-slate-100 hover:bg-white hover:ring-slate-200'
-                )}
-              >
-                <div
-                  className={cn(
-                    'border-b px-4 py-2 sm:px-5',
-                    composer ? 'border-white/8' : 'border-slate-100/80'
-                  )}
-                >
-                  <p
-                    className={cn(
-                      'text-[11px] font-semibold uppercase tracking-[0.18em]',
-                      composer ? 'text-white/45' : 'text-slate-500'
-                    )}
-                  >
-                    {saved
-                      ? 'Salvata per il gruppo'
-                      : tripType === 'roundtrip'
-                        ? pickStep === 'outbound'
-                          ? 'Andata'
-                          : 'Ritorno'
-                        : 'Volo'}
-                  </p>
-                </div>
-                <div className="grid gap-4 p-4 sm:grid-cols-[200px_1fr_150px] sm:items-center sm:p-5">
-                  <AirlineBadge
-                    name={airlineName}
-                    code={airlineCode}
-                    logo={airlineLogo}
-                    flightNumber={flightNumber}
-                    dark={composer}
-                  />
+              <li key={`${o.offerId}-${pickStep}`}>
+                <FlightOfferCard
+                  offer={{
+                    offerId: o.offerId,
+                    price: o.price,
+                    currency: o.currency,
+                    origin: from,
+                    destination: to,
+                    airline: airlineName,
+                    airlineCode,
+                    airlineLogo,
+                    flightNumber,
+                    departureAt: dep,
+                    arrivalAt: arr,
+                    durationMinutes: duration,
+                    stops: stops ?? 0,
+                    cabinClass: o.cabinClass,
+                  }}
+                  dark={composer}
+                  saved={saved}
+                  kicker={
+                    tripType === 'roundtrip'
+                      ? pickStep === 'outbound'
+                        ? 'Andata'
+                        : 'Ritorno'
+                      : 'Volo'
+                  }
+                  priceNote={tripType === 'roundtrip' ? 'andata + ritorno' : 'a persona'}
+                  actionLabel={
+                    tripType === 'roundtrip' && pickStep === 'outbound'
+                      ? 'Scegli andata'
+                      : saved
+                        ? 'Salvata'
+                        : selectLabel ??
+                          (tripType === 'roundtrip' ? 'Scegli ritorno' : 'Seleziona')
+                  }
+                  onAction={() => {
+                    if (tripType === 'roundtrip' && pickStep === 'outbound') {
+                      if (!o.hasReturn) {
+                        toast.error(
+                          'Questa offerta non ha un ritorno. Prova un altro volo.'
+                        );
+                        return;
+                      }
+                      setSelectedOutboundKey(outboundKey(o));
+                      setSelectedOutboundOffer(o);
+                      setPickStep('return');
+                      toast.message('Andata selezionata', {
+                        description: 'Ora scegli il volo di ritorno',
+                      });
+                      return;
+                    }
 
-                  <div className="flex items-center gap-3 sm:gap-5">
-                    <div className="min-w-[64px] text-center">
-                      <p
-                        className={cn(
-                          'font-display text-2xl font-semibold tabular-nums',
-                          composer ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
-                        {formatTime(dep)}
-                      </p>
-                      <p
-                        className={cn(
-                          'text-xs font-semibold',
-                          composer ? 'text-white/50' : 'text-slate-500'
-                        )}
-                      >
-                        {from}
-                      </p>
-                    </div>
+                    if (tripType === 'roundtrip' && !o.hasReturn) {
+                      toast.error('Seleziona un’offerta con andata e ritorno');
+                      return;
+                    }
 
-                    <div className="min-w-[96px] flex-1 px-1">
-                      <p
-                        className={cn(
-                          'mb-1 flex items-center justify-center gap-1 text-[11px]',
-                          composer ? 'text-white/45' : 'text-slate-500'
-                        )}
-                      >
-                        <Clock3 className="h-3 w-3" />
-                        {formatDuration(duration)}
-                      </p>
-                      <div className={cn('relative h-px', composer ? 'bg-white/15' : 'bg-slate-200')}>
-                        <Plane
-                          className={cn(
-                            'absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90',
-                            composer ? 'text-accent' : 'text-primary'
-                          )}
-                        />
-                      </div>
-                      <p
-                        className={cn(
-                          'mt-1 text-center text-[11px] font-medium',
-                          composer ? 'text-white/50' : 'text-slate-500'
-                        )}
-                      >
-                        {stopsLabel(stops)}
-                        {o.cabinClass ? ` · ${o.cabinClass}` : ''}
-                      </p>
-                    </div>
+                    if (onOfferSelect) {
+                      onOfferSelect(o);
+                      return;
+                    }
 
-                    <div className="min-w-[64px] text-center">
-                      <p
-                        className={cn(
-                          'font-display text-2xl font-semibold tabular-nums',
-                          composer ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
-                        {formatTime(arr)}
-                      </p>
-                      <p
-                        className={cn(
-                          'text-xs font-semibold',
-                          composer ? 'text-white/50' : 'text-slate-500'
-                        )}
-                      >
-                        {to}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className={cn(
-                      'flex flex-row items-center justify-between gap-3 border-t pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0',
-                      composer ? 'border-white/8' : 'border-slate-100'
-                    )}
-                  >
-                    <div className="text-right">
-                      <p
-                        className={cn(
-                          'font-display text-2xl font-semibold tabular-nums',
-                          composer ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
-                        {o.price.toLocaleString('it-IT', {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 2,
-                        })}
-                        <span
-                          className={cn(
-                            'ml-1 text-sm font-medium',
-                            composer ? 'text-white/50' : 'text-slate-500'
-                          )}
-                        >
-                          {o.currency}
-                        </span>
-                      </p>
-                      <p className={cn('text-[11px]', composer ? 'text-white/40' : 'text-slate-400')}>
-                        {tripType === 'roundtrip' ? 'andata + ritorno' : 'a persona'}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      className={cn(
-                        'px-5 font-semibold',
-                        composer
-                          ? saved
-                            ? 'rounded-full bg-white/12 text-white hover:bg-white/18'
-                            : 'rounded-full bg-accent text-[#0b1220] hover:bg-accent/90'
-                          : 'rounded-xl bg-primary hover:bg-primary/90'
-                      )}
-                      onClick={() => {
-                        if (tripType === 'roundtrip' && pickStep === 'outbound') {
-                          if (!o.hasReturn) {
-                            toast.error(
-                              'Questa offerta non ha un ritorno. Prova un altro volo.'
-                            );
-                            return;
-                          }
-                          setSelectedOutboundKey(outboundKey(o));
-                          setSelectedOutboundOffer(o);
-                          setPickStep('return');
-                          toast.message('Andata selezionata', {
-                            description: 'Ora scegli il volo di ritorno',
-                          });
-                          return;
-                        }
-
-                        if (tripType === 'roundtrip' && !o.hasReturn) {
-                          toast.error('Seleziona un’offerta con andata e ritorno');
-                          return;
-                        }
-
-                        if (onOfferSelect) {
-                          onOfferSelect(o);
-                          return;
-                        }
-
-                        saveFlightCheckoutDraft({
-                          offerId: o.offerId,
-                          price: o.price,
-                          currency: o.currency,
-                          outbound: {
-                            origin: o.origin,
-                            destination: o.destination,
-                            airline: o.airline,
-                            airlineCode: o.airlineCode,
-                            airlineLogo: o.airlineLogo,
-                            departureAt: o.departureAt,
-                            arrivalAt: o.arrivalAt,
-                            durationMinutes: o.durationMinutes,
-                            stops: o.stops,
-                            cabinClass: o.cabinClass,
-                            flightNumber: o.flightNumber,
-                          },
-                          returnLeg:
-                            tripType === 'roundtrip' && o.hasReturn
-                              ? {
-                                  origin: o.returnOrigin ?? o.destination,
-                                  destination: o.returnDestination ?? o.origin,
-                                  airline: o.returnAirline ?? o.airline,
-                                  airlineCode: o.returnAirlineCode ?? o.airlineCode,
-                                  airlineLogo: o.returnAirlineLogo ?? o.airlineLogo,
-                                  departureAt: o.returnDepartureAt,
-                                  arrivalAt: o.returnArrivalAt,
-                                  durationMinutes: o.returnDurationMinutes,
-                                  stops: o.returnStops,
-                                  flightNumber: o.returnFlightNumber,
-                                  cabinClass: o.cabinClass,
-                                }
-                              : null,
-                          adults,
-                          tripType,
-                          createdAt: Date.now(),
-                        });
-                        router.push('/prenota/voli/checkout');
-                      }}
-                    >
-                      {tripType === 'roundtrip' && pickStep === 'outbound'
-                        ? 'Scegli andata'
-                        : saved
-                          ? 'Salvata'
-                          : selectLabel ??
-                            (tripType === 'roundtrip' ? 'Scegli ritorno' : 'Seleziona')}
-                    </Button>
-                  </div>
-                </div>
+                    saveFlightCheckoutDraft({
+                      offerId: o.offerId,
+                      price: o.price,
+                      currency: o.currency,
+                      outbound: {
+                        origin: o.origin,
+                        destination: o.destination,
+                        airline: o.airline,
+                        airlineCode: o.airlineCode,
+                        airlineLogo: o.airlineLogo,
+                        departureAt: o.departureAt,
+                        arrivalAt: o.arrivalAt,
+                        durationMinutes: o.durationMinutes,
+                        stops: o.stops,
+                        cabinClass: o.cabinClass,
+                        flightNumber: o.flightNumber,
+                      },
+                      returnLeg:
+                        tripType === 'roundtrip' && o.hasReturn
+                          ? {
+                              origin: o.returnOrigin ?? o.destination,
+                              destination: o.returnDestination ?? o.origin,
+                              airline: o.returnAirline ?? o.airline,
+                              airlineCode: o.returnAirlineCode ?? o.airlineCode,
+                              airlineLogo: o.returnAirlineLogo ?? o.airlineLogo,
+                              departureAt: o.returnDepartureAt,
+                              arrivalAt: o.returnArrivalAt,
+                              durationMinutes: o.returnDurationMinutes,
+                              stops: o.returnStops,
+                              flightNumber: o.returnFlightNumber,
+                              cabinClass: o.cabinClass,
+                            }
+                          : null,
+                      adults,
+                      tripType,
+                      createdAt: Date.now(),
+                    });
+                    router.push('/prenota/voli/checkout');
+                  }}
+                />
               </li>
             );
           })}

@@ -1,17 +1,19 @@
 import 'server-only';
 
 import { addDays, format, parseISO } from 'date-fns';
-import { buildFlightLegs, sampleStartDates } from '@/lib/composer/flight-route';
+import { buildFlightLegs, sampleStartDates, type FlightLegKind } from '@/lib/composer/flight-route';
 import { searchFlightRates, type LiteApiFlightOffer } from '@/lib/liteapi/flights';
 import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import type { DestinationMeta } from '@/types/composer';
 
 export type CheapComboLeg = {
+  id: string;
   from: string;
   to: string;
   date: string;
-  kind: string;
+  kind: FlightLegKind;
+  dayIndex: number;
   price: number;
   currency: string;
   stops: number;
@@ -19,6 +21,9 @@ export type CheapComboLeg = {
   destination: string;
   offerId: string;
   airline: string | null;
+  airlineCode: string | null;
+  airlineLogo: string | null;
+  cabinClass: string | null;
   departureAt: string | null;
   arrivalAt: string | null;
   durationMinutes: number | null;
@@ -104,10 +109,12 @@ export async function findCheapestCombo(params: {
       const offer = await cheapestOnDate(leg.from, leg.to, leg.date);
       if (!offer) return null;
       return {
+        id: leg.id,
         from: leg.from,
         to: leg.to,
         date: leg.date,
         kind: leg.kind,
+        dayIndex: leg.dayIndex,
         price: offer.price,
         currency: offer.currency,
         stops: offer.stops,
@@ -115,6 +122,9 @@ export async function findCheapestCombo(params: {
         destination: offer.destination,
         offerId: offer.offerId,
         airline: offer.airline,
+        airlineCode: offer.airlineCode,
+        airlineLogo: offer.airlineLogo,
+        cabinClass: offer.cabinClass,
         departureAt: offer.departureAt,
         arrivalAt: offer.arrivalAt,
         durationMinutes: offer.durationMinutes,
