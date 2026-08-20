@@ -6,6 +6,9 @@ import { LiteApiError } from '@/lib/liteapi/client';
 import { findCheapestCombo } from '@/lib/liteapi/cheap-combo';
 import { clientIp, rateLimitJson } from '@/lib/api/request-guard';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 const destSchema = z.object({
   label: z.string().min(1).max(80),
   lat: z.number(),

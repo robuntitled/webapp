@@ -7,6 +7,9 @@ import { searchFlightRates } from '@/lib/liteapi/flights';
 import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
 
+export const runtime = 'nodejs';
+export const maxDuration = 25;
+
 const schema = z.object({
   destination: z.string().trim().min(2).max(120),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

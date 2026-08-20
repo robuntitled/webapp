@@ -6,6 +6,13 @@ import { defaultOriginIata, resolveOriginIata } from '@/lib/travel/origin-iata';
 import { airportsForCountry, resolveOriginAirports } from '@/lib/travel/airports-by-country';
 import { layoversFromSegments, type FlightLayover } from '@/lib/liteapi/flight-layovers';
 import { pickSensibleOffer } from '@/lib/liteapi/flight-value';
+import { selectSearchOrigins } from '@/lib/liteapi/flight-origins';
+import {
+  flightRatesCacheKey,
+  getCachedFlightRates,
+  setCachedFlightRates,
+  withFlightRatesInflight,
+} from '@/lib/liteapi/flight-cache';
 
 export type LiteApiFlightOffer = {
   offerId: string;
@@ -700,7 +707,7 @@ async function searchOneOrigin(params: {
       country: 'IT',
       cabinClass: 'ECONOMY',
     }),
-    timeoutMs: 30_000,
+    timeoutMs: 12_000,
   });
 
   const contexts = collectOfferContexts(raw);
@@ -714,6 +721,24 @@ async function searchOneOrigin(params: {
     .filter((o): o is LiteApiFlightOffer => o != null);
 }
 
+async function searchOneOriginCached(params: {
+  originIata: string;
+  destinationIata: string;
+  departureDate: string;
+  returnDate?: string | null;
+  adults: number;
+  currency: string;
+}): Promise<LiteApiFlightOffer[]> {
+  const key = flightRatesCacheKey(params);
+  const cached = await getCachedFlightRates(key);
+  if (cached) return cached;
+  return withFlightRatesInflight(key, async () => {
+    const offers = await searchOneOrigin(params);
+    await setCachedFlightRates(key, offers);
+    return offers;
+  });
+}
+
 export async function searchFlightRates(params: {
   originIata?: string;
   /** Paese ISO2 o nome (es. IT / Italia) → ricerca multi-aeroporto */
@@ -724,6 +749,8 @@ export async function searchFlightRates(params: {
   tripType?: 'oneway' | 'roundtrip';
   adults?: number;
   currency?: string;
+  /** Default 2: copre i hub senza aspettare 5 timeout LiteAPI. */
+  maxOrigins?: number;
 }): Promise<{ offers: LiteApiFlightOffer[]; destinationIata: string; originsSearched: string[] }> {
   const destinationIata = resolveIataFlexible(params.destination);
   if (!destinationIata) {
@@ -750,11 +777,12 @@ export async function searchFlightRates(params: {
   const adults = params.adults ?? 1;
   const currency = (params.currency ?? 'EUR').toUpperCase();
 
-  // Max 5 aeroporti in parallelo per non saturare rate limit
-  const batch = origins.slice(0, 5);
+  const batch = selectSearchOrigins(origins, {
+    maxOrigins: params.maxOrigins ?? 2,
+  });
   const results = await Promise.allSettled(
     batch.map((originIata) =>
-      searchOneOrigin({
+      searchOneOriginCached({
         originIata,
         destinationIata,
         departureDate: params.departureDate,

@@ -70,6 +70,7 @@ async function cheapestOnDate(
     tripType: 'oneway',
     adults: 1,
     currency: 'EUR',
+    maxOrigins: 1,
   });
   return pickSensibleOffer(offers);
 }
@@ -99,13 +100,12 @@ export async function findCheapestCombo(params: {
   windowEnd: string;
 }): Promise<CheapComboResult | null> {
   const maxDays = Math.min(21, Math.max(5, Math.round(params.maxDays)));
-  const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 8);
+  const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 4);
   if (starts.length === 0 || params.destinations.length < 2) return null;
 
   type Sample = { start: string; end: string; quotes: Array<CheapComboLeg | null> };
-  const samples: Sample[] = [];
 
-  for (const start of starts) {
+  const samples = await mapPool(starts, 2, async (start) => {
     const end = format(addDays(parseISO(start), maxDays - 1), 'yyyy-MM-dd');
     const legs = buildFlightLegs(params.destinations, start, end);
     const quotes = await mapPool(legs, 3, async (leg) => {
@@ -135,8 +135,8 @@ export async function findCheapestCombo(params: {
         flightNumber: offer.flightNumber,
       } satisfies CheapComboLeg;
     });
-    samples.push({ start, end, quotes });
-  }
+    return { start, end, quotes } satisfies Sample;
+  });
 
   const complete = samples.filter((s) => s.quotes.every(Boolean)) as Array<{
     start: string;
