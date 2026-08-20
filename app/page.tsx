@@ -278,12 +278,12 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-1 items-start justify-center px-4 pb-16 lg:items-center lg:py-12">
-          <ScrollReveal variant="card" className="w-full max-w-md rounded-3xl border border-white/40 bg-white p-7 shadow-2xl space-y-5 text-slate-900">
+          <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
             <div>
-              <h2 className="font-display text-2xl font-semibold text-slate-900">
+              <h2 className="font-display text-2xl font-semibold text-foreground">
                 {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
               </h2>
-              <p className="mt-1.5 text-sm text-slate-600">
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 {isRegisterMode
                   ? 'Due minuti. Poi scegli: Crea un Trip o Esplora i Trip.'
                   : 'Accedi e scegli: Crea un Trip o Esplora i Trip.'}
@@ -293,7 +293,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Button
                 variant="outline"
-                className="w-full h-11 rounded-xl bg-white text-slate-900 border-slate-200"
+                className="w-full"
                 disabled={oauthLoading !== null}
                 onClick={() => void handleOAuthSignIn('google')}
               >

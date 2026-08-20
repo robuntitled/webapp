@@ -14,22 +14,22 @@ export function Footer({ company }: FooterProps) {
   if (pathname === '/') return null;
 
   return (
-    <footer className="border-t bg-primary text-primary-foreground mt-auto">
-      <div className="container mx-auto px-4 py-12">
+    <footer className="mt-auto border-t border-border bg-card text-foreground">
+      <div className="container mx-auto max-w-[1200px] px-4 py-12 sm:px-5">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <div className="flex items-center gap-2.5 mb-4">
-              <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-lg" />
+              <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-[10px]" />
               <span className="font-display text-xl font-semibold">{company.tradeName}</span>
             </div>
-            <p className="text-sm text-primary-foreground/70 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Viaggi di gruppo nel mondo — raccontati da chi li vive e li fotografa.
             </p>
-            <p className="text-sm text-primary-foreground/60 mt-4">
+            <p className="text-sm text-muted-foreground mt-4">
               Privacy:{' '}
               <a
                 href={`mailto:${company.privacyEmail}`}
-                className="underline underline-offset-2 hover:text-white transition-colors"
+                className="text-primary underline underline-offset-2 hover:text-[var(--color-primary-hover)] transition-colors"
               >
                 {company.privacyEmail}
               </a>
@@ -37,22 +37,22 @@ export function Footer({ company }: FooterProps) {
           </div>
 
           <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <Link href="/dashboard" className="text-primary-foreground/80 hover:text-white transition-colors">
+            <Link href="/dashboard" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
               Cerca viaggi
             </Link>
-            <Link href="/privacy" className="text-primary-foreground/80 hover:text-white transition-colors">
+            <Link href="/privacy" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
               Privacy
             </Link>
-            <Link href="/termini" className="text-primary-foreground/80 hover:text-white transition-colors">
+            <Link href="/termini" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
               Termini
             </Link>
-            <Link href="/cookie" className="text-primary-foreground/80 hover:text-white transition-colors">
+            <Link href="/cookie" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
               Cookie
             </Link>
           </nav>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-primary-foreground/15 flex flex-col sm:flex-row sm:justify-between gap-2 text-xs text-primary-foreground/50">
+        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row sm:justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} {company.tradeName}</span>
           <span>Conforme al Regolamento UE 2016/679 (GDPR)</span>
         </div>

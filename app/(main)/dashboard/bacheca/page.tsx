@@ -55,11 +55,10 @@ export default async function BachecaPage() {
           me={me}
           currentUserId={userId}
         />
-        <CreatePostComposer tone="onDark" />
+        <CreatePostComposer />
         <PostFeed
           posts={posts}
           currentUserId={userId}
-          tone="onDark"
         />
       </div>
     </div>

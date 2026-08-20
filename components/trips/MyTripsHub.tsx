@@ -319,14 +319,14 @@ export function MyTripsHub({
           <p className="text-accent font-medium text-xs uppercase tracking-[0.2em] mb-2">
             Il tuo hub viaggi
           </p>
-          <h1 className="font-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+          <h1 className="font-display text-4xl md:text-5xl font-semibold text-foreground tracking-tight">
             I miei viaggi
           </h1>
-          <p className="mt-3 text-white/65 max-w-lg text-base leading-relaxed">
+          <p className="mt-3 text-muted-foreground max-w-lg text-base leading-relaxed">
             Bozze, viaggi che crei e modalità relax — tutto in un unico posto.
           </p>
         </div>
-        <Button asChild size="lg" className="rounded-full shrink-0 gap-2 shadow-lg">
+        <Button asChild size="lg" className="shrink-0 gap-2">
           <Link href="/dashboard/crea?new=1">
             <Plus className="h-4 w-4" />
             Nuovo Viaggio
@@ -356,23 +356,23 @@ export function MyTripsHub({
                   <Icon className="h-5 w-5" />
                 </div>
                 <span
-                  className={`text-xs font-bold tabular-nums px-2.5 py-1 rounded-full ${
+                  className={`text-xs font-bold tabular-nums px-2.5 py-1 rounded-[8px] ${
                     isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-white/10 text-white/70'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {count}
                 </span>
               </div>
-              <p className="font-display text-lg font-semibold text-white mt-4">{section.label}</p>
-              <p className="text-sm text-white/55 mt-1">{section.description}</p>
+              <p className="font-display text-lg font-semibold text-foreground mt-4">{section.label}</p>
+              <p className="text-sm text-muted-foreground mt-1">{section.description}</p>
             </button>
           );
         })}
       </div>
 
-      <div className="hub-panel rounded-3xl overflow-hidden">
+      <div className="hub-panel overflow-hidden rounded-[10px]">
         <div className="hub-panel-header px-6 py-5 flex items-center justify-between gap-4 border-b border-border/60">
           <div className="flex items-center gap-3 min-w-0">
             <div className="hub-panel-header-icon">

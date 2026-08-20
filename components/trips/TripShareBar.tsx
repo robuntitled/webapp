@@ -230,7 +230,7 @@ export function TripInviteInbox({ invites }: TripInviteInboxProps) {
 
   return (
     <section className="space-y-3">
-      <h2 className="nl-hero-section-title font-display text-lg font-semibold text-white">
+      <h2 className="nl-hero-section-title font-display text-lg font-semibold text-foreground">
         Inviti in sospeso
       </h2>
       <ul className="space-y-2">

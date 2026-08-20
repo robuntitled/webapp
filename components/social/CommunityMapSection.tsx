@@ -13,7 +13,7 @@ const CommunityMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="nl-feed-card flex h-[340px] items-center justify-center rounded-3xl text-sm text-white/55">
+      <div className="nl-feed-card flex h-[340px] items-center justify-center rounded-[10px] text-sm text-muted-foreground">
         Caricamento mappa…
       </div>
     ),

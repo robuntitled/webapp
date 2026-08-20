@@ -51,59 +51,59 @@ export default async function PointsPage() {
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
           {NOMAD_POINTS_LABEL}
         </p>
-        <h1 className="mt-3 font-display text-4xl font-semibold text-white">I miei NomadPoints</h1>
-        <p className="mt-4 text-lg text-white/90">
+        <h1 className="mt-3 font-display text-4xl font-semibold text-foreground">I miei NomadPoints</h1>
+        <p className="mt-4 text-lg text-muted-foreground">
           Guadagni punti per azioni: creare, soglia del gruppo, inviti, profilo, recensioni.{' '}
           {COMPLIANCE_COPY.pointsNoMoney}
         </p>
 
-        <div className="mt-8 rounded-3xl border border-white/15 bg-white/5 p-6">
+        <div className="mt-8 rounded-[10px] border border-border bg-card p-6">
           <div className="flex items-end justify-between">
             <div>
-              <p className="font-display text-5xl font-semibold tabular-nums text-white">
+              <p className="font-display text-5xl font-semibold tabular-nums text-foreground">
                 {formatPoints(total)}
               </p>
-              <p className="mt-1 text-sm text-white/80">punti disponibili</p>
+              <p className="mt-1 text-sm text-muted-foreground">punti disponibili</p>
             </div>
-            <span className="rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-sm font-medium text-white">
+            <span className="rounded-[8px] border border-border bg-muted px-3 py-1 text-sm font-medium text-foreground">
               {current.label}
             </span>
           </div>
 
           {next ? (
             <div className="mt-5">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-white/15">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-accent"
                   style={{ width: `${Math.round(ratio * 100)}%` }}
                 />
               </div>
-              <p className="mt-2 text-sm text-white/80">
-                {formatPoints(remaining)} punti a <strong className="text-white">{next.label}</strong>{' '}
+              <p className="mt-2 text-sm text-muted-foreground">
+                {formatPoints(remaining)} punti a <strong className="text-foreground">{next.label}</strong>{' '}
                 — {next.perkBoost}
               </p>
             </div>
           ) : (
-            <p className="mt-5 text-sm text-white/80">
+            <p className="mt-5 text-sm text-muted-foreground">
               Livello massimo raggiunto — {current.perkBoost}.
             </p>
           )}
         </div>
 
-        <h2 className="mt-10 font-display text-2xl font-semibold text-white">Riscatta in perk</h2>
-        <p className="mt-1 text-sm text-white/70">
+        <h2 className="mt-10 font-display text-2xl font-semibold text-foreground">Riscatta in perk</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Solo vantaggi interni. Per i boost incolla l’ID del Trip (nella pagina del viaggio).
         </p>
         <div className="mt-4">
           <RedeemPerks balance={total} />
         </div>
 
-        <h2 className="mt-10 font-display text-2xl font-semibold text-white">Come guadagni</h2>
+        <h2 className="mt-10 font-display text-2xl font-semibold text-foreground">Come guadagni</h2>
         <ul className="mt-4 space-y-2">
           {(PUBLIC_EARN_ACTIONS as PointsAction[]).map((key) => (
             <li
               key={key}
-              className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+              className="flex items-center justify-between rounded-[10px] border border-border bg-card px-4 py-3 text-sm text-foreground"
             >
               <span>{POINTS[key].label}</span>
               <span className="tabular-nums font-medium text-accent">
@@ -115,16 +115,16 @@ export default async function PointsPage() {
 
         {rows.length > 0 && (
           <>
-            <h2 className="mt-10 font-display text-2xl font-semibold text-white">Attività</h2>
+            <h2 className="mt-10 font-display text-2xl font-semibold text-foreground">Attività</h2>
             <ul className="mt-4 space-y-2">
               {rows.map((row) => (
                 <li
                   key={row.id}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                  className="flex items-center justify-between rounded-[10px] border border-border bg-card px-4 py-3 text-sm text-foreground"
                 >
                   <span>{ACTION_LABEL[row.action] ?? row.action}</span>
                   <span
-                    className={`tabular-nums font-medium ${row.points >= 0 ? 'text-accent' : 'text-white/70'}`}
+                    className={`tabular-nums font-medium ${row.points >= 0 ? 'text-accent' : 'text-muted-foreground'}`}
                   >
                     {row.points >= 0 ? '+' : ''}
                     {formatPoints(Math.abs(row.points))}

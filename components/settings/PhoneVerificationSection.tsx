@@ -72,17 +72,17 @@ export function PhoneVerificationSection({
       <div className="space-y-5">
         {verified ? (
           <div className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-5 space-y-3">
-            <div className="flex items-center gap-2 text-sky-100">
+            <div className="flex items-center gap-2 text-primary">
               <ShieldCheck className="h-5 w-5" />
               <p className="font-semibold">Account con spunta blu</p>
             </div>
             {masked && (
-              <p className="text-sm text-white/70">
-                Numero <span className="font-mono text-white/90">{masked}</span>
+              <p className="text-sm text-muted-foreground">
+                Numero <span className="font-mono text-foreground">{masked}</span>
               </p>
             )}
             <VerifiedBadges phoneVerified size="md" />
-            <p className="text-xs text-white/45">
+            <p className="text-xs text-muted-foreground">
               Gli altri vedono solo il badge, non il tuo numero. La registrazione email non dà questa
               spunta.
             </p>

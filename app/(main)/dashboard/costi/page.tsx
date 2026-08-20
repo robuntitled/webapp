@@ -26,13 +26,13 @@ export default async function CostiDashboardPage() {
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="nl-hero-subtitle text-sm">Admin · hub live</p>
-            <h1 className="nl-hero-title font-display text-3xl font-semibold tracking-tight text-white">
+            <h1 className="nl-hero-title font-display text-3xl font-semibold tracking-tight">
               Costi e provider
             </h1>
           </div>
           <Link
             href="/dashboard/impostazioni"
-            className="text-sm text-white/65 underline-offset-4 hover:text-white hover:underline"
+            className="text-sm text-primary underline-offset-4 hover:text-[var(--color-primary-hover)] hover:underline"
           >
             Impostazioni
           </Link>

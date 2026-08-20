@@ -51,12 +51,12 @@ export default function DashboardClient({
           </p>
         </ScrollReveal>
         <ScrollReveal variant="title">
-          <h1 className="mx-auto font-display text-[clamp(1.35rem,4.1vw,2.65rem)] font-semibold leading-none tracking-tight text-white sm:whitespace-nowrap">
+          <h1 className="mx-auto font-display text-[clamp(1.35rem,4.1vw,2.65rem)] font-semibold leading-none tracking-tight text-foreground sm:whitespace-nowrap">
             Il gruppo c’è già. Manchi solo tu.
           </h1>
         </ScrollReveal>
         <ScrollReveal variant="title" stagger={1}>
-          <p className="mx-auto mt-3 font-display text-[clamp(0.95rem,2.2vw,1.2rem)] leading-none text-white/90 sm:whitespace-nowrap">
+          <p className="mx-auto mt-3 font-display text-[clamp(0.95rem,2.2vw,1.2rem)] leading-none text-muted-foreground sm:whitespace-nowrap">
             Zero tour operator. Prenoti quando vuoi.
           </p>
         </ScrollReveal>
@@ -75,14 +75,14 @@ export default function DashboardClient({
       <div id="risultati" className="container mx-auto mt-4 max-w-7xl scroll-mt-24 px-4">
         {results.length > 0 ? (
           <section>
-            <p className="mb-5 text-center text-sm text-white/70">
+            <p className="mb-5 text-center text-sm text-muted-foreground">
               {results.length}{' '}
               {results.length === 1 ? 'viaggio aperto' : 'viaggi aperti'}
             </p>
             <DiscoverResultsSplit trips={results} session={session} />
           </section>
         ) : (
-          <p className="py-16 text-center text-sm text-white/60">
+          <p className="py-16 text-center text-sm text-muted-foreground">
             Nessun viaggio con questi filtri. Prova un’altra meta o allarga le date.
           </p>
         )}

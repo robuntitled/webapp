@@ -54,10 +54,10 @@ export function SettingsPageClient({ userSettings, privacyEmail }: SettingsPageC
         <p className="text-accent font-medium text-xs uppercase tracking-[0.2em] mb-2">
           Account
         </p>
-        <h1 className="font-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+        <h1 className="font-display text-4xl md:text-5xl font-semibold text-foreground tracking-tight">
           Impostazioni
         </h1>
-        <p className="mt-3 text-white/65 max-w-xl text-base leading-relaxed">
+        <p className="mt-3 text-muted-foreground max-w-xl text-base leading-relaxed">
           Gestisci comunicazioni, credenziali e i tuoi diritti sulla privacy — tutto in un unico
           posto, con lo stesso stile del profilo.
         </p>
@@ -81,14 +81,14 @@ export function SettingsPageClient({ userSettings, privacyEmail }: SettingsPageC
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <p className="font-display text-lg font-semibold text-white">{tab.label}</p>
-              <p className="text-sm text-white/55 mt-1">{tab.description}</p>
+              <p className="font-display text-lg font-semibold text-foreground">{tab.label}</p>
+              <p className="text-sm text-muted-foreground mt-1">{tab.description}</p>
             </button>
           );
         })}
       </div>
 
-      <div className="hub-panel rounded-3xl overflow-hidden">
+      <div className="hub-panel overflow-hidden rounded-[10px]">
         <div className="hub-panel-header px-6 py-5 flex items-center gap-3 border-b border-border/60">
           <div className="hub-panel-header-icon">
             <activeMeta.icon className="h-5 w-5 text-primary" />

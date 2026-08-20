@@ -14,8 +14,8 @@ export async function Navbar() {
   const showCostsDashboard = isAdminEmail(session?.user?.email);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background">
+      <div className="container mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-5">
         <Link
           href={session?.user ? '/dashboard' : '/'}
           className="flex items-center gap-2.5 group"
@@ -69,13 +69,13 @@ export async function Navbar() {
           {session?.user ? (
             <>
               <Link href="/dashboard/preferiti" className="hidden sm:block">
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button variant="ghost" size="icon">
                   <Heart className="h-5 w-5 text-accent" />
                 </Button>
               </Link>
               <NotificationBell />
               {session.user && (
-                <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
+                <Button asChild size="sm" className="hidden md:inline-flex gap-1.5">
                   <Link href="/dashboard/crea?new=1">
                     <Plus className="h-4 w-4" />
                     Crea un Trip
@@ -89,10 +89,10 @@ export async function Navbar() {
             </>
           ) : (
             <div className="hidden sm:flex items-center gap-2">
-              <Button asChild variant="ghost" size="sm" className="rounded-full">
+              <Button asChild variant="ghost" size="sm">
                 <Link href="/">Accedi</Link>
               </Button>
-              <Button asChild size="sm" className="rounded-full">
+              <Button asChild size="sm">
                 <Link href="/">Registrati</Link>
               </Button>
             </div>

@@ -44,10 +44,10 @@ export function HeroBackground({
   }, [images.length, intervalMs]);
 
   const overlayClass = {
-    light: 'bg-white/40',
-    dark: 'bg-slate-950/50',
-    gradient: 'bg-gradient-to-b from-black/45 via-black/35 to-black/55',
-    photo: 'bg-gradient-to-r from-black/50 via-black/20 to-transparent',
+    light: 'bg-[var(--color-bg)]/85',
+    dark: 'bg-stone-950/50',
+    gradient: 'bg-[var(--color-bg)]/85',
+    photo: 'bg-gradient-to-r from-stone-950/70 via-stone-950/35 to-transparent',
   }[overlay];
 
   const useParallax = parallax && !reduced;

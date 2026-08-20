@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { DM_Sans, Fraunces } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
@@ -10,15 +10,9 @@ import { CookieBanner } from '@/components/legal/CookieBanner';
 import { Footer } from '@/components/layout/Footer';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
-const dmSans = DM_Sans({
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-});
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-fraunces',
+  variable: '--font-inter',
   display: 'swap',
 });
 
@@ -43,7 +37,7 @@ export default async function RootLayout({
 
   return (
     <html lang="it">
-      <body className={`${dmSans.variable} ${fraunces.variable} font-sans`}>
+      <body className={`${inter.variable} font-sans`}>
         <Providers session={session}>
           <div className="flex min-h-dvh flex-col">
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>

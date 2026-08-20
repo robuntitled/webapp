@@ -33,7 +33,7 @@ export function LeaveReviewForm({ revieweeId, revieweeName }: LeaveReviewFormPro
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-white/70">
+      <p className="text-sm text-foreground">
         Hai viaggiato con {revieweeName}? Lascia una recensione.
       </p>
       <div className="flex items-center gap-1">
@@ -52,7 +52,7 @@ export function LeaveReviewForm({ revieweeId, revieweeName }: LeaveReviewFormPro
               <Star
                 className={cn(
                   'h-6 w-6',
-                  active ? 'fill-amber-400 text-amber-400' : 'text-white/25'
+                  active ? 'fill-amber-500 text-amber-500' : 'text-border'
                 )}
               />
             </button>
@@ -63,14 +63,13 @@ export function LeaveReviewForm({ revieweeId, revieweeName }: LeaveReviewFormPro
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder="Com’è stato viaggiare insieme…"
-        className="min-h-[96px] resize-none rounded-2xl border-white/15 bg-white/5 text-white placeholder:text-white/35"
+        className="min-h-[96px] resize-none"
         maxLength={800}
       />
       <Button
         type="button"
         onClick={submit}
         disabled={pending || body.trim().length < 8}
-        className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
       >
         {pending ? 'Invio…' : 'Pubblica recensione'}
       </Button>

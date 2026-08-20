@@ -52,7 +52,7 @@ function Chip({
   active,
   children,
   onClick,
-  tone = 'onDark',
+  tone = 'onLight',
 }: {
   active: boolean;
   children: ReactNode;
@@ -69,7 +69,7 @@ function Chip({
           ? 'border-accent bg-accent text-white shadow-sm'
           : tone === 'onDark'
             ? 'border-white/20 bg-white/10 text-white/90 hover:border-white/40'
-            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+            : 'border-border bg-card text-foreground hover:border-primary/40'
       )}
     >
       {children}
@@ -101,11 +101,11 @@ export function TripDiscoverSearchBar({
       className={
         inline
           ? 'w-full'
-          : 'sticky top-16 z-30 border-b border-white/10 bg-[#070b12]/75 backdrop-blur-xl'
+          : 'sticky top-16 z-30 border-b border-border bg-background'
       }
     >
       <div className={inline ? 'w-full' : 'container mx-auto max-w-6xl px-4 py-3'}>
-        <div className="flex flex-col gap-2 rounded-2xl bg-white p-1.5 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.55)] sm:flex-row sm:items-center sm:p-2">
+        <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-card p-1.5 sm:flex-row sm:items-center sm:p-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -209,7 +209,7 @@ export function TripDiscoverSearchBar({
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition',
                   advancedCount > 0
                     ? 'border-accent bg-accent text-white shadow-sm'
-                    : 'border-white/20 bg-white/10 text-white/90 hover:border-white/40'
+                    : 'border-border bg-card text-foreground hover:bg-muted'
                 )}
               >
                 <SlidersHorizontal className="h-4 w-4" />

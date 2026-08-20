@@ -255,7 +255,7 @@ function MapPinCard({
               {pin.subtitle}
             </p>
           ) : null}
-          <h3 className="m-0 line-clamp-2 font-[family-name:var(--font-fraunces)] text-[17px] font-semibold leading-snug tracking-tight text-white">
+          <h3 className="m-0 line-clamp-2 font-sans text-[17px] font-semibold leading-snug tracking-tight text-white">
             {pin.name}
           </h3>
         </div>

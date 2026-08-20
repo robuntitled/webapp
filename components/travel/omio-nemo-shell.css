@@ -1,9 +1,9 @@
 /* NomadLink scoped overrides for Omio Nemo search widget */
 
 .omio-nemo-shell {
-  --primary-color: oklch(0.38 0.08 220);
-  --secondary-color: oklch(0.38 0.08 220);
-  --font-family: var(--font-dm-sans), system-ui, sans-serif;
+  --primary-color: #0F766E;
+  --secondary-color: #0F766E;
+  --font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   --background: transparent;
   overflow: visible !important;
   position: relative;

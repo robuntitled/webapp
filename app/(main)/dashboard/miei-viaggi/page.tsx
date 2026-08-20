@@ -45,7 +45,7 @@ export default async function MyTripsPage() {
       />
 
       <div className="nl-hero-chrome relative z-0 container mx-auto max-w-5xl space-y-8 px-4 py-10 pb-24">
-        <TripJoinRequestsInbox requests={joinRequests} tone="onDark" />
+        <TripJoinRequestsInbox requests={joinRequests} />
         <TripInviteInbox invites={pendingInvites} />
         <MyTripsHub
           createdTrips={createdTrips}
