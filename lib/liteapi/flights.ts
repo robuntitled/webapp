@@ -4,6 +4,8 @@ import { liteApiFetch } from '@/lib/liteapi/client';
 import { resolveDestinationIata } from '@/lib/travel/iata';
 import { defaultOriginIata, resolveOriginIata } from '@/lib/travel/origin-iata';
 import { airportsForCountry, resolveOriginAirports } from '@/lib/travel/airports-by-country';
+import { layoversFromSegments, type FlightLayover } from '@/lib/liteapi/flight-layovers';
+import { pickSensibleOffer } from '@/lib/liteapi/flight-value';
 
 export type LiteApiFlightOffer = {
   offerId: string;
@@ -18,6 +20,7 @@ export type LiteApiFlightOffer = {
   arrivalAt: string | null;
   durationMinutes: number | null;
   stops: number;
+  layovers: FlightLayover[];
   cabinClass: string | null;
   flightNumber: string | null;
   /** Ritorno (andata e ritorno) */
@@ -30,6 +33,7 @@ export type LiteApiFlightOffer = {
   returnArrivalAt: string | null;
   returnDurationMinutes: number | null;
   returnStops: number | null;
+  returnLayovers: FlightLayover[];
   returnFlightNumber: string | null;
   hasReturn: boolean;
 };
@@ -599,6 +603,14 @@ function normalizeOfferContext(
     arrivalAt,
     durationMinutes: parseDurationMinutes(offer, journey, leg, departureAt, arrivalAt),
     stops: Number.isFinite(stops as number) ? Number(stops) : 0,
+    layovers: layoversFromSegments(
+      leg.map((s) => ({
+        origin: segmentAirport(s, 'origin'),
+        destination: segmentAirport(s, 'destination'),
+        departureAt: segmentDateTime(s, 'departure'),
+        arrivalAt: segmentDateTime(s, 'arrival'),
+      }))
+    ),
     cabinClass:
       toStr(fare?.family) ??
       toStr(offer.cabinClass) ??
@@ -621,6 +633,16 @@ function normalizeOfferContext(
       ? parseDurationMinutes(offer, journey, returnLeg, returnDepartureAt, returnArrivalAt)
       : null,
     returnStops: hasReturn ? Math.max(0, returnLeg.length - 1) : null,
+    returnLayovers: hasReturn
+      ? layoversFromSegments(
+          returnLeg.map((s) => ({
+            origin: segmentAirport(s, 'origin'),
+            destination: segmentAirport(s, 'destination'),
+            departureAt: segmentDateTime(s, 'departure'),
+            arrivalAt: segmentDateTime(s, 'arrival'),
+          }))
+        )
+      : [],
     returnFlightNumber: hasReturn ? returnFlightNumber : null,
     hasReturn,
   };
@@ -774,5 +796,5 @@ export async function fetchCheapestFlightOffer(params: {
     ...params,
     tripType: params.returnDate ? 'roundtrip' : 'oneway',
   });
-  return offers[0] ?? null;
+  return pickSensibleOffer(offers);
 }

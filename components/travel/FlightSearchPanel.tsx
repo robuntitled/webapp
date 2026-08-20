@@ -104,6 +104,7 @@ export type FlightOfferView = {
   arrivalAt?: string | null;
   durationMinutes?: number | null;
   stops?: number;
+  layovers?: Array<{ airport: string; waitMinutes?: number | null }>;
   cabinClass?: string | null;
   flightNumber?: string | null;
   returnOrigin?: string | null;
@@ -115,6 +116,7 @@ export type FlightOfferView = {
   returnArrivalAt?: string | null;
   returnDurationMinutes?: number | null;
   returnStops?: number | null;
+  returnLayovers?: Array<{ airport: string; waitMinutes?: number | null }>;
   returnFlightNumber?: string | null;
   hasReturn?: boolean;
 };
@@ -893,6 +895,7 @@ export function FlightSearchPanel({
               ? o.returnDurationMinutes
               : o.durationMinutes;
             const stops = showReturn ? o.returnStops ?? 0 : o.stops;
+            const layovers = showReturn ? o.returnLayovers : o.layovers;
             const saved = selectedOfferId === o.offerId;
 
             return (
@@ -912,6 +915,7 @@ export function FlightSearchPanel({
                     arrivalAt: arr,
                     durationMinutes: duration,
                     stops: stops ?? 0,
+                    layovers,
                     cabinClass: o.cabinClass,
                   }}
                   dark={composer}

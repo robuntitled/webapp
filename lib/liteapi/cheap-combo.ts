@@ -3,6 +3,8 @@ import 'server-only';
 import { addDays, format, parseISO } from 'date-fns';
 import { buildFlightLegs, sampleStartDates, type FlightLegKind } from '@/lib/composer/flight-route';
 import { searchFlightRates, type LiteApiFlightOffer } from '@/lib/liteapi/flights';
+import { pickSensibleOffer, flightValueScore } from '@/lib/liteapi/flight-value';
+import type { FlightLayover } from '@/lib/liteapi/flight-layovers';
 import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import type { DestinationMeta } from '@/types/composer';
@@ -17,6 +19,7 @@ export type CheapComboLeg = {
   price: number;
   currency: string;
   stops: number;
+  layovers: FlightLayover[];
   origin: string;
   destination: string;
   offerId: string;
@@ -68,7 +71,7 @@ async function cheapestOnDate(
     adults: 1,
     currency: 'EUR',
   });
-  return offers[0] ?? null;
+  return pickSensibleOffer(offers);
 }
 
 async function mapPool<T, R>(
@@ -118,6 +121,7 @@ export async function findCheapestCombo(params: {
         price: offer.price,
         currency: offer.currency,
         stops: offer.stops,
+        layovers: offer.layovers,
         origin: offer.origin,
         destination: offer.destination,
         offerId: offer.offerId,
@@ -143,8 +147,8 @@ export async function findCheapestCombo(params: {
 
   complete.sort(
     (a, b) =>
-      a.quotes.reduce((sum, l) => sum + l.price, 0) -
-      b.quotes.reduce((sum, l) => sum + l.price, 0)
+      a.quotes.reduce((sum, l) => sum + flightValueScore(l), 0) -
+      b.quotes.reduce((sum, l) => sum + flightValueScore(l), 0)
   );
   const best = complete[0];
   const total = Math.round(best.quotes.reduce((sum, l) => sum + l.price, 0) * 100) / 100;

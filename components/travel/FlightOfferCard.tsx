@@ -4,6 +4,11 @@ import { format } from 'date-fns';
 import { Clock3, Plane } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  formatLayoversLine,
+  hasLongLayover,
+  type FlightLayover,
+} from '@/lib/liteapi/flight-layovers';
 
 export type FlightOfferCardData = {
   offerId: string;
@@ -18,6 +23,7 @@ export type FlightOfferCardData = {
   arrivalAt?: string | null;
   durationMinutes?: number | null;
   stops?: number;
+  layovers?: FlightLayover[];
   cabinClass?: string | null;
   flightNumber?: string | null;
 };
@@ -41,11 +47,10 @@ function formatDuration(mins?: number | null): string {
   return `${h}h ${m}m`;
 }
 
-function stopsLabel(stops?: number): string {
-  if (stops == null) return '';
-  if (stops <= 0) return 'Diretto';
-  if (stops === 1) return '1 scalo';
-  return `${stops} scali`;
+function stopsLabel(stops?: number, layovers?: FlightLayover[]): string {
+  return formatLayoversLine(layovers) ?? (
+    stops == null ? '' : stops <= 0 ? 'Diretto' : stops === 1 ? '1 scalo' : `${stops} scali`
+  );
 }
 
 function AirlineBadge({
@@ -182,10 +187,16 @@ export function FlightOfferCard({
             <p
               className={cn(
                 'mt-1 text-center text-[11px] font-medium',
-                dark ? 'text-white/50' : 'text-slate-500'
+                hasLongLayover(offer.layovers)
+                  ? dark
+                    ? 'text-amber-300'
+                    : 'text-amber-700'
+                  : dark
+                    ? 'text-white/50'
+                    : 'text-slate-500'
               )}
             >
-              {stopsLabel(offer.stops)}
+              {stopsLabel(offer.stops, offer.layovers)}
               {offer.cabinClass ? ` · ${offer.cabinClass}` : ''}
             </p>
           </div>

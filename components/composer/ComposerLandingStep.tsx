@@ -121,6 +121,7 @@ type CheapComboView = {
     arrivalAt: string | null;
     durationMinutes: number | null;
     flightNumber: string | null;
+    layovers?: Array<{ airport: string; waitMinutes?: number | null }>;
   }>;
 };
 
@@ -849,17 +850,20 @@ export function ComposerLandingStep({
                       ) : (
                         <Search className="mr-2 h-4 w-4" />
                       )}
-                      {comboLoading ? 'Cerchiamo le date migliori…' : 'Trova la combo più conveniente'}
+                      {comboLoading ? 'Cerchiamo voli sostenibili…' : 'Trova la combo più conveniente'}
                     </Button>
                     {combo ? (
                       <div className="space-y-3">
                         <div>
                           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
-                            Stima più conveniente · {combo.maxDays} giorni
+                            Stima equilibrata · {combo.maxDays} giorni
                           </p>
                           <p className="mt-1 font-display text-xl font-semibold text-white">
                             {format(parseISO(combo.startDate), 'd MMM', { locale: it })} –{' '}
                             {format(parseISO(combo.endDate), 'd MMM yyyy', { locale: it })}
+                          </p>
+                          <p className="mt-1 text-xs text-white/55">
+                            Prezzo basso senza scali da 10 ore. Ogni tratta resta un contratto a sé.
                           </p>
                         </div>
                         <ul className="space-y-3">
@@ -885,6 +889,7 @@ export function ComposerLandingStep({
                                     arrivalAt: leg.arrivalAt,
                                     durationMinutes: leg.durationMinutes,
                                     stops: leg.stops,
+                                    layovers: leg.layovers,
                                     cabinClass: leg.cabinClass,
                                   }}
                                   kicker={`${legKindLabel(leg.kind)} · ${format(parseISO(leg.date), 'd MMM', { locale: it })}`}
