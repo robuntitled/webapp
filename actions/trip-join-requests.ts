@@ -13,6 +13,7 @@ import {
   notifyJoinRequestCreated,
   notifyJoinRequestResolved,
 } from '@/lib/notifications/trip-join';
+import { syncTripFormationMilestones } from '@/lib/commerce/trip-milestones';
 
 export type JoinRequestResult =
   | { ok: true; status: 'pending' | 'already_pending' | 'already_member' }
@@ -253,6 +254,9 @@ export async function respondJoinRequest(input: {
   });
 
   revalidateTrip(request.trip_id as string);
+  if (input.accept) {
+    await syncTripFormationMilestones(request.trip_id as string);
+  }
   return { ok: true, accepted: input.accept };
 }
 

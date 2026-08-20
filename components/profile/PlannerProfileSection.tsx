@@ -173,7 +173,7 @@ export function PlannerProfileSection({ initialProfile }: PlannerProfileSectionP
         </div>
       </Subsection>
 
-      <Subsection icon={Wallet} title="Budget indicativo">
+      <Subsection icon={Wallet} title="Budget orientativo">
         <div className="grid gap-3 sm:grid-cols-3">
           {BUDGET_OPTIONS.map((opt) => (
             <OptionCard

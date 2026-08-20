@@ -21,7 +21,6 @@ import {
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
 import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
-import { estimateParticipantCashbackEur } from '@/lib/commerce/cashback';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -368,9 +367,7 @@ export function HotelCheckoutClient({
               ? `ID: ${confirmation.bookingId}`
               : 'Riceverai i dettagli via email.'}
         </p>
-        <BookingCashbackNote
-          estimatedEur={estimateParticipantCashbackEur(confirmation?.amountEur ?? 0)}
-        />
+        <BookingCashbackNote />
         <Button className="rounded-xl" onClick={() => router.push('/prenota/hotel')}>
           Altre ricerche
         </Button>

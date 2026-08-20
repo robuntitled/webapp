@@ -123,7 +123,7 @@ export function TripManagementCard({ trip, variant }: TripManagementCardProps) {
               </div>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-xs text-muted-foreground">servizi da</p>
+              <p className="text-xs text-muted-foreground">Budget orientativo</p>
               <p className="text-2xl font-bold text-primary tabular-nums">~{trip.price}€</p>
               <p className="text-[10px] text-muted-foreground">stima, non pacchetto</p>
             </div>

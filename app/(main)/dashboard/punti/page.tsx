@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import {
   NOMAD_POINTS_LABEL,
   POINTS,
-  PERKS,
+  PUBLIC_EARN_ACTIONS,
   formatPoints,
   progressToNextTier,
   type PointsAction,
 } from '@/lib/commerce/points';
-import { listPointsForUser, sumPoints } from '@/lib/commerce/points-ledger';
+import { listPointsForUser, getPointsBalance } from '@/lib/commerce/points-ledger';
+import { RedeemPerks } from '@/components/commerce/RedeemPerks';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 export const metadata = {
   title: 'I miei NomadPoints — NomadLink',
@@ -21,10 +23,16 @@ export const metadata = {
 const ACTION_LABEL: Record<PointsAction | 'redeem', string> = {
   create_trip_published: POINTS.create_trip_published.label,
   group_formed: POINTS.group_formed.label,
-  referral_join: POINTS.referral_join.label,
+  group_doubled: POINTS.group_doubled.label,
+  invite_register: POINTS.invite_register.label,
+  invite_join_trip: POINTS.invite_join_trip.label,
+  invite_trip_departed: POINTS.invite_trip_departed.label,
   joined_trip: POINTS.joined_trip.label,
+  referral_join: POINTS.referral_join.label,
   review_written: POINTS.review_written.label,
+  review_verified: POINTS.review_verified.label,
   profile_completed: POINTS.profile_completed.label,
+  day90_bonus: POINTS.day90_bonus.label,
   redeem: 'Riscatto perk',
 };
 
@@ -33,7 +41,7 @@ export default async function PointsPage() {
   if (!session?.user?.id) redirect('/');
 
   const rows = await listPointsForUser(session.user.id);
-  const total = sumPoints(rows);
+  const total = await getPointsBalance(session.user.id);
   const { current, next, ratio, remaining } = progressToNextTier(total);
 
   return (
@@ -45,9 +53,8 @@ export default async function PointsPage() {
         </p>
         <h1 className="mt-3 font-display text-4xl font-semibold text-white">I miei NomadPoints</h1>
         <p className="mt-4 text-lg text-white/90">
-          Guadagni punti per quello che fai sulla piattaforma: creare viaggi, far partire il gruppo,
-          invitare, unirti, recensire. Non sono denaro né cashback: si riscattano solo in perk di
-          NomadLink.
+          Guadagni punti per azioni: creare, soglia del gruppo, inviti, profilo, recensioni.{' '}
+          {COMPLIANCE_COPY.pointsNoMoney}
         </p>
 
         <div className="mt-8 rounded-3xl border border-white/15 bg-white/5 p-6">
@@ -85,37 +92,15 @@ export default async function PointsPage() {
 
         <h2 className="mt-10 font-display text-2xl font-semibold text-white">Riscatta in perk</h2>
         <p className="mt-1 text-sm text-white/70">
-          Vantaggi di piattaforma. Il riscatto arriva a breve.
+          Solo vantaggi interni. Per i boost incolla l’ID del Trip (nella pagina del viaggio).
         </p>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-          {PERKS.map((perk) => {
-            const affordable = total >= perk.cost;
-            return (
-              <li
-                key={perk.id}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl" aria-hidden>
-                    {perk.emoji}
-                  </span>
-                  <span className="tabular-nums text-sm font-semibold text-accent">
-                    {formatPoints(perk.cost)} pt
-                  </span>
-                </div>
-                <p className="mt-2 font-medium">{perk.label}</p>
-                <p className="mt-1 text-sm text-white/70">{perk.description}</p>
-                <span className="mt-3 inline-block text-xs text-white/60">
-                  {affordable ? 'Disponibile · riscatto in arrivo' : 'Continua a guadagnare punti'}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mt-4">
+          <RedeemPerks balance={total} />
+        </div>
 
         <h2 className="mt-10 font-display text-2xl font-semibold text-white">Come guadagni</h2>
         <ul className="mt-4 space-y-2">
-          {(Object.keys(POINTS) as PointsAction[]).map((key) => (
+          {(PUBLIC_EARN_ACTIONS as PointsAction[]).map((key) => (
             <li
               key={key}
               className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"

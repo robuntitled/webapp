@@ -46,7 +46,7 @@ describe('trip formation', () => {
     const solid = trip({ participantCount: 4, minParticipants: 4 });
     expect(isGroupSolid(solid)).toBe(true);
     expect(canBookTripServices(solid)).toBe(true);
-    expect(departureGuaranteeCopy(solid)).toContain('completo');
+    expect(departureGuaranteeCopy(solid)).toContain('Soglia del gruppo');
   });
 
   it('treats legacy min=1 trips as already bookable', () => {

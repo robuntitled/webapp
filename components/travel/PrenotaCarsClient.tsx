@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
-import { estimateParticipantCashbackEur } from '@/lib/commerce/cashback';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
@@ -466,9 +465,7 @@ export function PrenotaCarsClient({
           richiesta.
         </p>
         <div className="mx-auto mt-3 max-w-md text-left">
-          <BookingCashbackNote
-            estimatedEur={estimateParticipantCashbackEur(quote?.car?.totalAmount ?? 0)}
-          />
+          <BookingCashbackNote />
         </div>
         <Button
           type="button"

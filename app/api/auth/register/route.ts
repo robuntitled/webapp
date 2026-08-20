@@ -11,6 +11,7 @@ import { issueEmailVerification } from '@/lib/auth/email-verification';
 import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
 import { verifyTurnstileToken } from '@/lib/auth/turnstile';
 import { clientIp } from '@/lib/api/request-guard';
+import { awardPoints } from '@/lib/commerce/points-ledger';
 import { ZodError } from 'zod';
 
 export async function POST(request: Request) {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       return new NextResponse(turnstile.error, { status: 400 });
     }
 
-    const { firstName, lastName, email, password, marketingConsent } =
+    const { firstName, lastName, email, password, marketingConsent, referredBy } =
       registerSchema.parse(body);
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -86,6 +87,9 @@ export async function POST(request: Request) {
           email_verified_at: null,
           ...buildPrivacyConsentFields(true),
           ...buildMarketingConsentFields(marketingConsent ?? false),
+          ...(referredBy && referredBy !== undefined
+            ? { referred_by_user_id: referredBy }
+            : {}),
         },
       ])
       .select('id, email, username, first_name, last_name')
@@ -96,6 +100,14 @@ export async function POST(request: Request) {
     }
 
     const issued = await issueEmailVerification(newUser.id, newUser.email);
+
+    if (referredBy && referredBy !== newUser.id) {
+      await awardPoints({
+        userId: referredBy,
+        action: 'invite_register',
+        ref: newUser.id,
+      });
+    }
 
     return NextResponse.json(
       {

@@ -19,6 +19,7 @@ export const GDPR_PUBLIC_PATHS = [
   '/privacy',
   '/termini',
   '/cookie',
+  '/punti',
   '/completa-registrazione',
 ];
 

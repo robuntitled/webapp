@@ -1,44 +1,37 @@
 /**
- * NomadCredits — programma loyalty, NON denaro.
- * Per restare fuori (o ai margini) del DPR 430/2001 i crediti sono inquadrati come
- * sconto sui prossimi servizi prenotati tramite NomadLink (stessa insegna,
- * art. 6 lett. c-bis DPR 430/2001): non acquistabili, non convertibili in denaro,
- * non trasferibili, con scadenza. Vedi docs/NOMADCREDITS-REGOLAMENTO.md.
+ * Cashback % rimosso: i punti sono per azioni, senza valore monetario.
+ * Funzioni lasciate a 0 per non far partire crediti in euro da codice legacy.
  */
-export const NOMAD_CREDITS_LABEL = 'NomadCredits';
+export const NOMAD_CREDITS_LABEL = 'NomadPoints';
 
 export const CASHBACK = {
-  creatorLaunchMin: 0.02,
-  participantMin: 0.012,
-  participantMax: 0.015,
+  creatorLaunchMin: 0,
+  participantMin: 0,
+  participantMax: 0,
 } as const;
 
 export type CashbackRole = 'creator' | 'participant';
 
-export function cashbackRateForRole(role: CashbackRole): number {
-  return role === 'creator'
-    ? CASHBACK.creatorLaunchMin
-    : (CASHBACK.participantMin + CASHBACK.participantMax) / 2;
+export function cashbackRateForRole(_role: CashbackRole): number {
+  return 0;
 }
 
-export function estimateCashbackEur(amountEur: number, role: CashbackRole): number {
-  const amount = Number.isFinite(amountEur) ? Math.max(0, amountEur) : 0;
-  return Math.round(amount * cashbackRateForRole(role) * 100) / 100;
+export function estimateCashbackEur(_amountEur: number, _role: CashbackRole): number {
+  return 0;
 }
 
 export function formatCreatorCashback(): string {
-  return '2%+';
+  return 'NomadPoints';
 }
 
 export function formatParticipantCashback(): string {
-  return '1,2–1,5%';
+  return 'NomadPoints';
 }
 
-/** Stima mid-range sul prezzo a persona (brokerage, non addebito). */
-export function estimateParticipantCashbackEur(pricePerPerson: number): number {
-  return Math.round(estimateCashbackEur(pricePerPerson, 'participant'));
+export function estimateParticipantCashbackEur(_pricePerPerson: number): number {
+  return 0;
 }
 
-export function estimateCreatorCashbackEur(pricePerPerson: number): number {
-  return Math.round(estimateCashbackEur(pricePerPerson, 'creator'));
+export function estimateCreatorCashbackEur(_pricePerPerson: number): number {
+  return 0;
 }

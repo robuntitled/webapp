@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Plane, Users } from 'lucide-react';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
-import { formatCreatorCashback, formatParticipantCashback } from '@/lib/commerce/cashback';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import Link from 'next/link';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
@@ -60,6 +60,14 @@ export default function LoginPage() {
     }
 
     const verify = params.get('verify');
+    const ref = params.get('ref');
+    if (ref && /^[0-9a-f-]{36}$/i.test(ref)) {
+      try {
+        localStorage.setItem('nl_ref', ref);
+      } catch {
+        /* ignore */
+      }
+    }
     if (verify === 'ok') {
       setInfo('Email confermata. Ora puoi accedere con email e password.');
       setIsRegisterMode(false);
@@ -116,6 +124,7 @@ export default function LoginPage() {
             termsAccepted: true,
             marketingConsent: marketingAccepted,
             turnstileToken: turnstileToken || undefined,
+            referredBy: localStorage.getItem('nl_ref') || undefined,
           }),
         });
 
@@ -238,15 +247,14 @@ export default function LoginPage() {
           </ScrollReveal>
           <ScrollReveal variant="title" stagger={1}>
             <p className="mt-4 max-w-md text-base leading-relaxed text-white drop-shadow sm:text-lg">
-              Organizzalo in autonomia, prenota a prezzi di mercato, spendi meno. Una parte torna
-              con il cashback.
+              {COMPLIANCE_COPY.guide}
             </p>
           </ScrollReveal>
           <ul className="mt-6 max-w-md space-y-2 text-sm text-white/95">
             {[
-              { Icon: Users, text: 'Unisciti a un viaggio in formazione, o lancialo tu' },
-              { Icon: Map, text: 'Costruisci i giorni sulla mappa, con l’AI se vuoi' },
-              { Icon: Plane, text: 'Prenota i servizi solo quando si parte davvero' },
+              { Icon: Users, text: 'Crea un Trip o esplora quelli in formazione' },
+              { Icon: Map, text: 'Costruite insieme l’itinerario, sulla mappa' },
+              { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
             ].map(({ Icon, text }, i) => (
               <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
                 <div className="flex items-start gap-3">
@@ -258,9 +266,13 @@ export default function LoginPage() {
           </ul>
           <LandingDestinations />
           <p className="mt-4 text-sm text-white/90">
-            Creator {formatCreatorCashback()} · partecipante {formatParticipantCashback()} ·{' '}
+            {COMPLIANCE_COPY.pointsNoMoney}{' '}
             <Link href="/dashboard" className="underline underline-offset-4">
-              Esplora i viaggi
+              Esplora i Trip
+            </Link>
+            {' · '}
+            <Link href="/dashboard/crea?new=1" className="underline underline-offset-4">
+              Crea un Trip
             </Link>
           </p>
         </div>
@@ -273,8 +285,8 @@ export default function LoginPage() {
               </h2>
               <p className="mt-1.5 text-sm text-slate-600">
                 {isRegisterMode
-                  ? 'Due minuti. Poi scegli: creare o unirti.'
-                  : 'Accedi e scegli: creare un viaggio o unirti a uno.'}
+                  ? 'Due minuti. Poi scegli: Crea un Trip o Esplora i Trip.'
+                  : 'Accedi e scegli: Crea un Trip o Esplora i Trip.'}
               </p>
             </div>
 

@@ -1,12 +1,6 @@
 import type { TravelIntent } from '@/lib/onboarding/keywords';
 
-export const ONBOARDING_STEPS = [
-  'intent',
-  'trip_type',
-  'setting',
-  'experience',
-  'home',
-] as const;
+export const ONBOARDING_STEPS = ['model', 'home', 'intent'] as const;
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 

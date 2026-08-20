@@ -151,7 +151,7 @@ export function PlannerQuickSetupSheet({
               </section>
 
               <section className="space-y-3">
-                <p className="text-sm font-medium text-white/80">Budget</p>
+                <p className="text-sm font-medium text-white/80">Budget orientativo</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {BUDGET_OPTIONS.map((opt) => (
                     <button

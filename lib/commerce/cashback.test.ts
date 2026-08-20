@@ -1,23 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import {
-  estimateParticipantCashbackEur,
-  estimateCreatorCashbackEur,
-  estimateCashbackEur,
-  formatCreatorCashback,
-  formatParticipantCashback,
-} from '@/lib/commerce/cashback';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
+import { cashbackRateForRole, estimateCashbackEur } from '@/lib/commerce/cashback';
 
-describe('cashback', () => {
-  it('formats creator and participant rates from the flow architecture', () => {
-    expect(formatCreatorCashback()).toBe('2%+');
-    expect(formatParticipantCashback()).toBe('1,2–1,5%');
+describe('cashback % removed', () => {
+  it('does not expose percentage cashback in compliance copy', () => {
+    expect(COMPLIANCE_COPY.pointsNoMoney).toMatch(/non hanno valore monetario/i);
+    expect(COMPLIANCE_COPY.guide).not.toMatch(/%/);
   });
 
-  it('estimates mid-range cashback on trip price', () => {
-    expect(estimateParticipantCashbackEur(1000)).toBe(14);
-    expect(estimateParticipantCashbackEur(0)).toBe(0);
-    expect(estimateCreatorCashbackEur(1000)).toBe(20);
-    expect(estimateCashbackEur(1000, 'participant')).toBe(13.5);
-    expect(estimateCashbackEur(1000, 'creator')).toBe(20);
+  it('does not credit percentage of booking value', () => {
+    expect(cashbackRateForRole('creator')).toBe(0);
+    expect(estimateCashbackEur(1000, 'participant')).toBe(0);
   });
 });

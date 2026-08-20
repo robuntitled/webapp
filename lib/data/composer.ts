@@ -17,7 +17,11 @@ export async function publishComposerTrip(
   input: PublishComposerInput
 ): Promise<PublishedComposerTrip> {
   const days = input.days as ComposerDay[];
-  const price = estimateTripBudget(days);
+  const estimated = estimateTripBudget(days);
+  const price =
+    input.budgetOrientativo && input.budgetOrientativo >= 80
+      ? input.budgetOrientativo
+      : estimated;
   const description = buildTripDescriptionFromDays(days, input.destination);
   const coverImage =
     input.imageUrl ||

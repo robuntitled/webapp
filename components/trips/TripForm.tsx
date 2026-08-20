@@ -340,7 +340,7 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="price" className="text-base font-semibold">
-          7. Budget indicativo a persona (€)
+          7. Budget orientativo a persona (€)
         </Label>
         <FlightPriceEstimate
           destination={destination}
@@ -362,8 +362,8 @@ export function TripForm({ action, submitLabel, initialTrip }: TripFormProps) {
           min="1"
         />
         <p className="text-xs text-muted-foreground">
-          Usa la stima volo come base — poi aggiungi hotel e attività. Dopo il lancio potrai
-          monitorare i prezzi reali nel Radar e prenotare via affiliate.
+          I costi reali dipendono dai servizi che ogni partecipante prenota separatamente. Non è il
+          prezzo del viaggio né un pacchetto.
         </p>
       </div>
 

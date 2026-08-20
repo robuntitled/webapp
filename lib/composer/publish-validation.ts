@@ -1,7 +1,8 @@
+import { evaluateQualityGate } from '@/lib/composer/quality-gate';
 import type { ComposerDay, ComposerDraft } from '@/types/composer';
 
 export type PublishValidationIssue = {
-  code: 'flight-incomplete' | 'hotel-incomplete';
+  code: string;
   message: string;
 };
 
@@ -82,6 +83,20 @@ export function validatePublishDraft(draft: ComposerDraft): PublishValidationIss
         'Completa gli hotel: scegli l’hotel dalla ricerca (nome e luogo), con check-in e check-out (es. 14:00 e 11:00).',
     });
   }
+
+  issues.push(
+    ...evaluateQualityGate({
+      title: draft.title,
+      destination: draft.destination,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      days: draft.days,
+      budgetOrientativo: draft.budgetHint,
+      minParticipants: draft.minParticipants,
+      maxParticipants: draft.maxParticipants,
+      planningMode: draft.planningMode,
+    })
+  );
 
   return issues;
 }

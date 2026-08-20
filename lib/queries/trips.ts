@@ -16,6 +16,7 @@ export const TRIP_LIST_SELECT = `
   planningMode: planning_mode,
   imageUrl: image_url,
   status,
+  boostUntil: boost_until,
   creator_id,
   creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image),
   trip_participants(user_id, role, joinedAt: joined_at)
@@ -70,10 +71,19 @@ export function mapTripsWithFavorites(
 }
 
 export async function getAllTrips(supabase: SupabaseClient, userId?: string) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('trips')
     .select(TRIP_LIST_SELECT)
     .order('createdAt', { ascending: false });
+
+  if (error && /boost_until/i.test(error.message)) {
+    const retry = await supabase
+      .from('trips')
+      .select(TRIP_LIST_SELECT.replace(/\s*boostUntil: boost_until,/, ''))
+      .order('createdAt', { ascending: false });
+    data = retry.data as typeof data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error('Errore nel recuperare i viaggi:', error);
@@ -84,7 +94,13 @@ export async function getAllTrips(supabase: SupabaseClient, userId?: string) {
     ? await import('@/lib/data/favorites').then((m) => m.loadFavoriteTripIds(userId))
     : undefined;
 
-  return mapTripsWithFavorites(data as unknown as RawTrip[], userId, { favoriteIds });
+  const mapped = mapTripsWithFavorites(data as unknown as RawTrip[], userId, { favoriteIds });
+  const now = Date.now();
+  return [...mapped].sort((a, b) => {
+    const aBoost = a.boostUntil && new Date(a.boostUntil).getTime() > now ? 1 : 0;
+    const bBoost = b.boostUntil && new Date(b.boostUntil).getTime() > now ? 1 : 0;
+    return bBoost - aBoost;
+  });
 }
 
 export async function getTripById(supabase: SupabaseClient, tripId: string, userId?: string) {

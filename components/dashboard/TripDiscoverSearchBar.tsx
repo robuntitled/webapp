@@ -163,7 +163,7 @@ export function TripDiscoverSearchBar({
             </PopoverTrigger>
             <PopoverContent className="w-72 rounded-xl p-4" align="end">
               <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Budget a persona
+                Fascia di spesa stimata
               </p>
               <Slider
                 min={priceBounds.min}

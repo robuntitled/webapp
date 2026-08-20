@@ -1,10 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import {
-  estimateCashbackEur,
-  type CashbackRole,
-} from '@/lib/commerce/cashback';
+import { type CashbackRole } from '@/lib/commerce/cashback';
 
 export type CashbackService = 'flight' | 'hotel' | 'car' | 'attraction';
 
@@ -35,35 +32,14 @@ export async function resolveCashbackRole(
   return data?.creator_id === userId ? 'creator' : 'participant';
 }
 
-export async function recordBookingCashback(opts: {
+export async function recordBookingCashback(_opts: {
   userId: string;
   tripId?: string | null;
   bookingRef: string;
   service: CashbackService;
   amountEur: number;
 }): Promise<void> {
-  const amount = Number.isFinite(opts.amountEur) ? Math.max(0, opts.amountEur) : 0;
-  if (amount <= 0 || !opts.bookingRef.trim()) return;
-
-  const role = await resolveCashbackRole(opts.userId, opts.tripId);
-  const credit = estimateCashbackEur(amount, role);
-  if (credit <= 0) return;
-
-  const { error } = await supabaseAdmin.from('cashback_ledger').insert({
-    user_id: opts.userId,
-    trip_id: opts.tripId || null,
-    booking_ref: opts.bookingRef.slice(0, 120),
-    service: opts.service,
-    amount_eur: Math.round(amount * 100) / 100,
-    credit_eur: credit,
-    rate: role === 'creator' ? 0.02 : 0.0135,
-    role,
-    status: 'pending',
-  });
-
-  if (error) {
-    console.error('[cashback_ledger]', error.message);
-  }
+  // Cashback % rimosso: i punti si assegnano per azioni, non sulla spesa.
 }
 
 export async function listCashbackForUser(userId: string): Promise<CashbackLedgerRow[]> {

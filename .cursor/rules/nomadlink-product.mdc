@@ -8,11 +8,12 @@ alwaysApply: true
 Full spec: `docs/NOMADLINK-STRATEGIA.md`
 
 - **Pure brokerage**, not a tour operator. No coordinators, no destination logistics, no standing between user and suppliers.
-- Value: organize a group trip yourself, book at market rates, spend less than traditional operators, get cashback.
-- Flow: LOGIN → **CREA** | **ESPLORA/UNISCITI**. Book flights/hotels/cars/attractions **only after the group is solid**.
-- CREA: templates first (anti cold-start), then modify or from scratch. Duration remaps the itinerary (drop secondary stops when days shrink). Publish as **In formazione** + departure guarantee.
-- ESPLORA: filters, In evidenza (seed), In chiusura (real FOMO), join CTA, cashback, creator trust (profile, rating, reviews).
-- Cashback: creator **2%+** (launch bonus), participant **1.2–1.5%**. Never fake scarcity.
-- Onboarding stays light: no name/age at the start.
+- Value: organize a group trip yourself, book at market rates, spend less than traditional operators, earn NomadPoints for actions (never cashback %).
+- Flow: LOGIN → **CREA un Trip** | **ESPLORA i Trip**. Book flights/hotels/cars/attractions **only after the group reaches the soglia del gruppo**.
+- CREA: templates first (anti cold-start), then modify or from scratch. Duration remaps the itinerary (drop secondary stops when days shrink). Publish as **In formazione** + soglia del gruppo.
+- ESPLORA: filters, In evidenza (boost), In chiusura (real FOMO), join CTA, creator trust (profile, rating, reviews).
+- Loyalty: NomadPoints for actions, not % of booking value. Not money. Internal redeem only (boost, templates, badge, Esplora priority, early access). Founding Creator: first 50 trips at threshold.
+- Budget copy is always **Budget orientativo** / stima. Never “prezzo del viaggio” or “costo del pacchetto”.
+- Onboarding: max 3 steps + model explainer, then forced Crea / Esplora. No name/age at the start.
 - Copy in Italian, catchy, high contrast on photo backgrounds (paper form controls).
 - Do not reintroduce “book services right after create”.

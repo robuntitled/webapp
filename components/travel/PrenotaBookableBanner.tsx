@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { TripWithRelations } from '@/types/trip';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 export function PrenotaBookableBanner({ trips }: { trips: TripWithRelations[] }) {
   if (trips.length === 0) {
@@ -9,14 +10,13 @@ export function PrenotaBookableBanner({ trips }: { trips: TripWithRelations[] })
           Prenoti i servizi dopo che il gruppo è formato.
         </p>
         <p className="mt-1 text-muted-foreground">
-          Cerca tariffe qui, ma prenota dal viaggio quando il gruppo è al minimo. Ogni servizio è
-          separato, con il suo fornitore.{' '}
+          {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}{' '}
           <Link href="/dashboard" className="underline underline-offset-2">
-            Esplora
+            Esplora i Trip
           </Link>
           {' · '}
           <Link href="/dashboard/crea?new=1" className="underline underline-offset-2">
-            Crea
+            Crea un Trip
           </Link>
         </p>
       </div>

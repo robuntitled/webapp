@@ -19,7 +19,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 const MICRO_STEPS = [
   { id: 1, label: 'Stile di viaggio' },
   { id: 2, label: 'Interessi' },
-  { id: 3, label: 'Budget e alloggio' },
+          { id: 3, label: 'Budget orientativo' },
   { id: 4, label: 'Note personali' },
 ] as const;
 
@@ -199,7 +199,7 @@ export function ComposerIntakeStep({
             >
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-widest text-white/45">
-                  Budget indicativo
+                  Budget orientativo
                 </p>
                 <div className="grid gap-2">
                   {BUDGET_OPTIONS.map((opt) => (

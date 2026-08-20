@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { KEYWORD_BY_ID, isValidKeywordId } from '@/lib/onboarding/keywords';
+import { isValidKeywordId } from '@/lib/onboarding/keywords';
 
 export const onboardingHomeSchema = z.object({
   city: z.string().trim().min(2).max(120),
@@ -13,15 +13,9 @@ export const completeOnboardingSchema = z.object({
   intent: z.enum(['create', 'book']),
   keywordIds: z
     .array(z.string().min(1).max(40))
-    .min(3)
     .max(24)
     .refine((ids) => ids.every(isValidKeywordId), 'Keyword non valida')
-    .refine((ids) => {
-      const cats = new Set(
-        ids.map((id) => KEYWORD_BY_ID.get(id)?.category).filter(Boolean)
-      );
-      return cats.has('trip_type') && cats.has('setting') && cats.has('experience');
-    }, 'Seleziona tipologia, ambiente ed esperienza'),
+    .default([]),
   home: onboardingHomeSchema,
 });
 

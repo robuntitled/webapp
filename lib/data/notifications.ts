@@ -5,7 +5,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 export type NotificationType =
   | 'trip_join_request'
   | 'trip_join_accepted'
-  | 'trip_join_rejected';
+  | 'trip_join_rejected'
+  | 'trip_feedback'
+  | 'second_trip'
+  | 'day90_incentive'
+  | 'dormant'
+  | 'threshold_near'
+  | 'threshold_reached';
 
 export type AppNotification = {
   id: string;

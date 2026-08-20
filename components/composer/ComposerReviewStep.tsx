@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { BLOCK_META, getBlockDisplayPrice, getBlockDisplayTitle } from '@/lib/composer/blocks';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { formatComposerDayLabel } from '@/lib/composer/days';
-import { formatCreatorCashback, formatParticipantCashback } from '@/lib/commerce/cashback';
+import { estimateTripBudget, formatComposerDayLabel } from '@/lib/composer/days';
 import type { ComposerDraft } from '@/types/composer';
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
+import { Input } from '@/components/ui/input';
 import {
   AlertTriangle,
   CalendarDays,
@@ -57,6 +57,7 @@ export function ComposerReviewStep({
   publishing,
   onBack,
   onPublish,
+  onChange,
 }: ComposerReviewStepProps) {
   const blockCount = draft.days.reduce((n, d) => n + d.blocks.length, 0);
   const publishIssues = validatePublishDraft(draft);
@@ -86,9 +87,8 @@ export function ComposerReviewStep({
                 Controlla e pubblica
               </h2>
               <p className="max-w-xl text-sm text-white/90">
-                Controlla l’itinerario. Esce “In formazione”: il viaggio parte al
-                raggiungimento del minimo posti. NomadCredits: tu {formatCreatorCashback()}, chi si
-                unisce {formatParticipantCashback()}.
+                Controlla l’itinerario. Esce “In formazione”: il viaggio parte alla soglia del
+                gruppo. Guadagni NomadPoints per le azioni, non percentuali sulla spesa.
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -153,12 +153,30 @@ export function ComposerReviewStep({
 
         <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/65">
           <p>
-            Il viaggio parte al raggiungimento di {draft.minParticipants ?? 4} partecipanti. I
-            servizi (voli, hotel, attività) si prenotano solo a gruppo formato.
+            Soglia del gruppo: {draft.minParticipants ?? 4} partecipanti. I servizi si prenotano
+            separatamente, dopo la soglia.
           </p>
           <p className="text-xs text-white/45">
-            {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
+            {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}{' '}
+            {COMPLIANCE_COPY.priceIsSumOfServices}
           </p>
+          <p className="text-xs text-white/45">
+            {COMPLIANCE_COPY.aiGenerated} {COMPLIANCE_COPY.responsibility}
+          </p>
+          <label className="block pt-2 text-xs uppercase tracking-wide text-white/45">
+            {COMPLIANCE_COPY.budgetLabel} a persona (€)
+            <Input
+              type="number"
+              min={80}
+              max={8000}
+              value={draft.budgetHint ?? (estimateTripBudget(draft.days) > 1 ? estimateTripBudget(draft.days) : '')}
+              onChange={(e) =>
+                onChange?.({ budgetHint: Math.max(0, Number(e.target.value) || 0) })
+              }
+              className="mt-1 h-10 border-white/15 bg-white/8 text-white"
+            />
+          </label>
+          <p className="text-xs text-white/45">{COMPLIANCE_COPY.budgetClarifier}</p>
         </div>
 
         {publishIssues.length > 0 && (

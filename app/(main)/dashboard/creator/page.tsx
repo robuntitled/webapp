@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
-import { formatCreatorCashback, formatParticipantCashback } from '@/lib/commerce/cashback';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
+import { POINTS } from '@/lib/commerce/points';
 
 export const metadata = {
   title: 'Per i Creator — NomadLink',
@@ -20,27 +21,26 @@ export default async function CreatorPage() {
       <div className="relative z-10 container mx-auto max-w-3xl px-4 py-16">
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Per i creator</p>
         <h1 className="mt-3 font-display text-4xl font-semibold text-white md:text-5xl">
-          Lancia tu. Il cashback è più alto.
+          Lancia tu. I punti premiano le azioni.
         </h1>
-        <p className="mt-4 text-lg text-white/90">
-          Nei primi 6–12 mesi chi crea il viaggio accumula {formatCreatorCashback()} in NomadCredits
-          sulle prenotazioni del gruppo. Chi si unisce {formatParticipantCashback()}. I servizi si
-          prenotano solo a gruppo formato, ognuno con il suo fornitore.
+        <p className="mt-4 text-lg text-white/90">{COMPLIANCE_COPY.guide}</p>
+        <p className="mt-3 text-white/85">
+          Crei un Trip: +{POINTS.create_trip_published.points} punti. Soglia del gruppo: +
+          {POINTS.group_formed.points} (×3 nei primi 90 giorni e per i Founding Creator). I primi 50
+          Trip alla soglia: badge permanente, ×3 e boost 14 giorni.
         </p>
+        <p className="mt-3 text-sm text-white/75">{COMPLIANCE_COPY.pointsNoMoney}</p>
         <ul className="mt-8 space-y-3 text-white/90">
           <li>Parti da un template: pochi minuti, itinerario già strutturato.</li>
-          <li>Pubblichi in formazione. Il viaggio parte al raggiungimento del minimo posti.</li>
-          <li>Niente markup da tour operator: prezzi di mercato dai fornitori.</li>
+          <li>Pubblichi in formazione. Il viaggio parte alla soglia del gruppo.</li>
+          <li>Niente markup da tour operator: ognuno prenota col proprio fornitore.</li>
         </ul>
         <Button asChild className="mt-10 rounded-full">
-          <Link href="/dashboard/crea?new=1">Crea un viaggio</Link>
+          <Link href="/dashboard/crea?new=1">Crea un Trip</Link>
         </Button>
-        <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/85">
+        <p className="mt-4 text-sm text-white/85">
           <Link href="/dashboard/punti" className="underline underline-offset-4">
             I miei NomadPoints
-          </Link>
-          <Link href="/dashboard/cashback" className="underline underline-offset-4">
-            I miei NomadCredits
           </Link>
         </p>
       </div>

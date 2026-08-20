@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { auth } from '@/auth';
 import { PrenotaNavTabs } from '@/components/travel/PrenotaNavTabs';
 import { PrenotaBookableBanner } from '@/components/travel/PrenotaBookableBanner';
+import { ComplianceNotes } from '@/components/legal/ComplianceNotes';
 import { fetchBookableTripsForUser } from '@/lib/data/bookable-trips';
 
 export async function PrenotaPageShell({
@@ -41,6 +42,7 @@ export async function PrenotaPageShell({
             {title}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
+          <ComplianceNotes className="mt-3 max-w-2xl" />
           <div className="mt-3">
             <PrenotaNavTabs />
           </div>

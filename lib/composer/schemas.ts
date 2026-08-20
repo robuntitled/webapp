@@ -46,6 +46,7 @@ export const publishComposerSchema = z
     minParticipants: z.number().int().min(1).max(99).optional(),
     imageUrl: z.string().url().optional().or(z.literal('')),
     days: z.array(daySchema).min(1),
+    budgetOrientativo: z.number().int().min(80).max(8000).optional(),
   })
   .refine((d) => new Date(d.endDate) >= new Date(d.startDate), {
     message: 'La data di fine deve essere dopo l\'inizio',

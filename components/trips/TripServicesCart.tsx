@@ -149,12 +149,16 @@ export function TripServicesCart({
         </div>
         {total > 0 ? (
           <p className="text-[11px] text-muted-foreground">
-            {COMPLIANCE_COPY.priceIsSumOfServices}
+            {COMPLIANCE_COPY.priceIsSumOfServices} {COMPLIANCE_COPY.budgetClarifier}
           </p>
         ) : null}
+        <p className="text-[11px] text-muted-foreground">
+          {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}{' '}
+          {COMPLIANCE_COPY.responsibility}
+        </p>
         {locked ? (
           <p className="text-xs text-muted-foreground">
-            Le prenotazioni si aprono quando il gruppo raggiunge il minimo posti.
+            Le prenotazioni si aprono alla soglia del gruppo.
           </p>
         ) : cart.items.length === 0 ? (
           <p className="text-xs text-muted-foreground">

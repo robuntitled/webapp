@@ -37,7 +37,7 @@ export async function Navbar() {
             href="/dashboard"
             className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            Esplora
+            Esplora i Trip
           </Link>
           {session?.user && (
             <>
@@ -45,7 +45,7 @@ export async function Navbar() {
                 href="/dashboard/crea?new=1"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                Crea
+                Crea un Trip
               </Link>
               <PrenotaNavMenu />
               <Link
@@ -78,7 +78,7 @@ export async function Navbar() {
                 <Button asChild size="sm" className="hidden md:inline-flex rounded-full gap-1.5">
                   <Link href="/dashboard/crea?new=1">
                     <Plus className="h-4 w-4" />
-                    Crea
+                    Crea un Trip
                   </Link>
                 </Button>
               )}

@@ -26,6 +26,7 @@ import {
   canJoinTrip,
 } from '@/lib/trips/display';
 import { formationLabel, isClosingSoon, lastJoinLabel } from '@/lib/trips/formation';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { isPhoneGateError, PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
 export type { TripWithRelations } from '@/types/trip';
@@ -215,8 +216,8 @@ export function TripCard({ trip, session, discover = false }: TripCardProps) {
                 <Users className="h-3.5 w-3.5" />
                 {participantCount}/{trip.maxParticipants} in crew
               </span>
-              <span className="text-xs" title="Stima dei servizi, non un prezzo pacchetto">
-                servizi da ~{trip.price}€/persona
+              <span className="text-xs" title={COMPLIANCE_COPY.budgetClarifier}>
+                {COMPLIANCE_COPY.budgetLabel} ~{trip.price}€
               </span>
             </div>
             {recentJoin ? (

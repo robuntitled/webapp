@@ -14,7 +14,7 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="Termini di Servizio"
-      lastUpdated={`18 agosto 2026 (v${TERMS_VERSION})`}
+      lastUpdated={`20 agosto 2026 (v${TERMS_VERSION})`}
       notice={<LegalConfigNotice company={company} />}
     >
       <LegalSection title="1. Premessa e operatore del servizio">
@@ -63,7 +63,9 @@ export default function TermsPage() {
             <strong>Ogni servizio è prenotato separatamente con il rispettivo fornitore.</strong>{' '}
             Voli, hotel, attività e altri servizi hanno ciascuno prezzo, condizioni e contratto
             propri, stipulati direttamente tra l&apos;utente e il fornitore terzo. Non esiste un
-            prezzo unico del viaggio né un checkout unico.
+            prezzo unico del viaggio né un checkout unico. Le cifre in piattaforma sono un{' '}
+            <strong>budget orientativo</strong>: i costi reali dipendono dai servizi che ogni
+            partecipante prenota separatamente.
           </li>
           <li>
             <strong>{company.tradeName} non è responsabile dell&apos;esecuzione dei servizi.</strong>{' '}
@@ -73,6 +75,18 @@ export default function TermsPage() {
             gruppo, itinerario, programma punti).
           </li>
         </ul>
+      </LegalSection>
+
+      <LegalSection title="4-bis. NomadPoints">
+        <p>
+          I NomadPoints sono un programma di fidelizzazione interno. Si ottengono per azioni sulla
+          piattaforma (creare un Trip, raggiungere o raddoppiare la soglia del gruppo, inviti,
+          profilo, recensioni). <strong>Non hanno valore monetario</strong>, non sono convertibili
+          in denaro, non sono un cashback percentuale sulla spesa e si riscattano solo in vantaggi
+          interni (boost, template, badge, priorità in Esplora, accesso anticipato). I Founding
+          Creator (primi 50 Trip che raggiungono la soglia) ricevono badge permanente, moltiplicatore
+          ×3 e boost 14 giorni.
+        </p>
       </LegalSection>
 
       <LegalSection title="5. Contenuti e viaggi creati dagli utenti">

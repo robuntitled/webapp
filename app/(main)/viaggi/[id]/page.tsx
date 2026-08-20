@@ -34,11 +34,7 @@ import {
 } from '@/lib/trips/formation';
 import { getPublicProfile } from '@/lib/data/public-profile';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
-import {
-  estimateParticipantCashbackEur,
-  formatCreatorCashback,
-  formatParticipantCashback,
-} from '@/lib/commerce/cashback';
+import { PostThresholdChecklist } from '@/components/trips/PostThresholdChecklist';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +55,6 @@ export default async function TripDetailPage({ params }: PageProps) {
   const status = getTripStatus(trip.startDate, trip.endDate);
   const canBook = canBookTripServices(trip);
   const closingSoon = isClosingSoon(trip);
-  const estimatedCashback = estimateParticipantCashbackEur(Number(trip.price) || 0);
   const lockReason = departureGuaranteeCopy(trip);
   const recentJoin = lastJoinLabel(trip);
   const deadline = joinDeadlineLabel(trip);
@@ -168,6 +163,8 @@ export default async function TripDetailPage({ params }: PageProps) {
           }
         />
 
+        {canBook ? <PostThresholdChecklist tripId={trip.id} /> : null}
+
         <TripExperienceHub
           destination={trip.destination}
           description={trip.description}
@@ -179,14 +176,20 @@ export default async function TripDetailPage({ params }: PageProps) {
             <div className="border-b border-border/40 pb-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Stima servizi a persona
+                  Budget orientativo a persona
                 </span>
                 <span className="font-display text-4xl font-semibold tabular-nums tracking-tight text-primary">
                   ~{trip.price}€
                 </span>
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground">
-                {COMPLIANCE_COPY.priceIsSumOfServices}
+                {COMPLIANCE_COPY.priceIsSumOfServices} {COMPLIANCE_COPY.budgetClarifier}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {COMPLIANCE_COPY.aiGenerated} {COMPLIANCE_COPY.responsibility}
               </p>
             </div>
 
@@ -209,14 +212,14 @@ export default async function TripDetailPage({ params }: PageProps) {
                 <p className="text-xs font-medium text-foreground">{deadline}</p>
               ) : null}
               <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Cashback stimato</span>
-                <span className="font-medium tabular-nums">
-                  {estimatedCashback > 0 ? `~${estimatedCashback}€` : formatParticipantCashback()}
+                <span className="text-muted-foreground">NomadPoints</span>
+                <span className="font-medium">
+                  <Link href="/punti" className="underline underline-offset-2">
+                    Vantaggi interni, non euro
+                  </Link>
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Creator {formatCreatorCashback()} · partecipante {formatParticipantCashback()}
-              </p>
+              <p className="text-[11px] text-muted-foreground">{COMPLIANCE_COPY.pointsNoMoney}</p>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <CakeSlice className="h-4 w-4 shrink-0 text-accent" />
                 {formatAgeRange(trip.minAge, trip.maxAge)}

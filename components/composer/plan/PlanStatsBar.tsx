@@ -17,7 +17,7 @@ export function PlanStatsBar({ days }: PlanStatsBarProps) {
   const stats = [
     {
       icon: Euro,
-      label: 'Budget stimato',
+      label: 'Budget orientativo',
       value: budget.total > 0 ? `${budget.total}€` : '—',
       sub: 'per persona',
       accent: true,

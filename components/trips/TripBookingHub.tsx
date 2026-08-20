@@ -10,6 +10,7 @@ import { picksFromItinerary } from '@/lib/composer/bookable-picks';
 import { BLOCK_META } from '@/lib/composer/blocks';
 import type { ComposerDayRow } from '@/lib/data/composer';
 import type { ComposerBookablePick } from '@/types/composer';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
 
 const TABS: {
@@ -208,7 +209,7 @@ export function TripBookingHub({
           Già scelti. Prenota questi.
         </h2>
         <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
-          Voli, hotel, auto e attività salvati in creazione. Niente ricerche da zero.
+          {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
         </p>
       </div>
 

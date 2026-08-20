@@ -28,7 +28,7 @@ export function BudgetPanel({ days, activeDayIndex }: BudgetPanelProps) {
       <div className="flex items-center gap-2">
         <PieChart className="h-4 w-4 text-accent" />
         <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
-          Budget viaggio
+          Budget orientativo
         </p>
       </div>
 
@@ -37,7 +37,7 @@ export function BudgetPanel({ days, activeDayIndex }: BudgetPanelProps) {
           <p className="text-3xl font-bold text-white tabular-nums">
             {breakdown.total > 0 ? `${breakdown.total}€` : '—'}
           </p>
-          <p className="text-[10px] text-white/35">stima totale / persona</p>
+          <p className="text-[10px] text-white/35">stima / persona · non un pacchetto</p>
         </div>
         <div className="text-right">
           <p className="text-lg font-semibold text-accent tabular-nums">

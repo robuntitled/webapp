@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,11 +9,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { PlaceSearchInput } from '@/components/composer/plan/PlaceSearchInput';
 import { submitOnboarding } from '@/actions/onboarding';
-import {
-  keywordsForCategory,
-  type InterestCategory,
-  type TravelIntent,
-} from '@/lib/onboarding/keywords';
+import { type TravelIntent } from '@/lib/onboarding/keywords';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import {
   EMPTY_ONBOARDING_DRAFT,
   ONBOARDING_STEPS,
@@ -26,31 +23,7 @@ import {
 } from '@/lib/onboarding/steps';
 import { cn } from '@/lib/utils';
 
-const STORAGE_KEY = 'nl-onboarding-v1';
-
-const KEYWORD_COPY: Record<
-  InterestCategory,
-  { title: string; subtitle: string; min: number; max: number }
-> = {
-  trip_type: {
-    title: 'Che viaggio sei?',
-    subtitle: 'Fino a tre. Da qui le proposte ti assomigliano.',
-    min: 1,
-    max: 3,
-  },
-  setting: {
-    title: 'Natura o città?',
-    subtitle: 'L’ambiente in cui ti senti a casa, quando parti.',
-    min: 1,
-    max: 3,
-  },
-  experience: {
-    title: 'Cosa ti accende?',
-    subtitle: 'Esperienze vere. Puoi sceglierne più di una.',
-    min: 1,
-    max: 4,
-  },
-};
+const STORAGE_KEY = 'nl-onboarding-v2';
 
 function loadDraft(): OnboardingDraft {
   if (typeof window === 'undefined') return EMPTY_ONBOARDING_DRAFT;
@@ -71,7 +44,7 @@ function loadDraft(): OnboardingDraft {
 export function OnboardingWizard() {
   const router = useRouter();
   const { update } = useSession();
-  const [step, setStep] = useState<OnboardingStepId>('intent');
+  const [step, setStep] = useState<OnboardingStepId>('model');
   const [draft, setDraft] = useState<OnboardingDraft>(EMPTY_ONBOARDING_DRAFT);
   const [hydrated, setHydrated] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -100,14 +73,14 @@ export function OnboardingWizard() {
     if (prev) setStep(prev);
   };
 
-  const finish = () => {
-    if (!draft.intent || !draft.home || draft.keywordIds.length === 0) {
-      toast.error('Completa tutte le domande prima di continuare.');
+  const finish = (intent = draft.intent) => {
+    if (!intent || !draft.home) {
+      toast.error('Scegli Crea o Esplora e indica da dove parti.');
       return;
     }
     startTransition(async () => {
       const result = await submitOnboarding({
-        intent: draft.intent,
+        intent,
         keywordIds: draft.keywordIds,
         home: draft.home,
       });
@@ -150,30 +123,26 @@ export function OnboardingWizard() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.22 }}
         >
-          {step === 'intent' && (
-            <IntentStep
-              value={draft.intent}
-              onSelect={(intent) => {
-                patch({ intent });
-                setTimeout(() => setStep('trip_type'), 180);
-              }}
-            />
-          )}
-          {(step === 'trip_type' || step === 'setting' || step === 'experience') && (
-            <KeywordStep
-              category={step}
-              selected={draft.keywordIds}
-              onChange={(keywordIds) => patch({ keywordIds })}
-              onBack={goPrev}
-              onNext={goNext}
-            />
+          {step === 'model' && (
+            <ModelStep onNext={goNext} />
           )}
           {step === 'home' && (
             <HomeStep
               value={draft.home}
               onChange={(home) => patch({ home })}
               onBack={goPrev}
-              onFinish={finish}
+              onFinish={goNext}
+              pending={false}
+            />
+          )}
+          {step === 'intent' && (
+            <IntentStep
+              value={draft.intent}
+              onSelect={(intent) => {
+                patch({ intent });
+                finish(intent);
+              }}
+              onBack={goPrev}
               pending={pending}
             />
           )}
@@ -183,40 +152,84 @@ export function OnboardingWizard() {
   );
 }
 
+function ModelStep({ onNext }: { onNext: () => void }) {
+  return (
+    <div>
+      <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-accent">
+        Come funziona
+      </p>
+      <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
+        Gruppo sì. Pacchetto no.
+      </h1>
+      <p className="mt-4 max-w-lg text-base leading-relaxed text-white/90">
+        {COMPLIANCE_COPY.guide}
+      </p>
+      <div className="mt-8 rounded-3xl border border-white/12 bg-white/[0.05] p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+          Esempio
+        </p>
+        <p className="mt-2 font-display text-xl font-semibold text-white">
+          10 giorni · Grecia, poi Kenya
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-white/80">
+          Pubblicate il Trip in formazione. Quando arrivate alla soglia del gruppo, aprite la chat.
+          Marco cerca il volo da Milano, Giulia da Roma: stessa meta, contratti diversi.
+        </p>
+      </div>
+      <div className="mt-10">
+        <Button type="button" className="rounded-full" onClick={onNext}>
+          Ho capito
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function IntentStep({
   value,
   onSelect,
+  onBack,
+  pending,
 }: {
   value: TravelIntent | null;
   onSelect: (intent: TravelIntent) => void;
+  onBack: () => void;
+  pending: boolean;
 }) {
   return (
     <div>
       <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-accent">
-        Prima scelta
+        Ultimo passo
       </p>
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
-        Crei, o ti unisci?
+        Crea un Trip o esplora
       </h1>
       <p className="mt-4 max-w-md text-base text-white/90">
-        Due strade. I servizi si prenotano solo quando il gruppo è formato.
+        Scelta obbligatoria. I servizi si prenotano dopo, ciascuno col proprio fornitore.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <IntentCard
           active={value === 'create'}
           icon={PenLine}
-          title="Crea un viaggio"
+          title="Crea un Trip"
           body="Parti da un template, pubblica in formazione, riempi i posti."
           onClick={() => onSelect('create')}
         />
         <IntentCard
           active={value === 'book'}
           icon={Ticket}
-          title="Esplora e unisciti"
-          body="Scegli un viaggio, unisciti, prenota quando il gruppo è pronto."
+          title="Esplora i Trip"
+          body="Scegli un viaggio, unisciti, prenota quando il gruppo è alla soglia."
           onClick={() => onSelect('book')}
         />
+      </div>
+      <div className="mt-8">
+        <Button type="button" variant="ghost" className="text-white/70" onClick={onBack} disabled={pending}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Indietro
+        </Button>
       </div>
     </div>
   );
@@ -253,77 +266,6 @@ function IntentCard({
       <h2 className="mt-4 font-display text-2xl font-semibold text-white">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-white/85">{body}</p>
     </button>
-  );
-}
-
-function KeywordStep({
-  category,
-  selected,
-  onChange,
-  onBack,
-  onNext,
-}: {
-  category: InterestCategory;
-  selected: string[];
-  onChange: (ids: string[]) => void;
-  onBack: () => void;
-  onNext: () => void;
-}) {
-  const copy = KEYWORD_COPY[category];
-  const options = keywordsForCategory(category);
-  const categoryIds = useMemo(() => new Set(options.map((o) => o.id)), [options]);
-  const pickedHere = selected.filter((id) => categoryIds.has(id));
-
-  const toggle = (id: string) => {
-    const inCat = selected.filter((x) => categoryIds.has(x));
-    const others = selected.filter((x) => !categoryIds.has(x));
-    if (inCat.includes(id)) {
-      onChange([...others, ...inCat.filter((x) => x !== id)]);
-      return;
-    }
-    if (inCat.length >= copy.max) {
-      toast.message(`Massimo ${copy.max}`);
-      return;
-    }
-    onChange([...others, ...inCat, id]);
-  };
-
-  return (
-    <div>
-      <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
-        {copy.title}
-      </h1>
-      <p className="mt-4 max-w-md text-base text-white/90">{copy.subtitle}</p>
-
-      <div className="mt-8 flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const on = selected.includes(opt.id);
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => toggle(opt.id)}
-              className={cn(
-                'rounded-full border px-4 py-2.5 text-sm font-medium transition',
-                on
-                  ? 'border-accent bg-accent/20 text-white'
-                  : 'border-white/15 bg-white/[0.04] text-white/80 hover:border-white/30'
-              )}
-            >
-              <span className="mr-1.5">{opt.emoji}</span>
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <StepNav
-        onBack={onBack}
-        onNext={onNext}
-        nextDisabled={pickedHere.length < copy.min}
-        nextLabel="Continua"
-      />
-    </div>
   );
 }
 
@@ -445,7 +387,7 @@ function HomeStep({
         onBack={onBack}
         onNext={onFinish}
         nextDisabled={!value?.city || pending}
-        nextLabel={pending ? 'Salvo…' : 'Entra'}
+        nextLabel={pending ? 'Salvo…' : 'Avanti'}
         pending={pending}
       />
     </div>

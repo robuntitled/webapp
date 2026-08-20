@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { INTEREST_KEYWORDS, keywordsForCategory, isValidKeywordId } from '@/lib/onboarding/keywords';
-import { afterOnboardingPath, postLoginPath } from '@/lib/onboarding/steps';
+import { afterOnboardingPath, ONBOARDING_STEPS, postLoginPath } from '@/lib/onboarding/steps';
 import { plannerFromKeywordIds } from '@/lib/onboarding/planner-from-keywords';
 import { completeOnboardingSchema } from '@/lib/validations/onboarding';
 import { coordsFromDestinationLabel } from '@/lib/trips/destination-coords';
@@ -23,6 +23,10 @@ describe('onboarding keywords', () => {
 });
 
 describe('onboarding paths', () => {
+  it('has three steps then Crea or Esplora', () => {
+    expect(ONBOARDING_STEPS).toEqual(['model', 'home', 'intent']);
+  });
+
   it('sends incomplete users to onboarding', () => {
     expect(postLoginPath({ onboardingCompleted: false })).toBe('/onboarding');
   });
@@ -40,13 +44,13 @@ describe('onboarding paths', () => {
 });
 
 describe('completeOnboardingSchema', () => {
-  it('requires all three keyword categories', () => {
+  it('accepts intent and home without keyword categories', () => {
     const result = completeOnboardingSchema.safeParse({
       intent: 'book',
-      keywordIds: ['city_break', 'city'],
+      keywordIds: [],
       home: { city: 'Roma', lat: 41.9, lng: 12.5 },
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('accepts a complete payload', () => {

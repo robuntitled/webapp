@@ -230,7 +230,7 @@ export function TripComposer({
     }
     setPublishing(true);
     try {
-      const payload = { ...draft, plannerProfile };
+      const payload = { ...draft, plannerProfile, budgetOrientativo: draft.budgetHint };
       const response = await fetch('/api/composer/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -249,7 +249,7 @@ export function TripComposer({
 
       clearComposerLocalSession();
       await clearComposerDraft().catch(() => undefined);
-      toast.success('Pubblicato in formazione. Il viaggio parte al raggiungimento del minimo posti.');
+      toast.success('Pubblicato in formazione. Il viaggio parte alla soglia del gruppo.');
       router.push(`/viaggi/${data.tripId}`);
     } catch {
       toast.error('Errore di rete');

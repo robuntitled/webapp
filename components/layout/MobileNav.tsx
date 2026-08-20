@@ -6,8 +6,8 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LINKS = [
-  { href: '/dashboard', label: 'Esplora' },
-  { href: '/dashboard/crea?new=1', label: 'Crea', auth: true },
+  { href: '/dashboard', label: 'Esplora i Trip' },
+  { href: '/dashboard/crea?new=1', label: 'Crea un Trip', auth: true },
   { href: '/prenota/voli', label: 'Servizi · Voli', auth: true },
   { href: '/prenota/hotel', label: 'Servizi · Hotel', auth: true },
   { href: '/prenota/auto', label: 'Servizi · Noleggio auto', auth: true },

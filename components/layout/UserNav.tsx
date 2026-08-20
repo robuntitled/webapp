@@ -49,6 +49,9 @@ export function UserNav({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
+            <Link href="/dashboard/punti">NomadPoints</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link href="/dashboard/profilo">Modifica profilo</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

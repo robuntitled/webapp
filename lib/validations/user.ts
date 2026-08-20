@@ -63,6 +63,7 @@ export const registerSchema = z.object({
   privacyConsent: z.literal(true, { message: 'Devi accettare l\'informativa privacy' }),
   termsAccepted: z.literal(true, { message: 'Devi accettare i termini di servizio' }),
   marketingConsent: z.boolean().optional(),
+  referredBy: z.string().uuid().optional(),
 });
 
 export const legalConsentSchema = z.object({

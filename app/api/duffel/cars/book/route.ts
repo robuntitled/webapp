@@ -5,7 +5,6 @@ import { DuffelError } from '@/lib/duffel/client';
 import { isDuffelConfigured } from '@/lib/duffel/config';
 import { createCarBooking } from '@/lib/duffel/cars';
 import { canBookWithoutCard, normalizePhoneE164 } from '@/lib/duffel/cars-map';
-import { recordBookingCashback } from '@/lib/commerce/cashback-ledger';
 
 const schema = z.object({
   quoteId: z.string().trim().min(8).max(80),
@@ -114,16 +113,6 @@ export async function POST(request: Request) {
       // Should not happen: we refuse card rates client-side, but log if supplier flipped.
       console.warn('[duffel cars book] unexpected payment_type', booking.payment_type);
     }
-
-    await recordBookingCashback({
-      userId: gate.userId,
-      tripId: parsed.data.tripId,
-      bookingRef: booking.reference ?? booking.id,
-      service: 'car',
-      amountEur:
-        parsed.data.amountEur ??
-        (booking.total_amount ? Number(booking.total_amount) : 0),
-    });
 
     return NextResponse.json({
       configured: true,

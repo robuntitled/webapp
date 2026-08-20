@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requirePhoneVerified } from '@/lib/auth/require-phone-verified';
 import { awardPoints } from '@/lib/commerce/points-ledger';
+import { syncTripFormationMilestones } from '@/lib/commerce/trip-milestones';
 
 export type TripInviteResult =
   | { ok: true }
@@ -134,15 +135,14 @@ export async function respondTripInvite(input: {
         return { ok: false, error: 'Impossibile unirti al viaggio.' };
       }
 
-      // NomadPoints: chi si unisce e chi ha invitato (referral).
-      await awardPoints({ userId, action: 'joined_trip', ref: invite.id });
       if (invite.from_user_id && invite.from_user_id !== userId) {
         await awardPoints({
           userId: invite.from_user_id,
-          action: 'referral_join',
+          action: 'invite_join_trip',
           ref: invite.id,
         });
       }
+      await syncTripFormationMilestones(invite.trip_id as string);
     }
   }
 

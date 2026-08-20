@@ -67,15 +67,16 @@ export async function completeUserOnboarding(
 
   if (delError) throw new Error(delError.message);
 
-  const { error: insError } = await supabaseAdmin.from('user_interests').insert(
-    uniqueIds.map((keyword_id) => ({
-      user_id: userId,
-      keyword_id,
-      source: 'onboarding',
-    }))
-  );
-
-  if (insError) throw new Error(insError.message);
+  if (uniqueIds.length > 0) {
+    const { error: insError } = await supabaseAdmin.from('user_interests').insert(
+      uniqueIds.map((keyword_id) => ({
+        user_id: userId,
+        keyword_id,
+        source: 'onboarding',
+      }))
+    );
+    if (insError) throw new Error(insError.message);
+  }
 
   await upsertPlannerProfile(userId, plannerFromKeywordIds(uniqueIds));
 }

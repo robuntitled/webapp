@@ -17,13 +17,34 @@ export const COMPLIANCE_COPY = {
   /** Disclaimer di qualificazione, ripetuto nei punti in cui si aggregano servizi. */
   notAPackage: 'NomadLink non organizza pacchetti turistici né vende viaggi.',
   /** Prezzo: mai "totale viaggio". Solo somma di contratti separati. */
-  priceIsSumOfServices: 'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
+  priceIsSumOfServices:
+    'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
   /** Trasparenza AI (AI Act). */
-  aiGenerated: 'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
+  aiGenerated:
+    'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
   /** Responsabilità. */
   responsibility:
     'NomadLink fornisce account, gruppo, itinerario e crediti. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
+  /** Messaggio guida (onboarding, homepage, Trip). */
+  guide:
+    'Su NomadLink crei o ti unisci a un viaggio di gruppo. Costruite insieme l’itinerario. Poi ognuno prenota voli e hotel per conto proprio. Niente pacchetto fisso, massima libertà.',
+  /** Etichetta unica per qualsiasi cifra aggregata. */
+  budgetLabel: 'Budget orientativo',
+  budgetFilterLabel: 'Fascia di spesa stimata',
+  budgetClarifier:
+    'I costi reali dipendono dai servizi che ogni partecipante prenota separatamente.',
+  /** Loyalty: nessun valore monetario. */
+  pointsNoMoney:
+    'I NomadPoints non hanno valore monetario, non sono convertibili in denaro e si riscattano solo in vantaggi interni alla piattaforma.',
 } as const;
+
+export const POST_THRESHOLD_CHECKLIST = [
+  'Aprite la chat di gruppo e allineatevi su date e mete.',
+  'Ognuno cerca voli e hotel per conto proprio: niente checkout unico.',
+  'Salvate le tratte e gli alloggi scelti sul Trip, così il gruppo li vede.',
+  'Confermate i documenti e le scadenze di ciascun fornitore.',
+  'Chi arriva dopo la soglia trova già itinerario e stime, non un pacchetto.',
+] as const;
 
 /**
  * "Soglia del gruppo" — sostituisce "garanzia di partenza".
@@ -31,6 +52,6 @@ export const COMPLIANCE_COPY = {
  * art. 41 D.Lgs. 62/2018): è una condizione sociale del gruppo.
  */
 export function groupThresholdCopy(minSeats: number, solid: boolean): string {
-  if (solid) return 'Gruppo al completo: avete raggiunto il minimo per partire.';
-  return `Il viaggio parte se il gruppo raggiunge ${minSeats} partecipanti.`;
+  if (solid) return 'Soglia del gruppo raggiunta: avete il minimo per partire.';
+  return `Il viaggio parte se il gruppo raggiunge la soglia di ${minSeats} partecipanti.`;
 }
