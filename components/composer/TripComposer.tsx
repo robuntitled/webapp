@@ -347,7 +347,7 @@ export function TripComposer({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="container mx-auto flex-1 overflow-y-auto px-4 py-8"
+              className="container mx-auto flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-3 pt-6"
             >
               <ComposerLandingStep
                 draft={draft}

@@ -648,8 +648,9 @@ export function ComposerLandingStep({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="mx-auto max-w-4xl pb-24"
+      className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col"
     >
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
       <ComposerWizardHeader
         step="landing"
         microStep={header.micro}
@@ -1338,26 +1339,28 @@ export function ComposerLandingStep({
           </motion.div>
         ) : null}
       </AnimatePresence>
+      </div>
 
-      <div className="mt-8 flex items-center justify-between gap-4">
-        <Button
-          type="button"
-          variant="ghost"
-          className="rounded-full text-white hover:text-slate-900"
-          disabled={phase === 'dest' && !onBack}
-          onClick={goBack}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Indietro
-        </Button>
+      <div className="shrink-0 border-t border-white/10 bg-[#0a101c]/90 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+        <div className="flex items-center justify-between gap-4">
+          <Button
+            type="button"
+            variant="ghost"
+            className="rounded-full text-white hover:text-slate-900"
+            disabled={phase === 'dest' && !onBack}
+            onClick={goBack}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Indietro
+          </Button>
 
-        <Button
-          type="button"
-          size="lg"
-          className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
-          disabled={!canNext}
-          onClick={goNext}
-        >
+          <Button
+            type="button"
+            size="lg"
+            className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
+            disabled={!canNext}
+            onClick={goNext}
+          >
           {phase === 'who' ? (
             <>
               <BookOpen className="mr-2 h-5 w-5" />
@@ -1375,6 +1378,7 @@ export function ComposerLandingStep({
             </>
           )}
         </Button>
+        </div>
       </div>
 
       <PlannerQuickSetupSheet
