@@ -70,6 +70,52 @@ export async function getTripMessages(
   })) as TripMessageRow[];
 }
 
+const JOIN_HELLO_LINES = [
+  'Ciao! Mi sono aggiunto al Trip. Si parte? ✈️',
+  'Ehilà, sono in. Accettami in crew e si parte 🌍',
+  'Ciao crew! Mi butto in questo viaggio — c’è posto per me? 🔥',
+] as const;
+
+export function joinRequestChatBody(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    h = (h + seed.charCodeAt(i) * (i + 1)) % JOIN_HELLO_LINES.length;
+  }
+  return JOIN_HELLO_LINES[h] ?? JOIN_HELLO_LINES[0];
+}
+
+/** Ping in chat all'organizzatore quando qualcuno chiede di unirsi (anche se non è ancora in crew). */
+export async function postJoinRequestChatPing(
+  tripId: string,
+  requesterId: string
+): Promise<void> {
+  const { data: trip } = await supabaseAdmin
+    .from('trips')
+    .select('creator_id')
+    .eq('id', tripId)
+    .maybeSingle();
+
+  if (trip?.creator_id) {
+    const { error: unhideError } = await supabaseAdmin
+      .from('trip_chat_hides')
+      .delete()
+      .eq('trip_id', tripId)
+      .eq('user_id', trip.creator_id as string);
+    if (unhideError && unhideError.code !== '42P01') {
+      console.warn('[postJoinRequestChatPing unhide]', unhideError.message);
+    }
+  }
+
+  const { error } = await supabaseAdmin.from('trip_messages').insert({
+    trip_id: tripId,
+    user_id: requesterId,
+    body: joinRequestChatBody(`${requesterId}:${tripId}`),
+  });
+  if (error) {
+    console.error('[postJoinRequestChatPing]', error.message);
+  }
+}
+
 export async function postTripMessage(
   tripId: string,
   userId: string,
@@ -215,7 +261,6 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
   for (const trip of trips) {
     if (hidden.has(trip.id)) continue;
     const participantCount = getParticipantCount(trip.trip_participants);
-    if (participantCount < 2) continue;
 
     const isOwner =
       trip.creator?.id === userId || trip.creator_id === userId;
@@ -238,6 +283,7 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
     ]);
 
     const last = lastRows?.[0];
+    if (participantCount < 2 && !last) continue;
 
     groups.push({
       id: trip.id,

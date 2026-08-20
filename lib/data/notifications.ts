@@ -76,7 +76,7 @@ export async function listNotificationsForUser(
     return [];
   }
 
-  return data.map((row) => ({
+  const items = data.map((row) => ({
     id: row.id as string,
     type: row.type as NotificationType,
     title: String(row.title ?? ''),
@@ -86,6 +86,49 @@ export async function listNotificationsForUser(
     readAt: (row.read_at as string | null) ?? null,
     createdAt: String(row.created_at),
   }));
+
+  return attachJoinRequestStatus(items);
+}
+
+async function attachJoinRequestStatus(
+  items: AppNotification[]
+): Promise<AppNotification[]> {
+  const requestIds = [
+    ...new Set(
+      items
+        .filter((n) => n.type === 'trip_join_request')
+        .map((n) =>
+          typeof n.metadata.requestId === 'string' ? n.metadata.requestId : null
+        )
+        .filter((id): id is string => !!id)
+    ),
+  ];
+  if (!requestIds.length) return items;
+
+  const { data, error } = await supabaseAdmin
+    .from('trip_join_requests')
+    .select('id, status')
+    .in('id', requestIds);
+
+  if (error || !data?.length) return items;
+
+  const statusById = new Map(
+    data.map((row) => [row.id as string, String(row.status)])
+  );
+
+  return items.map((n) => {
+    if (n.type !== 'trip_join_request') return n;
+    const requestId =
+      typeof n.metadata.requestId === 'string' ? n.metadata.requestId : null;
+    if (!requestId) return n;
+    return {
+      ...n,
+      metadata: {
+        ...n.metadata,
+        requestStatus: statusById.get(requestId) ?? 'unknown',
+      },
+    };
+  });
 }
 
 export async function countUnreadNotifications(userId: string): Promise<number> {

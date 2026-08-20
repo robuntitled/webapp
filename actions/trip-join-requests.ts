@@ -14,6 +14,7 @@ import {
   notifyJoinRequestResolved,
 } from '@/lib/notifications/trip-join';
 import { syncTripFormationMilestones } from '@/lib/commerce/trip-milestones';
+import { postJoinRequestChatPing } from '@/lib/data/trip-chat';
 
 export type JoinRequestResult =
   | { ok: true; status: 'pending' | 'already_pending' | 'already_member' }
@@ -153,11 +154,14 @@ export async function requestToJoinTrip(
   }
 
   if (upserted?.id) {
-    void notifyJoinRequestCreated({
-      tripId: parsedTripId.data,
-      requestId: upserted.id as string,
-      requesterId: userId,
-    });
+    await Promise.all([
+      notifyJoinRequestCreated({
+        tripId: parsedTripId.data,
+        requestId: upserted.id as string,
+        requesterId: userId,
+      }),
+      postJoinRequestChatPing(parsedTripId.data, userId),
+    ]);
   }
 
   revalidateTrip(parsedTripId.data);

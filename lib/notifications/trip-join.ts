@@ -68,7 +68,7 @@ export async function notifyJoinRequestCreated(input: {
     const tripTitle = String(trip.title ?? 'Viaggio');
     const link = `/viaggi/${trip.id}`;
     const title = 'Nuova richiesta di partecipazione';
-    const body = `${name} vuole unirsi a «${tripTitle}»`;
+    const body = `${name} vuole unirsi a «${tripTitle}». Accetta o rifiuta dalla campanella.`;
 
     await createNotification({
       userId: trip.creator_id as string,
@@ -87,8 +87,8 @@ export async function notifyJoinRequestCreated(input: {
     await emailIfPossible({
       userId: trip.creator_id as string,
       subject: `Nuova richiesta per «${tripTitle}» — NomadLink`,
-      text: `${body}\n\nGestisci la richiesta: ${url}`,
-      html: `<p><strong>${name}</strong> vuole unirsi a <strong>${tripTitle}</strong>.</p><p><a href="${url}">Apri il viaggio e rispondi</a></p>`,
+      text: `${body}\n\nRispondi dalla campanella delle notifiche, oppure apri il viaggio: ${url}`,
+      html: `<p><strong>${name}</strong> vuole unirsi a <strong>${tripTitle}</strong>.</p><p>Accetta o rifiuta dalla campanella delle notifiche su NomadLink.</p><p><a href="${url}">Apri il viaggio</a></p>`,
     });
   } catch (e) {
     console.error('[notifyJoinRequestCreated]', e);
