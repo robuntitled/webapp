@@ -96,7 +96,7 @@ async function findCheapestSingleDestination(params: {
 }): Promise<CheapComboResult | null> {
   const dest = params.destinations[0];
   if (!dest) return null;
-  const maxDays = Math.min(21, Math.max(5, Math.round(params.maxDays)));
+  const maxDays = Math.min(28, Math.max(5, Math.round(params.maxDays)));
   const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 5);
   if (starts.length === 0) return null;
 
@@ -198,7 +198,7 @@ export async function findCheapestCombo(params: {
   if (params.destinations.length === 1) {
     return findCheapestSingleDestination(params);
   }
-  const maxDays = Math.min(21, Math.max(5, Math.round(params.maxDays)));
+  const maxDays = Math.min(28, Math.max(5, Math.round(params.maxDays)));
   const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 4);
   if (starts.length === 0 || params.destinations.length < 2) return null;
 

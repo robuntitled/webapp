@@ -1,4 +1,20 @@
-import { activeCatalogDestinations, findCatalogDestination, type CatalogDestination } from '@/lib/catalog/destinations';
+import {
+  CATALOG_DESTINATIONS,
+  findCatalogDestination,
+  wizardCatalogDestinations,
+  type CatalogDestination,
+} from '@/lib/catalog/destinations';
+import seed from '@/lib/catalog/excel-seed.json';
+
+export type CatalogDay = {
+  day: number;
+  title: string;
+  highlights: string;
+  area: string;
+  paid: string;
+  arrival: boolean;
+  departure: boolean;
+};
 
 export type CatalogTemplate = {
   id: string;
@@ -13,20 +29,16 @@ export type CatalogTemplate = {
   region: string;
   featured?: boolean;
   status: 'published';
+  days: CatalogDay[];
 };
 
 export function templateIdFor(destinationId: string, durationDays: number): string {
   return `${destinationId}-${durationDays}`;
 }
 
-export function buildCatalogTemplates(destinations = activeCatalogDestinations()): CatalogTemplate[] {
-  const out: CatalogTemplate[] = [];
-  destinations.forEach((dest, destIndex) => {
-    dest.allowedDurations.forEach((durationDays, durIndex) => {
-      out.push(templateRecord(dest, durationDays, destIndex < 4 && durIndex === 0));
-    });
-  });
-  return out;
+function daysFor(destinationId: string, durationDays: number): CatalogDay[] {
+  const raw = (seed.days as Record<string, CatalogDay[]>)[templateIdFor(destinationId, durationDays)] ?? [];
+  return raw;
 }
 
 function templateRecord(
@@ -38,19 +50,32 @@ function templateRecord(
     id: templateIdFor(dest.id, durationDays),
     destinationId: dest.id,
     durationDays,
-    title: `${dest.name} · ${durationDays} giorni`,
-    summary: `${dest.vibe}. Itinerario curato NomadLink, ${durationDays} giorni.`,
-    label: `${dest.name} · ${durationDays} giorni`,
+    title: dest.name,
+    summary: dest.rationale || dest.vibe,
+    label: dest.name,
     vibe: dest.vibe,
     emoji: dest.emoji,
     gradient: dest.gradient,
     region: dest.continent,
     featured,
     status: 'published',
+    days: daysFor(dest.id, durationDays),
   };
 }
 
-export const CATALOG_TEMPLATES: CatalogTemplate[] = buildCatalogTemplates();
+export function buildCatalogTemplates(
+  destinations = wizardCatalogDestinations()
+): CatalogTemplate[] {
+  const out: CatalogTemplate[] = [];
+  destinations.forEach((dest, destIndex) => {
+    dest.allowedDurations.forEach((durationDays, durIndex) => {
+      out.push(templateRecord(dest, durationDays, dest.active && destIndex < 4 && durIndex === 0));
+    });
+  });
+  return out;
+}
+
+export const CATALOG_TEMPLATES: CatalogTemplate[] = buildCatalogTemplates(CATALOG_DESTINATIONS);
 
 export function findCatalogTemplate(id: string): CatalogTemplate | undefined {
   const direct = CATALOG_TEMPLATES.find((t) => t.id === id);

@@ -22,7 +22,7 @@ const destSchema = z.object({
 
 const schema = z.object({
   destinations: z.array(destSchema).min(1).max(4),
-  maxDays: z.number().int().min(5).max(21),
+  maxDays: z.number().int().min(5).max(28),
   windowStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   windowEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });

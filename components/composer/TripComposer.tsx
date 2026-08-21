@@ -9,7 +9,6 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { ComposerAssistantDock } from '@/components/composer/ComposerAssistantDock';
 import { ComposerLandingStep } from '@/components/composer/ComposerLandingStep';
-import { ComposerPlanStep } from '@/components/composer/ComposerPlanStep';
 import { ComposerReviewStep } from '@/components/composer/ComposerReviewStep';
 import { ComposerSourceStep } from '@/components/composer/ComposerSourceStep';
 import { buildComposerDays, remapComposerDaysToDuration } from '@/lib/composer/days';
@@ -32,7 +31,7 @@ import {
 import { validatePublishDraft } from '@/lib/composer/publish-validation';
 import { applyPicksToDays, mergeBookablePicks } from '@/lib/composer/bookable-picks';
 import { normalizeWizardStep, WIZARD_STEPS } from '@/lib/composer/wizard-steps';
-import type { ComposerDraft, ComposerDay } from '@/types/composer';
+import type { ComposerDraft } from '@/types/composer';
 import { EMPTY_PLANNER_PROFILE, type PlannerProfile } from '@/types/planner';
 import { PhoneVerifyGate } from '@/components/auth/PhoneVerifyGate';
 
@@ -220,8 +219,8 @@ export function TripComposer({
       draft.days.length > 0 ? draft.days : buildComposerDays(draft.startDate, draft.endDate);
     const remapped = remapComposerDaysToDuration(base, duration, draft.startDate);
     const days = applyPicksToDays(remapped, draft.bookablePicks ?? []);
-    setDraft((prev) => ({ ...prev, days, durationDays: duration }));
-    setStep(templatePublish ? 'review' : 'plan');
+    setDraft((prev) => ({ ...prev, days, durationDays: duration, budgetHint: prev.budgetHint ?? 900 }));
+    setStep('review');
   };
 
   const publish = async () => {
@@ -366,24 +365,6 @@ export function TripComposer({
             </motion.div>
           )}
 
-          {step === 'plan' && (
-            <motion.div
-              key="plan"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex min-h-0 flex-1 flex-col overflow-hidden"
-            >
-              <ComposerPlanStep
-                draft={{ ...draft, plannerProfile }}
-                onChangeDays={(days: ComposerDay[]) => patchDraft({ days })}
-                onPatchDraft={patchDraft}
-                onBack={() => setStep('landing')}
-                onReview={() => setStep('review')}
-              />
-            </motion.div>
-          )}
-
           {step === 'review' && (
             <motion.div
               key="review"
@@ -395,7 +376,7 @@ export function TripComposer({
               <ComposerReviewStep
                 draft={{ ...draft, plannerProfile }}
                 publishing={publishing}
-                onBack={() => setStep('plan')}
+                onBack={() => setStep('landing')}
                 onPublish={() => void publish()}
                 onChange={patchDraft}
               />

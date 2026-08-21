@@ -6,6 +6,7 @@ import {
   DESTINATION_REGIONS,
   findContinentCountry,
 } from '@/lib/composer/continent-countries';
+import { CATALOG_DESTINATIONS } from '@/lib/catalog/destinations';
 
 export { DESTINATION_REGIONS, CONTINENT_COUNTRIES };
 
@@ -51,10 +52,25 @@ export function filterDestinations(query: string): ComposerDestination[] {
 
 export function findDestination(idOrLabel: string): ComposerDestination | undefined {
   const key = idOrLabel.trim().toLowerCase();
-  return (
-    COMPOSER_DESTINATIONS.find((d) => d.id === key || d.label.toLowerCase() === key) ??
-    findContinentCountry(idOrLabel)
+  const featured = COMPOSER_DESTINATIONS.find((d) => d.id === key || d.label.toLowerCase() === key);
+  if (featured) return featured;
+  const fromCatalog = CATALOG_DESTINATIONS.find(
+    (d) => d.id === key || d.slug === key || d.name.toLowerCase() === key
   );
+  if (fromCatalog) {
+    return {
+      id: fromCatalog.id,
+      label: fromCatalog.name,
+      emoji: fromCatalog.emoji,
+      region: fromCatalog.continent,
+      vibe: fromCatalog.vibe,
+      gradient: fromCatalog.gradient,
+      lat: fromCatalog.lat,
+      lng: fromCatalog.lng,
+      countryCode: fromCatalog.countryCode,
+    };
+  }
+  return findContinentCountry(idOrLabel);
 }
 
 export function featuredToMeta(dest: ComposerDestination): DestinationMeta {

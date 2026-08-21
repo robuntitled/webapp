@@ -27,6 +27,8 @@ import { generateTripTitle } from '@/lib/composer/title-generator';
 import { remapComposerDaysToDuration } from '@/lib/composer/days';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { mergeBookablePicks } from '@/lib/composer/bookable-picks';
+import { findCatalogDestination } from '@/lib/catalog/destinations';
+import { draftFromTripTemplate, findTripTemplate } from '@/lib/composer/trip-templates';
 import {
   buildFlightLegs,
   hasWideCountry,
@@ -51,47 +53,39 @@ const WHO_COVERS = {
 
 type Audience = 'solo' | 'open' | 'friends';
 
-const DURATION_CARDS = [
-  {
-    n: 5 as const,
-    kicker: 'Ponte',
-    title: '5 giorni',
-    body: 'Il lungo weekend che vale un viaggio.',
-  },
-  {
-    n: 7 as const,
-    kicker: 'Settimana',
-    title: '7 giorni',
-    body: 'Il ritmo giusto. Niente fretta.',
-  },
-  {
-    n: 10 as const,
-    kicker: 'Il giro',
-    title: '10 giorni',
-    body: 'Ci stai tutto. Zero rimpianti.',
-  },
-];
+const MONTH_LABELS = [
+  'gennaio',
+  'febbraio',
+  'marzo',
+  'aprile',
+  'maggio',
+  'giugno',
+  'luglio',
+  'agosto',
+  'settembre',
+  'ottobre',
+  'novembre',
+  'dicembre',
+] as const;
 
-const FLEX_DURATION_CARDS = [
-  {
-    n: 7 as const,
-    kicker: 'Settimana',
-    title: '7 giorni',
-    body: 'Il ritmo giusto.',
-  },
-  {
-    n: 10 as const,
-    kicker: 'Il giro',
-    title: '10 giorni',
-    body: 'Ci stai tutto.',
-  },
-  {
-    n: 12 as const,
-    kicker: 'Ampio',
-    title: '12 giorni',
-    body: 'Tre mete, zero corsa.',
-  },
-];
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth()}`;
+}
+
+function monthOptions(from: Date, count = 18): Date[] {
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(from.getFullYear(), from.getMonth() + i, 1);
+    return d;
+  });
+}
+
+function lastDayOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
+function monthLabel(d: Date): string {
+  return `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 type CheapComboView = {
   startDate: string;
@@ -249,8 +243,14 @@ export function ComposerLandingStep({
   const [visitPicks, setVisitPicks] = useState<string[]>([]);
   const [dateMode, setDateMode] = useState<'flex' | 'exact'>('exact');
   const [maxDays, setMaxDays] = useState(fixedDurationDays ?? 10);
-  const [windowFrom, setWindowFrom] = useState<Date>(() => addDays(new Date(), 21));
-  const [windowTo, setWindowTo] = useState<Date>(() => addDays(new Date(), 81));
+  const [fromMonth, setFromMonth] = useState<Date>(() => {
+    const d = addDays(new Date(), 60);
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [toMonth, setToMonth] = useState<Date>(() => {
+    const d = addDays(new Date(), 90);
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
   const [combo, setCombo] = useState<CheapComboView | null>(null);
   const [comboLoading, setComboLoading] = useState(false);
 
@@ -274,10 +274,11 @@ export function ComposerLandingStep({
     });
   }, [fixedDurationDays, startDate]);
 
+  const catalogDest = findCatalogDestination(draft.catalogDestinationId ?? draft.destination ?? '');
+  const destDurations = catalogDest?.allowedDurations ?? [7, 10, 14];
   const selectedDestinations = getDraftDestinations(draft);
   const destCover = draft.destination ? coverForDestination(draft.destination) : null;
   const orderNeeded = needsVisitOrder(selectedDestinations);
-  const flexDatesEnabled = orderNeeded || templateMode;
   const extraSteps = (startedWithDest.current ? 0 : 1) + (orderNeeded ? 1 : 0);
   const microTotal = 3 + extraSteps;
 
@@ -302,8 +303,8 @@ export function ComposerLandingStep({
       : phase === 'order'
         ? visitPicks.length === selectedDestinations.length && selectedDestinations.length >= 2
         : phase === 'when'
-          ? flexDatesEnabled && dateMode === 'flex'
-            ? Boolean(combo)
+          ? dateMode === 'flex'
+            ? toMonth >= fromMonth
             : Boolean(startDate && endDate && endDate >= startDate)
           : phase === 'from'
             ? Boolean(draft.organizerOrigin?.iata)
@@ -502,17 +503,24 @@ export function ComposerLandingStep({
     applyVisitOrder(next);
   };
 
-  const applyDuration = (n: 5 | 7 | 10 | 12) => {
+  const applyDuration = (n: number) => {
     const start = startDate ?? addDays(new Date(), 14);
     const end = addDays(start, n - 1);
     const startIso = format(start, 'yyyy-MM-dd');
     setStartDate(start);
     setEndDate(end);
-    if (n === 7 || n === 10 || n === 12) setMaxDays(n);
+    setMaxDays(n);
+    const nextTpl = draft.catalogDestinationId
+      ? findTripTemplate(`${draft.catalogDestinationId}-${n}`)
+      : undefined;
+    const fromTpl = nextTpl ? draftFromTripTemplate(nextTpl, startIso) : null;
     onChange({
+      ...(fromTpl ?? {}),
       startDate: startIso,
       endDate: format(end, 'yyyy-MM-dd'),
-      days: remapComposerDaysToDuration(draft.days, n, startIso),
+      durationDays: n,
+      days: fromTpl?.days ?? remapComposerDaysToDuration(draft.days, n, startIso),
+      templateId: nextTpl?.id ?? draft.templateId,
     });
   };
 
@@ -608,9 +616,9 @@ export function ComposerLandingStep({
             placeType: d.placeType,
             subtitle: d.subtitle,
           })),
-          maxDays,
-          windowStart: format(windowFrom, 'yyyy-MM-dd'),
-          windowEnd: format(windowTo, 'yyyy-MM-dd'),
+          maxDays: draft.durationDays ?? maxDays,
+          windowStart: format(fromMonth, 'yyyy-MM-dd'),
+          windowEnd: format(lastDayOfMonth(toMonth), 'yyyy-MM-dd'),
         }),
       });
       const data = (await res.json()) as {
@@ -714,417 +722,205 @@ export function ComposerLandingStep({
 
         {phase === 'when' ? (
           <motion.div key="when" {...phaseMotion} className="space-y-6">
-            {flexDatesEnabled ? (
-              <>
-                <div className="flex justify-center gap-2">
-                  {(
-                    [
-                      ['exact', 'Ho già le date'],
-                      ['flex', 'Date flessibili'],
-                    ] as const
-                  ).map(([id, label]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => {
-                        setDateMode(id);
-                        if (id === 'flex') setCombo(null);
-                      }}
-                      className={cn(
-                        'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
-                        dateMode === id
-                          ? 'bg-accent text-[#0b1220]'
-                          : 'bg-white/8 text-white/70 hover:bg-white/12'
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+            <div className="flex justify-center gap-2">
+              {(
+                [
+                  ['exact', 'Ho già le date'],
+                  ['flex', 'Date flessibili'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setDateMode(id);
+                    if (id === 'flex') setCombo(null);
+                  }}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
+                    dateMode === id
+                      ? 'bg-accent text-[#0b1220]'
+                      : 'bg-white/8 text-white/70 hover:bg-white/12'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-                {dateMode === 'flex' ? (
-                  <>
-                    <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                              Partire dal
-                            </p>
-                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
-                              <CalendarIcon className="h-4 w-4 text-accent" />
-                              {format(windowFrom, 'd MMM yyyy', { locale: it })}
-                            </p>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 rounded-xl" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={windowFrom}
-                            onSelect={(d) => {
-                              if (!d) return;
-                              setWindowFrom(d);
-                              if (windowTo < d) setWindowTo(addDays(d, 60));
-                              setCombo(null);
-                            }}
-                            disabled={{ before: new Date() }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                              Tornare entro
-                            </p>
-                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
-                              <CalendarIcon className="h-4 w-4 text-accent" />
-                              {format(windowTo, 'd MMM yyyy', { locale: it })}
-                            </p>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 rounded-xl" align="end">
-                          <Calendar
-                            mode="single"
-                            selected={windowTo}
-                            defaultMonth={windowFrom}
-                            onSelect={(d) => {
-                              if (!d) return;
-                              setWindowTo(d);
-                              setCombo(null);
-                            }}
-                            disabled={{ before: addDays(windowFrom, maxDays - 1) }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                        Quanti giorni
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              {destDurations.map((n) => (
+                <GlassChoiceCard
+                  key={n}
+                  kicker="Durata"
+                  title={`${n} giorni`}
+                  body={catalogDest?.vibe ?? 'Itinerario curato'}
+                  active={(draft.durationDays ?? maxDays) === n}
+                  onClick={() => applyDuration(n)}
+                />
+              ))}
+            </div>
+
+            {dateMode === 'flex' ? (
+              <>
+                <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
+                  <label className="px-4 py-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                      Da
+                    </p>
+                    <select
+                      className="mt-1.5 w-full bg-transparent font-display text-lg font-semibold text-white outline-none"
+                      value={monthKey(fromMonth)}
+                      onChange={(e) => {
+                        const [y, m] = e.target.value.split('-').map(Number);
+                        const next = new Date(y, m, 1);
+                        setFromMonth(next);
+                        if (toMonth < next) setToMonth(next);
+                        setCombo(null);
+                      }}
+                    >
+                      {monthOptions(new Date()).map((d) => (
+                        <option key={monthKey(d)} value={monthKey(d)} className="text-slate-900">
+                          {monthLabel(d)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="px-4 py-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                      A
+                    </p>
+                    <select
+                      className="mt-1.5 w-full bg-transparent font-display text-lg font-semibold text-white outline-none"
+                      value={monthKey(toMonth)}
+                      onChange={(e) => {
+                        const [y, m] = e.target.value.split('-').map(Number);
+                        const next = new Date(y, m, 1);
+                        setToMonth(next < fromMonth ? fromMonth : next);
+                        setCombo(null);
+                      }}
+                    >
+                      {monthOptions(fromMonth).map((d) => (
+                        <option key={monthKey(d)} value={monthKey(d)} className="text-slate-900">
+                          {monthLabel(d)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {comboLoading ? (
+                  <p className="flex items-center justify-center gap-2 text-sm text-white/70">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cerchiamo i voli da tutta Italia…
+                  </p>
+                ) : null}
+                {combo ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                        Combinazione · {combo.maxDays} giorni
                       </p>
-                      <div className="flex items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3 py-2.5">
-                          <button
-                            type="button"
-                            aria-label="Meno giorni"
-                            onClick={() => {
-                              setMaxDays((n) => Math.max(5, n - 1));
-                              setCombo(null);
-                            }}
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl font-semibold text-white hover:bg-white/16"
-                          >
-                            −
-                          </button>
-                          <div className="min-w-0 flex-1 text-center">
-                            <input
-                              type="number"
-                              min={5}
-                              max={21}
-                              inputMode="numeric"
-                              value={maxDays}
-                              onChange={(e) => {
-                                const raw = Number(e.target.value);
-                                if (!Number.isFinite(raw)) return;
-                                setMaxDays(Math.min(21, Math.max(1, Math.round(raw))));
-                                setCombo(null);
-                              }}
-                              onBlur={() => setMaxDays((n) => Math.min(21, Math.max(5, n)))}
-                              className="w-full bg-transparent text-center font-display text-2xl font-semibold tabular-nums text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            />
-                            <p className="text-xs text-white/45">giorni · da 5 a 21</p>
-                          </div>
-                          <button
-                            type="button"
-                            aria-label="Più giorni"
-                            onClick={() => {
-                              setMaxDays((n) => Math.min(21, n + 1));
-                              setCombo(null);
-                            }}
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl font-semibold text-white hover:bg-white/16"
-                          >
-                            +
-                          </button>
-                      </div>
-                      <div className="grid gap-2.5 sm:grid-cols-3">
-                        {FLEX_DURATION_CARDS.map((card) => (
-                          <GlassChoiceCard
-                            key={card.n}
-                            kicker={card.kicker}
-                            title={card.title}
-                            body={card.body}
-                            active={maxDays === card.n}
-                            onClick={() => {
-                              setMaxDays(card.n);
-                              setCombo(null);
-                            }}
-                          />
-                        ))}
-                      </div>
+                      <p className="mt-1 font-display text-xl font-semibold text-white">
+                        {format(parseISO(combo.startDate), 'd MMM', { locale: it })} –{' '}
+                        {format(parseISO(combo.endDate), 'd MMM yyyy', { locale: it })}
+                      </p>
                     </div>
+                    <ul className="space-y-3">
+                      {combo.legs.map((leg) => {
+                        const saved = (draft.bookablePicks ?? []).some(
+                          (p) => p.id === `flight-${leg.id}` || p.offerId === leg.offerId
+                        );
+                        return (
+                          <li key={leg.id}>
+                            <FlightOfferCard
+                              dark
+                              offer={{
+                                offerId: leg.offerId,
+                                price: leg.price,
+                                currency: leg.currency,
+                                origin: leg.origin,
+                                destination: leg.destination,
+                                airline: leg.airline,
+                                airlineCode: leg.airlineCode,
+                                airlineLogo: leg.airlineLogo,
+                                flightNumber: leg.flightNumber,
+                                departureAt: leg.departureAt,
+                                arrivalAt: leg.arrivalAt,
+                                durationMinutes: leg.durationMinutes,
+                                stops: leg.stops,
+                                layovers: leg.layovers,
+                                cabinClass: leg.cabinClass,
+                              }}
+                              kicker={`${legKindLabel(leg.kind)} · ${format(parseISO(leg.date), 'd MMM', { locale: it })}`}
+                              saved={saved}
+                              actionLabel={saved ? 'Salvata' : 'Salva per il gruppo'}
+                              onAction={() => saveComboLeg(leg)}
+                            />
+                          </li>
+                        );
+                      })}
+                    </ul>
                     <Button
                       type="button"
-                      onClick={() => void findCheapCombo()}
-                      disabled={comboLoading}
+                      onClick={() => saveAllComboLegs(combo)}
                       className="h-12 w-full rounded-full bg-accent text-base font-semibold text-[#0b1220] hover:bg-accent/90"
                     >
-                      {comboLoading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Search className="mr-2 h-4 w-4" />
-                      )}
-                      {comboLoading ? 'Cerchiamo voli sostenibili…' : 'Trova la combo più conveniente'}
+                      Salva queste date
                     </Button>
-                    {combo ? (
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
-                            Stima equilibrata · {combo.maxDays} giorni
-                          </p>
-                          <p className="mt-1 font-display text-xl font-semibold text-white">
-                            {format(parseISO(combo.startDate), 'd MMM', { locale: it })} –{' '}
-                            {format(parseISO(combo.endDate), 'd MMM yyyy', { locale: it })}
-                          </p>
-                          <p className="mt-1 text-xs text-white/55">
-                            Prezzo basso senza scali da 10 ore. Ogni tratta resta un contratto a sé.
-                          </p>
-                        </div>
-                        <ul className="space-y-3">
-                          {combo.legs.map((leg) => {
-                            const saved = (draft.bookablePicks ?? []).some(
-                              (p) => p.id === `flight-${leg.id}` || p.offerId === leg.offerId
-                            );
-                            return (
-                              <li key={leg.id}>
-                                <FlightOfferCard
-                                  dark
-                                  offer={{
-                                    offerId: leg.offerId,
-                                    price: leg.price,
-                                    currency: leg.currency,
-                                    origin: leg.origin,
-                                    destination: leg.destination,
-                                    airline: leg.airline,
-                                    airlineCode: leg.airlineCode,
-                                    airlineLogo: leg.airlineLogo,
-                                    flightNumber: leg.flightNumber,
-                                    departureAt: leg.departureAt,
-                                    arrivalAt: leg.arrivalAt,
-                                    durationMinutes: leg.durationMinutes,
-                                    stops: leg.stops,
-                                    layovers: leg.layovers,
-                                    cabinClass: leg.cabinClass,
-                                  }}
-                                  kicker={`${legKindLabel(leg.kind)} · ${format(parseISO(leg.date), 'd MMM', { locale: it })}`}
-                                  saved={saved}
-                                  actionLabel={saved ? 'Salvata' : 'Salva per il gruppo'}
-                                  onAction={() => saveComboLeg(leg)}
-                                />
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        <div className="flex items-baseline justify-between rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3 text-sm">
-                          <span className="text-white/50">Somma stime (non un pacchetto)</span>
-                          <span className="font-display text-2xl font-semibold text-white">
-                            {combo.total.toLocaleString('it-IT')} {combo.currency}
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={() => saveAllComboLegs(combo)}
-                          className="h-12 w-full rounded-full bg-accent text-base font-semibold text-[#0b1220] hover:bg-accent/90"
-                        >
-                          {combo.legs.every((leg) =>
-                            (draft.bookablePicks ?? []).some(
-                              (p) => p.id === `flight-${leg.id}` || p.offerId === leg.offerId
-                            )
-                          )
-                            ? 'Combo salvata'
-                            : 'Salva tutta la combo'}
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="text-center text-xs text-white/50">
-                        Proviamo alcune partenze nella finestra. Ogni volo resta una tratta a sé.
-                      </p>
-                    )}
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                              Partenza
-                            </p>
-                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
-                              <CalendarIcon className="h-4 w-4 text-accent" />
-                              {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                            </p>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 rounded-xl" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={startDate}
-                            onSelect={(d) => {
-                              setStartDate(d);
-                              if (d) {
-                                const ret = addDays(d, maxDays - 1);
-                                setEndDate(ret);
-                                onChange({
-                                  startDate: format(d, 'yyyy-MM-dd'),
-                                  endDate: format(ret, 'yyyy-MM-dd'),
-                                });
-                              }
-                            }}
-                            disabled={{ before: new Date() }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            disabled={!startDate}
-                            className="px-4 py-3.5 text-left hover:bg-white/[0.06] disabled:opacity-50"
-                          >
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                              Ritorno
-                            </p>
-                            <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
-                              <CalendarIcon className="h-4 w-4 text-accent" />
-                              {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                            </p>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 rounded-xl" align="end">
-                          <Calendar
-                            mode="single"
-                            selected={endDate}
-                            defaultMonth={startDate}
-                            onSelect={(d) => {
-                              setEndDate(d);
-                              if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
-                            }}
-                            disabled={{ before: startDate || new Date() }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="grid gap-2.5 sm:grid-cols-3">
-                      {FLEX_DURATION_CARDS.map((card) => (
-                        <GlassChoiceCard
-                          key={card.n}
-                          kicker={card.kicker}
-                          title={card.title}
-                          body={card.body}
-                          active={activeDuration === card.n}
-                          onClick={() => applyDuration(card.n)}
-                        />
-                      ))}
-                    </div>
-                  </>
+                  <p className="text-center text-xs text-white/50">
+                    Avanti cerca i voli A/R da tutta Italia sulla durata scelta.
+                  </p>
                 )}
               </>
             ) : (
-              <>
-            <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="px-4 py-3.5 text-left transition hover:bg-white/[0.06]"
-                  >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                      Partenza
-                    </p>
-                    <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
-                      <CalendarIcon className="h-4 w-4 text-accent" />
-                      {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                    </p>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 rounded-xl" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(d) => {
-                      setStartDate(d);
-                      if (d) {
-                        const span = activeDuration && activeDuration > 1 ? activeDuration : 7;
+              <div className="grid grid-cols-2 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="px-4 py-3.5 text-left hover:bg-white/[0.06]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                        Partenza
+                      </p>
+                      <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                        <CalendarIcon className="h-4 w-4 text-accent" />
+                        {startDate ? format(startDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
+                      </p>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 rounded-xl" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(d) => {
+                        if (!d) return;
+                        const span = draft.durationDays ?? maxDays;
                         const ret = addDays(d, span - 1);
+                        setStartDate(d);
                         setEndDate(ret);
                         onChange({
                           startDate: format(d, 'yyyy-MM-dd'),
                           endDate: format(ret, 'yyyy-MM-dd'),
+                          durationDays: span,
                         });
-                      }
-                    }}
-                    disabled={{ before: new Date() }}
-                    classNames={{ today: 'rounded-md text-foreground' }}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    disabled={!startDate}
-                    className="px-4 py-3.5 text-left transition hover:bg-white/[0.06] disabled:opacity-50"
-                  >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                      Ritorno
-                    </p>
-                    <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
-                      <CalendarIcon className="h-4 w-4 text-accent" />
-                      {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : 'Scegli'}
-                    </p>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 rounded-xl" align="end">
-                  <Calendar
-                    key={startDate?.toISOString() ?? 'no-start'}
-                    mode="single"
-                    selected={endDate}
-                    defaultMonth={startDate}
-                    onSelect={(d) => {
-                      setEndDate(d);
-                      if (d) onChange({ endDate: format(d, 'yyyy-MM-dd') });
-                    }}
-                    disabled={{ before: startDate || new Date() }}
-                    classNames={{ today: 'rounded-md text-foreground' }}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {!fixedDurationDays
-                ? DURATION_CARDS.map((card) => (
-                    <GlassChoiceCard
-                      key={card.n}
-                      kicker={card.kicker}
-                      title={card.title}
-                      body={card.body}
-                      active={activeDuration === card.n}
-                      onClick={() => applyDuration(card.n)}
+                      }}
+                      disabled={{ before: new Date() }}
                     />
-                  ))
-                : (
-                    <p className="col-span-full rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3 text-center text-sm text-white/75">
-                      Durata fissa del template: {fixedDurationDays} giorni
-                    </p>
-                  )}
-            </div>
-            <p className="text-center text-xs text-white/75">
-              Accorciando i giorni togliamo le tappe secondarie. Arrivo e partenza restano.
-            </p>
-              </>
+                  </PopoverContent>
+                </Popover>
+                <div className="px-4 py-3.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                    Ritorno
+                  </p>
+                  <p className="mt-1.5 flex items-center gap-2 font-display text-lg font-semibold text-white">
+                    <CalendarIcon className="h-4 w-4 text-accent" />
+                    {endDate ? format(endDate, 'd MMM yyyy', { locale: it }) : '—'}
+                  </p>
+                </div>
+              </div>
             )}
           </motion.div>
         ) : null}
-
         {phase === 'order' ? (
           <motion.div key="order" {...phaseMotion} className="space-y-5">
             <p className="text-center text-sm text-white/65">
@@ -1362,14 +1158,6 @@ export function ComposerLandingStep({
                 Viaggio solo tuo. Potrai comunque aprirlo alla crew più avanti.
               </p>
             )}
-
-            <div className="composer-panel rounded-3xl p-5">
-              <p className="text-sm font-medium text-white/80">Regola hotel (default A)</p>
-              <p className="mt-1 text-xs text-white/55">
-                Stesso hotel suggerito dal template. Ognuno prenota la propria camera col fornitore.
-              </p>
-              <input type="hidden" value={draft.hotelRule ?? 'A'} readOnly />
-            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -1392,13 +1180,24 @@ export function ComposerLandingStep({
             type="button"
             size="lg"
             className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
-            disabled={!canNext}
-            onClick={goNext}
+            disabled={!canNext || comboLoading}
+            onClick={() => {
+              if (phase === 'when' && dateMode === 'flex' && !combo) {
+                void findCheapCombo();
+                return;
+              }
+              goNext();
+            }}
           >
           {phase === 'who' ? (
             <>
               <BookOpen className="mr-2 h-5 w-5" />
-              Inizia a comporre
+              Anteprima
+            </>
+          ) : phase === 'when' && dateMode === 'flex' && !combo ? (
+            <>
+              {comboLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              Cerca voli
             </>
           ) : phase === 'from' && currentLeg && legIndex < flightLegs.length - 1 ? (
             <>

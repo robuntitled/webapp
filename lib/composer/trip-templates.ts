@@ -1,64 +1,67 @@
 import { addDays, format, parseISO } from 'date-fns';
 import { featuredToMeta } from '@/lib/composer/destinations';
 import { coverForDestination } from '@/lib/composer/destination-covers';
-import { DAY_TEMPLATES } from '@/lib/composer/day-templates';
 import { createBlockId } from '@/lib/composer/blocks';
 import { inferTimeSlotForType } from '@/lib/composer/time-slots';
 import {
   CATALOG_TEMPLATES,
   findCatalogTemplate,
+  type CatalogDay,
   type CatalogTemplate,
 } from '@/lib/catalog/templates';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
-import type { ComposerBlock, ComposerBlockType, ComposerDay, ComposerDraft } from '@/types/composer';
+import type { ComposerBlock, ComposerDay, ComposerDraft } from '@/types/composer';
 
 export type TripTemplate = CatalogTemplate;
 
-/** Template attivi per meta × durata consentita. */
 export const TRIP_TEMPLATES: TripTemplate[] = CATALOG_TEMPLATES;
 
 export function findTripTemplate(id: string): TripTemplate | undefined {
   return findCatalogTemplate(id);
 }
 
-function blockFromDayTemplate(
-  type: ComposerBlockType,
-  title: string,
-  timeSlot: string | undefined,
-  sortOrder: number
-): ComposerBlock {
-  return {
+function blocksFromCatalogDay(day: CatalogDay, index: number, total: number): ComposerBlock[] {
+  const blocks: ComposerBlock[] = [];
+  const slot = day.arrival ? 'afternoon' : day.departure ? 'morning' : inferTimeSlotForType('attraction');
+  blocks.push({
     id: createBlockId(),
-    type,
-    sortOrder,
-    content: { title, timeSlot: timeSlot ?? inferTimeSlotForType(type) },
+    type: 'attraction',
+    sortOrder: 0,
+    content: {
+      title: day.title,
+      note: day.highlights,
+      area: day.area,
+      timeSlot: slot,
+    },
     alternatives: [],
     selectedAlternativeId: null,
-  };
-}
-
-function daysForDuration(durationDays: number): ComposerDay['title'][] {
-  const explore = DAY_TEMPLATES.find((t) => t.id === 'explore');
-  const culture = DAY_TEMPLATES.find((t) => t.id === 'culture');
-  const relax = DAY_TEMPLATES.find((t) => t.id === 'relax');
-  const arrival = DAY_TEMPLATES.find((t) => t.id === 'arrival');
-  const departure = DAY_TEMPLATES.find((t) => t.id === 'departure');
-  const mid = [explore, culture, relax].filter(Boolean);
-  const titles: string[] = [];
-  for (let i = 0; i < durationDays; i++) {
-    if (i === 0) titles.push(arrival?.label ?? 'Arrivo');
-    else if (i === durationDays - 1) titles.push(departure?.label ?? 'Partenza');
-    else titles.push(mid[(i - 1) % mid.length]?.label ?? 'Esplorazione');
+  });
+  if (day.paid) {
+    blocks.push({
+      id: createBlockId(),
+      type: 'activity',
+      sortOrder: 1,
+      content: {
+        title: day.paid,
+        area: day.area,
+        timeSlot: 'afternoon',
+        paidHint: true,
+      },
+      alternatives: [],
+      selectedAlternativeId: null,
+    });
   }
-  return titles;
-}
-
-function blocksForDayIndex(index: number, total: number): ComposerBlock[] {
-  const templateId =
-    index === 0 ? 'arrival' : index === total - 1 ? 'departure' : index % 3 === 1 ? 'explore' : index % 3 === 2 ? 'culture' : 'relax';
-  const template = DAY_TEMPLATES.find((t) => t.id === templateId);
-  if (!template) return [];
-  return template.blocks.map((b, i) => blockFromDayTemplate(b.type, b.title, b.timeSlot, i));
+  if (!day.paid && !day.arrival && !day.departure && index > 0 && index < total - 1) {
+    blocks.push({
+      id: createBlockId(),
+      type: 'free_time',
+      sortOrder: 1,
+      content: { title: day.highlights || 'Tempo libero', timeSlot: 'afternoon' },
+      alternatives: [],
+      selectedAlternativeId: null,
+    });
+  }
+  return blocks;
 }
 
 export function draftFromTripTemplate(
@@ -80,15 +83,30 @@ export function draftFromTripTemplate(
     lng: dest.lng,
     countryCode: dest.countryCode,
   });
-  const days: ComposerDay[] = Array.from({ length: template.durationDays }, (_, index) => ({
+  const catalogDays =
+    template.days.length === template.durationDays
+      ? template.days
+      : Array.from({ length: template.durationDays }, (_, i) => ({
+          day: i + 1,
+          title: i === 0 ? 'Arrivo' : i === template.durationDays - 1 ? 'Partenza' : `Giorno ${i + 1}`,
+          highlights: dest.vibe,
+          area: dest.name,
+          paid: '',
+          arrival: i === 0,
+          departure: i === template.durationDays - 1,
+        }));
+
+  const days: ComposerDay[] = catalogDays.map((day, index) => ({
     dayIndex: index + 1,
     date: format(addDays(start, index), 'yyyy-MM-dd'),
-    title: daysForDuration(template.durationDays)[index] ?? `Giorno ${index + 1}`,
-    blocks: blocksForDayIndex(index, template.durationDays),
+    title: day.title,
+    blocks: blocksFromCatalogDay(day, index, catalogDays.length),
   }));
 
+  const title = dest.name.length >= 12 ? dest.name : `Viaggio in ${dest.name}`;
+
   return {
-    title: template.title,
+    title,
     destination: dest.name,
     destinationMeta: meta,
     destinations: [meta],
@@ -101,5 +119,6 @@ export function draftFromTripTemplate(
     durationDays: template.durationDays,
     hotelRule: 'A',
     planningMode: 'solo',
+    budgetHint: 900,
   };
 }

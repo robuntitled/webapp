@@ -62,26 +62,32 @@ function hotelIsComplete(block: { content: Record<string, unknown> }): boolean {
 export function validatePublishDraft(draft: ComposerDraft): PublishValidationIssue[] {
   const blocks = allBlocks(draft.days);
   const issues: PublishValidationIssue[] = [];
-
-  const flights = blocks.filter((b) => b.type === 'flight');
-  const hotelCheckins = blocks.filter(
-    (b) => b.type === 'hotel' && b.content.hotelPhase !== 'checkout'
+  const templateTrip = Boolean(draft.templateId);
+  const savedFlight = (draft.bookablePicks ?? []).some(
+    (p) => p.kind === 'flight' && p.offerId
   );
 
-  if (flights.length > 0 && !flights.every(flightIsComplete)) {
-    issues.push({
-      code: 'flight-incomplete',
-      message:
-        'Completa i voli nel piano: punto di partenza, orario partenza e orario arrivo.',
-    });
-  }
+  if (!templateTrip) {
+    const flights = blocks.filter((b) => b.type === 'flight');
+    const hotelCheckins = blocks.filter(
+      (b) => b.type === 'hotel' && b.content.hotelPhase !== 'checkout'
+    );
 
-  if (hotelCheckins.length > 0 && !hotelCheckins.every(hotelIsComplete)) {
-    issues.push({
-      code: 'hotel-incomplete',
-      message:
-        'Completa gli hotel: scegli l’hotel dalla ricerca (nome e luogo), con check-in e check-out (es. 14:00 e 11:00).',
-    });
+    if (flights.length > 0 && !flights.every(flightIsComplete) && !savedFlight) {
+      issues.push({
+        code: 'flight-incomplete',
+        message:
+          'Completa i voli nel piano: punto di partenza, orario partenza e orario arrivo.',
+      });
+    }
+
+    if (hotelCheckins.length > 0 && !hotelCheckins.every(hotelIsComplete)) {
+      issues.push({
+        code: 'hotel-incomplete',
+        message:
+          'Completa gli hotel: scegli l’hotel dalla ricerca (nome e luogo), con check-in e check-out (es. 14:00 e 11:00).',
+      });
+    }
   }
 
   issues.push(
@@ -91,7 +97,7 @@ export function validatePublishDraft(draft: ComposerDraft): PublishValidationIss
       startDate: draft.startDate,
       endDate: draft.endDate,
       days: draft.days,
-      budgetOrientativo: draft.budgetHint,
+      budgetOrientativo: draft.budgetHint ?? (templateTrip ? 900 : undefined),
       minParticipants: draft.minParticipants,
       maxParticipants: draft.maxParticipants,
       planningMode: draft.planningMode,

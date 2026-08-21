@@ -4,12 +4,13 @@ export type ComposerWizardStep = 'source' | 'landing' | 'plan' | 'review';
 /** Step legacy salvati in bozze precedenti */
 export type LegacyComposerWizardStep = 'intake' | 'setup';
 
-export const WIZARD_STEPS: ComposerWizardStep[] = ['source', 'landing', 'plan', 'review'];
+export const WIZARD_STEPS: ComposerWizardStep[] = ['source', 'landing', 'review'];
 
 export function normalizeWizardStep(
   step: string | null | undefined
 ): ComposerWizardStep {
-  if (step === 'source' || step === 'plan' || step === 'review' || step === 'landing') {
+  if (step === 'plan') return 'review';
+  if (step === 'source' || step === 'review' || step === 'landing') {
     return step;
   }
   return 'source';
