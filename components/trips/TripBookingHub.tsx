@@ -135,6 +135,7 @@ type TripBookingHubProps = {
   endDate: string;
   adults?: number;
   isAuthenticated: boolean;
+  isParticipant?: boolean;
   bookerEmail?: string;
   bookerName?: string;
   composerItinerary?: ComposerDayRow[] | null;
@@ -149,6 +150,7 @@ export function TripBookingHub({
   endDate,
   adults = 2,
   isAuthenticated,
+  isParticipant = false,
   bookerEmail = '',
   bookerName = '',
   composerItinerary,
@@ -198,6 +200,17 @@ export function TripBookingHub({
 
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
   const activePicks = grouped[tab];
+  const canBookFlights = isAuthenticated && isParticipant;
+  const canBookHotel = canBook && isAuthenticated && isParticipant;
+  const canBookActivities = canBookHotel;
+  const tabAllowsSearch =
+    tab === 'voli' ? canBookFlights : tab === 'hotel' ? canBookHotel : tab === 'attivita' ? canBookActivities : canBook;
+  const pickAllowsCheckout = (pick: ComposerBookablePick) => {
+    if (pick.kind === 'flight') return canBookFlights;
+    if (pick.kind === 'hotel') return canBookHotel;
+    if (pick.kind === 'activity' || pick.kind === 'attraction') return canBookActivities;
+    return canBook;
+  };
 
   return (
     <section id="prenota" className="scroll-mt-24 space-y-4">
@@ -284,7 +297,10 @@ export function TripBookingHub({
                 startDate={startDate}
                 endDate={endDate}
                 adults={Math.min(9, Math.max(1, adults))}
-                allowCheckout={canBook && isAuthenticated}
+                tripId={tripId}
+                allowCheckout={activePicks.some(pickAllowsCheckout)}
+                allowFlightCheckout={canBookFlights}
+                allowHotelCheckout={canBookHotel}
                 layout="rail"
               />
             </div>
@@ -294,9 +310,11 @@ export function TripBookingHub({
             </p>
           )}
 
-          {!canBook ? (
+          {!tabAllowsSearch ? (
             <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
-              {lockReason ?? 'Prenoti i servizi solo a gruppo formato.'}
+              {tab === 'voli'
+                ? 'Unisciti al Trip per prenotare il volo. Partenza da tutta Italia verso la meta.'
+                : (lockReason ?? 'Hotel e attività si sbloccano dopo la soglia voli.')}
             </p>
           ) : (
             <details className="rounded-2xl border border-border/50 bg-muted/15 px-4 py-3">

@@ -200,6 +200,7 @@ export function TripComposer({
           ...partial,
           minParticipants: 4,
           maxParticipants: 8,
+          hotelRule: 'A',
           plannerProfile,
         },
         plannerProfile
@@ -208,18 +209,19 @@ export function TripComposer({
     setStep('landing');
   };
 
+  const templatePublish = Boolean(draft.templateId);
+
   const goToCompose = () => {
     if (!draft.startDate || !draft.endDate) return;
-    const duration = Math.max(
-      1,
-      differenceInCalendarDays(parseISO(draft.endDate), parseISO(draft.startDate)) + 1
-    );
+    const duration =
+      draft.durationDays ??
+      Math.max(1, differenceInCalendarDays(parseISO(draft.endDate), parseISO(draft.startDate)) + 1);
     const base =
       draft.days.length > 0 ? draft.days : buildComposerDays(draft.startDate, draft.endDate);
     const remapped = remapComposerDaysToDuration(base, duration, draft.startDate);
     const days = applyPicksToDays(remapped, draft.bookablePicks ?? []);
-    setDraft((prev) => ({ ...prev, days }));
-    setStep('plan');
+    setDraft((prev) => ({ ...prev, days, durationDays: duration }));
+    setStep(templatePublish ? 'review' : 'plan');
   };
 
   const publish = async () => {
@@ -230,7 +232,15 @@ export function TripComposer({
     }
     setPublishing(true);
     try {
-      const payload = { ...draft, plannerProfile, budgetOrientativo: draft.budgetHint };
+      const payload = {
+        ...draft,
+        plannerProfile,
+        budgetOrientativo: draft.budgetHint,
+        hotelRule: draft.hotelRule ?? 'A',
+        templateId: draft.templateId,
+        catalogDestinationId: draft.catalogDestinationId,
+        departureCity: draft.organizerOrigin?.city ?? profileCity ?? 'Italia',
+      };
       const response = await fetch('/api/composer/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -331,13 +341,7 @@ export function TripComposer({
               exit={{ opacity: 0 }}
               className="container mx-auto flex-1 overflow-y-auto px-4 py-8"
             >
-              <ComposerSourceStep
-                onScratch={() => {
-                  setDraft(mergeDraft(EMPTY_DRAFT, { plannerProfile }, plannerProfile));
-                  setStep('landing');
-                }}
-                onTemplate={applyTemplate}
-              />
+              <ComposerSourceStep onTemplate={applyTemplate} />
             </motion.div>
           )}
 
@@ -356,6 +360,8 @@ export function TripComposer({
                 onBack={() => setStep('source')}
                 profileCity={profileCity}
                 profileCountry={profileCountry}
+                fixedDurationDays={draft.durationDays}
+                templateMode={templatePublish}
               />
             </motion.div>
           )}
@@ -398,12 +404,14 @@ export function TripComposer({
         </AnimatePresence>
       </div>
 
-      <ComposerAssistantDock
-        draft={{ ...draft, plannerProfile }}
-        step={step}
-        plannerProfile={plannerProfile}
-        onApplyPatch={applyAssistPatch}
-      />
+      {!templatePublish ? (
+        <ComposerAssistantDock
+          draft={{ ...draft, plannerProfile }}
+          step={step}
+          plannerProfile={plannerProfile}
+          onApplyPatch={applyAssistPatch}
+        />
+      ) : null}
     </div>
   );
 }

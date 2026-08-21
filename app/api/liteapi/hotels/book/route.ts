@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookHotel } from '@/lib/liteapi/hotel-booking';
+import { confirmParticipantHotel, tripAllowsHotelBooking } from '@/lib/data/trip-commitments';
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
@@ -56,7 +57,28 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (parsed.data.tripId) {
+      const allowed = await tripAllowsHotelBooking(parsed.data.tripId);
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error:
+              'Hotel disponibile solo dopo la soglia voli. Conferma prima il tuo volo sul Trip.',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const result = await bookHotel(parsed.data);
+    if (parsed.data.tripId) {
+      await confirmParticipantHotel({
+        tripId: parsed.data.tripId,
+        userId: session.user.id,
+        matchesGroup: true,
+        bookingRef: result.bookingRef,
+      }).catch((err) => console.error('[hotels/book] confirm hotel', err));
+    }
     return NextResponse.json({
       ok: true,
       bookingId: result.bookingId,

@@ -27,8 +27,11 @@ type SavedTripBookablesProps = {
   startDate?: string;
   endDate?: string;
   adults?: number;
+  tripId?: string;
   variant?: 'dark' | 'light';
   allowCheckout?: boolean;
+  allowFlightCheckout?: boolean;
+  allowHotelCheckout?: boolean;
   layout?: 'list' | 'cards' | 'rail';
 };
 
@@ -37,8 +40,11 @@ export function SavedTripBookables({
   startDate,
   endDate,
   adults = 1,
+  tripId,
   variant = 'light',
   allowCheckout = true,
+  allowFlightCheckout,
+  allowHotelCheckout,
   layout = 'list',
 }: SavedTripBookablesProps) {
   const router = useRouter();
@@ -47,6 +53,14 @@ export function SavedTripBookables({
   const bookable = picks.filter(isCheckoutBookable);
   const places = picks.filter((p) => !isCheckoutBookable(p));
   const dark = variant === 'dark';
+  const flightCheckout = allowFlightCheckout ?? allowCheckout;
+  const hotelCheckout = allowHotelCheckout ?? allowCheckout;
+
+  const canCheckoutPick = (pick: ComposerBookablePick) => {
+    if (pick.kind === 'flight') return flightCheckout;
+    if (pick.kind === 'hotel') return hotelCheckout;
+    return allowCheckout;
+  };
 
   const book = (pick: ComposerBookablePick) => {
     if (pick.kind === 'flight' && pick.offerId && pick.origin && pick.destinationIata && pick.price != null) {
@@ -54,6 +68,7 @@ export function SavedTripBookables({
         offerId: pick.offerId,
         price: pick.price,
         currency: pick.currency ?? 'EUR',
+        tripId,
         outbound: {
           origin: pick.origin,
           destination: pick.destinationIata,
@@ -130,7 +145,7 @@ export function SavedTripBookables({
       >
         {picks.map((pick) => {
           const Icon = kindIcon(pick.kind);
-          const canBookThis = allowCheckout && isCheckoutBookable(pick);
+          const canBookThis = canCheckoutPick(pick) && isCheckoutBookable(pick);
           return (
             <li
               key={pick.id}
@@ -213,7 +228,7 @@ export function SavedTripBookables({
                       {pick.price != null ? ` · ${pick.price} ${pick.currency ?? 'EUR'}` : ''}
                     </p>
                   </div>
-                  {allowCheckout ? (
+                  {canCheckoutPick(pick) ? (
                     <Button
                       type="button"
                       size="sm"

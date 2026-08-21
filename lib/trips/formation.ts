@@ -1,5 +1,11 @@
 import { differenceInCalendarDays, differenceInMinutes, subDays } from 'date-fns';
 import { getParticipantCount, getSpotsLeft } from '@/lib/trips/display';
+import {
+  confirmedFlightCount,
+  flightsToMinimum,
+  isFlightThresholdMet,
+  usesFlightThreshold,
+} from '@/lib/trips/commitment';
 import { groupThresholdCopy } from '@/lib/legal/compliance-copy';
 import type { TripWithRelations } from '@/types/trip';
 
@@ -11,11 +17,13 @@ export function tripMinSeats(trip: Pick<TripWithRelations, 'minParticipants'>): 
 }
 
 export function isGroupSolid(trip: TripWithRelations): boolean {
-  const count = trip.participantCount ?? getParticipantCount(trip.trip_participants);
-  return count >= tripMinSeats(trip);
+  return isFlightThresholdMet(trip);
 }
 
 export function seatsToMinimum(trip: TripWithRelations): number {
+  if (usesFlightThreshold(trip)) {
+    return flightsToMinimum(trip);
+  }
   const count = trip.participantCount ?? getParticipantCount(trip.trip_participants);
   return Math.max(0, tripMinSeats(trip) - count);
 }
@@ -45,13 +53,26 @@ export function isClosingSoon(trip: TripWithRelations, now = new Date()): boolea
 
 export function formationLabel(trip: TripWithRelations): string {
   if (isGroupSolid(trip)) return 'Gruppo formato';
+  if (usesFlightThreshold(trip)) {
+    const confirmed = confirmedFlightCount(trip);
+    const min = tripMinSeats(trip);
+    const missing = flightsToMinimum(trip);
+    if (missing === 1) {
+      return `In formazione · voli ${confirmed}/${min} · manca 1 volo`;
+    }
+    return `In formazione · voli ${confirmed}/${min} · mancano ${missing} voli`;
+  }
   const missing = seatsToMinimum(trip);
   if (missing === 1) return 'In formazione · manca 1 posto al minimo';
   return `In formazione · mancano ${missing} posti al minimo`;
 }
 
 export function departureGuaranteeCopy(trip: TripWithRelations): string {
-  return groupThresholdCopy(tripMinSeats(trip), isGroupSolid(trip));
+  return groupThresholdCopy(
+    tripMinSeats(trip),
+    isGroupSolid(trip),
+    usesFlightThreshold(trip) ? 'flights' : 'participants'
+  );
 }
 
 export function lastJoinAt(trip: TripWithRelations): Date | null {

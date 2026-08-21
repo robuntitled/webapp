@@ -51,7 +51,14 @@ export const POST_THRESHOLD_CHECKLIST = [
  * Non è un'obbligazione di viaggio di NomadLink (evita il profilo da organizzatore,
  * art. 41 D.Lgs. 62/2018): è una condizione sociale del gruppo.
  */
-export function groupThresholdCopy(minSeats: number, solid: boolean): string {
+export function groupThresholdCopy(
+  minSeats: number,
+  solid: boolean,
+  mode: 'participants' | 'flights' = 'participants'
+): string {
   if (solid) return 'Soglia del gruppo raggiunta: avete il minimo per partire.';
+  if (mode === 'flights') {
+    return `Hotel e attività si sbloccano quando ${minSeats} partecipanti hanno confermato il volo (posto confermato).`;
+  }
   return `Il viaggio parte se il gruppo raggiunge la soglia di ${minSeats} partecipanti.`;
 }

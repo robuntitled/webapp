@@ -29,6 +29,8 @@
     "db:cashback": "node scripts/db-exec.mjs supabase/migrations/026_cashback_ledger.sql",
     "db:points": "node scripts/db-exec.mjs supabase/migrations/027_nomad_points.sql",
     "db:loyalty": "node scripts/db-exec.mjs supabase/migrations/028_points_loyalty.sql",
+    "db:catalog": "node scripts/db-exec.mjs supabase/migrations/030_destinations_templates.sql",
+    "db:commitments": "node scripts/db-exec.mjs supabase/migrations/031_trip_commitments.sql",
     "gen:covers": "node scripts/gen-destination-covers.mjs",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",

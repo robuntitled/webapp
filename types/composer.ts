@@ -136,6 +136,11 @@ export type ComposerDraft = {
   plannerProfile?: PlannerProfile;
   /** Budget indicativo opzionale (landing) */
   budgetHint?: number;
+  /** Regola hotel Excel: A default, B condivise, C un booker */
+  hotelRule?: 'A' | 'B' | 'C';
+  templateId?: string;
+  catalogDestinationId?: string;
+  durationDays?: number;
   days: ComposerDay[];
   /** Copertina scelta da Pexels in pubblicazione */
   imageUrl?: string;

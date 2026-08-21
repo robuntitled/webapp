@@ -47,6 +47,11 @@ export const publishComposerSchema = z
     imageUrl: z.string().url().optional().or(z.literal('')),
     days: z.array(daySchema).min(1),
     budgetOrientativo: z.number().int().min(80).max(8000).optional(),
+    hotelRule: z.enum(['A', 'B', 'C']).optional(),
+    templateId: z.string().max(80).optional(),
+    catalogDestinationId: z.string().max(80).optional(),
+    durationDays: z.number().int().min(3).max(30).optional(),
+    departureCity: z.string().max(120).optional(),
   })
   .refine((d) => new Date(d.endDate) >= new Date(d.startDate), {
     message: 'La data di fine deve essere dopo l\'inizio',

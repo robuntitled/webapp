@@ -370,7 +370,12 @@ export function FlightCheckoutClient({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ prebookId, transactionId, amountEur }),
+          body: JSON.stringify({
+          prebookId,
+          transactionId,
+          amountEur,
+          tripId: loadFlightCheckoutDraft()?.tripId,
+        }),
         });
         const data = (await res.json()) as {
           error?: string;

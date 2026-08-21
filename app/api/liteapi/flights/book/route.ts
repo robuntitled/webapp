@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookFlight } from '@/lib/liteapi/flight-booking';
+import { confirmParticipantFlight } from '@/lib/data/trip-commitments';
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
@@ -38,6 +39,13 @@ export async function POST(request: Request) {
 
   try {
     const result = await bookFlight(parsed.data);
+    if (parsed.data.tripId) {
+      await confirmParticipantFlight({
+        tripId: parsed.data.tripId,
+        userId: session.user.id,
+        bookingRef: result.bookingRef,
+      }).catch((err) => console.error('[flights/book] confirm seat', err));
+    }
     return NextResponse.json({
       ok: true,
       bookingId: result.bookingId,

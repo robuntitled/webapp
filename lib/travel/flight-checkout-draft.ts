@@ -24,6 +24,7 @@ export type FlightCheckoutDraft = {
   returnLeg: FlightLegDraft | null;
   adults: number;
   tripType: 'oneway' | 'roundtrip';
+  tripId?: string;
   createdAt: number;
   /** @deprecated flat fields kept for older sessions */
   origin?: string;

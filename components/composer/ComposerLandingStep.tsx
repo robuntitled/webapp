@@ -223,6 +223,10 @@ type ComposerLandingStepProps = {
   onBack?: () => void;
   profileCity?: string | null;
   profileCountry?: string | null;
+  /** Durata fissa dal template (niente cambio 5/7/10). */
+  fixedDurationDays?: number;
+  /** Percorso template: date flessibili anche su meta singola. */
+  templateMode?: boolean;
 };
 
 export function ComposerLandingStep({
@@ -232,6 +236,8 @@ export function ComposerLandingStep({
   onBack,
   profileCity: _profileCity,
   profileCountry: _profileCountry,
+  fixedDurationDays,
+  templateMode = false,
 }: ComposerLandingStepProps) {
   const [plannerOpen, setPlannerOpen] = useState(false);
   const titleTouched = useRef(false);
@@ -242,7 +248,7 @@ export function ComposerLandingStep({
   const [legIndex, setLegIndex] = useState(0);
   const [visitPicks, setVisitPicks] = useState<string[]>([]);
   const [dateMode, setDateMode] = useState<'flex' | 'exact'>('exact');
-  const [maxDays, setMaxDays] = useState(10);
+  const [maxDays, setMaxDays] = useState(fixedDurationDays ?? 10);
   const [windowFrom, setWindowFrom] = useState<Date>(() => addDays(new Date(), 21));
   const [windowTo, setWindowTo] = useState<Date>(() => addDays(new Date(), 81));
   const [combo, setCombo] = useState<CheapComboView | null>(null);
@@ -252,12 +258,26 @@ export function ComposerLandingStep({
   const [startDate, setStartDate] = useState<Date | undefined>(defaultStart);
   const [endDate, setEndDate] = useState<Date | undefined>(() => {
     if (draft.endDate) return new Date(draft.endDate);
-    return addDays(defaultStart, 7);
+    return addDays(defaultStart, fixedDurationDays ? fixedDurationDays - 1 : 7);
   });
+
+  useEffect(() => {
+    if (!fixedDurationDays || !startDate) return;
+    setMaxDays(fixedDurationDays);
+    const end = addDays(startDate, fixedDurationDays - 1);
+    setEndDate(end);
+    const startIso = format(startDate, 'yyyy-MM-dd');
+    onChange({
+      durationDays: fixedDurationDays,
+      endDate: format(end, 'yyyy-MM-dd'),
+      days: remapComposerDaysToDuration(draft.days, fixedDurationDays, startIso),
+    });
+  }, [fixedDurationDays, startDate]);
 
   const selectedDestinations = getDraftDestinations(draft);
   const destCover = draft.destination ? coverForDestination(draft.destination) : null;
   const orderNeeded = needsVisitOrder(selectedDestinations);
+  const flexDatesEnabled = orderNeeded || templateMode;
   const extraSteps = (startedWithDest.current ? 0 : 1) + (orderNeeded ? 1 : 0);
   const microTotal = 3 + extraSteps;
 
@@ -282,7 +302,7 @@ export function ComposerLandingStep({
       : phase === 'order'
         ? visitPicks.length === selectedDestinations.length && selectedDestinations.length >= 2
         : phase === 'when'
-          ? orderNeeded && dateMode === 'flex'
+          ? flexDatesEnabled && dateMode === 'flex'
             ? Boolean(combo)
             : Boolean(startDate && endDate && endDate >= startDate)
           : phase === 'from'
@@ -694,7 +714,7 @@ export function ComposerLandingStep({
 
         {phase === 'when' ? (
           <motion.div key="when" {...phaseMotion} className="space-y-6">
-            {orderNeeded ? (
+            {flexDatesEnabled ? (
               <>
                 <div className="flex justify-center gap-2">
                   {(
@@ -1080,16 +1100,22 @@ export function ComposerLandingStep({
             </div>
 
             <div className="grid gap-2.5 sm:grid-cols-3">
-              {DURATION_CARDS.map((card) => (
-                <GlassChoiceCard
-                  key={card.n}
-                  kicker={card.kicker}
-                  title={card.title}
-                  body={card.body}
-                  active={activeDuration === card.n}
-                  onClick={() => applyDuration(card.n)}
-                />
-              ))}
+              {!fixedDurationDays
+                ? DURATION_CARDS.map((card) => (
+                    <GlassChoiceCard
+                      key={card.n}
+                      kicker={card.kicker}
+                      title={card.title}
+                      body={card.body}
+                      active={activeDuration === card.n}
+                      onClick={() => applyDuration(card.n)}
+                    />
+                  ))
+                : (
+                    <p className="col-span-full rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3 text-center text-sm text-white/75">
+                      Durata fissa del template: {fixedDurationDays} giorni
+                    </p>
+                  )}
             </div>
             <p className="text-center text-xs text-white/75">
               Accorciando i giorni togliamo le tappe secondarie. Arrivo e partenza restano.
@@ -1328,7 +1354,7 @@ export function ComposerLandingStep({
                   </label>
                 </div>
                 <p className="mt-3 text-xs text-white/55">
-                  Il viaggio parte al raggiungimento del minimo posti.
+                  Soglia = voli confermati, non solo iscritti. Non è garanzia di partenza NomadLink.
                 </p>
               </div>
             ) : (
@@ -1336,6 +1362,14 @@ export function ComposerLandingStep({
                 Viaggio solo tuo. Potrai comunque aprirlo alla crew più avanti.
               </p>
             )}
+
+            <div className="composer-panel rounded-3xl p-5">
+              <p className="text-sm font-medium text-white/80">Regola hotel (default A)</p>
+              <p className="mt-1 text-xs text-white/55">
+                Stesso hotel suggerito dal template. Ognuno prenota la propria camera col fornitore.
+              </p>
+              <input type="hidden" value={draft.hotelRule ?? 'A'} readOnly />
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>

@@ -6,7 +6,6 @@ import { searchFlightRates, type LiteApiFlightOffer } from '@/lib/liteapi/flight
 import { pickSensibleOffer, flightValueScore } from '@/lib/liteapi/flight-value';
 import type { FlightLayover } from '@/lib/liteapi/flight-layovers';
 import { resolveFlightDestinationIata } from '@/lib/travel/iata';
-import { defaultOriginIata } from '@/lib/travel/origin-iata';
 import type { DestinationMeta } from '@/types/composer';
 
 export type CheapComboLeg = {
@@ -43,13 +42,9 @@ export type CheapComboResult = {
   legs: CheapComboLeg[];
 };
 
-function italyOrigin(): string {
-  return defaultOriginIata() || 'FCO';
-}
-
 function originForHop(fromLabel: string): { originIata?: string; originCountry?: string } {
   if (fromLabel.trim().toLowerCase() === 'italia') {
-    return { originIata: italyOrigin() };
+    return { originCountry: 'IT' };
   }
   const iata = resolveFlightDestinationIata(fromLabel);
   return iata ? { originIata: iata } : { originIata: fromLabel };
@@ -70,7 +65,7 @@ async function cheapestOnDate(
     tripType: 'oneway',
     adults: 1,
     currency: 'EUR',
-    maxOrigins: 1,
+    maxOrigins: origin.originCountry === 'IT' ? 3 : 1,
   });
   return pickSensibleOffer(offers);
 }
@@ -93,12 +88,116 @@ async function mapPool<T, R>(
   return out;
 }
 
+async function findCheapestSingleDestination(params: {
+  destinations: DestinationMeta[];
+  maxDays: number;
+  windowStart: string;
+  windowEnd: string;
+}): Promise<CheapComboResult | null> {
+  const dest = params.destinations[0];
+  if (!dest) return null;
+  const maxDays = Math.min(21, Math.max(5, Math.round(params.maxDays)));
+  const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 5);
+  if (starts.length === 0) return null;
+
+  const destinationIata = resolveFlightDestinationIata(dest.label) ?? dest.label;
+
+  type Sample = { start: string; end: string; offer: LiteApiFlightOffer | null };
+
+  const samples = await mapPool(starts, 2, async (start) => {
+    const end = format(addDays(parseISO(start), maxDays - 1), 'yyyy-MM-dd');
+    const { offers } = await searchFlightRates({
+      originCountry: 'IT',
+      destination: destinationIata,
+      departureDate: start,
+      returnDate: end,
+      tripType: 'roundtrip',
+      adults: 1,
+      currency: 'EUR',
+      maxOrigins: 3,
+    });
+    return { start, end, offer: pickSensibleOffer(offers) } satisfies Sample;
+  });
+
+  const complete = samples.filter((s) => s.offer) as Array<{
+    start: string;
+    end: string;
+    offer: LiteApiFlightOffer;
+  }>;
+  if (complete.length === 0) return null;
+
+  complete.sort((a, b) => flightValueScore(a.offer) - flightValueScore(b.offer));
+  const best = complete[0];
+  const offer = best.offer;
+
+  const outboundLeg: CheapComboLeg = {
+    id: 'outbound',
+    from: 'Italia',
+    to: dest.label,
+    date: best.start,
+    kind: 'outbound',
+    dayIndex: 1,
+    price: offer.price,
+    currency: offer.currency,
+    stops: offer.stops,
+    layovers: offer.layovers,
+    origin: offer.origin,
+    destination: offer.destination,
+    offerId: offer.offerId,
+    airline: offer.airline,
+    airlineCode: offer.airlineCode,
+    airlineLogo: offer.airlineLogo,
+    cabinClass: offer.cabinClass,
+    departureAt: offer.departureAt,
+    arrivalAt: offer.arrivalAt,
+    durationMinutes: offer.durationMinutes,
+    flightNumber: offer.flightNumber,
+  };
+
+  const returnLeg: CheapComboLeg = {
+    id: 'return',
+    from: dest.label,
+    to: 'Italia',
+    date: best.end,
+    kind: 'return',
+    dayIndex: maxDays,
+    price: 0,
+    currency: offer.currency,
+    stops: offer.stops,
+    layovers: offer.layovers,
+    origin: offer.destination,
+    destination: offer.origin,
+    offerId: offer.offerId,
+    airline: offer.airline,
+    airlineCode: offer.airlineCode,
+    airlineLogo: offer.airlineLogo,
+    cabinClass: offer.cabinClass,
+    departureAt: offer.returnDepartureAt ?? null,
+    arrivalAt: offer.returnArrivalAt ?? null,
+    durationMinutes: offer.returnDurationMinutes ?? null,
+    flightNumber: offer.returnFlightNumber ?? null,
+  };
+
+  return {
+    startDate: best.start,
+    endDate: best.end,
+    maxDays,
+    total: offer.price,
+    currency: offer.currency,
+    samplesTried: starts.length,
+    legs: [outboundLeg, returnLeg],
+  };
+}
+
 export async function findCheapestCombo(params: {
   destinations: DestinationMeta[];
   maxDays: number;
   windowStart: string;
   windowEnd: string;
 }): Promise<CheapComboResult | null> {
+  if (params.destinations.length === 1) {
+    return findCheapestSingleDestination(params);
+  }
   const maxDays = Math.min(21, Math.max(5, Math.round(params.maxDays)));
   const starts = sampleStartDates(params.windowStart, params.windowEnd, maxDays, 4);
   if (starts.length === 0 || params.destinations.length < 2) return null;

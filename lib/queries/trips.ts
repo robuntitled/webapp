@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getParticipantCount } from '@/lib/trips/display';
 import type { TripParticipantRole } from '@/lib/trips/roles';
-import type { TripWithRelations } from '@/types/trip';
+import type { TripParticipant, TripWithRelations } from '@/types/trip';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { polishTripTitle } from '@/lib/composer/title-generator';
 
@@ -118,6 +118,10 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
       maxAge: max_age,
       planningMode: planning_mode,
       composerVersion: composer_version,
+      templateId: template_id,
+      destinationId: destination_id,
+      durationDays: duration_days,
+      hotelRule: hotel_rule,
       imageUrl: image_url,
       status,
       creator_id,
@@ -127,17 +131,65 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
     .eq('id', tripId)
     .single();
 
+  if (error && /template_id|destination_id|duration_days|hotel_rule/i.test(error.message)) {
+    const retry = await supabase
+      .from('trips')
+      .select(
+        `
+        id, title, destination, description, price,
+        startDate: start_date,
+        endDate: end_date,
+        minParticipants: min_participants,
+        maxParticipants: max_participants,
+        minAge: min_age,
+        maxAge: max_age,
+        planningMode: planning_mode,
+        composerVersion: composer_version,
+        imageUrl: image_url,
+        status,
+        creator_id,
+        creator:users!trips_creator_id_fkey(id, username, first_name, last_name, image)
+      `
+      )
+      .eq('id', tripId)
+      .single();
+    if (retry.error || !retry.data) {
+      console.error('Errore nel recuperare il viaggio:', retry.error ?? error);
+      return null;
+    }
+    return loadTripDetail(tripId, retry.data as Record<string, unknown>, userId);
+  }
+
   if (error || !data) {
     console.error('Errore nel recuperare il viaggio:', error);
     return null;
   }
 
+  return loadTripDetail(tripId, data as Record<string, unknown>, userId);
+}
+
+async function loadTripDetail(
+  tripId: string,
+  data: Record<string, unknown>,
+  userId?: string
+): Promise<TripWithRelations | null> {
   // Partecipanti via admin (evita RLS/embed fragili sul client anon)
   let participants: TripWithRelations['trip_participants'] = [];
-  const { data: parts, error: pErr } = await supabaseAdmin
+  let parts: Array<Record<string, unknown>> | null = null;
+  let pErr: { message: string } | null = null;
+  ({ data: parts, error: pErr } = await supabaseAdmin
     .from('trip_participants')
-    .select('user_id, role, joined_at')
-    .eq('trip_id', tripId);
+    .select(
+      'user_id, role, joined_at, seat_status, flight_confirmed_at, flight_booking_ref, hotel_confirmed_at, hotel_matches_group'
+    )
+    .eq('trip_id', tripId));
+
+  if (pErr && /seat_status|flight_confirmed|hotel_confirmed/i.test(pErr.message)) {
+    ({ data: parts, error: pErr } = await supabaseAdmin
+      .from('trip_participants')
+      .select('user_id, role, joined_at')
+      .eq('trip_id', tripId));
+  }
 
   if (pErr) {
     console.error('Errore partecipanti:', pErr.message);
@@ -155,6 +207,11 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
         user_id: p.user_id as string,
         role: p.role as TripParticipantRole | undefined,
         joinedAt: (p.joined_at as string | null) ?? null,
+        seatStatus: (p.seat_status as TripParticipant['seatStatus']) ?? undefined,
+        flightConfirmedAt: (p.flight_confirmed_at as string | null) ?? null,
+        flightBookingRef: (p.flight_booking_ref as string | null) ?? null,
+        hotelConfirmedAt: (p.hotel_confirmed_at as string | null) ?? null,
+        hotelMatchesGroup: (p.hotel_matches_group as boolean | null) ?? null,
         user: u
           ? {
               id: u.id as string,
@@ -175,6 +232,7 @@ export async function getTripById(supabase: SupabaseClient, tripId: string, user
   const raw = {
     ...(data as unknown as RawTrip),
     trip_participants: participants,
+    confirmedFlightCount: participants.filter((p) => p.seatStatus === 'confirmed').length,
   };
   const [trip] = mapTripsWithFavorites([raw], userId, { favoriteIds });
   return trip ?? null;

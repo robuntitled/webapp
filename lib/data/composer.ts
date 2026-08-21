@@ -44,6 +44,11 @@ export async function publishComposerTrip(
     composer_version: 1,
     status: 'forming' as const,
     creator_id: userId,
+    destination_id: input.catalogDestinationId ?? null,
+    template_id: input.templateId ?? null,
+    duration_days: input.durationDays ?? null,
+    hotel_rule: input.hotelRule ?? 'A',
+    departure_city: input.departureCity ?? null,
   };
 
   let { data: trip, error: tripError } = await supabaseAdmin
@@ -51,6 +56,22 @@ export async function publishComposerTrip(
     .insert(tripRow)
     .select('id')
     .single();
+
+  if (tripError && /destination_id|template_id|duration_days|hotel_rule|departure_city/i.test(tripError.message)) {
+    const {
+      destination_id: _d,
+      template_id: _t,
+      duration_days: _dur,
+      hotel_rule: _h,
+      departure_city: _c,
+      ...legacy
+    } = tripRow;
+    ({ data: trip, error: tripError } = await supabaseAdmin
+      .from('trips')
+      .insert(legacy)
+      .select('id')
+      .single());
+  }
 
   if (tripError && /status/i.test(tripError.message)) {
     ({ data: trip, error: tripError } = await supabaseAdmin

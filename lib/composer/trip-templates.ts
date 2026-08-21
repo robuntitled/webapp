@@ -1,44 +1,24 @@
 import { addDays, format, parseISO } from 'date-fns';
-import { COMPOSER_DESTINATIONS, featuredToMeta } from '@/lib/composer/destinations';
+import { featuredToMeta } from '@/lib/composer/destinations';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { DAY_TEMPLATES } from '@/lib/composer/day-templates';
 import { createBlockId } from '@/lib/composer/blocks';
 import { inferTimeSlotForType } from '@/lib/composer/time-slots';
+import {
+  CATALOG_TEMPLATES,
+  findCatalogTemplate,
+  type CatalogTemplate,
+} from '@/lib/catalog/templates';
+import { findCatalogDestination } from '@/lib/catalog/destinations';
 import type { ComposerBlock, ComposerBlockType, ComposerDay, ComposerDraft } from '@/types/composer';
 
-export type TripTemplate = {
-  id: string;
-  destinationId: string;
-  durationDays: 5 | 7 | 10;
-  label: string;
-  vibe: string;
-  emoji: string;
-  gradient: string;
-  region: string;
-  featured?: boolean;
-};
+export type TripTemplate = CatalogTemplate;
 
-const DURATION_CYCLE: Array<5 | 7 | 10> = [7, 5, 10, 7, 5];
-
-export const TRIP_TEMPLATES: TripTemplate[] = COMPOSER_DESTINATIONS.slice(0, 10).map(
-  (dest, index) => {
-    const durationDays = DURATION_CYCLE[index % DURATION_CYCLE.length] ?? 7;
-    return {
-      id: `${dest.id}-${durationDays}`,
-      destinationId: dest.id,
-      durationDays,
-      label: `${dest.label} · ${durationDays} giorni`,
-      vibe: dest.vibe,
-      emoji: dest.emoji,
-      gradient: dest.gradient,
-      region: dest.region,
-      featured: index < 4,
-    };
-  }
-);
+/** Template attivi per meta × durata consentita. */
+export const TRIP_TEMPLATES: TripTemplate[] = CATALOG_TEMPLATES;
 
 export function findTripTemplate(id: string): TripTemplate | undefined {
-  return TRIP_TEMPLATES.find((t) => t.id === id);
+  return findCatalogTemplate(id);
 }
 
 function blockFromDayTemplate(
@@ -85,11 +65,21 @@ export function draftFromTripTemplate(
   template: TripTemplate,
   startDate: string
 ): Partial<ComposerDraft> {
-  const dest = COMPOSER_DESTINATIONS.find((d) => d.id === template.destinationId);
+  const dest = findCatalogDestination(template.destinationId);
   if (!dest) return {};
   const start = parseISO(startDate);
   const end = addDays(start, template.durationDays - 1);
-  const meta = featuredToMeta(dest);
+  const meta = featuredToMeta({
+    id: dest.id,
+    label: dest.name,
+    emoji: dest.emoji,
+    region: dest.continent,
+    vibe: dest.vibe,
+    gradient: dest.gradient,
+    lat: dest.lat,
+    lng: dest.lng,
+    countryCode: dest.countryCode,
+  });
   const days: ComposerDay[] = Array.from({ length: template.durationDays }, (_, index) => ({
     dayIndex: index + 1,
     date: format(addDays(start, index), 'yyyy-MM-dd'),
@@ -98,16 +88,18 @@ export function draftFromTripTemplate(
   }));
 
   return {
-    title: `${dest.label} in ${template.durationDays} giorni`,
-    destination: dest.label,
+    title: template.title,
+    destination: dest.name,
     destinationMeta: meta,
     destinations: [meta],
-    startDate,
+    startDate: format(start, 'yyyy-MM-dd'),
     endDate: format(end, 'yyyy-MM-dd'),
-    planningMode: 'solo',
-    minParticipants: 4,
-    maxParticipants: 8,
+    imageUrl: coverForDestination(dest.id),
     days,
-    imageUrl: coverForDestination(template.destinationId),
+    templateId: template.id,
+    catalogDestinationId: dest.id,
+    durationDays: template.durationDays,
+    hotelRule: 'A',
+    planningMode: 'solo',
   };
 }

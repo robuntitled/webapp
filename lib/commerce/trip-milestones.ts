@@ -126,7 +126,7 @@ export async function grantExploreBoostForUser(
 export async function syncTripFormationMilestones(tripId: string): Promise<void> {
   const { data: trip, error } = await supabaseAdmin
     .from('trips')
-    .select('id, creator_id, min_participants, start_date, end_date, title, destination, description, price, max_participants, planning_mode')
+    .select('id, creator_id, min_participants, template_id, start_date, end_date, title, destination, description, price, max_participants, planning_mode')
     .eq('id', tripId)
     .maybeSingle();
 
@@ -136,7 +136,17 @@ export async function syncTripFormationMilestones(tripId: string): Promise<void>
   }
 
   const min = tripMinSeats({ minParticipants: Number(trip.min_participants) || 0 });
-  const count = await participantCount(tripId);
+  let count = await participantCount(tripId);
+
+  if (trip.template_id) {
+    const { count: flightCount, error: flightErr } = await supabaseAdmin
+      .from('trip_participants')
+      .select('*', { count: 'exact', head: true })
+      .eq('trip_id', tripId)
+      .eq('seat_status', 'confirmed');
+    if (!flightErr) count = flightCount ?? 0;
+  }
+
   const founding = await isFoundingCreator(trip.creator_id as string);
 
   if (count >= min) {

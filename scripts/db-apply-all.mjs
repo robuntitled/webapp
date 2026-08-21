@@ -34,6 +34,8 @@ const MIGRATIONS = [
   'supabase/migrations/026_cashback_ledger.sql',
   'supabase/migrations/027_nomad_points.sql',
   'supabase/migrations/028_points_loyalty.sql',
+  'supabase/migrations/030_destinations_templates.sql',
+  'supabase/migrations/031_trip_commitments.sql',
 ];
 
 await withPgClient(async (client) => {

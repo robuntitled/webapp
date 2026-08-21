@@ -31,6 +31,7 @@ import {
 import { getPublicProfile } from '@/lib/data/public-profile';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { PostThresholdChecklist } from '@/components/trips/PostThresholdChecklist';
+import { TripCommitmentPanel } from '@/components/trips/TripCommitmentPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,6 +132,8 @@ export default async function TripDetailPage({ params }: PageProps) {
       </div>
 
       <div className="container mx-auto max-w-5xl px-4 py-8 -mt-5 relative z-10 space-y-8">
+        <TripCommitmentPanel trip={trip} />
+
         <TripBookingHub
           tripId={trip.id}
           destination={trip.destination}
@@ -146,15 +149,12 @@ export default async function TripDetailPage({ params }: PageProps) {
           }
           adults={Math.min(9, Math.max(1, trip.maxParticipants ?? 2))}
           isAuthenticated={Boolean(session?.user?.id)}
+          isParticipant={isParticipant || isCreator}
           bookerEmail={session?.user?.email ?? ''}
           bookerName={session?.user?.name ?? ''}
           composerItinerary={composerItinerary}
           canBook={canBook}
-          lockReason={
-            canBook
-              ? undefined
-              : 'Prenoti voli, hotel e attrazioni solo quando il gruppo è solido.'
-          }
+          lockReason={canBook ? undefined : lockReason}
         />
 
         {canBook ? <PostThresholdChecklist tripId={trip.id} /> : null}
