@@ -5,12 +5,38 @@ import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookFlight } from '@/lib/liteapi/flight-booking';
 import { confirmParticipantFlight } from '@/lib/data/trip-commitments';
+import { savePracticeFlightBooking } from '@/lib/data/practices';
+import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
+import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+
+const legSchema = z.object({
+  origin: z.string(),
+  destination: z.string(),
+  airline: z.string().nullable(),
+  airlineCode: z.string().nullable().optional(),
+  airlineLogo: z.string().nullable().optional(),
+  departureAt: z.string().nullable().optional(),
+  arrivalAt: z.string().nullable().optional(),
+  durationMinutes: z.number().nullable().optional(),
+  stops: z.number().nullable().optional(),
+  flightNumber: z.string().nullable().optional(),
+  cabinClass: z.string().nullable().optional(),
+});
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
   transactionId: z.string().trim().min(4).max(200),
   tripId: z.string().uuid().optional(),
+  practiceId: z.string().uuid().optional(),
   amountEur: z.number().finite().nonnegative().max(1_000_000).optional(),
+  snapshot: z
+    .object({
+      offerId: z.string().optional(),
+      currency: z.string().optional(),
+      outbound: legSchema,
+      returnLeg: legSchema.nullable().optional(),
+    })
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -45,6 +71,42 @@ export async function POST(request: Request) {
         userId: session.user.id,
         bookingRef: result.bookingRef,
       }).catch((err) => console.error('[flights/book] confirm seat', err));
+    }
+    if (parsed.data.practiceId && parsed.data.snapshot) {
+      const recap = {
+        bookingId: result.bookingId,
+        bookingRef: result.bookingRef,
+        status: result.status,
+        offerId: parsed.data.snapshot.offerId ?? null,
+        amountEur: parsed.data.amountEur ?? null,
+        currency: parsed.data.snapshot.currency ?? 'EUR',
+        outbound: parsed.data.snapshot.outbound,
+        returnLeg: parsed.data.snapshot.returnLeg ?? null,
+        bookedAt: new Date().toISOString(),
+      };
+      const saved = await savePracticeFlightBooking({
+        practiceId: parsed.data.practiceId,
+        userId: session.user.id,
+        recap,
+      }).catch((err) => {
+        console.error('[flights/book] practice', err);
+        return null;
+      });
+      const email = session.user.email;
+      if (email && saved && 'practice' in saved) {
+        const dest =
+          findItineraryTemplate(saved.practice.template_id)?.destination_name ?? 'il tuo viaggio';
+        void sendBookingConfirmationEmail({
+          to: email,
+          kind: 'flight',
+          destinationName: dest,
+          practiceId: saved.practice.id,
+          bookingRef: result.bookingRef,
+          amountEur: recap.amountEur,
+          currency: recap.currency,
+          flight: recap,
+        });
+      }
     }
     return NextResponse.json({
       ok: true,

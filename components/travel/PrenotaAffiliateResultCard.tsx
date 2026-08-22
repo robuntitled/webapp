@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { ExternalLink, Landmark, Star } from 'lucide-react';
+import { saveLastActivityDraft } from '@/lib/travel/activity-draft';
 
 export type PrenotaAffiliateCardItem = {
   id: string;
@@ -110,6 +111,15 @@ export function PrenotaAffiliateResultCard({ item }: { item: PrenotaAffiliateCar
               href={item.bookingUrl}
               target="_blank"
               rel="noopener noreferrer sponsored"
+              onClick={() =>
+                saveLastActivityDraft({
+                  title: item.title,
+                  provider: 'viator',
+                  bookingUrl: item.bookingUrl,
+                  amountEur: item.priceFrom ?? null,
+                  currency: item.currency ?? 'EUR',
+                })
+              }
               className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
             >
               {cta}

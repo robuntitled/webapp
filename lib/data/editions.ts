@@ -5,7 +5,10 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { OFFICIAL_EDITION_SEEDS, findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { datesForDuration } from '@/lib/itineraries/dates';
 import { createPractice, findPracticeForEdition } from '@/lib/data/practices';
+import type { EditionMemberCard } from '@/lib/itineraries/bookings';
 import type { EditionStatus, EditionType } from '@/lib/itineraries/types';
+
+export type { EditionMemberCard };
 
 export type EditionRow = {
   id: string;
@@ -143,6 +146,34 @@ export async function createPrivateEdition(input: {
     practice: practice.practice,
     invitePath: `/invito/${token}`,
   };
+}
+
+export async function listEditionMembers(editionId: string): Promise<EditionMemberCard[]> {
+  if (editionId.startsWith('seed-')) return [];
+  const { data, error } = await supabaseAdmin
+    .from('edition_members')
+    .select('user_id, status')
+    .eq('edition_id', editionId)
+    .neq('status', 'left')
+    .order('joined_at', { ascending: true });
+  if (error || !data?.length) return [];
+  const ids = data.map((r) => r.user_id as string);
+  const { data: users } = await supabaseAdmin
+    .from('users')
+    .select('id, first_name, last_name, username, image')
+    .in('id', ids);
+  const map = new Map((users ?? []).map((u) => [u.id as string, u]));
+  return data.map((row) => {
+    const u = map.get(row.user_id as string);
+    return {
+      userId: row.user_id as string,
+      firstName: (u?.first_name as string | null) ?? null,
+      lastName: (u?.last_name as string | null) ?? null,
+      username: (u?.username as string | null) ?? null,
+      image: (u?.image as string | null) ?? null,
+      status: row.status as EditionMemberCard['status'],
+    };
+  });
 }
 
 export async function joinEdition(input: { userId: string; editionId: string }) {

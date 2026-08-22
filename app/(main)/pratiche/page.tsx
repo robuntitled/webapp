@@ -6,6 +6,7 @@ import { SlideshowWash } from '@/components/brand/SlideshowWash';
 import { listUserPractices } from '@/lib/data/practices';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
+import { BookingRecap } from '@/components/itineraries/BookingRecap';
 import { uniqueCover } from '@/lib/composer/destination-covers';
 
 export const dynamic = 'force-dynamic';
@@ -65,6 +66,9 @@ export default async function PratichePage() {
                         <p className="mt-1 text-sm text-white/80">
                           {formatItDate(p.date_from)} – {formatItDate(p.date_to)}
                         </p>
+                        <div className="mt-2">
+                          <BookingRecap practice={p} compact />
+                        </div>
                       </div>
                     </div>
                   </Link>

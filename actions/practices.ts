@@ -11,6 +11,8 @@ import {
   confirmPracticeFlight,
   confirmPracticeHotel,
 } from '@/lib/data/practices';
+import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
+import type { ActivityBookingRecap } from '@/lib/itineraries/bookings';
 import type { TravelMode } from '@/lib/itineraries/types';
 
 function requireUser() {
@@ -82,10 +84,31 @@ export async function confirmHotelAction(practiceId: string) {
   return { ok: true as const };
 }
 
-export async function confirmActivityAction(practiceId: string) {
-  const userId = await requireUser();
-  const result = await confirmPracticeActivity(practiceId, userId);
+export async function confirmActivityAction(
+  practiceId: string,
+  recap?: Omit<ActivityBookingRecap, 'bookedAt'>
+) {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/');
+  const bookedAt = new Date().toISOString();
+  const full = recap ? { ...recap, bookedAt } : undefined;
+  const result = await confirmPracticeActivity(practiceId, session.user.id, full);
   if ('error' in result) return result;
+  if (full && session.user.email && 'practice' in result && result.practice) {
+    const dest =
+      findItineraryTemplate(result.practice.template_id)?.destination_name ?? 'il tuo viaggio';
+    void sendBookingConfirmationEmail({
+      to: session.user.email,
+      kind: 'activity',
+      destinationName: dest,
+      practiceId,
+      bookingRef: full.bookingRef,
+      amountEur: full.amountEur,
+      currency: full.currency,
+      activity: full,
+    });
+  }
   revalidatePath(`/pratica/${practiceId}`);
+  revalidatePath('/pratiche');
   return { ok: true as const };
 }

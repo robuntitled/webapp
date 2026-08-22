@@ -23,6 +23,7 @@ export type HotelOfferDraft = {
   checkout: string;
   adults: number;
   childrenAges?: number[];
+  practiceId?: string;
   savedAt: number;
 };
 

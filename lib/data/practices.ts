@@ -2,10 +2,17 @@ import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import {
+  flightFingerprint,
+  type ActivityBookingRecap,
+  type EditionPeerFlight,
+  type FlightBookingRecap,
+  type HotelBookingRecap,
+} from '@/lib/itineraries/bookings';
 import { datesForDuration } from '@/lib/itineraries/dates';
 import type { PracticeRow, PracticeStatus, TravelMode } from '@/lib/itineraries/types';
 
-export type { PracticeRow };
+export type { EditionPeerFlight, PracticeRow };
 
 function missing(error: { code?: string; message?: string } | null) {
   return (
@@ -125,22 +132,142 @@ export async function confirmPracticeHotel(practiceId: string, userId: string) {
   return { ok: true };
 }
 
-export async function confirmPracticeActivity(practiceId: string, userId: string) {
+export async function confirmPracticeActivity(
+  practiceId: string,
+  userId: string,
+  recap?: ActivityBookingRecap
+) {
   const current = await getPractice(practiceId, userId);
   if (!current) return { error: 'Pratica non trovata.' };
   if (current.mode === 'group' && current.status === 'draft') {
     return { error: 'In gruppo le attività si sbloccano dopo il volo confermato.' };
   }
+  const next = recap ? [...(current.activity_bookings ?? []), recap] : current.activity_bookings;
   const { error } = await supabaseAdmin
     .from('practices')
     .update({
       activity_confirmed_at: new Date().toISOString(),
       status: current.hotel_confirmed_at ? 'ready' : 'preparing',
+      ...(recap ? { activity_bookings: next } : {}),
     })
     .eq('id', practiceId)
     .eq('user_id', userId);
-  if (error) return { error: error.message };
-  return { ok: true };
+  if (error) {
+    if (missing(error) && recap) {
+      return confirmPracticeActivity(practiceId, userId);
+    }
+    return { error: error.message };
+  }
+  return { ok: true as const, practice: current, recap };
+}
+
+export async function savePracticeFlightBooking(input: {
+  practiceId: string;
+  userId: string;
+  recap: FlightBookingRecap;
+}): Promise<{ practice: PracticeRow } | { error: string }> {
+  const current = await getPractice(input.practiceId, input.userId);
+  if (!current) return { error: 'Pratica non trovata.' };
+  const { data, error } = await supabaseAdmin
+    .from('practices')
+    .update({
+      status: 'confirmed',
+      flight_confirmed_at: input.recap.bookedAt,
+      flight_booking: input.recap,
+    })
+    .eq('id', input.practiceId)
+    .eq('user_id', input.userId)
+    .select('*')
+    .single();
+  if (error || !data) {
+    if (missing(error)) return confirmPracticeFlight(input.practiceId, input.userId);
+    return { error: error?.message ?? 'Salvataggio volo fallito.' };
+  }
+  const practice = data as PracticeRow;
+  if (practice.edition_id) {
+    await supabaseAdmin
+      .from('edition_members')
+      .update({ status: 'confirmed' })
+      .eq('edition_id', practice.edition_id)
+      .eq('user_id', input.userId);
+    await maybeFormEdition(practice.edition_id);
+  }
+  return { practice };
+}
+
+export async function savePracticeHotelBooking(input: {
+  practiceId: string;
+  userId: string;
+  recap: HotelBookingRecap;
+}): Promise<{ practice: PracticeRow } | { error: string }> {
+  const current = await getPractice(input.practiceId, input.userId);
+  if (!current) return { error: 'Pratica non trovata.' };
+  if (current.mode === 'group' && current.status === 'draft') {
+    return { error: 'In gruppo l’hotel si sblocca dopo il volo confermato.' };
+  }
+  const nextStatus: PracticeStatus =
+    current.flight_confirmed_at || current.status === 'confirmed' ? 'preparing' : current.status;
+  const hotels = [...(current.hotel_bookings ?? []), input.recap];
+  const { data, error } = await supabaseAdmin
+    .from('practices')
+    .update({
+      hotel_confirmed_at: input.recap.bookedAt,
+      hotel_bookings: hotels,
+      status: current.activity_confirmed_at ? 'ready' : nextStatus,
+    })
+    .eq('id', input.practiceId)
+    .eq('user_id', input.userId)
+    .select('*')
+    .single();
+  if (error || !data) {
+    if (missing(error)) {
+      const fallback = await confirmPracticeHotel(input.practiceId, input.userId);
+      if (fallback && 'error' in fallback && fallback.error) {
+        return { error: fallback.error };
+      }
+      return { practice: current };
+    }
+    return { error: error?.message ?? 'Salvataggio hotel fallito.' };
+  }
+  return { practice: data as PracticeRow };
+}
+
+export async function listEditionPeerFlights(
+  editionId: string,
+  excludeUserId: string
+): Promise<EditionPeerFlight[]> {
+  const { data, error } = await supabaseAdmin
+    .from('practices')
+    .select('user_id, flight_booking')
+    .eq('edition_id', editionId)
+    .not('flight_booking', 'is', null)
+    .neq('user_id', excludeUserId);
+  if (error || !data?.length) return [];
+
+  const userIds = [...new Set(data.map((r) => r.user_id as string))];
+  const { data: users } = await supabaseAdmin
+    .from('users')
+    .select('id, first_name')
+    .in('id', userIds);
+  const names = new Map((users ?? []).map((u) => [u.id as string, u.first_name as string | null]));
+
+  const grouped = new Map<string, EditionPeerFlight>();
+  for (const row of data) {
+    const recap = row.flight_booking as FlightBookingRecap | null;
+    if (!recap?.outbound) continue;
+    const fingerprint = flightFingerprint(recap);
+    const existing = grouped.get(fingerprint);
+    const booker = {
+      userId: row.user_id as string,
+      firstName: names.get(row.user_id as string) ?? null,
+    };
+    if (existing) {
+      existing.bookers.push(booker);
+    } else {
+      grouped.set(fingerprint, { fingerprint, recap, bookers: [booker] });
+    }
+  }
+  return [...grouped.values()];
 }
 
 async function maybeFormEdition(editionId: string) {

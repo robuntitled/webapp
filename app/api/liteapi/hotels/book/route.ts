@@ -5,6 +5,9 @@ import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookHotel } from '@/lib/liteapi/hotel-booking';
 import { confirmParticipantHotel, tripAllowsHotelBooking } from '@/lib/data/trip-commitments';
+import { savePracticeHotelBooking } from '@/lib/data/practices';
+import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
+import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
@@ -26,7 +29,19 @@ const schema = z.object({
     .min(1)
     .max(9),
   tripId: z.string().uuid().optional(),
+  practiceId: z.string().uuid().optional(),
   amountEur: z.number().finite().nonnegative().max(1_000_000).optional(),
+  snapshot: z
+    .object({
+      hotelName: z.string(),
+      city: z.string().nullable().optional(),
+      address: z.string().nullable().optional(),
+      roomName: z.string().nullable().optional(),
+      checkin: z.string().nullable().optional(),
+      checkout: z.string().nullable().optional(),
+      currency: z.string().optional(),
+    })
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -78,6 +93,44 @@ export async function POST(request: Request) {
         matchesGroup: true,
         bookingRef: result.bookingRef,
       }).catch((err) => console.error('[hotels/book] confirm hotel', err));
+    }
+    if (parsed.data.practiceId && parsed.data.snapshot) {
+      const recap = {
+        bookingId: result.bookingId,
+        bookingRef: result.bookingRef,
+        hotelName: parsed.data.snapshot.hotelName,
+        city: parsed.data.snapshot.city ?? null,
+        address: parsed.data.snapshot.address ?? null,
+        roomName: parsed.data.snapshot.roomName ?? null,
+        checkin: parsed.data.snapshot.checkin ?? null,
+        checkout: parsed.data.snapshot.checkout ?? null,
+        amountEur: parsed.data.amountEur ?? null,
+        currency: parsed.data.snapshot.currency ?? 'EUR',
+        bookedAt: new Date().toISOString(),
+      };
+      const saved = await savePracticeHotelBooking({
+        practiceId: parsed.data.practiceId,
+        userId: session.user.id,
+        recap,
+      }).catch((err) => {
+        console.error('[hotels/book] practice', err);
+        return null;
+      });
+      const email = session.user.email;
+      if (email && saved && 'practice' in saved) {
+        const dest =
+          findItineraryTemplate(saved.practice.template_id)?.destination_name ?? 'il tuo viaggio';
+        void sendBookingConfirmationEmail({
+          to: email,
+          kind: 'hotel',
+          destinationName: dest,
+          practiceId: saved.practice.id,
+          bookingRef: result.bookingRef,
+          amountEur: recap.amountEur,
+          currency: recap.currency,
+          hotel: recap,
+        });
+      }
     }
     return NextResponse.json({
       ok: true,

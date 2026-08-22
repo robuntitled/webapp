@@ -17,7 +17,7 @@ export async function Navbar() {
     <AppHeader>
       <div className="container mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-5">
         <Link
-          href={session?.user ? '/dashboard' : '/'}
+          href="/destinazioni"
           className="flex items-center gap-2.5 group"
         >
           <Image

@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { SlideshowWash } from '@/components/brand/SlideshowWash';
-import { JoinEditionButton } from '@/components/itineraries/JoinEditionButton';
+import { Button } from '@/components/ui/button';
 import { listOfficialEditions } from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
@@ -58,17 +58,11 @@ export default async function PartenzeIndexPage() {
                     <p className="text-xs font-medium text-white/70">
                       {ed.confirmed_count ?? 0}/{ed.min_confirmed} partecipanti confermati
                     </p>
-                    <div className="flex flex-wrap items-center gap-3">
-                      {tpl ? (
-                        <Link
-                          href={`/itinerario/${tpl.destination_slug}?d=${tpl.duration_days}`}
-                          className="text-sm font-semibold text-accent"
-                        >
-                          Vedi piano
-                        </Link>
-                      ) : null}
-                      {ed.id.startsWith('seed-') ? null : <JoinEditionButton editionId={ed.id} />}
-                    </div>
+                    {ed.id.startsWith('seed-') ? null : (
+                      <Button asChild className="rounded-full">
+                        <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
+                      </Button>
+                    )}
                   </div>
                 </li>
               );

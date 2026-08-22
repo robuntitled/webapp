@@ -68,6 +68,9 @@ export type PracticeRow = {
   flight_confirmed_at: string | null;
   hotel_confirmed_at: string | null;
   activity_confirmed_at: string | null;
+  flight_booking?: import('./bookings').FlightBookingRecap | null;
+  hotel_bookings?: import('./bookings').HotelBookingRecap[] | null;
+  activity_bookings?: import('./bookings').ActivityBookingRecap[] | null;
 };
 
 export type EditionType = 'official' | 'private';

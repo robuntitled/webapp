@@ -25,6 +25,7 @@ export type FlightCheckoutDraft = {
   adults: number;
   tripType: 'oneway' | 'roundtrip';
   tripId?: string;
+  practiceId?: string;
   createdAt: number;
   /** @deprecated flat fields kept for older sessions */
   origin?: string;

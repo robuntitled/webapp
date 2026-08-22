@@ -293,6 +293,7 @@ export function FlightCheckoutClient({
       try {
         const amountEur =
           loadFlightPaymentPending()?.price ?? loadFlightCheckoutDraft()?.price ?? 0;
+        const draft = loadFlightCheckoutDraft();
         const res = await fetch('/api/liteapi/flights/book', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -301,7 +302,16 @@ export function FlightCheckoutClient({
           prebookId,
           transactionId,
           amountEur,
-          tripId: loadFlightCheckoutDraft()?.tripId,
+          tripId: draft?.tripId,
+          practiceId: draft?.practiceId,
+          snapshot: draft
+            ? {
+                offerId: draft.offerId,
+                currency: draft.currency,
+                outbound: draft.outbound,
+                returnLeg: draft.returnLeg,
+              }
+            : undefined,
         }),
         });
         const data = (await res.json()) as {

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { auth } from '@/auth';
 import { SlideshowWash } from '@/components/brand/SlideshowWash';
+import { BookingRecap } from '@/components/itineraries/BookingRecap';
 import { PracticeBookingHub } from '@/components/itineraries/PracticeBookingHub';
 import { getPractice } from '@/lib/data/practices';
 import { getEdition } from '@/lib/data/editions';
@@ -52,6 +53,7 @@ export default async function PraticaPage({ params }: PageProps) {
             viaggio.
           </p>
         </header>
+        <BookingRecap practice={practice} />
         {edition?.invite_token ? (
           <p className="rounded-2xl bg-[#161d2b] p-4 text-sm text-white/80">
             Invito amici:{' '}

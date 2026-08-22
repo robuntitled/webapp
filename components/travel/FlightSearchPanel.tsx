@@ -157,6 +157,7 @@ type FlightSearchPanelProps = {
   onOfferSelect?: (offer: FlightOfferView) => void;
   selectedOfferId?: string | null;
   selectLabel?: string;
+  practiceId?: string;
 };
 
 type FlightFormCache = {
@@ -216,6 +217,7 @@ export function FlightSearchPanel({
   onOfferSelect,
   selectedOfferId,
   selectLabel,
+  practiceId,
 }: FlightSearchPanelProps) {
   const router = useRouter();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
@@ -998,6 +1000,7 @@ export function FlightSearchPanel({
                           : null,
                       adults,
                       tripType,
+                      practiceId,
                       createdAt: Date.now(),
                     });
                     router.push('/prenota/voli/checkout');

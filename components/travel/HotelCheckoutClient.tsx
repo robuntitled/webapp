@@ -106,6 +106,7 @@ export function HotelCheckoutClient({
           loadHotelPaymentPending()?.price ??
           loadHotelOfferDraft()?.totalAmount ??
           0;
+        const hotelDraft = loadHotelOfferDraft();
         const res = await fetch('/api/liteapi/hotels/book', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -123,6 +124,18 @@ export function HotelCheckoutClient({
               },
             ],
             amountEur,
+            practiceId: hotelDraft?.practiceId,
+            snapshot: hotelDraft
+              ? {
+                  hotelName: hotelDraft.name,
+                  city: hotelDraft.city,
+                  address: hotelDraft.address,
+                  roomName: hotelDraft.roomName,
+                  checkin: hotelDraft.checkin,
+                  checkout: hotelDraft.checkout,
+                  currency: hotelDraft.currency,
+                }
+              : undefined,
           }),
         });
         const data = (await res.json()) as {

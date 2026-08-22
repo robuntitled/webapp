@@ -99,6 +99,7 @@ type LiteApiHotelSearchProps = {
   preferredHotelIds?: string[];
   autoSearch?: boolean;
   hideSearchForm?: boolean;
+  practiceId?: string;
 };
 
 type HotelFormCache = {
@@ -218,6 +219,7 @@ export function LiteApiHotelSearch({
   preferredHotelIds,
   autoSearch = false,
   hideSearchForm = false,
+  practiceId,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
   const hotelDefaults = defaultHotelDates();
@@ -368,6 +370,7 @@ export function LiteApiHotelSearch({
       checkout,
       adults,
       childrenAges: childAges.slice(0, childrenCount),
+      practiceId,
       savedAt: Date.now(),
     });
     router.push('/prenota/hotel/checkout');

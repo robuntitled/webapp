@@ -32,6 +32,7 @@
     "db:catalog": "node scripts/db-exec.mjs supabase/migrations/030_destinations_templates.sql",
     "db:commitments": "node scripts/db-exec.mjs supabase/migrations/031_trip_commitments.sql",
     "db:practices": "node scripts/db-exec.mjs supabase/migrations/032_practices_editions.sql",
+    "db:bookings": "node scripts/db-exec.mjs supabase/migrations/033_practice_bookings.sql",
     "gen:covers": "node scripts/gen-destination-covers.mjs",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",
