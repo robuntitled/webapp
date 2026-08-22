@@ -226,14 +226,19 @@ export function StartTripWizard({
   };
 
   return (
-    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-white">
+    <div
+      className={cn(
+        'composer-shell relative min-h-[calc(100vh-4rem)] bg-white',
+        step === 'dest' ? 'overflow-visible' : 'overflow-hidden'
+      )}
+    >
       {step === 'dest' ? (
-        <section className="relative isolate -mt-16 overflow-visible pt-16">
+        <section className="relative isolate -mt-16 overflow-visible pt-16 pb-[15vh]">
           <div className="absolute inset-0 overflow-hidden">
             <HeroBackground
               images={BRAND_IMAGES.heroes.slideshow}
               overlay="dark"
-              className="z-0"
+              className="!z-0"
               intervalMs={6500}
             />
           </div>
@@ -260,7 +265,7 @@ export function StartTripWizard({
                 : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
             </p>
           </div>
-          <div className="relative z-10 nl-page w-full pb-10 pt-2">
+          <div className="relative z-10 nl-page w-full pb-6 pt-2">
             <CatalogFiltersBar
               value={filters}
               onChange={setFilters}
@@ -279,9 +284,9 @@ export function StartTripWizard({
               }
             />
           </div>
-          {/* Toggle a cavallo tra hero e bianco */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex -translate-y-1/2 justify-center">
-            <div className="pointer-events-auto inline-flex rounded-full border border-slate-200/80 bg-slate-900/90 p-1 shadow-xl backdrop-blur-md">
+          {/* Esattamente a metà del confine foto / bianco */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex translate-y-1/2 justify-center">
+            <div className="pointer-events-auto inline-flex rounded-full border border-white/30 bg-slate-900/90 p-1 shadow-xl backdrop-blur-md">
               <button
                 type="button"
                 onClick={() => {
@@ -321,7 +326,7 @@ export function StartTripWizard({
       <div
         className={cn(
           'relative z-10 nl-page flex w-full flex-col pb-24',
-          step === 'dest' ? 'min-h-0 pt-12' : 'min-h-[calc(100vh-4rem)] pt-6'
+          step === 'dest' ? 'min-h-0 pt-14' : 'min-h-[calc(100vh-4rem)] pt-6'
         )}
       >
         {step !== 'dest' ? (
