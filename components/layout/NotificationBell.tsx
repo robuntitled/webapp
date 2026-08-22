@@ -106,12 +106,12 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative rounded-full text-white hover:bg-white/10 hover:text-white"
+          className="relative rounded-full text-slate-700 hover:bg-slate-100 hover:text-primary"
           aria-label={unread > 0 ? `Notifiche, ${unread} non lette` : 'Notifiche'}
         >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
               {unread > 9 ? '9+' : unread}
             </span>
           )}

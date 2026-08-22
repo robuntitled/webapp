@@ -16,10 +16,7 @@ export async function Navbar() {
   return (
     <AppHeader>
       <div className="mx-auto flex h-16 w-full max-w-4xl items-center justify-between px-4">
-        <Link
-          href="/destinazioni"
-          className="flex items-center gap-2.5 group"
-        >
+        <Link href="/destinazioni" className="group flex items-center gap-2.5">
           <Image
             src="/assets/logo.png"
             alt="NomadLink"
@@ -27,15 +24,15 @@ export async function Navbar() {
             height={36}
             className="rounded-lg transition-transform group-hover:scale-105"
           />
-          <span className="font-display text-xl font-semibold tracking-tight text-white">
+          <span className="font-display text-xl font-semibold tracking-tight text-primary">
             NomadLink
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden items-center gap-1 md:flex">
           <Link
             href="/destinazioni"
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
           >
             Itinerari
           </Link>
@@ -43,13 +40,13 @@ export async function Navbar() {
             <>
               <Link
                 href="/pratiche"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
               >
                 I miei viaggi
               </Link>
               <Link
                 href="/dashboard/bacheca"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
               >
                 Bacheca
               </Link>
@@ -65,28 +62,29 @@ export async function Navbar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-white hover:bg-white/10 hover:text-white"
+                  className="text-accent hover:bg-accent/10 hover:text-accent"
                 >
-                  <Heart className="h-5 w-5 fill-accent text-accent" />
+                  <Heart className="h-5 w-5 fill-accent" />
                 </Button>
               </Link>
               <NotificationBell />
-              <UserNav
-                user={session.user}
-                showCostsDashboard={showCostsDashboard}
-              />
+              <UserNav user={session.user} showCostsDashboard={showCostsDashboard} />
             </>
           ) : (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden items-center gap-2 sm:flex">
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/10 hover:text-white"
+                className="font-semibold text-slate-700 hover:bg-slate-100 hover:text-primary"
               >
                 <Link href="/">Accedi</Link>
               </Button>
-              <Button asChild size="sm" className="bg-accent text-white hover:bg-accent/90">
+              <Button
+                asChild
+                size="sm"
+                className="rounded-full bg-accent font-semibold text-white hover:bg-accent/90"
+              >
                 <Link href="/">Registrati</Link>
               </Button>
             </div>

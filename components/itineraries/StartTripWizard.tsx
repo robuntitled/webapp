@@ -132,6 +132,12 @@ export function StartTripWizard({
     return Object.fromEntries(slugs.map((s, i) => [s, urls[i]]));
   }, [destSections]);
 
+  const durationOptions = useMemo(
+    () =>
+      [...new Set(destinations.flatMap((d) => d.allowedDurations))].sort((a, b) => a - b),
+    [destinations]
+  );
+
   const fridayHints = useMemo(() => {
     const first = nextFriday(startOfDay(new Date()));
     return [0, 1, 2, 3].map((w) => addDays(first, w * 7));
@@ -220,7 +226,7 @@ export function StartTripWizard({
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-24 pt-10">
         <div className="mb-8 space-y-4 text-center">
           {step === 'dest' ? (
-            <div className="inline-flex rounded-full border border-white/15 bg-[#0b1220]/80 p-1">
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => {
@@ -228,10 +234,10 @@ export function StartTripWizard({
                   router.replace('/destinazioni', { scroll: false });
                 }}
                 className={cn(
-                  'rounded-full px-4 py-1.5 text-sm font-medium transition',
+                  'rounded-full px-4 py-1.5 text-sm font-semibold transition',
                   homeView === 'itinerari'
-                    ? 'bg-accent text-[#0b1220]'
-                    : 'text-white/75 hover:text-white'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 Itinerari
@@ -243,10 +249,10 @@ export function StartTripWizard({
                   router.replace('/destinazioni?vista=partenze', { scroll: false });
                 }}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition',
+                  'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition',
                   homeView === 'partenze'
-                    ? 'bg-accent text-[#0b1220]'
-                    : 'text-white/75 hover:text-white'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 <Users className="h-3.5 w-3.5" />
@@ -254,7 +260,7 @@ export function StartTripWizard({
               </button>
             </div>
           ) : (
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#161d2b] px-4 py-1.5 text-sm text-white">
+            <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               Step {idx + 1} di {STEPS.length}
             </p>
@@ -272,14 +278,14 @@ export function StartTripWizard({
               ))}
             </div>
           ) : null}
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
             {showPartenze && 'Partenze già aperte'}
             {!showPartenze && step === 'dest' && 'Scegli la nazione. Poi i giorni.'}
             {step === 'plan' && 'Questo è il piano.'}
             {step === 'who' && 'Come vuoi partire?'}
             {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
           </h1>
-          <p className="mx-auto max-w-xl text-base text-muted-foreground">
+          <p className="mx-auto max-w-xl text-base text-slate-600">
             {showPartenze && 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'}
             {!showPartenze && step === 'dest' && 'Cerca o scegli il continente. Poi i giorni.'}
             {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
@@ -306,23 +312,25 @@ export function StartTripWizard({
                   onChange={setFilters}
                   searchPlaceholder="Cerca nazione, continente o vibe"
                   resultsId="risultati-itinerari"
+                  durationOptions={durationOptions}
                 />
-                <p className="text-center text-xs text-muted-foreground">
+                <p className="text-center text-sm font-medium text-slate-600">
                   {filteredDestinations.length}{' '}
-                  {filteredDestinations.length === 1 ? 'meta' : 'mete'} · filtri e ricerca
-                  aggiornano l’elenco
+                  {filteredDestinations.length === 1 ? 'meta' : 'mete'}
+                  {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
+                  {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
                 </p>
                 {destSections.length === 0 ? (
-                  <p className="rounded-2xl border border-white/10 bg-[#0b1220]/60 px-4 py-8 text-center text-sm text-white/70">
+                  <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 shadow-sm">
                     Nessuna destinazione con questo filtro.
                   </p>
                 ) : (
                   <div id="risultati-itinerari" className="space-y-6">
                     {destSections.map((section) => (
                       <section key={section.continent} className="space-y-3">
-                        <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-foreground">
+                        <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-slate-900">
                           {section.continent}
-                          <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-white/40">
+                          <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-slate-400">
                             {section.items.length}
                           </span>
                         </h2>
@@ -330,7 +338,7 @@ export function StartTripWizard({
                           {section.items.map((dest) => (
                             <article
                               key={dest.slug}
-                              className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1220]/75 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
+                              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary/30 hover:shadow-md"
                             >
                               <div className="relative h-44">
                                 <Image
@@ -340,37 +348,37 @@ export function StartTripWizard({
                                   className="object-cover"
                                   sizes="(max-width: 640px) 100vw, 50vw"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                                <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                                <p className="absolute left-4 top-4 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
                                   {dest.continent ?? section.continent}
                                 </p>
                                 {dest.published === false ? (
-                                  <p className="absolute right-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70 backdrop-blur-sm">
+                                  <p className="absolute right-4 top-4 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
                                     Presto
                                   </p>
                                 ) : dest.published ? (
-                                  <p className="absolute right-4 top-4 rounded-full bg-accent/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0b1220]">
+                                  <p className="absolute right-4 top-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
                                     Aperta
                                   </p>
                                 ) : null}
                                 <div className="absolute bottom-3 left-4 right-4">
-                                  <h3 className="font-display text-2xl font-semibold text-white">
+                                  <h3 className="font-display text-2xl font-semibold text-white drop-shadow">
                                     {dest.emoji} {dest.name}
                                   </h3>
-                                  <p className="mt-0.5 text-sm text-white/85">{dest.vibe}</p>
+                                  <p className="mt-0.5 text-sm text-white/95 drop-shadow">{dest.vibe}</p>
                                 </div>
                               </div>
-                              <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+                              <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-3">
                                 {dest.allowedDurations.map((n) => (
                                   <button
                                     key={n}
                                     type="button"
                                     onClick={() => pickDuration(dest, n)}
                                     className={cn(
-                                      'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
+                                      'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
                                       filters.duration === n
-                                        ? 'bg-accent text-[#0b1220]'
-                                        : 'border border-white/20 bg-white/8 text-white hover:bg-accent hover:text-[#0b1220]'
+                                        ? 'bg-primary text-white'
+                                        : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
                                     )}
                                   >
                                     {n} giorni
@@ -389,7 +397,7 @@ export function StartTripWizard({
 
             {step === 'plan' && template ? (
               <motion.div key="plan" {...phaseMotion} className="flex items-start gap-3 sm:gap-4">
-              <div className="composer-panel min-w-0 flex-1 space-y-5 rounded-3xl p-6 md:p-8">
+              <div className="min-w-0 flex-1 space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
                 <div className="flex flex-wrap gap-2">
                   {templatesForDestination(template.destination_slug).map((t) => (
                     <button
@@ -397,44 +405,47 @@ export function StartTripWizard({
                       type="button"
                       onClick={() => setDuration(t.duration_days)}
                       className={cn(
-                        'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
+                        'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
                         t.duration_days === template.duration_days
-                          ? 'bg-accent text-[#0b1220]'
-                          : 'border border-[#2a3344] bg-[#0b1220] text-white/80 hover:bg-[#1c2436]'
+                          ? 'bg-primary text-white'
+                          : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
                       )}
                     >
                       {t.duration_days} giorni
                     </button>
                   ))}
                 </div>
-                <p className="text-white/85">{template.summary}</p>
-                <div className="flex items-center gap-3 rounded-2xl bg-[#0b1220] px-4 py-3">
+                <p className="text-slate-700">{template.summary}</p>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <Wallet className="h-4 w-4 text-accent" />
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider text-white/45">
+                    <p className="text-[11px] uppercase tracking-wider text-slate-500">
                       {COMPLIANCE_COPY.budgetLabel}
                     </p>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-semibold text-slate-900">
                       ~{template.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € a persona
                     </p>
                   </div>
                 </div>
                 <ol className="space-y-2">
                   {template.days.map((day) => (
-                    <li key={day.day_number} className="rounded-2xl bg-[#0b1220] px-4 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
+                    <li
+                      key={day.day_number}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                         Giorno {day.day_number}
                       </p>
-                      <p className="font-semibold text-white">{day.title}</p>
-                      <p className="mt-1 text-sm text-white/70">{day.description}</p>
-                      <p className="mt-1 flex items-center gap-1 text-xs text-white/50">
+                      <p className="font-semibold text-slate-900">{day.title}</p>
+                      <p className="mt-1 text-sm text-slate-600">{day.description}</p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                         <MapPin className="h-3 w-3" />
                         {day.area_segment}
                       </p>
                     </li>
                   ))}
                 </ol>
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-slate-500">
                   {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
                 </p>
               </div>
@@ -480,7 +491,9 @@ export function StartTripWizard({
               <motion.div key="when" {...phaseMotion}>
                 {mode === 'group' ? (
                   officialForTemplate.length === 0 ? (
-                    <p className="text-sm text-white/80">Nessuna partenza ufficiale su questa durata.</p>
+                    <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 shadow-sm">
+                      Nessuna partenza ufficiale su questa durata.
+                    </p>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {officialForTemplate.map((ed, i) => (
@@ -500,7 +513,7 @@ export function StartTripWizard({
                     </div>
                   )
                 ) : (
-                  <div className="composer-panel space-y-5 rounded-3xl p-5 md:p-7">
+                  <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">
                     <div className="flex flex-wrap gap-2">
                       {fridayHints.map((d) => {
                         const active = date && format(date, 'yyyy-MM-dd') === format(d, 'yyyy-MM-dd');
@@ -510,10 +523,10 @@ export function StartTripWizard({
                             type="button"
                             onClick={() => setDate(d)}
                             className={cn(
-                              'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
+                              'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
                               active
-                                ? 'bg-accent text-[#0b1220]'
-                                : 'border border-white/15 bg-[#0b1220] text-white/80 hover:bg-[#1c2436]'
+                                ? 'bg-primary text-white'
+                                : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
                             )}
                           >
                             Ven {format(d, 'd MMM', { locale: it })}
@@ -531,35 +544,35 @@ export function StartTripWizard({
                         range ? { tripEnd: [new Date(`${range.date_to}T12:00:00`)] } : undefined
                       }
                       modifiersClassNames={{
-                        tripEnd: 'bg-accent/25 text-white rounded-md',
+                        tripEnd: 'bg-primary/15 text-primary rounded-md',
                       }}
-                      className="w-full rounded-2xl border border-[#2a3344] bg-[#0b1220] p-3 text-white [--cell-size:2.6rem] sm:[--cell-size:2.9rem]"
+                      className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 [--cell-size:2.6rem] sm:[--cell-size:2.9rem]"
                       classNames={{
                         root: 'w-full',
                         month: 'w-full',
-                        weekday: 'text-white/40',
-                        today: 'bg-white/10 text-white rounded-md',
-                        disabled: 'text-white/20 opacity-40',
-                        outside: 'text-white/25',
+                        weekday: 'text-slate-400',
+                        today: 'bg-slate-100 text-slate-900 rounded-md',
+                        disabled: 'text-slate-300 opacity-40',
+                        outside: 'text-slate-300',
                       }}
                     />
                     {date && range ? (
-                      <div className="flex items-start gap-3 rounded-2xl bg-[#0b1220] px-4 py-3">
+                      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <CalendarDays className="mt-0.5 h-4 w-4 text-accent" />
                         <div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-slate-900">
                             {format(date, 'EEEE d MMMM yyyy', { locale: it })} →{' '}
                             {format(new Date(`${range.date_to}T12:00:00`), 'EEEE d MMMM yyyy', {
                               locale: it,
                             })}
                           </p>
-                          <p className="mt-0.5 text-xs text-white/55">
+                          <p className="mt-0.5 text-xs text-slate-500">
                             {template?.duration_days} giorni · partenza e rientro
                           </p>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-center text-sm text-white/60">
+                      <p className="text-center text-sm text-slate-600">
                         Tocca un venerdì o un giorno sul calendario.
                       </p>
                     )}
