@@ -108,6 +108,8 @@ export async function confirmPracticeFlight(practiceId: string, userId: string) 
       .eq('edition_id', practice.edition_id)
       .eq('user_id', userId);
     await maybeFormEdition(practice.edition_id);
+    const { notifyEditionFlightConfirmed } = await import('@/lib/notifications/edition');
+    void notifyEditionFlightConfirmed({ editionId: practice.edition_id, userId });
   }
   return { practice };
 }
@@ -191,6 +193,11 @@ export async function savePracticeFlightBooking(input: {
       .eq('edition_id', practice.edition_id)
       .eq('user_id', input.userId);
     await maybeFormEdition(practice.edition_id);
+    const { notifyEditionFlightConfirmed } = await import('@/lib/notifications/edition');
+    void notifyEditionFlightConfirmed({
+      editionId: practice.edition_id,
+      userId: input.userId,
+    });
   }
   return { practice };
 }

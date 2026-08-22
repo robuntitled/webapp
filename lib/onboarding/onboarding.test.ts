@@ -31,9 +31,9 @@ describe('onboarding paths', () => {
     expect(postLoginPath({ onboardingCompleted: false })).toBe('/onboarding');
   });
 
-  it('sends returning users to dashboard', () => {
+  it('sends returning users to itinerari', () => {
     expect(postLoginPath({ onboardingCompleted: true, travelIntent: 'create' })).toBe(
-      '/dashboard'
+      '/destinazioni'
     );
   });
 

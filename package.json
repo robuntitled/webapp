@@ -33,6 +33,8 @@
     "db:commitments": "node scripts/db-exec.mjs supabase/migrations/031_trip_commitments.sql",
     "db:practices": "node scripts/db-exec.mjs supabase/migrations/032_practices_editions.sql",
     "db:bookings": "node scripts/db-exec.mjs supabase/migrations/033_practice_bookings.sql",
+    "db:edition-chat": "node scripts/db-exec.mjs supabase/migrations/034_edition_chat.sql",
+    "db:cleanup-trips": "node scripts/db-exec.mjs supabase/migrations/035_cleanup_creator_trips.sql",
     "gen:covers": "node scripts/gen-destination-covers.mjs",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",

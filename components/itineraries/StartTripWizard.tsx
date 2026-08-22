@@ -14,7 +14,7 @@ import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { SlideshowWash } from '@/components/brand/SlideshowWash';
-import { uniqueCover } from '@/lib/composer/destination-covers';
+import { coverForDestination, uniqueCover } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
@@ -275,7 +275,7 @@ export function StartTripWizard({
                           >
                             <div className="relative h-44">
                               <Image
-                                src={uniqueCover(dest.slug, i)}
+                                src={coverForDestination(dest.slug)}
                                 alt={dest.name}
                                 fill
                                 className="object-cover"

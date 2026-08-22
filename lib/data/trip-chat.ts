@@ -2,8 +2,9 @@ import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
-import { getParticipantCount } from '@/lib/trips/display';
-import { isTripEnded } from '@/lib/utils/trip';
+import { coverForDestination } from '@/lib/composer/destination-covers';
+import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { formatItDate } from '@/lib/itineraries/dates';
 
 export type TripMessageRow = {
   id: string;
@@ -20,36 +21,41 @@ export type TripMessageRow = {
   } | null;
 };
 
-export async function isTripMember(tripId: string, userId: string): Promise<boolean> {
-  const { data: trip } = await supabaseAdmin
-    .from('trips')
-    .select('creator_id')
-    .eq('id', tripId)
-    .single();
+function mapMessage(row: Record<string, unknown>): TripMessageRow {
+  const user = row.user;
+  return {
+    id: String(row.id),
+    trip_id: String(row.edition_id ?? row.trip_id),
+    user_id: String(row.user_id),
+    body: String(row.body),
+    created_at: String(row.created_at),
+    user: Array.isArray(user)
+      ? ((user[0] as TripMessageRow['user']) ?? null)
+      : ((user as TripMessageRow['user']) ?? null),
+  };
+}
 
-  if (!trip) return false;
-  if (trip.creator_id === userId) return true;
-
-  const { data: participant } = await supabaseAdmin
-    .from('trip_participants')
+export async function isTripMember(editionId: string, userId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('edition_members')
     .select('user_id')
-    .eq('trip_id', tripId)
+    .eq('edition_id', editionId)
     .eq('user_id', userId)
+    .neq('status', 'left')
     .maybeSingle();
-
-  return !!participant;
+  return Boolean(data);
 }
 
 export async function getTripMessages(
-  tripId: string,
+  editionId: string,
   since?: string
 ): Promise<TripMessageRow[]> {
   let query = supabaseAdmin
-    .from('trip_messages')
+    .from('edition_messages')
     .select(
-      'id, trip_id, user_id, body, created_at, user:users!trip_messages_user_id_fkey(id, username, first_name, last_name, image)'
+      'id, edition_id, user_id, body, created_at, user:users!edition_messages_user_id_fkey(id, username, first_name, last_name, image)'
     )
-    .eq('trip_id', tripId)
+    .eq('edition_id', editionId)
     .order('created_at', { ascending: true })
     .limit(200);
 
@@ -58,22 +64,17 @@ export async function getTripMessages(
   }
 
   const { data, error } = await query;
-
   if (error) {
     if (error.code === '42P01') return [];
     throw new Error(error.message);
   }
-
-  return (data ?? []).map((row) => ({
-    ...row,
-    user: Array.isArray(row.user) ? row.user[0] ?? null : row.user,
-  })) as TripMessageRow[];
+  return (data ?? []).map((row) => mapMessage(row as Record<string, unknown>));
 }
 
 const JOIN_HELLO_LINES = [
-  'Ciao! Mi sono aggiunto al Trip. Si parte? ✈️',
-  'Ehilà, sono in. Accettami in crew e si parte 🌍',
-  'Ciao crew! Mi butto in questo viaggio — c’è posto per me? 🔥',
+  'Ciao! Mi sono aggiunto al viaggio. Si parte? ✈️',
+  'Ehilà, sono in. Ci vediamo in destinazione 🌍',
+  'Ciao gruppo! Mi butto in questo viaggio 🔥',
 ] as const;
 
 export function joinRequestChatBody(seed: string): string {
@@ -84,200 +85,182 @@ export function joinRequestChatBody(seed: string): string {
   return JOIN_HELLO_LINES[h] ?? JOIN_HELLO_LINES[0];
 }
 
-/** Ping in chat all'organizzatore quando qualcuno chiede di unirsi (anche se non è ancora in crew). */
 export async function postJoinRequestChatPing(
-  tripId: string,
+  editionId: string,
   requesterId: string
 ): Promise<void> {
-  const { data: trip } = await supabaseAdmin
-    .from('trips')
-    .select('creator_id')
-    .eq('id', tripId)
-    .maybeSingle();
+  await supabaseAdmin
+    .from('edition_chat_hides')
+    .delete()
+    .eq('edition_id', editionId);
 
-  if (trip?.creator_id) {
-    const { error: unhideError } = await supabaseAdmin
-      .from('trip_chat_hides')
-      .delete()
-      .eq('trip_id', tripId)
-      .eq('user_id', trip.creator_id as string);
-    if (unhideError && unhideError.code !== '42P01') {
-      console.warn('[postJoinRequestChatPing unhide]', unhideError.message);
-    }
-  }
-
-  const { error } = await supabaseAdmin.from('trip_messages').insert({
-    trip_id: tripId,
+  const { error } = await supabaseAdmin.from('edition_messages').insert({
+    edition_id: editionId,
     user_id: requesterId,
-    body: joinRequestChatBody(`${requesterId}:${tripId}`),
+    body: joinRequestChatBody(`${requesterId}:${editionId}`),
   });
-  if (error) {
-    console.error('[postJoinRequestChatPing]', error.message);
+  if (error && error.code !== '42P01') {
+    console.error('[postJoinPing]', error.message);
   }
 }
 
 export async function postTripMessage(
-  tripId: string,
+  editionId: string,
   userId: string,
   body: string
 ): Promise<TripMessageRow> {
   const trimmed = body.trim();
   if (!trimmed) throw new Error('Messaggio vuoto');
 
-  const member = await isTripMember(tripId, userId);
+  const member = await isTripMember(editionId, userId);
   if (!member) throw new Error('Non fai parte di questo viaggio');
 
-  // Se era nascosta, riaprila
   await supabaseAdmin
-    .from('trip_chat_hides')
+    .from('edition_chat_hides')
     .delete()
     .eq('user_id', userId)
-    .eq('trip_id', tripId);
+    .eq('edition_id', editionId);
 
   const { data, error } = await supabaseAdmin
-    .from('trip_messages')
-    .insert({ trip_id: tripId, user_id: userId, body: trimmed })
+    .from('edition_messages')
+    .insert({ edition_id: editionId, user_id: userId, body: trimmed })
     .select(
-      'id, trip_id, user_id, body, created_at, user:users!trip_messages_user_id_fkey(id, username, first_name, last_name, image)'
+      'id, edition_id, user_id, body, created_at, user:users!edition_messages_user_id_fkey(id, username, first_name, last_name, image)'
     )
     .single();
 
   if (error) throw new Error(error.message);
-
-  const row = data as TripMessageRow & { user: TripMessageRow['user'] | TripMessageRow['user'][] };
-  return {
-    ...row,
-    user: Array.isArray(row.user) ? row.user[0] ?? null : row.user,
-  };
+  return mapMessage(data as Record<string, unknown>);
 }
 
-export async function markTripChatRead(tripId: string, userId: string): Promise<void> {
-  const { error } = await supabaseAdmin.from('trip_chat_reads').upsert(
+export async function markTripChatRead(editionId: string, userId: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('edition_chat_reads').upsert(
     {
       user_id: userId,
-      trip_id: tripId,
+      edition_id: editionId,
       last_read_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id,trip_id' }
+    { onConflict: 'user_id,edition_id' }
   );
   if (error && error.code !== '42P01') {
     console.warn('[chat] mark read failed', error.message);
   }
 }
 
-export async function hideTripChat(tripId: string, userId: string): Promise<void> {
-  const member = await isTripMember(tripId, userId);
+export async function hideTripChat(editionId: string, userId: string): Promise<void> {
+  const member = await isTripMember(editionId, userId);
   if (!member) throw new Error('Non fai parte di questo viaggio');
 
-  const { error } = await supabaseAdmin.from('trip_chat_hides').upsert(
+  const { error } = await supabaseAdmin.from('edition_chat_hides').upsert(
     {
       user_id: userId,
-      trip_id: tripId,
+      edition_id: editionId,
       hidden_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id,trip_id' }
+    { onConflict: 'user_id,edition_id' }
   );
   if (error) {
     if (error.code === '42P01') {
-      throw new Error('Esegui npm run db:chat-reads');
+      throw new Error('Esegui npm run db:edition-chat');
     }
     throw new Error(error.message);
   }
 }
 
-export async function unhideTripChat(tripId: string, userId: string): Promise<void> {
+export async function unhideTripChat(editionId: string, userId: string): Promise<void> {
   await supabaseAdmin
-    .from('trip_chat_hides')
+    .from('edition_chat_hides')
     .delete()
     .eq('user_id', userId)
-    .eq('trip_id', tripId);
+    .eq('edition_id', editionId);
 }
 
-type MembershipTrip = {
+type MembershipEdition = {
   id: string;
-  title: string;
-  destination: string;
-  imageUrl: string | null;
-  endDate: string;
-  creator_id?: string | null;
-  creator?: { id: string } | null;
-  trip_participants?: { user_id: string; role?: string }[];
+  template_id: string;
+  date_from: string;
+  date_to: string;
+  memberIds: string[];
 };
 
-const MEMBERSHIP_SELECT = `
-  id, title, destination,
-  imageUrl: image_url,
-  endDate: end_date,
-  creator_id,
-  creator:users!trips_creator_id_fkey(id),
-  trip_participants(user_id, role)
-`;
+async function loadMembershipEditions(userId: string): Promise<MembershipEdition[]> {
+  const { data: mine, error } = await supabaseAdmin
+    .from('edition_members')
+    .select('edition_id')
+    .eq('user_id', userId)
+    .neq('status', 'left');
+  if (error || !mine?.length) return [];
 
-async function loadMembershipTrips(userId: string): Promise<MembershipTrip[]> {
-  const { data: created } = await supabaseAdmin
-    .from('trips')
-    .select(MEMBERSHIP_SELECT)
-    .eq('creator_id', userId);
+  const ids = mine.map((r) => r.edition_id as string);
+  const { data: editions } = await supabaseAdmin
+    .from('editions')
+    .select('id, template_id, date_from, date_to, status')
+    .in('id', ids)
+    .in('status', ['open', 'formed', 'locked']);
+  if (!editions?.length) return [];
 
-  const { data: parts } = await supabaseAdmin
-    .from('trip_participants')
-    .select('trip_id')
-    .eq('user_id', userId);
+  const today = new Date().toISOString().slice(0, 10);
+  const live = editions.filter((e) => String(e.date_to).slice(0, 10) >= today);
 
-  const joinedIds = (parts ?? []).map((p) => p.trip_id).filter(Boolean);
-  let joined: MembershipTrip[] = [];
-  if (joinedIds.length > 0) {
-    const { data } = await supabaseAdmin
-      .from('trips')
-      .select(MEMBERSHIP_SELECT)
-      .in('id', joinedIds);
-    joined = (data ?? []) as unknown as MembershipTrip[];
-  }
+  const withMembers = await Promise.all(
+    live.map(async (e) => {
+      const { data: members } = await supabaseAdmin
+        .from('edition_members')
+        .select('user_id')
+        .eq('edition_id', e.id)
+        .neq('status', 'left');
+      return {
+        id: e.id as string,
+        template_id: e.template_id as string,
+        date_from: String(e.date_from).slice(0, 10),
+        date_to: String(e.date_to).slice(0, 10),
+        memberIds: (members ?? []).map((m) => m.user_id as string),
+      };
+    })
+  );
+  return withMembers;
+}
 
-  const map = new Map<string, MembershipTrip>();
-  for (const t of [...((created ?? []) as unknown as MembershipTrip[]), ...joined]) {
-    map.set(t.id, t);
-  }
-  return [...map.values()].filter((t) => !isTripEnded(t.endDate));
+function editionTitle(ed: MembershipEdition) {
+  const tpl = findItineraryTemplate(ed.template_id);
+  const dest = tpl?.destination_name ?? ed.template_id;
+  return `${dest} · ${formatItDate(ed.date_from)}`;
 }
 
 export async function listChatGroupsForUser(userId: string): Promise<ChatGroupItem[]> {
-  const trips = await loadMembershipTrips(userId);
+  const editions = await loadMembershipEditions(userId);
 
   const { data: hides } = await supabaseAdmin
-    .from('trip_chat_hides')
-    .select('trip_id')
+    .from('edition_chat_hides')
+    .select('edition_id')
     .eq('user_id', userId);
-  const hidden = new Set((hides ?? []).map((h) => h.trip_id));
+  const hidden = new Set((hides ?? []).map((h) => h.edition_id));
 
   const { data: reads } = await supabaseAdmin
-    .from('trip_chat_reads')
-    .select('trip_id, last_read_at')
+    .from('edition_chat_reads')
+    .select('edition_id, last_read_at')
     .eq('user_id', userId);
-  const readAt = new Map((reads ?? []).map((r) => [r.trip_id, r.last_read_at as string]));
+  const readAt = new Map((reads ?? []).map((r) => [r.edition_id, r.last_read_at as string]));
 
   const groups: ChatGroupItem[] = [];
 
-  for (const trip of trips) {
-    if (hidden.has(trip.id)) continue;
-    const participantCount = getParticipantCount(trip.trip_participants);
-
-    const isOwner =
-      trip.creator?.id === userId || trip.creator_id === userId;
-
-    const since = readAt.get(trip.id) ?? '1970-01-01T00:00:00.000Z';
+  for (const ed of editions) {
+    if (hidden.has(ed.id)) continue;
+    const participantCount = ed.memberIds.length;
+    const since = readAt.get(ed.id) ?? '1970-01-01T00:00:00.000Z';
+    const tpl = findItineraryTemplate(ed.template_id);
 
     const [{ count: unreadCount }, { data: lastRows }] = await Promise.all([
       supabaseAdmin
-        .from('trip_messages')
+        .from('edition_messages')
         .select('*', { count: 'exact', head: true })
-        .eq('trip_id', trip.id)
+        .eq('edition_id', ed.id)
         .neq('user_id', userId)
         .gt('created_at', since),
       supabaseAdmin
-        .from('trip_messages')
+        .from('edition_messages')
         .select('body, created_at')
-        .eq('trip_id', trip.id)
+        .eq('edition_id', ed.id)
         .order('created_at', { ascending: false })
         .limit(1),
     ]);
@@ -286,12 +269,12 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
     if (participantCount < 2 && !last) continue;
 
     groups.push({
-      id: trip.id,
-      title: trip.title,
-      destination: trip.destination,
-      imageUrl: trip.imageUrl,
+      id: ed.id,
+      title: editionTitle(ed),
+      destination: tpl?.destination_name ?? ed.template_id,
+      imageUrl: coverForDestination(tpl?.destination_slug ?? ed.template_id),
       participantCount,
-      role: isOwner ? 'owner' : 'member',
+      role: 'member',
       unreadCount: unreadCount ?? 0,
       lastMessageAt: last?.created_at ?? null,
       lastMessagePreview: last?.body
@@ -314,52 +297,40 @@ export async function listChatContactsForUser(
   userId: string,
   query?: string
 ): Promise<ChatContact[]> {
-  const trips = await loadMembershipTrips(userId);
+  const editions = await loadMembershipEditions(userId);
   const q = query?.trim().toLowerCase() ?? '';
+  const byUser = new Map<string, ChatContact>();
 
-  type Acc = ChatContact & { sortAt: number };
-  const byUser = new Map<string, Acc>();
-
-  for (const trip of trips) {
-    const participants = trip.trip_participants ?? [];
-    if (participants.length < 2) continue;
-
+  for (const ed of editions) {
+    if (ed.memberIds.length < 2) continue;
+    const others = ed.memberIds.filter((id) => id !== userId);
+    if (!others.length) continue;
     const { data: users } = await supabaseAdmin
       .from('users')
       .select('id, first_name, last_name, username, image')
-      .in(
-        'id',
-        participants.map((p) => p.user_id).filter((id) => id !== userId)
-      );
+      .in('id', others);
 
     for (const u of users ?? []) {
       if (u.id === userId) continue;
       const name = [u.first_name, u.last_name].filter(Boolean).join(' ');
       const hay = `${name} ${u.username ?? ''}`.toLowerCase();
       if (q && !hay.includes(q)) continue;
-
-      const prev = byUser.get(u.id);
-      const sortAt = Date.now(); // membership order; refine below
-      if (!prev) {
-        byUser.set(u.id, {
-          userId: u.id,
-          firstName: u.first_name,
-          lastName: u.last_name,
-          username: u.username ?? null,
-          image: u.image,
-          sharedTripId: trip.id,
-          sharedTripTitle: trip.title,
-          sortAt,
-        });
-      }
+      if (byUser.has(u.id as string)) continue;
+      byUser.set(u.id as string, {
+        userId: u.id as string,
+        firstName: u.first_name as string | null,
+        lastName: u.last_name as string | null,
+        username: (u.username as string | null) ?? null,
+        image: u.image as string | null,
+        sharedTripId: ed.id,
+        sharedTripTitle: editionTitle(ed),
+      });
     }
   }
 
-  return [...byUser.values()]
-    .sort((a, b) =>
-      (a.firstName ?? a.username ?? '').localeCompare(b.firstName ?? b.username ?? '', 'it')
-    )
-    .map(({ sortAt: _s, ...c }) => c);
+  return [...byUser.values()].sort((a, b) =>
+    (a.firstName ?? a.username ?? '').localeCompare(b.firstName ?? b.username ?? '', 'it')
+  );
 }
 
 export async function searchChatMessagesForUser(
@@ -370,40 +341,36 @@ export async function searchChatMessagesForUser(
   const q = query.trim();
   if (q.length < 2) return [];
 
-  const trips = await loadMembershipTrips(userId);
-  const tripIds = trips.map((t) => t.id);
-  if (tripIds.length === 0) return [];
+  const editions = await loadMembershipEditions(userId);
+  const editionIds = editions.map((e) => e.id);
+  if (editionIds.length === 0) return [];
 
-  const titleById = new Map(trips.map((t) => [t.id, t.title]));
+  const titleById = new Map(editions.map((e) => [e.id, editionTitle(e)]));
 
   const { data, error } = await supabaseAdmin
-    .from('trip_messages')
+    .from('edition_messages')
     .select(
-      'id, trip_id, body, created_at, user:users!trip_messages_user_id_fkey(first_name, last_name, username)'
+      'id, edition_id, body, created_at, user:users!edition_messages_user_id_fkey(first_name, last_name, username)'
     )
-    .in('trip_id', tripIds)
-    .ilike('body', `%${q.replace(/[%_]/g, '')}%`)
+    .in('edition_id', editionIds)
+    .ilike('body', `%${q}%`)
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) {
-    if (error.code === '42P01') return [];
-    throw new Error(error.message);
-  }
+  if (error || !data) return [];
 
-  return (data ?? []).map((row) => {
-    const user = Array.isArray(row.user) ? row.user[0] : row.user;
-    const authorName =
-      (user?.username ? `@${user.username}` : null) ||
-      [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-      'Viaggiatore';
+  return data.map((row) => {
+    const u = Array.isArray(row.user) ? row.user[0] : row.user;
+    const author =
+      [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim() ||
+      (u?.username ? `@${u.username}` : 'Viaggiatore');
     return {
       messageId: row.id as string,
-      tripId: row.trip_id as string,
-      tripTitle: titleById.get(row.trip_id as string) ?? 'Viaggio',
-      body: row.body as string,
-      createdAt: row.created_at as string,
-      authorName,
+      tripId: row.edition_id as string,
+      tripTitle: titleById.get(row.edition_id as string) ?? 'Viaggio',
+      body: String(row.body ?? ''),
+      createdAt: String(row.created_at),
+      authorName: author,
     };
   });
 }

@@ -323,7 +323,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                       </div>
                     ) : filteredGroups.length === 0 ? (
                       <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-                        Nessuna chat di gruppo. Quando qualcuno si unisce a un tuo viaggio,
+                        Nessuna chat di gruppo. Quando qualcuno si aggiunge alla partenza,
                         compare qui.
                       </p>
                     ) : (

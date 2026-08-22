@@ -42,7 +42,7 @@ export default auth((req) => {
   }
 
   if (pathname === ONBOARDING_PATH && userId && privacyOk && onboardingDone) {
-    return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
+    return NextResponse.redirect(new URL('/destinazioni', req.nextUrl));
   }
 
   if (pathname === '/' && userId && privacyOk) {

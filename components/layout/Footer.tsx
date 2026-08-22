@@ -38,7 +38,7 @@ export function Footer({ company }: FooterProps) {
           </div>
 
           <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <Link href="/dashboard" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link href="/destinazioni" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
               Cerca viaggi
             </Link>
             <Link href="/privacy" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">

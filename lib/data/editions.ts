@@ -194,6 +194,11 @@ export async function joinEdition(input: { userId: string; editionId: string }) 
     status: 'interested',
   });
 
+  const { notifyEditionMemberJoined } = await import('@/lib/notifications/edition');
+  const { postJoinRequestChatPing } = await import('@/lib/data/trip-chat');
+  void notifyEditionMemberJoined({ editionId: edition.id, joinerId: input.userId });
+  void postJoinRequestChatPing(edition.id, input.userId);
+
   return createPractice({
     userId: input.userId,
     templateId: edition.template_id,

@@ -32,7 +32,7 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         error: message,
-        hint: message.includes('trip_messages') ? 'Esegui npm run db:chat' : undefined,
+        hint: message.includes('edition_messages') ? 'Esegui npm run db:edition-chat' : undefined,
       },
       { status: 500 }
     );

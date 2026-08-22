@@ -11,7 +11,16 @@ export type NotificationType =
   | 'day90_incentive'
   | 'dormant'
   | 'threshold_near'
-  | 'threshold_reached';
+  | 'threshold_reached'
+  | 'edition_member_joined'
+  | 'edition_flight_confirmed'
+  | 'edition_reminder';
+
+const HIDDEN_TYPES = new Set([
+  'trip_join_request',
+  'trip_join_accepted',
+  'trip_join_rejected',
+]);
 
 export type AppNotification = {
   id: string;
@@ -87,48 +96,7 @@ export async function listNotificationsForUser(
     createdAt: String(row.created_at),
   }));
 
-  return attachJoinRequestStatus(items);
-}
-
-async function attachJoinRequestStatus(
-  items: AppNotification[]
-): Promise<AppNotification[]> {
-  const requestIds = [
-    ...new Set(
-      items
-        .filter((n) => n.type === 'trip_join_request')
-        .map((n) =>
-          typeof n.metadata.requestId === 'string' ? n.metadata.requestId : null
-        )
-        .filter((id): id is string => !!id)
-    ),
-  ];
-  if (!requestIds.length) return items;
-
-  const { data, error } = await supabaseAdmin
-    .from('trip_join_requests')
-    .select('id, status')
-    .in('id', requestIds);
-
-  if (error || !data?.length) return items;
-
-  const statusById = new Map(
-    data.map((row) => [row.id as string, String(row.status)])
-  );
-
-  return items.map((n) => {
-    if (n.type !== 'trip_join_request') return n;
-    const requestId =
-      typeof n.metadata.requestId === 'string' ? n.metadata.requestId : null;
-    if (!requestId) return n;
-    return {
-      ...n,
-      metadata: {
-        ...n.metadata,
-        requestStatus: statusById.get(requestId) ?? 'unknown',
-      },
-    };
-  });
+  return items.filter((n) => !HIDDEN_TYPES.has(n.type));
 }
 
 export async function countUnreadNotifications(userId: string): Promise<number> {
@@ -136,7 +104,8 @@ export async function countUnreadNotifications(userId: string): Promise<number> 
     .from('user_notifications')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .is('read_at', null);
+    .is('read_at', null)
+    .not('type', 'in', '(trip_join_request,trip_join_accepted,trip_join_rejected)');
 
   if (error) {
     if (!isMissingTable(error)) {

@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,7 +17,6 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/actions/notifications';
-import { respondJoinRequest } from '@/actions/trip-join-requests';
 
 type NotificationItem = {
   id: string;
@@ -28,7 +26,6 @@ type NotificationItem = {
   link: string | null;
   readAt: string | null;
   createdAt: string;
-  metadata?: Record<string, unknown>;
 };
 
 function relativeTime(iso: string): string {
@@ -40,65 +37,6 @@ function relativeTime(iso: string): string {
   if (hours < 24) return `${hours} h`;
   const days = Math.floor(hours / 24);
   return `${days} g`;
-}
-
-function joinRequestId(n: NotificationItem): string | null {
-  const id = n.metadata?.requestId;
-  return typeof id === 'string' ? id : null;
-}
-
-function isPendingJoinRequest(n: NotificationItem): boolean {
-  return (
-    n.type === 'trip_join_request' &&
-    joinRequestId(n) != null &&
-    (n.metadata?.requestStatus === 'pending' || n.metadata?.requestStatus == null)
-  );
-}
-
-function JoinRequestActions({
-  notification,
-  disabled,
-  onRespond,
-}: {
-  notification: NotificationItem;
-  disabled: boolean;
-  onRespond: (n: NotificationItem, accept: boolean) => void;
-}) {
-  return (
-    <div className="mt-2 flex w-full gap-2">
-      <Button
-        type="button"
-        size="sm"
-        className="h-7 flex-1 rounded-full"
-        disabled={disabled}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onRespond(notification, true);
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <Check className="h-3.5 w-3.5" />
-        Accetta
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-7 flex-1 rounded-full"
-        disabled={disabled}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onRespond(notification, false);
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <X className="h-3.5 w-3.5" />
-        Rifiuta
-      </Button>
-    </div>
-  );
 }
 
 export function NotificationBell() {
@@ -119,7 +57,7 @@ export function NotificationBell() {
       setItems(data.notifications ?? []);
       setUnread(data.unreadCount ?? 0);
     } catch {
-      // silent — campanella non critica
+      // silent
     }
   }, []);
 
@@ -134,7 +72,6 @@ export function NotificationBell() {
   }, [open, load]);
 
   const onItemClick = (n: NotificationItem) => {
-    if (isPendingJoinRequest(n)) return;
     startTransition(async () => {
       if (!n.readAt) {
         await markNotificationRead(n.id);
@@ -149,37 +86,6 @@ export function NotificationBell() {
         setOpen(false);
         router.push(n.link);
       }
-    });
-  };
-
-  const respond = (n: NotificationItem, accept: boolean) => {
-    const requestId = joinRequestId(n);
-    if (!requestId) return;
-    startTransition(async () => {
-      const res = await respondJoinRequest({ requestId, accept });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(accept ? 'Accettato — è in crew!' : 'Richiesta rifiutata');
-      if (!n.readAt) {
-        await markNotificationRead(n.id);
-        setUnread((u) => Math.max(0, u - 1));
-      }
-      setItems((list) =>
-        list.map((x) =>
-          x.id === n.id
-            ? {
-                ...x,
-                readAt: x.readAt ?? new Date().toISOString(),
-                metadata: {
-                  ...x.metadata,
-                  requestStatus: accept ? 'accepted' : 'rejected',
-                },
-              }
-            : x
-        )
-      );
     });
   };
 
@@ -201,9 +107,7 @@ export function NotificationBell() {
           variant="ghost"
           size="icon"
           className="relative rounded-full"
-          aria-label={
-            unread > 0 ? `Notifiche, ${unread} non lette` : 'Notifiche'
-          }
+          aria-label={unread > 0 ? `Notifiche, ${unread} non lette` : 'Notifiche'}
         >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
@@ -234,68 +138,45 @@ export function NotificationBell() {
           </div>
         ) : (
           <div className="max-h-80 overflow-y-auto">
-            {items.map((n) => {
-              const pendingJoin = isPendingJoinRequest(n);
-              const resolved =
-                n.type === 'trip_join_request' &&
-                (n.metadata?.requestStatus === 'accepted' ||
-                  n.metadata?.requestStatus === 'rejected');
-              return (
-                <DropdownMenuItem
-                  key={n.id}
-                  className="cursor-pointer flex-col items-start gap-0.5 py-3"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    onItemClick(n);
-                  }}
-                >
-                  <div className="flex w-full items-start justify-between gap-2">
-                    <p
-                      className={`text-sm leading-snug ${
-                        n.readAt ? 'font-normal' : 'font-semibold'
-                      }`}
-                    >
-                      {n.title}
-                    </p>
-                    <span className="shrink-0 text-[10px] text-muted-foreground">
-                      {relativeTime(n.createdAt)}
-                    </span>
-                  </div>
-                  {n.body ? (
-                    <p className="line-clamp-2 text-xs text-muted-foreground">
-                      {n.body}
-                    </p>
-                  ) : null}
-                  {resolved ? (
-                    <p className="mt-1 text-[11px] font-medium text-muted-foreground">
-                      {n.metadata?.requestStatus === 'accepted'
-                        ? 'Accettata'
-                        : 'Rifiutata'}
-                    </p>
-                  ) : null}
-                  {pendingJoin ? (
-                    <JoinRequestActions
-                      notification={n}
-                      disabled={pending}
-                      onRespond={respond}
-                    />
-                  ) : null}
-                  {!n.readAt && !pendingJoin ? (
-                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
-                  ) : null}
-                </DropdownMenuItem>
-              );
-            })}
+            {items.map((n) => (
+              <DropdownMenuItem
+                key={n.id}
+                className="cursor-pointer flex-col items-start gap-0.5 py-3"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  onItemClick(n);
+                }}
+              >
+                <div className="flex w-full items-start justify-between gap-2">
+                  <p
+                    className={`text-sm leading-snug ${
+                      n.readAt ? 'font-normal' : 'font-semibold'
+                    }`}
+                  >
+                    {n.title}
+                  </p>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {relativeTime(n.createdAt)}
+                  </span>
+                </div>
+                {n.body ? (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
+                ) : null}
+                {!n.readAt ? (
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                ) : null}
+              </DropdownMenuItem>
+            ))}
           </div>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link
-            href="/dashboard/miei-viaggi"
+            href="/pratiche"
             className="justify-center text-sm text-muted-foreground"
             onClick={() => setOpen(false)}
           >
-            Vai a I Miei Viaggi
+            I miei viaggi
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

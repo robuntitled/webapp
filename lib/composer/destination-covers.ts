@@ -32,9 +32,9 @@ export const DESTINATION_COVERS: Record<string, string> = {
   sicilia:
     'https://images.unsplash.com/photo-1523365154888-8a758819b722?auto=format&fit=crop&w=1200&q=80',
   sardegna:
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=1200&q=80',
   canarie:
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
   vietnam:
     'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80',
   australia:
@@ -140,9 +140,9 @@ export const DESTINATION_COVERS: Record<string, string> = {
   jamaica:
     'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?auto=format&fit=crop&w=1200&q=80',
   belize:
-    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?auto=format&fit=crop&w=1200&q=80',
   fiji:
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1437719417032-859c46eef3a3?auto=format&fit=crop&w=1200&q=80',
 };
 
 const TRAVEL_PHOTO_POOL = [
@@ -178,27 +178,48 @@ export function coverForDestination(idOrLabel: string): string {
   return TRAVEL_PHOTO_POOL[hash % TRAVEL_PHOTO_POOL.length] ?? DEFAULT_TRIP_IMAGE;
 }
 
-const THAILANDIA_SHOTS = [
-  'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1528183429752-a91b0c5b0e6d?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1537953773345-d513d325864c?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1483683802025-11d0f9bfd68b?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=1400&q=80',
-];
+const DESTINATION_POOLS: Record<string, string[]> = {
+  thailandia: [
+    'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1528183429752-a91b0c5b0e6d?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1598974357801-cbca100e65d3?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1609137144813-7d9921338f24?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1476512269419-b193e1ed1a87?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?auto=format&fit=crop&w=1400&q=80',
+  ].filter((url, i, arr) => arr.indexOf(url) === i),
+};
 
-const UNIQUE_COVER_POOL = [
-  ...THAILANDIA_SHOTS,
-  ...TRAVEL_PHOTO_POOL,
-  ...Object.values(DESTINATION_COVERS),
-].filter((url, i, arr) => arr.indexOf(url) === i);
+function destinationCoverPool(slug: string): string[] {
+  const key = slug.trim().toLowerCase();
+  if (DESTINATION_POOLS[key]?.length) return DESTINATION_POOLS[key];
+  const dest = findDestination(key);
+  const primary =
+    (dest && DESTINATION_COVERS[dest.id]) ||
+    DESTINATION_COVERS[key] ||
+    (dest && GENERATED_DESTINATION_COVERS[dest.id]) ||
+    GENERATED_DESTINATION_COVERS[key];
+  if (primary) return [primary];
+  return [coverForDestination(key)];
+}
 
-/** Copertina unica per card: stesso seed, foto diverse per indice. */
+/** Copertina della destinazione, variante diversa per indice. Mai pool casuale. */
 export function uniqueCover(seed: string, index = 0): string {
-  let hash = 0;
-  const key = seed.trim().toLowerCase();
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  return UNIQUE_COVER_POOL[(hash + index) % UNIQUE_COVER_POOL.length] ?? coverForDestination(seed);
+  const pool = destinationCoverPool(seed);
+  return pool[index % pool.length] ?? coverForDestination(seed);
+}
+
+/** Assegna copertine senza ripetere lo stesso URL nella lista. */
+export function uniqueCoversForSlugs(slugs: string[]): string[] {
+  const used = new Set<string>();
+  return slugs.map((slug, i) => {
+    const pool = destinationCoverPool(slug);
+    const pick = pool.find((url) => !used.has(url)) ?? uniqueCover(slug, i);
+    used.add(pick);
+    return pick;
+  });
 }

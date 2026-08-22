@@ -21,7 +21,7 @@ export default async function OnboardingPage() {
     redirect('/completa-registrazione');
   }
   if (session.user.onboardingCompleted) {
-    redirect('/dashboard');
+    redirect('/destinazioni');
   }
 
   return (
