@@ -1111,12 +1111,23 @@
     }
   }
 
+  .nl-hero-slide {
+    object-fit: contain;
+  }
+
+  /* Viewport larghi (desktop / landscape): riempi senza letterbox. */
+  @media (min-aspect-ratio: 4 / 3) {
+    .nl-hero-slide {
+      object-fit: cover;
+    }
+  }
+
   @keyframes nl-hero-parallax {
     from {
-      transform: translate3d(0, 0, 0) scale(1.06);
+      transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate3d(0, -6%, 0) scale(1.1);
+      transform: translate3d(0, -4%, 0);
     }
   }
 }
