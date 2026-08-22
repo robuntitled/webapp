@@ -287,7 +287,7 @@ export function StartTripWizard({
             <p className="mx-auto max-w-xl text-base text-white/90 drop-shadow">
               {showPartenze
                 ? 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'
-                : 'Cerca o scegli il continente. Poi i giorni.'}
+                : 'Scegli la vibe, prenota, parti.'}
             </p>
           </div>
           <div className="relative z-10 nl-page w-full pb-8 pt-2">
