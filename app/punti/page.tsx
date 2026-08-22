@@ -37,7 +37,7 @@ export default function PublicPointsPage() {
         <Link href="/destinazioni" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-[#0b1220]">
           Itinerari
         </Link>
-        <Link href="/partenze" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
+        <Link href="/destinazioni?vista=partenze" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
           Partenze
         </Link>
       </div>

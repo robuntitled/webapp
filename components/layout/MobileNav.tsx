@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 
 const LINKS = [
   { href: '/destinazioni', label: 'Itinerari' },
-  { href: '/partenze', label: 'Partenze', auth: true },
   { href: '/pratiche', label: 'I miei viaggi', auth: true },
   { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },

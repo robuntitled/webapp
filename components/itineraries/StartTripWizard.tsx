@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { addDays, format, nextFriday, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { it as itDayPicker } from 'react-day-picker/locale';
-import { ArrowLeft, ArrowRight, CalendarDays, Loader2, MapPin, Search, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Loader2, MapPin, Search, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { SlideshowWash } from '@/components/brand/SlideshowWash';
 import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
+import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
 import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
@@ -46,6 +47,7 @@ export function StartTripWizard({
   editions,
   initialSlug,
   initialDuration,
+  initialHomeView = 'itinerari',
 }: {
   destinations: {
     slug: string;
@@ -59,11 +61,16 @@ export function StartTripWizard({
   editions: OfficialEditionCard[];
   initialSlug?: string;
   initialDuration?: number;
+  /** Toggle home: catalogo nazioni vs partenze già aperte. */
+  initialHomeView?: 'itinerari' | 'partenze';
 }) {
   const startTemplate = initialSlug
     ? findItineraryBySlug(initialSlug, initialDuration)
     : undefined;
   const [step, setStep] = useState<Step>(startTemplate ? 'plan' : 'dest');
+  const [homeView, setHomeView] = useState<'itinerari' | 'partenze'>(
+    startTemplate ? 'itinerari' : initialHomeView
+  );
   const [slug, setSlug] = useState(startTemplate?.destination_slug ?? '');
   const [duration, setDuration] = useState(startTemplate?.duration_days ?? 0);
   const [mode, setMode] = useState<TravelMode | null>(null);
@@ -74,6 +81,8 @@ export function StartTripWizard({
   const [pending, startTransition] = useTransition();
   const { data: session } = useSession();
   const router = useRouter();
+
+  const showPartenze = step === 'dest' && homeView === 'partenze';
 
   const template = slug && duration ? findItineraryBySlug(slug, duration) : undefined;
   const idx = STEPS.indexOf(step);
@@ -201,29 +210,69 @@ export function StartTripWizard({
       <SlideshowWash />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-8 pt-10">
         <div className="mb-8 space-y-4 text-center">
-          <p className="inline-flex items-center gap-2 rounded-full bg-[#161d2b] px-4 py-1.5 text-sm text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-            Step {idx + 1} di {STEPS.length}
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            {STEPS.map((s, i) => (
-              <div
-                key={s}
+          {step === 'dest' ? (
+            <div className="inline-flex rounded-full border border-white/15 bg-[#0b1220]/80 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setHomeView('itinerari');
+                  router.replace('/destinazioni', { scroll: false });
+                }}
                 className={cn(
-                  'h-1.5 rounded-full transition-all duration-500',
-                  i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-white/15'
+                  'rounded-full px-4 py-1.5 text-sm font-medium transition',
+                  homeView === 'itinerari'
+                    ? 'bg-accent text-[#0b1220]'
+                    : 'text-white/75 hover:text-white'
                 )}
-              />
-            ))}
-          </div>
+              >
+                Itinerari
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHomeView('partenze');
+                  router.replace('/destinazioni?vista=partenze', { scroll: false });
+                }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition',
+                  homeView === 'partenze'
+                    ? 'bg-accent text-[#0b1220]'
+                    : 'text-white/75 hover:text-white'
+                )}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Partenze
+              </button>
+            </div>
+          ) : (
+            <p className="inline-flex items-center gap-2 rounded-full bg-[#161d2b] px-4 py-1.5 text-sm text-white">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+              Step {idx + 1} di {STEPS.length}
+            </p>
+          )}
+          {step !== 'dest' || !showPartenze ? (
+            <div className="flex items-center justify-center gap-2">
+              {STEPS.map((s, i) => (
+                <div
+                  key={s}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all duration-500',
+                    i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-white/15'
+                  )}
+                />
+              ))}
+            </div>
+          ) : null}
           <h1 className="font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
-            {step === 'dest' && 'Scegli la nazione. Poi i giorni.'}
+            {showPartenze && 'Partenze già aperte'}
+            {!showPartenze && step === 'dest' && 'Scegli la nazione. Poi i giorni.'}
             {step === 'plan' && 'Questo è il piano.'}
             {step === 'who' && 'Come vuoi partire?'}
             {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
           </h1>
           <p className="mx-auto max-w-xl text-base text-white/85">
-            {step === 'dest' && 'Cerca o scegli il continente. Poi i giorni.'}
+            {showPartenze && 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'}
+            {!showPartenze && step === 'dest' && 'Cerca o scegli il continente. Poi i giorni.'}
             {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
             {step === 'who' && 'Stesso piano. Cambiano solo date e con chi vai.'}
             {step === 'when' &&
@@ -235,7 +284,13 @@ export function StartTripWizard({
 
         <div className="flex-1">
           <AnimatePresence mode="wait">
-            {step === 'dest' ? (
+            {step === 'dest' && showPartenze ? (
+              <motion.div key="partenze" {...phaseMotion}>
+                <OfficialEditionsGrid editions={editions} />
+              </motion.div>
+            ) : null}
+
+            {step === 'dest' && !showPartenze ? (
               <motion.div key="dest" {...phaseMotion} className="space-y-6">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />

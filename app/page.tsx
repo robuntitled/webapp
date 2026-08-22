@@ -271,7 +271,7 @@ export default function LoginPage() {
               Itinerari
             </Link>
             {' · '}
-            <Link href="/partenze" className="underline underline-offset-4">
+            <Link href="/destinazioni?vista=partenze" className="underline underline-offset-4">
               Partenze
             </Link>
           </p>

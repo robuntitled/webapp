@@ -4,7 +4,12 @@ import { wizardDestinationCards } from '@/lib/itineraries/catalog';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DestinazioniPage() {
+type PageProps = {
+  searchParams: Promise<{ vista?: string }>;
+};
+
+export default async function DestinazioniPage({ searchParams }: PageProps) {
+  const { vista } = await searchParams;
   const [destinations, editions] = await Promise.all([
     Promise.resolve(wizardDestinationCards()),
     listOfficialEditions(),
@@ -12,6 +17,7 @@ export default async function DestinazioniPage() {
   return (
     <StartTripWizard
       destinations={destinations}
+      initialHomeView={vista === 'partenze' ? 'partenze' : 'itinerari'}
       editions={editions.map((e) => ({
         id: e.id,
         template_id: e.template_id,

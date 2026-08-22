@@ -39,7 +39,7 @@ describe('onboarding paths', () => {
 
   it('branches after first onboarding', () => {
     expect(afterOnboardingPath('create')).toBe('/destinazioni');
-    expect(afterOnboardingPath('book')).toBe('/partenze');
+    expect(afterOnboardingPath('book')).toBe('/destinazioni?vista=partenze');
   });
 });
 

@@ -16,12 +16,12 @@ export default async function PartenzeJoinPage({ params }: PageProps) {
   if (!session?.user?.id) redirect('/');
   const { id } = await params;
   if (id.startsWith('seed-')) {
-    redirect('/partenze');
+    redirect('/destinazioni?vista=partenze');
   }
 
   const joined = await joinEdition({ userId: session.user.id, editionId: id });
   if ('error' in joined) {
-    redirect('/partenze');
+    redirect('/destinazioni?vista=partenze');
   }
 
   const template = findItineraryTemplate(joined.practice.template_id);
