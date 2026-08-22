@@ -19,6 +19,7 @@ import { TripChatPanel } from '@/components/chat/TripChatPanel';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 type TripGroupsChatDockProps = {
@@ -188,14 +189,15 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : String(unreadTotal)) : null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="pointer-events-auto flex w-full max-w-4xl flex-col items-center gap-3">
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            className="flex h-[min(580px,calc(100vh-8rem))] w-[min(400px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-border/80 bg-background shadow-2xl"
+            className="flex h-[min(560px,calc(100vh-7.5rem))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border/80 bg-background shadow-2xl sm:max-w-lg"
           >
             <div className="flex shrink-0 items-center gap-3 border-b bg-muted/40 px-4 py-3.5">
               {activeGroup ? (
@@ -428,19 +430,22 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
       <Button
         type="button"
         size="lg"
-        className={`relative h-14 gap-2 rounded-full px-5 font-semibold shadow-xl ${
-          open ? 'opacity-90' : ''
-        }`}
+        className={cn(
+          'relative h-12 min-w-[9.5rem] gap-2 rounded-full border border-white/10 bg-[#0b1220]/92 px-6 font-semibold text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md',
+          'hover:bg-[#161d2b] hover:text-white',
+          open && 'ring-2 ring-accent/70'
+        )}
         onClick={() => setOpen((v) => !v)}
       >
-        <MessageCircle className="h-5 w-5" />
-        <span className="hidden sm:inline">{open ? 'Chiudi' : 'Chat'}</span>
+        <MessageCircle className="h-5 w-5 text-accent" />
+        <span>{open ? 'Chiudi' : 'Chat'}</span>
         {!open && badge && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-bold text-destructive-foreground">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#0b1220]">
             {badge}
           </span>
         )}
       </Button>
+      </div>
     </div>
   );
 }

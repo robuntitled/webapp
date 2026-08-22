@@ -1,59 +1,117 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  CatalogFiltersBar,
+  EMPTY_CATALOG_FILTERS,
+  type CatalogFilterState,
+} from '@/components/itineraries/CatalogFiltersBar';
 import { uniqueCover } from '@/lib/composer/destination-covers';
+import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
+import { cn } from '@/lib/utils';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
 
-/** Elenco istanze di viaggio già aperte (partenze ufficiali). */
+/** Elenco partenze con ricerca + filtri che puntano ai risultati. */
 export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCard[] }) {
-  if (editions.length === 0) {
-    return <p className="text-center text-sm text-white/70">Nessuna partenza aperta al momento.</p>;
-  }
+  const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
+
+  const enriched = useMemo(
+    () =>
+      editions.map((ed, i) => {
+        const tpl = findItineraryTemplate(ed.template_id);
+        const dest = tpl ? findCatalogDestination(tpl.destination_slug) : undefined;
+        return {
+          ed,
+          tpl,
+          dest,
+          cover: uniqueCover(tpl?.destination_slug ?? ed.template_id, i),
+          name: (tpl?.destination_name ?? ed.template_id).toLowerCase(),
+        };
+      }),
+    [editions]
+  );
+
+  const visible = useMemo(() => {
+    const q = filters.query.trim().toLowerCase();
+    return enriched.filter(({ ed, tpl, dest, name }) => {
+      if (filters.continent !== 'Tutte' && dest?.continent !== filters.continent) return false;
+      if (filters.duration != null && tpl?.duration_days !== filters.duration) return false;
+      if (filters.published === true && ed.id.startsWith('seed-')) return false;
+      if (filters.published === false && !ed.id.startsWith('seed-')) return false;
+      if (!q) return true;
+      return (
+        name.includes(q) ||
+        ed.template_id.toLowerCase().includes(q) ||
+        (tpl?.summary ?? '').toLowerCase().includes(q) ||
+        (dest?.continent ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [enriched, filters]);
 
   return (
-    <ul className="grid gap-5 sm:grid-cols-2">
-      {editions.map((ed, i) => {
-        const tpl = findItineraryTemplate(ed.template_id);
-        const cover = uniqueCover(tpl?.destination_slug ?? ed.template_id, i);
-        return (
-          <li
-            key={ed.id}
-            className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1220]/80 shadow-[0_24px_60px_-32px_rgba(0,0,0,0.75)]"
-          >
-            <div className="relative h-56 sm:h-64">
-              <Image src={cover} alt="" fill className="object-cover" sizes="50vw" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-[#0b1220]/35 to-transparent" />
-              {tpl ? (
-                <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                  {tpl.duration_days} giorni
-                </p>
-              ) : null}
-              <div className="absolute bottom-4 left-4 right-4">
-                <p className="font-display text-2xl font-semibold text-white">
+    <div className="space-y-5">
+      <CatalogFiltersBar
+        value={filters}
+        onChange={setFilters}
+        searchPlaceholder="Cerca destinazione o template"
+        showPublished
+        resultsId="risultati-partenze"
+      />
+      <p className="text-center text-xs text-white/50">
+        {visible.length}{' '}
+        {visible.length === 1 ? 'partenza' : 'partite'} · filtri e ricerca aggiornano l’elenco
+      </p>
+      <ul id="risultati-partenze" className="space-y-2.5">
+        {visible.length === 0 ? (
+          <li className="rounded-2xl border border-white/10 bg-[#0b1220]/60 px-4 py-8 text-center text-sm text-white/70">
+            Nessuna partenza con questi filtri.
+          </li>
+        ) : (
+          visible.map(({ ed, tpl, cover }) => (
+            <li
+              key={ed.id}
+              className={cn(
+                'flex gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1220]/75 p-2.5',
+                'transition hover:border-white/25 hover:bg-[#121a2b]'
+              )}
+            >
+              <div className="relative h-[4.75rem] w-[6.5rem] shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-36">
+                <Image src={cover} alt="" fill className="object-cover" sizes="144px" />
+                {tpl ? (
+                  <p className="absolute left-1.5 top-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
+                    {tpl.duration_days}g
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5">
+                <p className="font-display text-lg font-semibold leading-tight text-white sm:text-xl">
                   {tpl?.destination_name ?? ed.template_id}
                 </p>
-                <p className="mt-1 text-sm text-white/80">
+                <p className="text-sm text-white/75">
                   {formatItDate(ed.date_from)} – {formatItDate(ed.date_to)}
                 </p>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-white/60">
+                    {ed.confirmed_count}/{ed.min_confirmed} confermati
+                  </p>
+                  {ed.id.startsWith('seed-') ? (
+                    <span className="text-xs text-white/40">Presto</span>
+                  ) : (
+                    <Button asChild size="sm" className="rounded-full">
+                      <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-              <p className="text-xs font-medium text-white/70">
-                {ed.confirmed_count}/{ed.min_confirmed} partecipanti confermati
-              </p>
-              {ed.id.startsWith('seed-') ? (
-                <p className="text-xs text-white/45">Presto prenotabile</p>
-              ) : (
-                <Button asChild className="rounded-full">
-                  <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
-                </Button>
-              )}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          ))
+        )}
+      </ul>
+    </div>
   );
 }

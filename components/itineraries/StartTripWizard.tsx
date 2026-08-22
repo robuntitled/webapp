@@ -1,14 +1,13 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { addDays, format, nextFriday, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { it as itDayPicker } from 'react-day-picker/locale';
-import { ArrowLeft, ArrowRight, CalendarDays, Loader2, MapPin, Search, Users, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Loader2, MapPin, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { SlideshowWash } from '@/components/brand/SlideshowWash';
 import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
+import {
+  CatalogFiltersBar,
+  EMPTY_CATALOG_FILTERS,
+  type CatalogFilterState,
+} from '@/components/itineraries/CatalogFiltersBar';
+import { DestinationPreviewRow } from '@/components/itineraries/DestinationPreviewRow';
 import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
@@ -76,8 +81,7 @@ export function StartTripWizard({
   const [mode, setMode] = useState<TravelMode | null>(null);
   const [date, setDate] = useState<Date>();
   const [editionId, setEditionId] = useState<string | null>(null);
-  const [destQuery, setDestQuery] = useState('');
-  const [continent, setContinent] = useState<string>('Tutte');
+  const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
   const [pending, startTransition] = useTransition();
   const { data: session } = useSession();
   const router = useRouter();
@@ -93,9 +97,12 @@ export function StartTripWizard({
   );
 
   const filteredDestinations = useMemo(() => {
-    const q = destQuery.trim().toLowerCase();
+    const q = filters.query.trim().toLowerCase();
     return destinations.filter((d) => {
-      if (continent !== 'Tutte' && d.continent !== continent) return false;
+      if (filters.continent !== 'Tutte' && d.continent !== filters.continent) return false;
+      if (filters.duration != null && !d.allowedDurations.includes(filters.duration)) return false;
+      if (filters.published === true && d.published !== true) return false;
+      if (filters.published === false && d.published !== false) return false;
       if (!q) return true;
       return (
         d.name.toLowerCase().includes(q) ||
@@ -104,7 +111,7 @@ export function StartTripWizard({
         (d.continent ?? '').toLowerCase().includes(q)
       );
     });
-  }, [continent, destQuery, destinations]);
+  }, [destinations, filters]);
 
   const destSections = useMemo(() => {
     const order = [...CATALOG_CONTINENTS];
@@ -119,7 +126,7 @@ export function StartTripWizard({
   const destCoverBySlug = useMemo(() => {
     const slugs = destSections.flatMap((s) => s.items.map((d) => d.slug));
     const urls = uniqueCoversForSlugs(slugs);
-    return Object.fromEntries(slugs.map((slug, i) => [slug, urls[i]]));
+    return Object.fromEntries(slugs.map((s, i) => [s, urls[i]]));
   }, [destSections]);
 
   const fridayHints = useMemo(() => {
@@ -208,7 +215,7 @@ export function StartTripWizard({
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
       <SlideshowWash />
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-8 pt-10">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-24 pt-10">
         <div className="mb-8 space-y-4 text-center">
           {step === 'dest' ? (
             <div className="inline-flex rounded-full border border-white/15 bg-[#0b1220]/80 p-1">
@@ -291,85 +298,47 @@ export function StartTripWizard({
             ) : null}
 
             {step === 'dest' && !showPartenze ? (
-              <motion.div key="dest" {...phaseMotion} className="space-y-6">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="search"
-                    value={destQuery}
-                    onChange={(e) => setDestQuery(e.target.value)}
-                    placeholder="Cerca nazione o continente"
-                    className="h-12 w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setContinent(r)}
-                      className={cn(
-                        'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
-                        continent === r
-                          ? 'bg-accent text-[#0b1220]'
-                          : 'border border-white/15 bg-[#0b1220]/70 text-white/80 hover:bg-[#161d2b]'
-                      )}
-                    >
-                      {r.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+              <motion.div key="dest" {...phaseMotion} className="space-y-5">
+                <CatalogFiltersBar
+                  value={filters}
+                  onChange={setFilters}
+                  searchPlaceholder="Cerca nazione, continente o vibe"
+                  resultsId="risultati-itinerari"
+                />
+                <p className="text-center text-xs text-white/50">
+                  {filteredDestinations.length}{' '}
+                  {filteredDestinations.length === 1 ? 'meta' : 'mete'} · filtri e ricerca
+                  aggiornano l’elenco
+                </p>
                 {destSections.length === 0 ? (
-                  <p className="text-center text-sm text-white/70">Nessuna destinazione con questo filtro.</p>
+                  <p className="rounded-2xl border border-white/10 bg-[#0b1220]/60 px-4 py-8 text-center text-sm text-white/70">
+                    Nessuna destinazione con questo filtro.
+                  </p>
                 ) : (
-                  destSections.map((section) => (
-                    <section key={section.continent} className="space-y-3">
-                      <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-white">
-                        {section.continent}
-                      </h2>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {section.items.map((dest) => (
-                          <article
-                            key={dest.slug}
-                            className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1220]/75 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
-                          >
-                            <div className="relative h-44">
-                              <Image
-                                src={destCoverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
-                                alt={dest.name}
-                                fill
-                                className="object-cover"
-                                sizes="(max-width: 640px) 100vw, 50vw"
+                  <div id="risultati-itinerari" className="space-y-6">
+                    {destSections.map((section) => (
+                      <section key={section.continent} className="space-y-2.5">
+                        <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-white/80">
+                          {section.continent}
+                          <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-white/40">
+                            {section.items.length}
+                          </span>
+                        </h2>
+                        <ul className="space-y-2.5">
+                          {section.items.map((dest) => (
+                            <li key={dest.slug}>
+                              <DestinationPreviewRow
+                                dest={dest}
+                                cover={destCoverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
+                                highlightDuration={filters.duration}
+                                onPickDuration={(days) => pickDuration(dest, days)}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                              <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                                {dest.continent ?? section.continent}
-                              </p>
-                              <div className="absolute bottom-3 left-4 right-4">
-                                <h3 className="font-display text-2xl font-semibold text-white">
-                                  {dest.emoji} {dest.name}
-                                </h3>
-                                <p className="mt-0.5 text-sm text-white/85">{dest.vibe}</p>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                              {dest.allowedDurations.map((n) => (
-                                <button
-                                  key={n}
-                                  type="button"
-                                  onClick={() => pickDuration(dest, n)}
-                                  className="rounded-full border border-white/20 bg-white/8 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-accent hover:text-[#0b1220]"
-                                >
-                                  {n} giorni
-                                </button>
-                              ))}
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  ))
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
                 )}
               </motion.div>
             ) : null}
