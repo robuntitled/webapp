@@ -1,5 +1,6 @@
 import { THAILANDIA_TEMPLATES } from '@/lib/itineraries/thailandia';
 import { findCatalogDestination, wizardCatalogDestinations } from '@/lib/catalog/destinations';
+import { withResolvedDayCoords } from '@/lib/itineraries/geo';
 import type { ItineraryTemplate, OfficialEditionSeed } from '@/lib/itineraries/types';
 
 /**
@@ -10,7 +11,10 @@ import type { ItineraryTemplate, OfficialEditionSeed } from '@/lib/itineraries/t
  */
 export const PUBLISHED_TEMPLATES: ItineraryTemplate[] = THAILANDIA_TEMPLATES.filter(
   (t) => t.status === 'published'
-);
+).map((t) => ({
+  ...t,
+  days: withResolvedDayCoords(t.days, t.destination_slug),
+}));
 
 export function wizardDestinationCards() {
   return wizardCatalogDestinations().map((d) => ({

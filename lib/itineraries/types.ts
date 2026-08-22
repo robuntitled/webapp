@@ -13,6 +13,9 @@ export type ItineraryDay = {
   transfer?: 'internal_flight' | 'ferry' | 'bus' | 'none';
   is_arrival: boolean;
   is_departure: boolean;
+  /** WGS84 — posizione tappa sulla mappa locale. */
+  lat?: number;
+  lng?: number;
 };
 
 export type ItineraryHotel = {

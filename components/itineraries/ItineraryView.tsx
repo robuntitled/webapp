@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, BedDouble, CalendarDays, MapPin, Ticket, Wallet } from 'lucide-react';
+import { ArrowLeft, BedDouble, CalendarDays, Ticket, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { coverForDestination } from '@/lib/composer/destination-covers';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { itineraryPath } from '@/lib/itineraries/params';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
+import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
 import { cn } from '@/lib/utils';
 
 function eur(n: number) {
@@ -97,31 +98,7 @@ export function ItineraryView({
 
         <section className="space-y-3">
           <h2 className="font-display text-xl font-semibold">Giorno per giorno</h2>
-          <ol className="space-y-3">
-            {template.days.map((day) => (
-              <li key={day.day_number} className="rounded-[10px] border border-border bg-card p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-accent">
-                    Giorno {day.day_number}
-                  </span>
-                  {day.is_arrival ? <Badge variant="secondary">Arrivo</Badge> : null}
-                  {day.is_departure ? <Badge variant="secondary">Partenza</Badge> : null}
-                  {day.transfer && day.transfer !== 'none' ? (
-                    <Badge variant="outline">{day.transfer.replace('_', ' ')}</Badge>
-                  ) : null}
-                </div>
-                <p className="mt-1 font-semibold">{day.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{day.description}</p>
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {day.area_segment}
-                  {day.pois.length
-                    ? ` · ${day.pois.map((p) => p.name).join(', ')}`
-                    : ''}
-                </p>
-              </li>
-            ))}
-          </ol>
+          <ItineraryDaysWithMap template={template} />
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">

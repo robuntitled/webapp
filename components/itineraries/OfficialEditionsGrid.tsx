@@ -22,6 +22,11 @@ function durationFromId(templateId: string, fallback?: number | null) {
   return m ? Number(m[1]) : null;
 }
 
+/** Almeno un posto prenotato → Ultimi posti; altrimenti Disponibile. */
+function scarcityLabel(confirmed: number): 'disponibile' | 'ultimi' {
+  return confirmed >= 1 ? 'ultimi' : 'disponibile';
+}
+
 /** Elenco partenze chiaro, filtri affidabili. */
 export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCard[] }) {
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
@@ -33,17 +38,18 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
         const slug = tpl?.destination_slug ?? ed.template_id.split('-')[0] ?? '';
         const dest = findCatalogDestination(slug) ?? findCatalogDestination(ed.template_id);
         const days = durationFromId(ed.template_id, tpl?.duration_days);
-        // Tutte le partenze in elenco sono joinabili (anche seed di lancio).
-        const open = ed.status === 'open' || ed.status === 'formed' || ed.id.startsWith('seed-');
+        const scarcity = scarcityLabel(ed.confirmed_count ?? 0);
         return {
           ed,
           tpl,
           dest,
           days,
-          open,
+          scarcity,
           cover: uniqueCover(slug || ed.template_id, i),
           name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',
+          lat: dest?.lat ?? null,
+          lng: dest?.lng ?? null,
         };
       }),
     [editions]
@@ -59,11 +65,12 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
 
   const visible = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
-    return enriched.filter(({ ed, tpl, dest, name, continent, days, open }) => {
+    return enriched.filter(({ ed, tpl, dest, name, continent, days, scarcity }) => {
       if (filters.continent !== 'Tutte' && continent !== filters.continent) return false;
       if (filters.duration != null && (days == null || days !== filters.duration)) return false;
-      if (filters.published === true && !open) return false;
-      if (filters.published === false && open) return false;
+      // published true = Disponibile (0 confermati); false = Ultimi posti (≥1)
+      if (filters.published === true && scarcity !== 'disponibile') return false;
+      if (filters.published === false && scarcity !== 'ultimi') return false;
       if (!q) return true;
       return (
         name.includes(q) ||
@@ -86,7 +93,7 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
         showPublished
         resultsId="risultati-partenze"
         durationOptions={durationOptions}
-        publishedLabels={{ all: 'Tutte', yes: 'Aperte', no: 'Presto' }}
+        publishedLabels={{ all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }}
       />
       <p className="text-center text-sm font-medium text-slate-600">
         {visible.length}{' '}
@@ -100,14 +107,22 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
             Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.
           </li>
         ) : (
-          visible.map(({ ed, tpl, cover, days }) => (
+          visible.map(({ ed, tpl, cover, days, scarcity }) => (
             <li
               key={ed.id}
               className={cn(
-                'flex gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm',
+                'relative flex gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm',
                 'transition hover:border-primary/30 hover:shadow-md'
               )}
             >
+              <span
+                className={cn(
+                  'absolute right-3 top-3 z-10 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm',
+                  scarcity === 'ultimi' ? 'bg-accent' : 'bg-primary'
+                )}
+              >
+                {scarcity === 'ultimi' ? 'Ultimi posti' : 'Disponibile'}
+              </span>
               <div className="relative h-[4.75rem] w-[6.5rem] shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-36">
                 <Image src={cover} alt="" fill className="object-cover" sizes="144px" />
                 {days != null ? (
@@ -116,7 +131,7 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
                   </p>
                 ) : null}
               </div>
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5">
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5 pr-16 sm:pr-24">
                 <p className="font-display text-lg font-semibold leading-tight text-slate-900 sm:text-xl">
                   {tpl?.destination_name ?? ed.template_id}
                 </p>
@@ -126,9 +141,6 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
                 <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-slate-500">
                     {ed.confirmed_count}/{ed.min_confirmed} confermati
-                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                      Aperta
-                    </span>
                   </p>
                   <Button asChild size="sm" className="rounded-full bg-accent text-white hover:bg-accent/90">
                     <Link href={`/partenze/${ed.id}`}>Partecipa</Link>

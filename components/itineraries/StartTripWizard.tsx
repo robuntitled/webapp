@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { addDays, format, nextFriday, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { it as itDayPicker } from 'react-day-picker/locale';
-import { ArrowLeft, ArrowRight, CalendarDays, Loader2, MapPin, Users, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Loader2, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
 import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
+import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
 import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -292,7 +293,12 @@ export function StartTripWizard({
         </section>
       ) : null}
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-24 pt-6">
+      <div
+        className={cn(
+          'relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full flex-col px-4 pb-24 pt-6',
+          step === 'plan' ? 'max-w-6xl' : 'max-w-4xl'
+        )}
+      >
         {step !== 'dest' ? (
           <div className="mb-8 space-y-4 text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
@@ -456,24 +462,12 @@ export function StartTripWizard({
                     </p>
                   </div>
                 </div>
-                <ol className="space-y-2">
-                  {template.days.map((day) => (
-                    <li
-                      key={day.day_number}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                        Giorno {day.day_number}
-                      </p>
-                      <p className="font-semibold text-slate-900">{day.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">{day.description}</p>
-                      <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                        <MapPin className="h-3 w-3" />
-                        {day.area_segment}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
+                <div>
+                  <h2 className="mb-3 font-display text-lg font-semibold text-slate-900">
+                    Giorno per giorno
+                  </h2>
+                  <ItineraryDaysWithMap template={template} />
+                </div>
                 <p className="text-xs text-slate-500">
                   {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
                 </p>

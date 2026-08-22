@@ -1,4 +1,5 @@
 import type { ItineraryDay, ItineraryTemplate } from '@/lib/itineraries/types';
+import { AREA_SEGMENT_COORDS } from '@/lib/itineraries/geo';
 
 function day(
   day_number: number,
@@ -8,6 +9,7 @@ function day(
   pois: ItineraryDay['pois'],
   extra: Partial<ItineraryDay> = {}
 ): ItineraryDay {
+  const segCoords = AREA_SEGMENT_COORDS[area_segment.trim().toLowerCase()];
   return {
     day_number,
     title,
@@ -17,6 +19,8 @@ function day(
     transfer: extra.transfer ?? 'none',
     is_arrival: extra.is_arrival ?? false,
     is_departure: extra.is_departure ?? false,
+    lat: extra.lat ?? segCoords?.lat,
+    lng: extra.lng ?? segCoords?.lng,
   };
 }
 
