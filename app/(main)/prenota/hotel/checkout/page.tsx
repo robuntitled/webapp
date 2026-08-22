@@ -12,8 +12,8 @@ export default async function HotelCheckoutPage() {
   return (
     <PrenotaPageShell
       title="Checkout hotel"
-      subtitle="Conferma gli ospiti e completa il pagamento in sicurezza."
-      badge="Prenotabile"
+      subtitle="Ospiti, poi pagamento. Contratto con il fornitore."
+      simple
     >
       <HotelCheckoutClient defaultEmail={session.user.email ?? ''} />
     </PrenotaPageShell>

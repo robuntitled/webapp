@@ -98,6 +98,7 @@ type LiteApiHotelSearchProps = {
   className?: string;
   preferredHotelIds?: string[];
   autoSearch?: boolean;
+  hideSearchForm?: boolean;
 };
 
 type HotelFormCache = {
@@ -216,6 +217,7 @@ export function LiteApiHotelSearch({
   className,
   preferredHotelIds,
   autoSearch = false,
+  hideSearchForm = false,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
   const hotelDefaults = defaultHotelDates();
@@ -466,6 +468,7 @@ export function LiteApiHotelSearch({
 
   return (
     <div className={cn('space-y-4', className)}>
+      {!hideSearchForm ? (
       <div
         className={cn(
           'overflow-hidden rounded-2xl',
@@ -582,6 +585,7 @@ export function LiteApiHotelSearch({
           </div>
         </div>
       </div>
+      ) : null}
 
       {loading && !rawHotels && (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card py-16 text-sm text-muted-foreground">

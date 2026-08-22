@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -13,7 +13,7 @@ import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
 import { PrenotaActivitiesClient } from '@/components/travel/PrenotaActivitiesClient';
 import { PrenotaAttractionsClient } from '@/components/travel/PrenotaAttractionsClient';
-import { firstStayCity } from '@/lib/itineraries/catalog';
+import { staysFromTemplate } from '@/lib/itineraries/dates';
 import { cn } from '@/lib/utils';
 import type { ItineraryTemplate, PracticeRow } from '@/lib/itineraries/types';
 
@@ -27,11 +27,13 @@ export function PracticeBookingHub({
   template: ItineraryTemplate;
 }) {
   const [step, setStep] = useState<BookStep>('flight');
+  const [stayIdx, setStayIdx] = useState(0);
   const [pending, startTransition] = useTransition();
   const groupLocked = practice.mode === 'group' && !practice.flight_confirmed_at;
-  const city = firstStayCity(template);
   const from = String(practice.date_from).slice(0, 10);
   const to = String(practice.date_to).slice(0, 10);
+  const stays = useMemo(() => staysFromTemplate(template, from), [template, from]);
+  const stay = stays[stayIdx] ?? stays[0];
 
   function run(fn: (id: string) => Promise<unknown>) {
     startTransition(async () => {
@@ -56,9 +58,7 @@ export function PracticeBookingHub({
             onClick={() => setStep(id)}
             className={cn(
               'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
-              step === id
-                ? 'bg-accent text-[#0b1220]'
-                : 'border border-white/15 bg-white/8 text-white/80 hover:bg-white/12'
+              step === id ? 'bg-accent text-[#0b1220]' : 'bg-[#161d2b] text-white'
             )}
           >
             {label}
@@ -68,11 +68,12 @@ export function PracticeBookingHub({
 
       {step === 'flight' ? (
         <div className="space-y-3">
-          <p className="text-sm text-white/70">
-            Ricerca automatica da tutta Italia. Posto confermato = volo prenotato.
+          <p className="text-sm text-white/80">
+            Offerte da tutta Italia sulle date del viaggio. Scegli andata, poi ritorno.
           </p>
           <FlightSearchPanel
             variant="composer"
+            hideSearchForm
             defaultOrigin="Italia"
             defaultDestination={template.destination_name}
             defaultStartDate={from}
@@ -95,23 +96,46 @@ export function PracticeBookingHub({
 
       {step === 'hotel' ? (
         groupLocked ? (
-          <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/70">
+          <p className="rounded-3xl bg-[#161d2b] p-5 text-sm text-white/80">
             In gruppo l’hotel si sblocca dopo il volo confermato.
           </p>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-white/70">
-              Stessa zona del piano ({city}). Ognuno prenota la propria camera.
+            {stays.length > 1 ? (
+              <div className="flex flex-wrap gap-2">
+                {stays.map((s, i) => (
+                  <button
+                    key={`${s.city}-${s.checkin}`}
+                    type="button"
+                    onClick={() => setStayIdx(i)}
+                    className={cn(
+                      'rounded-full px-3.5 py-1.5 text-sm font-medium',
+                      i === stayIdx ? 'bg-accent text-[#0b1220]' : 'bg-[#161d2b] text-white'
+                    )}
+                  >
+                    {i + 1}. {s.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <p className="text-sm text-white/80">
+              {stay
+                ? `${stay.label}: stessa zona, camera tua. ${stay.checkin} → ${stay.checkout}`
+                : 'Hotel del piano.'}
             </p>
-            <LiteApiHotelSearch
-              defaultCity={city}
-              defaultCheckin={from}
-              defaultCheckout={to}
-              defaultAdults={1}
-              autoSearch
-              cacheKey={null}
-              className="rounded-2xl bg-card p-4"
-            />
+            {stay ? (
+              <LiteApiHotelSearch
+                key={`${stay.city}-${stay.checkin}`}
+                defaultCity={stay.city}
+                defaultCheckin={stay.checkin}
+                defaultCheckout={stay.checkout}
+                defaultAdults={1}
+                autoSearch
+                hideSearchForm
+                cacheKey={null}
+                className="rounded-3xl bg-white p-4"
+              />
+            ) : null}
             <Button
               variant="secondary"
               disabled={pending || Boolean(practice.hotel_confirmed_at)}
@@ -126,28 +150,30 @@ export function PracticeBookingHub({
 
       {step === 'sights' ? (
         groupLocked ? (
-          <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/70">
+          <p className="rounded-3xl bg-[#161d2b] p-5 text-sm text-white/80">
             In gruppo attrazioni e attività dopo il volo.
           </p>
         ) : (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-card p-4">
-              <p className="mb-3 text-sm font-medium text-foreground">Attrazioni</p>
+            <div className="rounded-3xl bg-white p-4">
+              <p className="mb-3 text-sm font-medium text-slate-900">Attrazioni</p>
               <PrenotaAttractionsClient
-                defaultCity={city}
+                defaultCity={stay?.city ?? template.destination_name}
                 defaultStartDate={from}
                 defaultEndDate={to}
                 autoSearch
+                hideSearchForm
                 cacheKey={null}
               />
             </div>
-            <div className="rounded-2xl bg-card p-4">
-              <p className="mb-3 text-sm font-medium text-foreground">Attività</p>
+            <div className="rounded-3xl bg-white p-4">
+              <p className="mb-3 text-sm font-medium text-slate-900">Attività</p>
               <PrenotaActivitiesClient
-                defaultCity={city}
+                defaultCity={stay?.city ?? template.destination_name}
                 defaultStartDate={from}
                 defaultEndDate={to}
                 autoSearch
+                hideSearchForm
                 cacheKey={null}
               />
             </div>

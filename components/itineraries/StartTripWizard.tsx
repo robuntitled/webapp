@@ -7,19 +7,26 @@ import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { ArrowLeft, ArrowRight, CalendarIcon, Loader2, MapPin, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, MapPin, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
+import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
 import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
 import type { OfficialEditionCard, TravelMode } from '@/lib/itineraries/types';
+
+const WHO_COVERS = {
+  solo: 'https://images.unsplash.com/photo-1504150558240-0b4fd8946624?auto=format&fit=crop&w=900&q=80',
+  friends:
+    'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
+  group: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=900&q=80',
+} as const;
 
 type Step = 'dest' | 'plan' | 'who' | 'when';
 
@@ -85,8 +92,28 @@ export function StartTripWizard({
         toast.error('Scegli come vuoi partire.');
         return;
       }
+      if (mode === 'group') {
+        const eds = editions.filter((e) => e.template_id === template?.template_id);
+        if (eds.length === 1) {
+          confirmWithEdition(eds[0].id);
+          return;
+        }
+      }
       setStep('when');
     }
+  };
+
+  const confirmWithEdition = (id: string) => {
+    if (!template) return;
+    if (!session?.user) {
+      toast.error('Accedi per confermare.');
+      router.push(`/?callbackUrl=/itinerario/${template.destination_slug}?d=${template.duration_days}`);
+      return;
+    }
+    startTransition(async () => {
+      const result = await joinEditionAction(id);
+      if (result?.error) toast.error(result.error);
+    });
   };
 
   const confirm = () => {
@@ -101,10 +128,7 @@ export function StartTripWizard({
         toast.error('Scegli una partenza ufficiale.');
         return;
       }
-      startTransition(async () => {
-        const result = await joinEditionAction(editionId);
-        if (result?.error) toast.error(result.error);
-      });
+      confirmWithEdition(editionId);
       return;
     }
     if (!date) {
@@ -123,10 +147,20 @@ export function StartTripWizard({
 
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      <div className="composer-aurora" />
+      {slug ? (
+        <Image
+          src={coverForDestination(slug)}
+          alt=""
+          fill
+          className="object-cover"
+          sizes="100vw"
+          priority
+        />
+      ) : null}
+      <div className="absolute inset-0 bg-[#0b1220]/70" />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col px-4 pb-8 pt-10">
         <div className="mb-8 space-y-4 text-center">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-sm text-white/90">
+          <p className="inline-flex items-center gap-2 rounded-full bg-[#161d2b] px-4 py-1.5 text-sm text-white">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
             Step {idx + 1} di {STEPS.length}
           </p>
@@ -145,7 +179,7 @@ export function StartTripWizard({
             {step === 'dest' && 'Scegli la nazione. Poi i giorni.'}
             {step === 'plan' && 'Questo è il piano.'}
             {step === 'who' && 'Come vuoi partire?'}
-            {step === 'when' && (mode === 'group' ? 'Quale partenza ufficiale?' : 'Quando parti?')}
+            {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
           </h1>
           <p className="mx-auto max-w-xl text-base text-white/85">
             {step === 'dest' && 'Tre durate. L’itinerario è già pronto.'}
@@ -153,7 +187,7 @@ export function StartTripWizard({
             {step === 'who' && 'Stesso piano. Cambiano solo date e con chi vai.'}
             {step === 'when' &&
               (mode === 'group'
-                ? 'Solo date già aperte da NomadLink.'
+                ? 'Date già fissate. Entri e vedi i voli.'
                 : 'Scegli il giorno. Poi partono voli, hotel e attrazioni.')}
           </p>
         </div>
@@ -262,89 +296,71 @@ export function StartTripWizard({
 
             {step === 'who' ? (
               <motion.div key="who" {...phaseMotion} className="grid gap-3 sm:grid-cols-3">
-                {(
-                  [
-                    ['solo', 'Da solo', 'Date tue. Pratica privata.'],
-                    ['friends', 'Con amici', 'Stesse date. Invito privato.'],
-                    ['group', 'In gruppo', 'Solo partenze ufficiali.'],
-                  ] as const
-                ).map(([id, title, body]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setMode(id)}
-                    className={cn(
-                      'rounded-2xl border px-4 py-4 text-left transition',
-                      mode === id
-                        ? 'border-accent/70 bg-accent/15 shadow-[0_0_0_1px_rgba(245,158,11,0.25)]'
-                        : 'border-white/12 bg-white/[0.05] hover:border-white/22 hover:bg-white/[0.08]'
-                    )}
-                  >
-                    <p className="font-display text-lg font-semibold text-white">{title}</p>
-                    <p className="mt-1 text-sm text-white/70">{body}</p>
-                  </button>
-                ))}
+                <PhotoChoiceCard
+                  cover={WHO_COVERS.solo}
+                  active={mode === 'solo'}
+                  onClick={() => setMode('solo')}
+                  kicker="Privato"
+                  title="Da solo"
+                  body="Date tue. Poi i voli."
+                />
+                <PhotoChoiceCard
+                  cover={WHO_COVERS.friends}
+                  active={mode === 'friends'}
+                  onClick={() => setMode('friends')}
+                  kicker="Privato"
+                  title="Con amici"
+                  body="Stesse date. Invito."
+                />
+                <PhotoChoiceCard
+                  cover={WHO_COVERS.group}
+                  active={mode === 'group'}
+                  onClick={() => setMode('group')}
+                  kicker="Ufficiale"
+                  title="In gruppo"
+                  body="Date già aperte. Subito i voli."
+                />
               </motion.div>
             ) : null}
 
             {step === 'when' ? (
-              <motion.div key="when" {...phaseMotion} className="composer-panel space-y-4 rounded-3xl p-6 md:p-8">
+              <motion.div key="when" {...phaseMotion}>
                 {mode === 'group' ? (
                   officialForTemplate.length === 0 ? (
-                    <p className="text-sm text-white/70">Nessuna partenza ufficiale su questa durata.</p>
+                    <p className="text-sm text-white/80">Nessuna partenza ufficiale su questa durata.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {officialForTemplate.map((ed) => (
-                        <li key={ed.id}>
-                          <button
-                            type="button"
-                            onClick={() => setEditionId(ed.id)}
-                            className={cn(
-                              'w-full rounded-2xl border px-4 py-3 text-left transition',
-                              editionId === ed.id
-                                ? 'border-accent/70 bg-accent/15'
-                                : 'border-white/12 bg-white/[0.05] hover:bg-white/[0.08]'
-                            )}
-                          >
-                            <p className="font-semibold text-white">
-                              {formatItDate(ed.date_from)} – {formatItDate(ed.date_to)}
-                            </p>
-                            <p className="text-sm text-white/60">
-                              {ed.confirmed_count}/{ed.min_confirmed} voli confermati
-                            </p>
-                          </button>
-                        </li>
+                        <PhotoChoiceCard
+                          key={ed.id}
+                          cover={coverForDestination(slug || 'thailandia')}
+                          active={editionId === ed.id}
+                          onClick={() => {
+                            setEditionId(ed.id);
+                            confirmWithEdition(ed.id);
+                          }}
+                          kicker={`${ed.confirmed_count}/${ed.min_confirmed} voli`}
+                          title={template?.destination_name ?? 'Partenza'}
+                          body={`${formatItDate(ed.date_from)} – ${formatItDate(ed.date_to)}`}
+                        />
                       ))}
-                    </ul>
+                    </div>
                   )
                 ) : (
-                  <>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="composer-field w-full justify-start rounded-2xl"
-                        >
-                          <CalendarIcon className="h-4 w-4" />
-                          {date ? format(date, 'd MMMM yyyy', { locale: it }) : 'Data di partenza'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={setDate}
-                          disabled={(d) => d < new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <div className="composer-panel space-y-4 rounded-3xl p-6 md:p-8">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      disabled={(d) => d < new Date()}
+                      className="mx-auto rounded-2xl bg-white p-3 text-slate-900"
+                    />
                     {range ? (
-                      <p className="text-sm text-white/70">
+                      <p className="text-center text-sm text-white/80">
                         Rientro {format(new Date(range.date_to), 'd MMMM yyyy', { locale: it })}
                       </p>
                     ) : null}
-                  </>
+                  </div>
                 )}
               </motion.div>
             ) : null}
@@ -363,7 +379,7 @@ export function StartTripWizard({
                 <ArrowLeft className="h-4 w-4" />
                 Indietro
               </Button>
-              {step === 'when' ? (
+              {step === 'when' && mode !== 'group' ? (
                 <Button
                   type="button"
                   size="lg"
@@ -372,9 +388,11 @@ export function StartTripWizard({
                   onClick={confirm}
                 >
                   {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Conferma e cerca i voli
+                  Conferma e vedi i voli
                   <ArrowRight className="h-4 w-4" />
                 </Button>
+              ) : step === 'when' && mode === 'group' ? (
+                <span />
               ) : (
                 <Button
                   type="button"

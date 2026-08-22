@@ -38,6 +38,7 @@ import {
   type FlightLegDraft,
 } from '@/lib/travel/flight-checkout-draft';
 import { cn } from '@/lib/utils';
+import { isStripeClientSecret } from '@/lib/travel/stripe-client-secret';
 
 type Step = 'details' | 'payment' | 'done';
 type Title = 'MR' | 'MRS' | 'MS' | 'MISS';
@@ -354,7 +355,11 @@ export function FlightCheckoutClient({
   } | null>(null);
 
   const stripePromise = useMemo(() => {
-    if (!payment?.publishableKey || payment.paymentMode !== 'stripe_elements') {
+    if (
+      !payment?.publishableKey ||
+      payment.paymentMode !== 'stripe_elements' ||
+      !isStripeClientSecret(payment.secretKey)
+    ) {
       return null;
     }
     return loadStripe(payment.publishableKey) as Promise<Stripe | null>;
@@ -592,9 +597,10 @@ export function FlightCheckoutClient({
         return;
       }
       const paymentEnv = data.paymentEnv ?? 'sandbox';
-      const paymentMode: 'stripe_elements' | 'liteapi_sdk' = data.publishableKey
-        ? 'stripe_elements'
-        : 'liteapi_sdk';
+      const paymentMode: 'stripe_elements' | 'liteapi_sdk' =
+        data.publishableKey && isStripeClientSecret(data.secretKey)
+          ? 'stripe_elements'
+          : 'liteapi_sdk';
       const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,
@@ -671,11 +677,11 @@ export function FlightCheckoutClient({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-5">
         <Link
-          href="/prenota/voli"
+          href="/pratiche"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
-          Torna ai risultati
+          Torna alla pratica
         </Link>
 
         {step === 'details' ? (

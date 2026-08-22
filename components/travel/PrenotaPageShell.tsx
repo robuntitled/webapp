@@ -10,12 +10,14 @@ export async function PrenotaPageShell({
   subtitle,
   children,
   badge,
+  simple = false,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
   /** Es. stato feature (hotel/attrazioni) */
   badge?: string;
+  simple?: boolean;
 }) {
   const session = await auth();
   const bookable = session?.user?.id ? await fetchBookableTripsForUser(session.user.id) : [];
@@ -42,14 +44,16 @@ export async function PrenotaPageShell({
             {title}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
-          <ComplianceNotes className="mt-3 max-w-2xl" />
+          {simple ? null : <ComplianceNotes className="mt-3 max-w-2xl" />}
+          {simple ? null : (
           <div className="mt-3">
             <PrenotaNavTabs />
           </div>
+          )}
         </div>
       </div>
       <div className="container mx-auto max-w-6xl px-4 py-4 sm:py-5">
-        <PrenotaBookableBanner trips={bookable} />
+        {simple ? null : <PrenotaBookableBanner trips={bookable} />}
         {children}
       </div>
     </div>

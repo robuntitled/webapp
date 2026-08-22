@@ -64,12 +64,14 @@ export function PrenotaAttractionsClient({
   defaultStartDate,
   defaultEndDate,
   autoSearch = false,
+  hideSearchForm = false,
   cacheKey = 'attractions',
 }: {
   defaultCity?: string;
   defaultStartDate?: string;
   defaultEndDate?: string;
   autoSearch?: boolean;
+  hideSearchForm?: boolean;
   cacheKey?: SearchCacheKey | null;
 } = {}) {
   const defaults = defaultAffiliateDates();
@@ -280,6 +282,7 @@ export function PrenotaAttractionsClient({
 
   return (
     <div className="space-y-4">
+      {!hideSearchForm ? (
       <PrenotaAffiliateSearchBar
         city={city}
         startDate={startDate}
@@ -299,6 +302,7 @@ export function PrenotaAttractionsClient({
         onSortChange={setSort}
         showFilters
       />
+      ) : null}
 
       {destinationName && results && (
         <p className="text-xs text-muted-foreground">

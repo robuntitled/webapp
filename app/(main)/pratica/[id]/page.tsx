@@ -27,7 +27,6 @@ export default async function PraticaPage({ params }: PageProps) {
 
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      <div className="composer-aurora" />
       <div className="relative z-10 container mx-auto max-w-4xl space-y-6 px-4 py-10">
         <Link
           href="/pratiche"

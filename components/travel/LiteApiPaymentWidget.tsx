@@ -101,7 +101,21 @@ export function LiteApiPaymentWidget({
           returnUrl,
         });
         payment.handlePayment();
-        if (!cancelled) setReady(true);
+        const started = Date.now();
+        while (!cancelled && Date.now() - started < 8000) {
+          const host = document.getElementById(targetId);
+          if (host?.querySelector('iframe, form, input, .StripeElement')) {
+            if (!cancelled) setReady(true);
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        if (!cancelled) {
+          setReady(true);
+          if (!document.getElementById(targetId)?.querySelector('iframe, form, input')) {
+            setError('Il form carta non si è caricato. Riprova.');
+          }
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Errore caricamento pagamento');
@@ -138,7 +152,7 @@ export function LiteApiPaymentWidget({
       ) : null}
       <div
         id={targetId}
-        className="min-h-[220px] [&_iframe]:min-h-[220px]"
+        className="min-h-[320px] rounded-2xl bg-white p-2 [&_iframe]:min-h-[300px] [&_iframe]:w-full"
         aria-busy={!ready && !error}
       />
       {paymentEnv === 'sandbox' ? (

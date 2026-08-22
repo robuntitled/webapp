@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
 import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
 import { Button } from '@/components/ui/button';
+import { isStripeClientSecret } from '@/lib/travel/stripe-client-secret';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -140,7 +141,11 @@ export function HotelCheckoutClient({
   } | null>(null);
 
   const stripePromise = useMemo(() => {
-    if (!payment?.publishableKey || payment.paymentMode !== 'stripe_elements') {
+    if (
+      !payment?.publishableKey ||
+      payment.paymentMode !== 'stripe_elements' ||
+      !isStripeClientSecret(payment.secretKey)
+    ) {
       return null;
     }
     return loadStripe(payment.publishableKey) as Promise<Stripe | null>;
@@ -292,7 +297,7 @@ export function HotelCheckoutClient({
         toast.error(data.error ?? 'Impossibile riservare l’hotel');
         if (data.code === 'offer_expired') {
           clearHotelOfferDraft();
-          router.push('/prenota/hotel');
+          router.push('/pratiche');
         }
         return;
       }
@@ -301,9 +306,10 @@ export function HotelCheckoutClient({
         return;
       }
       const paymentEnv = data.paymentEnv ?? 'sandbox';
-      const paymentMode: 'stripe_elements' | 'liteapi_sdk' = data.publishableKey
-        ? 'stripe_elements'
-        : 'liteapi_sdk';
+      const paymentMode: 'stripe_elements' | 'liteapi_sdk' =
+        data.publishableKey && isStripeClientSecret(data.secretKey)
+          ? 'stripe_elements'
+          : 'liteapi_sdk';
       const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,

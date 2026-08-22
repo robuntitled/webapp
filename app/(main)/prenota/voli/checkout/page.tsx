@@ -12,7 +12,8 @@ export default async function FlightCheckoutPage() {
   return (
     <PrenotaPageShell
       title="Checkout volo"
-      subtitle="Verifica l’offerta, inserisci i passeggeri e completa il pagamento in sicurezza."
+      subtitle="Passeggeri, poi pagamento. Contratto con il fornitore."
+      simple
     >
       <FlightCheckoutClient defaultEmail={session.user.email ?? ''} />
     </PrenotaPageShell>
