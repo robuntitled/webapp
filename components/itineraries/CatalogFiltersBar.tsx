@@ -54,7 +54,7 @@ export function CatalogFiltersBar({
   }, [durationOptions, value.duration]);
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-3">
+    <div className="w-full space-y-3">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
@@ -68,8 +68,7 @@ export function CatalogFiltersBar({
         />
       </div>
 
-      <div className="flex justify-center overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max items-center justify-center gap-1.5">
+      <div className="flex w-full flex-wrap items-center gap-1.5">
           {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
             <FilterChip
               key={r}
@@ -140,7 +139,6 @@ export function CatalogFiltersBar({
               />
             </>
           ) : null}
-        </div>
       </div>
     </div>
   );

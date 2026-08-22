@@ -27,7 +27,6 @@ import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsG
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
 import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
-import { ItineraryMiniSketch } from '@/components/itineraries/ItineraryMiniSketch';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
 import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -399,34 +398,22 @@ export function StartTripWizard({
                                   <p className="mt-0.5 text-sm text-white/95 drop-shadow">{dest.vibe}</p>
                                 </div>
                               </div>
-                              <div className="flex items-stretch gap-3 bg-white px-3 py-2.5">
-                                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                  {dest.allowedDurations.map((n) => (
-                                    <button
-                                      key={n}
-                                      type="button"
-                                      onClick={() => pickDuration(dest, n)}
-                                      className={cn(
-                                        'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
-                                        filters.duration === n
-                                          ? 'bg-primary text-white'
-                                          : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
-                                      )}
-                                    >
-                                      {n} giorni
-                                    </button>
-                                  ))}
-                                </div>
-                                <ItineraryMiniSketch
-                                  slug={dest.slug}
-                                  durationDays={
-                                    filters.duration &&
-                                    dest.allowedDurations.includes(filters.duration)
-                                      ? filters.duration
-                                      : dest.allowedDurations[1] ?? dest.allowedDurations[0]
-                                  }
-                                  className="h-[4.25rem] w-[7.25rem] shrink-0"
-                                />
+                              <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-3">
+                                {dest.allowedDurations.map((n) => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => pickDuration(dest, n)}
+                                    className={cn(
+                                      'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
+                                      filters.duration === n
+                                        ? 'bg-primary text-white'
+                                        : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
+                                    )}
+                                  >
+                                    {n} giorni
+                                  </button>
+                                ))}
                               </div>
                             </article>
                           ))}
