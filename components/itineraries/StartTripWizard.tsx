@@ -283,7 +283,7 @@ export function StartTripWizard({
               </div>
             ) : null}
             <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
-              {showPartenze ? 'Partenze già aperte' : 'Scegli la nazione. Poi i giorni.'}
+              {showPartenze ? 'Partenze già aperte' : 'Risparmi, Viaggi, Meno sbatti'}
             </h1>
             <p className="mx-auto max-w-xl text-base text-white/90 drop-shadow">
               {showPartenze
