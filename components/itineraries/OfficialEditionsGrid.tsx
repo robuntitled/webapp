@@ -62,7 +62,7 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
         showPublished
         resultsId="risultati-partenze"
       />
-      <p className="text-center text-xs text-white/50">
+      <p className="text-center text-xs text-muted-foreground">
         {visible.length}{' '}
         {visible.length === 1 ? 'partenza' : 'partite'} · filtri e ricerca aggiornano l’elenco
       </p>

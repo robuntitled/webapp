@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -12,7 +13,7 @@ import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { SlideshowWash } from '@/components/brand/SlideshowWash';
+
 import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import {
@@ -20,9 +21,9 @@ import {
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
-import { DestinationPreviewRow } from '@/components/itineraries/DestinationPreviewRow';
 import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
+import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
 import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -53,6 +54,7 @@ export function StartTripWizard({
   initialSlug,
   initialDuration,
   initialHomeView = 'itinerari',
+  favoriteTemplateIds = [],
 }: {
   destinations: {
     slug: string;
@@ -68,6 +70,7 @@ export function StartTripWizard({
   initialDuration?: number;
   /** Toggle home: catalogo nazioni vs partenze già aperte. */
   initialHomeView?: 'itinerari' | 'partenze';
+  favoriteTemplateIds?: string[];
 }) {
   const startTemplate = initialSlug
     ? findItineraryBySlug(initialSlug, initialDuration)
@@ -213,8 +216,7 @@ export function StartTripWizard({
   };
 
   return (
-    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      <SlideshowWash />
+    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-white">
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-24 pt-10">
         <div className="mb-8 space-y-4 text-center">
           {step === 'dest' ? (
@@ -264,20 +266,20 @@ export function StartTripWizard({
                   key={s}
                   className={cn(
                     'h-1.5 rounded-full transition-all duration-500',
-                    i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-white/15'
+                    i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-slate-200'
                   )}
                 />
               ))}
             </div>
           ) : null}
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
             {showPartenze && 'Partenze già aperte'}
             {!showPartenze && step === 'dest' && 'Scegli la nazione. Poi i giorni.'}
             {step === 'plan' && 'Questo è il piano.'}
             {step === 'who' && 'Come vuoi partire?'}
             {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
           </h1>
-          <p className="mx-auto max-w-xl text-base text-white/85">
+          <p className="mx-auto max-w-xl text-base text-muted-foreground">
             {showPartenze && 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'}
             {!showPartenze && step === 'dest' && 'Cerca o scegli il continente. Poi i giorni.'}
             {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
@@ -305,7 +307,7 @@ export function StartTripWizard({
                   searchPlaceholder="Cerca nazione, continente o vibe"
                   resultsId="risultati-itinerari"
                 />
-                <p className="text-center text-xs text-white/50">
+                <p className="text-center text-xs text-muted-foreground">
                   {filteredDestinations.length}{' '}
                   {filteredDestinations.length === 1 ? 'meta' : 'mete'} · filtri e ricerca
                   aggiornano l’elenco
@@ -317,25 +319,67 @@ export function StartTripWizard({
                 ) : (
                   <div id="risultati-itinerari" className="space-y-6">
                     {destSections.map((section) => (
-                      <section key={section.continent} className="space-y-2.5">
-                        <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-white/80">
+                      <section key={section.continent} className="space-y-3">
+                        <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-foreground">
                           {section.continent}
                           <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-white/40">
                             {section.items.length}
                           </span>
                         </h2>
-                        <ul className="space-y-2.5">
+                        <div className="grid gap-4 sm:grid-cols-2">
                           {section.items.map((dest) => (
-                            <li key={dest.slug}>
-                              <DestinationPreviewRow
-                                dest={dest}
-                                cover={destCoverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
-                                highlightDuration={filters.duration}
-                                onPickDuration={(days) => pickDuration(dest, days)}
-                              />
-                            </li>
+                            <article
+                              key={dest.slug}
+                              className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1220]/75 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
+                            >
+                              <div className="relative h-44">
+                                <Image
+                                  src={destCoverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
+                                  alt={dest.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="(max-width: 640px) 100vw, 50vw"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                                  {dest.continent ?? section.continent}
+                                </p>
+                                {dest.published === false ? (
+                                  <p className="absolute right-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70 backdrop-blur-sm">
+                                    Presto
+                                  </p>
+                                ) : dest.published ? (
+                                  <p className="absolute right-4 top-4 rounded-full bg-accent/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0b1220]">
+                                    Aperta
+                                  </p>
+                                ) : null}
+                                <div className="absolute bottom-3 left-4 right-4">
+                                  <h3 className="font-display text-2xl font-semibold text-white">
+                                    {dest.emoji} {dest.name}
+                                  </h3>
+                                  <p className="mt-0.5 text-sm text-white/85">{dest.vibe}</p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+                                {dest.allowedDurations.map((n) => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => pickDuration(dest, n)}
+                                    className={cn(
+                                      'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
+                                      filters.duration === n
+                                        ? 'bg-accent text-[#0b1220]'
+                                        : 'border border-white/20 bg-white/8 text-white hover:bg-accent hover:text-[#0b1220]'
+                                    )}
+                                  >
+                                    {n} giorni
+                                  </button>
+                                ))}
+                              </div>
+                            </article>
                           ))}
-                        </ul>
+                        </div>
                       </section>
                     ))}
                   </div>
@@ -344,7 +388,8 @@ export function StartTripWizard({
             ) : null}
 
             {step === 'plan' && template ? (
-              <motion.div key="plan" {...phaseMotion} className="composer-panel space-y-5 rounded-3xl p-6 md:p-8">
+              <motion.div key="plan" {...phaseMotion} className="flex items-start gap-3 sm:gap-4">
+              <div className="composer-panel min-w-0 flex-1 space-y-5 rounded-3xl p-6 md:p-8">
                 <div className="flex flex-wrap gap-2">
                   {templatesForDestination(template.destination_slug).map((t) => (
                     <button
@@ -392,6 +437,13 @@ export function StartTripWizard({
                 <p className="text-xs text-white/50">
                   {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
                 </p>
+              </div>
+              <PlanSaveButton
+                key={template.template_id}
+                templateId={template.template_id}
+                initialSaved={favoriteTemplateIds.includes(template.template_id)}
+                isLoggedIn={Boolean(session?.user)}
+              />
               </motion.div>
             ) : null}
 
@@ -519,12 +571,12 @@ export function StartTripWizard({
         </div>
 
         {step !== 'dest' ? (
-          <div className="mt-6 shrink-0 border-t border-[#2a3344] bg-[#0b1220] pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="mt-6 shrink-0 border-t border-border bg-white pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="ghost"
-                className="rounded-full text-white hover:bg-[#161d2b]"
+                className="rounded-full text-foreground hover:bg-muted"
                 onClick={goBack}
               >
                 <ArrowLeft className="h-4 w-4" />

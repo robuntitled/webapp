@@ -189,15 +189,15 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : String(unreadTotal)) : null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <div className="pointer-events-auto flex w-full max-w-4xl flex-col items-center gap-3">
+    <div className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3 pb-[max(0px,env(safe-area-inset-bottom))]">
+      <div className="flex flex-col items-end gap-3">
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            className="flex h-[min(560px,calc(100vh-7.5rem))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border/80 bg-background shadow-2xl sm:max-w-lg"
+            className="flex h-[min(560px,calc(100vh-8rem))] w-[min(400px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-border/80 bg-background shadow-2xl"
           >
             <div className="flex shrink-0 items-center gap-3 border-b bg-muted/40 px-4 py-3.5">
               {activeGroup ? (

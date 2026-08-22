@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
+import { auth } from '@/auth';
 import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
 import { listOfficialEditions } from '@/lib/data/editions';
+import { loadFavoriteItineraryIds } from '@/lib/data/favorites';
 import { findItineraryBySlug, wizardDestinationCards } from '@/lib/itineraries/catalog';
 import { parseDurationParam } from '@/lib/itineraries/params';
 
@@ -14,13 +16,18 @@ export default async function ItinerarioPage({ params, searchParams }: PageProps
   const { d } = await searchParams;
   const duration = parseDurationParam(d);
   if (!findItineraryBySlug(slug, duration)) notFound();
-  const [destinations, editions] = await Promise.all([
+  const session = await auth();
+  const [destinations, editions, favoriteIds] = await Promise.all([
     Promise.resolve(wizardDestinationCards()),
     listOfficialEditions(),
+    session?.user?.id
+      ? loadFavoriteItineraryIds(session.user.id)
+      : Promise.resolve(new Set<string>()),
   ]);
   return (
     <StartTripWizard
       destinations={destinations}
+      favoriteTemplateIds={[...favoriteIds]}
       initialSlug={slug}
       initialDuration={duration}
       editions={editions.map((e) => ({

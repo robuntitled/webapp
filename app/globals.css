@@ -51,7 +51,7 @@
   --color-primary-hover: #0D9488;
   --color-accent: #F97316;
   --color-accent-hover: #FB923C;
-  --color-bg: #FAFAF9;
+  --color-bg: #FFFFFF;
   --color-surface: #FFFFFF;
   --color-border: #E7E5E4;
   --color-text: #1C1917;
@@ -61,7 +61,7 @@
   --color-warning: #D97706;
 
   --radius: 0.625rem;
-  --background: #FAFAF9;
+  --background: #FFFFFF;
   --foreground: #1C1917;
   --card: #FFFFFF;
   --card-foreground: #1C1917;
@@ -222,7 +222,7 @@
   }
 
   .composer-shell {
-    background: #0b1220;
+    background: #ffffff;
   }
 
   .composer-aurora {

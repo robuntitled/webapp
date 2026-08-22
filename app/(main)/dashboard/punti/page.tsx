@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { HeroBackground } from '@/components/brand/HeroBackground';
-import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
 import {
   NOMAD_POINTS_LABEL,
@@ -45,9 +43,8 @@ export default async function PointsPage() {
   const { current, next, ratio, remaining } = progressToNextTier(total);
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)]">
-      <HeroBackground images={[BRAND_IMAGES.heroes.dashboard]} overlay="gradient" />
-      <div className="relative z-10 container mx-auto max-w-2xl px-4 py-16">
+    <div className="min-h-[calc(100vh-4rem)] bg-white">
+      <div className="container mx-auto max-w-2xl px-4 py-16">
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
           {NOMAD_POINTS_LABEL}
         </p>

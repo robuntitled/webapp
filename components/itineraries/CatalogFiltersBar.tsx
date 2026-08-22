@@ -38,7 +38,7 @@ export function CatalogFiltersBar({
     onChange({ ...value, [key]: v });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         <input
@@ -52,62 +52,37 @@ export function CatalogFiltersBar({
         />
       </div>
 
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-[#0b1220]/55 p-3">
-        <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-          Continente
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
-            <FilterChip
-              key={r}
-              active={value.continent === r}
-              onClick={() => set('continent', r)}
-              label={r}
-            />
-          ))}
-        </div>
-
-        <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-          Giorni
-        </p>
-        <div className="flex flex-wrap gap-1.5">
+      <div className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
           <FilterChip
-            active={value.duration === null}
-            onClick={() => set('duration', null)}
-            label="Tutte"
+            key={r}
+            active={value.continent === r}
+            onClick={() => set('continent', r)}
+            label={r === 'Tutte' ? 'Tutte' : r}
           />
-          {DURATION_FILTERS.map((n) => (
-            <FilterChip
-              key={n}
-              active={value.duration === n}
-              onClick={() => set('duration', n)}
-              label={`${n}g`}
-            />
-          ))}
-        </div>
-
+        ))}
+        <span className="mx-0.5 h-4 w-px shrink-0 bg-white/20" aria-hidden />
+        {DURATION_FILTERS.map((n) => (
+          <FilterChip
+            key={n}
+            active={value.duration === n}
+            onClick={() => set('duration', value.duration === n ? null : n)}
+            label={`${n}g`}
+          />
+        ))}
         {showPublished ? (
           <>
-            <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-              Disponibilità
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <FilterChip
-                active={value.published === null}
-                onClick={() => set('published', null)}
-                label="Tutte"
-              />
-              <FilterChip
-                active={value.published === true}
-                onClick={() => set('published', true)}
-                label="Aperte ora"
-              />
-              <FilterChip
-                active={value.published === false}
-                onClick={() => set('published', false)}
-                label="In arrivo"
-              />
-            </div>
+            <span className="mx-0.5 h-4 w-px shrink-0 bg-white/20" aria-hidden />
+            <FilterChip
+              active={value.published === true}
+              onClick={() => set('published', value.published === true ? null : true)}
+              label="Aperte"
+            />
+            <FilterChip
+              active={value.published === false}
+              onClick={() => set('published', value.published === false ? null : false)}
+              label="Presto"
+            />
           </>
         ) : null}
       </div>
@@ -129,7 +104,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full px-3 py-1.5 text-sm font-medium transition',
+        'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition sm:text-sm',
         active
           ? 'bg-accent text-[#0b1220]'
           : 'border border-white/15 bg-[#161d2b]/80 text-white/80 hover:bg-[#1c2436]'

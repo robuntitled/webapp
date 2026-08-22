@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { HeroBackground } from '@/components/brand/HeroBackground';
-import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { POINTS } from '@/lib/commerce/points';
@@ -16,9 +14,8 @@ export default async function CreatorPage() {
   if (!session?.user) redirect('/');
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)]">
-      <HeroBackground images={[BRAND_IMAGES.heroes.dashboard]} overlay="gradient" />
-      <div className="relative z-10 container mx-auto max-w-3xl px-4 py-16">
+    <div className="min-h-[calc(100vh-4rem)] bg-white">
+      <div className="container mx-auto max-w-3xl px-4 py-16">
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Per i creator</p>
         <h1 className="mt-3 font-display text-4xl font-semibold text-foreground md:text-5xl">
           Lancia tu. I punti premiano le azioni.

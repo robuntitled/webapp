@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, MapPin, Plane, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { SlideshowWash } from '@/components/brand/SlideshowWash';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { Button } from '@/components/ui/button';
 import { uniqueCover } from '@/lib/composer/destination-covers';
@@ -121,20 +120,19 @@ export function PartenzeJoinFlow({
   }
 
   return (
-    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      <SlideshowWash />
-      <div className="relative z-10 mx-auto w-full max-w-4xl space-y-6 px-4 py-10">
+    <div className="min-h-[calc(100vh-4rem)] bg-white">
+      <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-10">
         <header>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             Partenza ufficiale
           </p>
-          <h1 className="mt-2 font-display text-3xl font-semibold text-white md:text-4xl">
+          <h1 className="mt-2 font-display text-3xl font-semibold text-foreground md:text-4xl">
             {template.destination_name} · {template.duration_days} giorni
           </h1>
-          <p className="mt-2 text-white/70">
+          <p className="mt-2 text-muted-foreground">
             {formatItDate(dateFrom)} – {formatItDate(dateTo)}
           </p>
-          <p className="mt-1 text-sm text-white/55">
+          <p className="mt-1 text-sm text-muted-foreground">
             {step === 'plan' && 'Stesso piano. Date già fissate. Viaggio con altri.'}
             {step === 'people' && 'Chi si è già aggiunto. Solo sguardo, niente profilo.'}
             {step === 'flights' && 'I voli già prenotati dal gruppo. Ti va bene lo stesso?'}
