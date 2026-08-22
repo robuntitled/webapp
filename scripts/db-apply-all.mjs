@@ -41,6 +41,7 @@ const MIGRATIONS = [
   'supabase/migrations/034_edition_chat.sql',
   'supabase/migrations/035_cleanup_creator_trips.sql',
   'supabase/migrations/036_itinerary_templates_normalized.sql',
+  'supabase/migrations/037_favorite_itineraries.sql',
 ];
 
 await withPgClient(async (client) => {

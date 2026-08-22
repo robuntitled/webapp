@@ -61,13 +61,13 @@ export async function Navbar() {
           <MobileNav isLoggedIn={!!session?.user} />
           {session?.user ? (
             <>
-              <Link href="/dashboard/preferiti" className="hidden sm:block">
+              <Link href="/pratiche" className="hidden sm:block" title="I miei viaggi">
                 <Button
                   variant="ghost"
                   size="icon"
                   className="text-white hover:bg-white/10 hover:text-white"
                 >
-                  <Heart className="h-5 w-5 text-accent" />
+                  <Heart className="h-5 w-5 fill-accent text-accent" />
                 </Button>
               </Link>
               <NotificationBell />

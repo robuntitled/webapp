@@ -37,6 +37,7 @@
     "db:cleanup-trips": "node scripts/db-exec.mjs supabase/migrations/035_cleanup_creator_trips.sql",
     "db:itineraries-schema": "node scripts/db-exec.mjs supabase/migrations/036_itinerary_templates_normalized.sql",
     "db:itineraries": "node scripts/import-itinerary-templates.mjs",
+    "db:favorite-itineraries": "node scripts/db-exec.mjs supabase/migrations/037_favorite_itineraries.sql",
     "gen:covers": "node scripts/gen-destination-covers.mjs",
     "db:planner": "node scripts/apply-planner.mjs",
     "db:verify-planner": "node scripts/verify-planner.mjs",
