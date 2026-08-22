@@ -371,7 +371,7 @@ export function StartTripWizard({
                   cover={WHO_COVERS.solo}
                   active={mode === 'solo'}
                   onClick={() => setMode('solo')}
-                  kicker="Privato"
+                  kicker="Viaggio Privato"
                   title="Da solo"
                   body="Date tue. Poi i voli."
                 />
@@ -379,7 +379,7 @@ export function StartTripWizard({
                   cover={WHO_COVERS.friends}
                   active={mode === 'friends'}
                   onClick={() => setMode('friends')}
-                  kicker="Privato"
+                  kicker="Viaggio Privato"
                   title="Con amici"
                   body="Stesse date. Invito."
                 />
@@ -387,7 +387,7 @@ export function StartTripWizard({
                   cover={WHO_COVERS.group}
                   active={mode === 'group'}
                   onClick={() => setMode('group')}
-                  kicker="Ufficiale"
+                  kicker="Viaggio Condiviso"
                   title="In gruppo"
                   body="Date già aperte. Subito i voli."
                 />

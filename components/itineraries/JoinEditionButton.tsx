@@ -20,7 +20,7 @@ export function JoinEditionButton({ editionId }: { editionId: string }) {
       }}
     >
       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-      Unisciti · interessato
+      Partecipa
     </Button>
   );
 }
