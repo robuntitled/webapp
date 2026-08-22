@@ -11,12 +11,12 @@ export function PrenotaBookableBanner({ trips }: { trips: TripWithRelations[] })
         </p>
         <p className="mt-1 text-muted-foreground">
           {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}{' '}
-          <Link href="/dashboard" className="underline underline-offset-2">
-            Esplora i Trip
+          <Link href="/destinazioni" className="underline underline-offset-2">
+            Itinerari
           </Link>
           {' · '}
-          <Link href="/dashboard/crea?new=1" className="underline underline-offset-2">
-            Crea un Trip
+          <Link href="/pratiche" className="underline underline-offset-2">
+            Le mie pratiche
           </Link>
         </p>
       </div>

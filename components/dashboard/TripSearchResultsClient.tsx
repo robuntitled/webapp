@@ -82,8 +82,8 @@ export function TripSearchResultsClient({
 
         <p className="mt-10 text-center text-sm text-white/50">
           Vuoi lanciare tu?{' '}
-          <Link href="/dashboard/crea?new=1" className="text-white underline underline-offset-4">
-            Parti da un template
+          <Link href="/destinazioni" className="text-white underline underline-offset-4">
+            Scegli un itinerario
           </Link>
         </p>
       </div>

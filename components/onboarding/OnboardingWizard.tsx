@@ -169,11 +169,11 @@ function ModelStep({ onNext }: { onNext: () => void }) {
           Esempio
         </p>
         <p className="mt-2 font-display text-xl font-semibold text-white">
-          10 giorni · Grecia, poi Kenya
+          Thailandia · 14 giorni
         </p>
         <p className="mt-2 text-sm leading-relaxed text-white/80">
-          Pubblicate il Trip in formazione. Quando arrivate alla soglia del gruppo, aprite la chat.
-          Marco cerca il volo da Milano, Giulia da Roma: stessa meta, contratti diversi.
+          Piano ufficiale NomadLink. Marco parte da solo a novembre, Giulia entra su una partenza
+          di gruppo: stesso itinerario, voli e hotel prenotati ciascuno col proprio fornitore.
         </p>
       </div>
       <div className="mt-10">
@@ -203,7 +203,7 @@ function IntentStep({
         Ultimo passo
       </p>
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
-        Crea un Trip o esplora
+        Scegli un itinerario o una partenza
       </h1>
       <p className="mt-4 max-w-md text-base text-white/90">
         Scelta obbligatoria. I servizi si prenotano dopo, ciascuno col proprio fornitore.
@@ -213,15 +213,15 @@ function IntentStep({
         <IntentCard
           active={value === 'create'}
           icon={PenLine}
-          title="Crea un Trip"
-          body="Parti da un template, pubblica in formazione, riempi i posti."
+          title="Scegli un itinerario"
+          body="Thailandia 10, 14 o 21 giorni. Poi da solo, con amici o in gruppo."
           onClick={() => onSelect('create')}
         />
         <IntentCard
           active={value === 'book'}
           icon={Ticket}
-          title="Esplora i Trip"
-          body="Scegli un viaggio, unisciti, prenota quando il gruppo è alla soglia."
+          title="Partenze di gruppo"
+          body="Date ufficiali già aperte. Posto confermato = volo prenotato."
           onClick={() => onSelect('book')}
         />
       </div>

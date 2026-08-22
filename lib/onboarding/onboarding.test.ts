@@ -23,7 +23,7 @@ describe('onboarding keywords', () => {
 });
 
 describe('onboarding paths', () => {
-  it('has three steps then Crea or Esplora', () => {
+  it('has three steps then itinerari or partenze', () => {
     expect(ONBOARDING_STEPS).toEqual(['model', 'home', 'intent']);
   });
 
@@ -38,8 +38,8 @@ describe('onboarding paths', () => {
   });
 
   it('branches after first onboarding', () => {
-    expect(afterOnboardingPath('create')).toBe('/dashboard/crea?new=1');
-    expect(afterOnboardingPath('book')).toBe('/dashboard');
+    expect(afterOnboardingPath('create')).toBe('/destinazioni');
+    expect(afterOnboardingPath('book')).toBe('/partenze');
   });
 });
 

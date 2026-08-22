@@ -34,11 +34,11 @@ export default function PublicPointsPage() {
         ))}
       </ul>
       <div className="mt-10 flex gap-3">
-        <Link href="/dashboard/crea?new=1" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-[#0b1220]">
-          Crea un Trip
+        <Link href="/destinazioni" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-[#0b1220]">
+          Itinerari
         </Link>
-        <Link href="/dashboard" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
-          Esplora i Trip
+        <Link href="/partenze" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
+          Partenze
         </Link>
       </div>
     </main>

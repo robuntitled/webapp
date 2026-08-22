@@ -6,8 +6,9 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LINKS = [
-  { href: '/dashboard', label: 'Esplora i Trip' },
-  { href: '/dashboard/crea?new=1', label: 'Crea un Trip', auth: true },
+  { href: '/destinazioni', label: 'Itinerari' },
+  { href: '/partenze', label: 'Partenze', auth: true },
+  { href: '/pratiche', label: 'Le mie pratiche', auth: true },
   { href: '/prenota/voli', label: 'Servizi · Voli', auth: true },
   { href: '/prenota/hotel', label: 'Servizi · Hotel', auth: true },
   { href: '/prenota/auto', label: 'Servizi · Noleggio auto', auth: true },
@@ -17,7 +18,6 @@ const LINKS = [
   { href: '/prenota/attrazioni', label: 'Servizi · Attrazioni', auth: true },
   { href: '/prenota/attivita', label: 'Servizi · Attività', auth: true },
   { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
-  { href: '/dashboard/miei-viaggi', label: 'I miei viaggi', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
 ] as const satisfies readonly { href: string; label: string; auth?: boolean }[];
 

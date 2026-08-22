@@ -27,7 +27,7 @@ export const COMPLIANCE_COPY = {
     'NomadLink fornisce account, gruppo, itinerario e crediti. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
   /** Messaggio guida (onboarding, homepage, Trip). */
   guide:
-    'Su NomadLink crei o ti unisci a un viaggio di gruppo. Costruite insieme l’itinerario. Poi ognuno prenota voli e hotel per conto proprio. Niente pacchetto fisso, massima libertà.',
+    'Su NomadLink scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
   /** Etichetta unica per qualsiasi cifra aggregata. */
   budgetLabel: 'Budget orientativo',
   budgetFilterLabel: 'Fascia di spesa stimata',

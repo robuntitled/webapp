@@ -40,7 +40,7 @@ export function onboardingStepIndex(step: OnboardingStepId): number {
 
 /** Dopo onboarding: ramifica. Login successivi: sempre dashboard. */
 export function afterOnboardingPath(intent: TravelIntent): string {
-  return intent === 'create' ? '/dashboard/crea?new=1' : '/dashboard';
+  return intent === 'book' ? '/partenze' : '/destinazioni';
 }
 
 export function postLoginPath(opts: {

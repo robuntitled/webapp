@@ -6,7 +6,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const PROTECTED_PATHS = [
   '/onboarding',
-  '/dashboard/crea',
+  '/pratiche',
+  '/pratica',
   '/dashboard/miei-viaggi',
   '/dashboard/profilo',
   '/dashboard/impostazioni',

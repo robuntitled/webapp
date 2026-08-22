@@ -1,14 +1,16 @@
-import { auth } from '@/auth';
-import { fetchAllTrips } from '@/lib/data/trips';
-import DashboardClient from '@/app/(main)/dashboard/DashboardClient';
+import { CatalogHome } from '@/components/itineraries/CatalogHome';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
+import { listOfficialEditions } from '@/lib/data/editions';
+import { publishedDestinations } from '@/lib/itineraries/catalog';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const session = await auth();
-  const trips = await fetchAllTrips(session?.user?.id);
+  const [destinations, editions] = await Promise.all([
+    Promise.resolve(publishedDestinations()),
+    listOfficialEditions(),
+  ]);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)]">
@@ -17,7 +19,9 @@ export default async function DashboardPage() {
         overlay="gradient"
         parallax
       />
-      <DashboardClient initialTrips={trips} session={session} />
+      <div className="relative z-0">
+        <CatalogHome destinations={destinations} editions={editions} />
+      </div>
     </div>
   );
 }

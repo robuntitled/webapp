@@ -36,7 +36,7 @@ export default async function CreatorPage() {
           <li>Niente markup da tour operator: ognuno prenota col proprio fornitore.</li>
         </ul>
         <Button asChild className="mt-10">
-          <Link href="/dashboard/crea?new=1">Crea un Trip</Link>
+          <Link href="/destinazioni">Scegli un itinerario</Link>
         </Button>
         <p className="mt-4 text-sm text-muted-foreground">
           <Link href="/dashboard/punti" className="text-primary underline underline-offset-4 hover:text-[var(--color-primary-hover)]">

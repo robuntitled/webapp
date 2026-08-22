@@ -252,8 +252,8 @@ export default function LoginPage() {
           </ScrollReveal>
           <ul className="mt-6 max-w-md space-y-2 text-sm text-white/95">
             {[
-              { Icon: Users, text: 'Crea un Trip o esplora quelli in formazione' },
-              { Icon: Map, text: 'Costruite insieme l’itinerario, sulla mappa' },
+              { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
+              { Icon: Users, text: 'Parti da solo, con amici o su una partenza di gruppo' },
               { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
             ].map(({ Icon, text }, i) => (
               <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
@@ -267,12 +267,12 @@ export default function LoginPage() {
           <LandingDestinations />
           <p className="mt-4 text-sm text-white/90">
             {COMPLIANCE_COPY.pointsNoMoney}{' '}
-            <Link href="/dashboard" className="underline underline-offset-4">
-              Esplora i Trip
+            <Link href="/destinazioni" className="underline underline-offset-4">
+              Itinerari
             </Link>
             {' · '}
-            <Link href="/dashboard/crea?new=1" className="underline underline-offset-4">
-              Crea un Trip
+            <Link href="/partenze" className="underline underline-offset-4">
+              Partenze
             </Link>
           </p>
         </div>
@@ -285,8 +285,8 @@ export default function LoginPage() {
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 {isRegisterMode
-                  ? 'Due minuti. Poi scegli: Crea un Trip o Esplora i Trip.'
-                  : 'Accedi e scegli: Crea un Trip o Esplora i Trip.'}
+                  ? 'Due minuti. Poi scegli un itinerario o una partenza di gruppo.'
+                  : 'Accedi e scegli un itinerario ufficiale.'}
               </p>
             </div>
 

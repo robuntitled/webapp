@@ -71,7 +71,7 @@ export function ComposerDraftCard({ draft, currentStep, updatedAt }: ComposerDra
 
       <div className="flex flex-col sm:flex-row gap-2 shrink-0">
         <Button asChild className="rounded-full gap-2">
-          <Link href="/dashboard/crea?resume=1">
+          <Link href="/destinazioni">
             <Pencil className="h-4 w-4" />
             Riprendi bozza
           </Link>
