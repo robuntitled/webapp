@@ -15,7 +15,7 @@ export function CatalogHome({
   editions: EditionRow[];
 }) {
   return (
-    <div className="container mx-auto max-w-6xl space-y-12 px-4 py-12">
+    <div className="mx-auto w-full max-w-4xl space-y-12 px-4 py-12">
       <header className="mx-auto max-w-2xl rounded-[10px] bg-background/85 px-4 py-6 text-center backdrop-blur-sm">
         <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.22em] text-accent">
           Itinerari

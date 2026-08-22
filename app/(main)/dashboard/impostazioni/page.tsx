@@ -25,7 +25,7 @@ export default async function SettingsPage() {
         images={[BRAND_IMAGES.heroes.slideshow[5], BRAND_IMAGES.heroes.slideshow[1]]}
         overlay="gradient"
       />
-      <div className="relative z-0 container mx-auto px-4 py-10 pb-24 max-w-4xl">
+      <div className="relative z-0 mx-auto w-full max-w-4xl px-4 py-10 pb-24">
         <SettingsPageClient
           userSettings={userSettings}
           privacyEmail={company.privacyEmail}

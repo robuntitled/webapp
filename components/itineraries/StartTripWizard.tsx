@@ -107,6 +107,12 @@ export function StartTripWizard({
       .filter((s) => s.items.length > 0);
   }, [filteredDestinations]);
 
+  const destCoverBySlug = useMemo(() => {
+    const slugs = destSections.flatMap((s) => s.items.map((d) => d.slug));
+    const urls = uniqueCoversForSlugs(slugs);
+    return Object.fromEntries(slugs.map((slug, i) => [slug, urls[i]]));
+  }, [destSections]);
+
   const fridayHints = useMemo(() => {
     const first = nextFriday(startOfDay(new Date()));
     return [0, 1, 2, 3].map((w) => addDays(first, w * 7));
@@ -193,7 +199,7 @@ export function StartTripWizard({
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
       <SlideshowWash />
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col px-4 pb-8 pt-10">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-8 pt-10">
         <div className="mb-8 space-y-4 text-center">
           <p className="inline-flex items-center gap-2 rounded-full bg-[#161d2b] px-4 py-1.5 text-sm text-white">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
@@ -268,16 +274,14 @@ export function StartTripWizard({
                         {section.continent}
                       </h2>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        {(() => {
-                          const covers = uniqueCoversForSlugs(section.items.map((d) => d.slug));
-                          return section.items.map((dest, i) => (
+                        {section.items.map((dest) => (
                           <article
                             key={dest.slug}
                             className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1220]/75 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
                           >
                             <div className="relative h-44">
                               <Image
-                                src={covers[i] ?? coverForDestination(dest.slug)}
+                                src={destCoverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
                                 alt={dest.name}
                                 fill
                                 className="object-cover"
@@ -307,8 +311,7 @@ export function StartTripWizard({
                               ))}
                             </div>
                           </article>
-                          ));
-                        })()}
+                        ))}
                       </div>
                     </section>
                   ))

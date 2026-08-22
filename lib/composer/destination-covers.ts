@@ -86,15 +86,15 @@ export const DESTINATION_COVERS: Record<string, string> = {
   georgia:
     'https://images.unsplash.com/photo-1565008576549-57569a49371d?auto=format&fit=crop&w=1200&q=80',
   albania:
-    'https://images.unsplash.com/photo-1596484552834-6a58f850bb0b?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=1200&q=80',
   lapponia:
     'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=1200&q=80',
   baleari:
-    'https://images.unsplash.com/photo-1518656307425-e47778b3ba05?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?auto=format&fit=crop&w=1200&q=80',
   azzorre:
     'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?auto=format&fit=crop&w=1200&q=80',
   'cammino-santiago':
-    'https://images.unsplash.com/photo-1578306376271-47980ce7c9b1?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?auto=format&fit=crop&w=1200&q=80',
   inghilterra:
     'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80',
   scozia:
@@ -102,13 +102,13 @@ export const DESTINATION_COVERS: Record<string, string> = {
   danimarca:
     'https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?auto=format&fit=crop&w=1200&q=80',
   'faer-oer':
-    'https://images.unsplash.com/photo-1527004013197-933c4bb611b5?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1200&q=80',
   olanda:
     'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=1200&q=80',
   'repubblica-ceca':
     'https://images.unsplash.com/photo-1541849546-216549ae216d?auto=format&fit=crop&w=1200&q=80',
   giordania:
-    'https://images.unsplash.com/photo-1548786746-1c48c0f8d6c4?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1587595431973-160d0d94add1?auto=format&fit=crop&w=1200&q=80',
   sudafrica:
     'https://images.unsplash.com/photo-1484318571209-661cf29a69c3?auto=format&fit=crop&w=1200&q=80',
   namibia:
@@ -116,13 +116,13 @@ export const DESTINATION_COVERS: Record<string, string> = {
   oman:
     'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?auto=format&fit=crop&w=1200&q=80',
   madagascar:
-    'https://images.unsplash.com/photo-1621419816163-0f2cb72a1b1b?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1523805009345-7448845a9e53?auto=format&fit=crop&w=1200&q=80',
   'emirati-arabi':
-    'https://images.unsplash.com/photo-1512453979798-5e85decdb7c0?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1512632578888-169bbbc64f33?auto=format&fit=crop&w=1200&q=80',
   'capo-verde':
     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
   zanzibar:
-    'https://images.unsplash.com/photo-1586861635167-e5223aadc9cf?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1559827260-dc66d52bef19?auto=format&fit=crop&w=1200&q=80',
   uganda:
     'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?auto=format&fit=crop&w=1200&q=80',
   tanzania:
@@ -140,9 +140,9 @@ export const DESTINATION_COVERS: Record<string, string> = {
   jamaica:
     'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?auto=format&fit=crop&w=1200&q=80',
   belize:
-    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1590523278191-995cbcda646b?auto=format&fit=crop&w=1200&q=80',
   fiji:
-    'https://images.unsplash.com/photo-1437719417032-859c46eef3a3?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1505142468610-359e7d316be0?auto=format&fit=crop&w=1200&q=80',
 };
 
 function unsplashPhotoId(url: string): string {
@@ -196,7 +196,7 @@ export function coverForDestination(idOrLabel: string): string {
 const DESTINATION_POOLS: Record<string, string[]> = {
   thailandia: uniqueByPhotoId([
     UNIQUE_DESTINATION_COVERS.thailandia,
-    'https://images.unsplash.com/photo-1528183429752-a91b0c5b0e6d?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=1400&q=80',
@@ -204,7 +204,7 @@ const DESTINATION_POOLS: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1598974357801-cbca100e65d3?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1609137144813-7d9921338f24?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1400&q=80',
-    'https://images.unsplash.com/photo-1476512269419-b193e1ed1a87?auto=format&fit=crop&w=1400&q=80',
+    'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?auto=format&fit=crop&w=1400&q=80',
     'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1400&q=80',
   ]).filter((url) => {

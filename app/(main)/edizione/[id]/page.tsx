@@ -24,7 +24,7 @@ export default async function EdizionePage({ params }: PageProps) {
   const formed = confirmed >= edition.min_confirmed;
 
   return (
-    <div className="container mx-auto max-w-2xl space-y-6 px-4 py-10">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-10">
       <Button asChild variant="ghost" className="-ml-2">
         <Link href={template ? itineraryPath(template.destination_slug, template.duration_days) : '/destinazioni'}>
           <ArrowLeft className="mr-2 h-4 w-4" />

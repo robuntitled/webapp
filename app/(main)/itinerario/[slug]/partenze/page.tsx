@@ -25,7 +25,7 @@ export default async function PartenzePage({ params, searchParams }: PageProps) 
   );
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-6 px-4 py-10">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-10">
       <Button asChild variant="ghost" className="-ml-2">
         <Link href={`/itinerario/${slug}?d=${template.duration_days}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />

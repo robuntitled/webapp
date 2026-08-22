@@ -25,7 +25,7 @@ export default async function ProfilePage() {
         images={[BRAND_IMAGES.heroes.slideshow[2], BRAND_IMAGES.heroes.slideshow[4]]}
         overlay="gradient"
       />
-      <div className="relative z-0 container mx-auto px-4 py-10 pb-24 max-w-4xl">
+      <div className="relative z-0 mx-auto w-full max-w-4xl px-4 py-10 pb-24">
         <ProfilePageClient
           userProfile={userProfile}
           plannerProfile={plannerProfile}

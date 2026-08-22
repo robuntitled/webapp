@@ -21,7 +21,7 @@ export default async function PratichePage() {
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
       <SlideshowWash />
-      <div className="relative z-10 container mx-auto max-w-5xl space-y-8 px-4 py-12">
+      <div className="relative z-10 mx-auto w-full max-w-4xl space-y-8 px-4 py-12">
         <header>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             Account

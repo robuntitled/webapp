@@ -21,7 +21,7 @@ export default async function InvitoPage({ params }: PageProps) {
   const template = findItineraryTemplate(edition.template_id);
 
   return (
-    <div className="container mx-auto max-w-lg space-y-4 px-4 py-12">
+    <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-12">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
         Invito privato
       </p>

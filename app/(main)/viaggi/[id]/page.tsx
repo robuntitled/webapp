@@ -79,7 +79,7 @@ export default async function TripDetailPage({ params }: PageProps) {
       <div className="relative h-[32vh] min-h-[220px] max-h-[300px] w-full">
         <Image src={imageUrl} alt={trip.title} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/20" />
-        <div className="absolute top-20 left-0 right-0 container mx-auto max-w-5xl px-4">
+        <div className="absolute top-20 left-0 right-0 mx-auto w-full max-w-4xl px-4">
           <Button
             asChild
             variant="ghost"
@@ -91,7 +91,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             </Link>
           </Button>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 container mx-auto max-w-5xl px-4 pb-6">
+        <div className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-4xl px-4 pb-6">
           <div className="mb-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <Badge
               variant={status.variant}
@@ -131,7 +131,7 @@ export default async function TripDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto max-w-5xl px-4 py-8 -mt-5 relative z-10 space-y-8">
+      <div className="relative z-10 mx-auto -mt-5 w-full max-w-4xl space-y-8 px-4 py-8">
         <TripCommitmentPanel trip={trip} />
 
         <TripBookingHub

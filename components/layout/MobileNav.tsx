@@ -33,7 +33,8 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
             className="fixed inset-0 top-16 z-40 bg-slate-950/40 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <nav className="fixed top-16 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-md shadow-lg px-4 py-4 flex flex-col gap-1">
+          <nav className="fixed top-16 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-md shadow-lg py-4">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-1 px-4">
             {LINKS.filter((l) => !('auth' in l && l.auth) || isLoggedIn).map((link) => (
               <Link
                 key={link.href}
@@ -44,7 +45,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                 {link.label}
               </Link>
             ))}
-
+            </div>
           </nav>
         </>
       )}

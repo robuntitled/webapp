@@ -44,7 +44,7 @@ export default function DashboardClient({
 
   return (
     <div className="relative z-0 pb-24">
-      <div className="container mx-auto max-w-4xl px-4 pb-8 pt-14 text-center md:pt-20">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-8 pt-14 text-center md:pt-20">
         <ScrollReveal variant="decor">
           <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.22em] text-accent">
             Esplora
@@ -72,7 +72,7 @@ export default function DashboardClient({
         </div>
       </div>
 
-      <div id="risultati" className="container mx-auto mt-4 max-w-7xl scroll-mt-24 px-4">
+      <div id="risultati" className="mx-auto mt-4 w-full max-w-4xl scroll-mt-24 px-4">
         {results.length > 0 ? (
           <section>
             <p className="mb-5 text-center text-sm text-muted-foreground">

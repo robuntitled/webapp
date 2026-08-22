@@ -16,7 +16,7 @@ export function Footer({ company }: FooterProps) {
 
   return (
     <footer className="mt-auto border-t border-border bg-card text-foreground">
-      <div className="container mx-auto max-w-[1200px] px-4 py-12 sm:px-5">
+      <div className="mx-auto w-full max-w-4xl px-4 py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <div className="flex items-center gap-2.5 mb-4">
