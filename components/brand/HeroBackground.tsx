@@ -80,7 +80,7 @@ export function HeroBackground({
               src={src}
               alt=""
               fill
-              priority={i === 0}
+              priority={i < 3}
               quality={50}
               sizes="100vw"
               className="scale-110 object-cover blur-2xl brightness-[0.55] saturate-125"
@@ -90,7 +90,7 @@ export function HeroBackground({
               src={src}
               alt={active ? alt : ''}
               fill
-              priority={i === 0}
+              priority={i < 3}
               quality={85}
               sizes="100vw"
               className={cn(

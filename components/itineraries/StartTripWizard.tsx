@@ -16,6 +16,8 @@ import { Calendar } from '@/components/ui/calendar';
 
 import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
+import { HeroBackground } from '@/components/brand/HeroBackground';
+import { BRAND_IMAGES } from '@/lib/brand/images';
 import {
   CatalogFiltersBar,
   EMPTY_CATALOG_FILTERS,
@@ -223,10 +225,16 @@ export function StartTripWizard({
 
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-white">
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-24 pt-10">
-        <div className="mb-8 space-y-4 text-center">
-          {step === 'dest' ? (
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 shadow-sm">
+      {step === 'dest' ? (
+        <section className="relative isolate overflow-hidden">
+          <HeroBackground
+            images={BRAND_IMAGES.heroes.slideshow}
+            overlay="dark"
+            className="z-0"
+            intervalMs={6500}
+          />
+          <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-10 text-center sm:py-12">
+            <div className="inline-flex rounded-full border border-white/25 bg-black/35 p-1 shadow-lg backdrop-blur-md">
               <button
                 type="button"
                 onClick={() => {
@@ -237,7 +245,7 @@ export function StartTripWizard({
                   'rounded-full px-4 py-1.5 text-sm font-semibold transition',
                   homeView === 'itinerari'
                     ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-white/85 hover:text-white'
                 )}
               >
                 Itinerari
@@ -252,20 +260,45 @@ export function StartTripWizard({
                   'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition',
                   homeView === 'partenze'
                     ? 'bg-accent text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-white/85 hover:text-white'
                 )}
               >
                 <Users className="h-3.5 w-3.5" />
                 Partenze
               </button>
             </div>
-          ) : (
+            {!showPartenze ? (
+              <div className="flex items-center justify-center gap-2">
+                {STEPS.map((s, i) => (
+                  <div
+                    key={s}
+                    className={cn(
+                      'h-1.5 rounded-full transition-all duration-500',
+                      i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-white/35'
+                    )}
+                  />
+                ))}
+              </div>
+            ) : null}
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
+              {showPartenze ? 'Partenze già aperte' : 'Scegli la nazione. Poi i giorni.'}
+            </h1>
+            <p className="mx-auto max-w-xl text-base text-white/90 drop-shadow">
+              {showPartenze
+                ? 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'
+                : 'Cerca o scegli il continente. Poi i giorni.'}
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 pb-24 pt-6">
+        {step !== 'dest' ? (
+          <div className="mb-8 space-y-4 text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               Step {idx + 1} di {STEPS.length}
             </p>
-          )}
-          {step !== 'dest' || !showPartenze ? (
             <div className="flex items-center justify-center gap-2">
               {STEPS.map((s, i) => (
                 <div
@@ -277,25 +310,21 @@ export function StartTripWizard({
                 />
               ))}
             </div>
-          ) : null}
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-            {showPartenze && 'Partenze già aperte'}
-            {!showPartenze && step === 'dest' && 'Scegli la nazione. Poi i giorni.'}
-            {step === 'plan' && 'Questo è il piano.'}
-            {step === 'who' && 'Come vuoi partire?'}
-            {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
-          </h1>
-          <p className="mx-auto max-w-xl text-base text-slate-600">
-            {showPartenze && 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'}
-            {!showPartenze && step === 'dest' && 'Cerca o scegli il continente. Poi i giorni.'}
-            {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
-            {step === 'who' && 'Stesso piano. Cambiano solo date e con chi vai.'}
-            {step === 'when' &&
-              (mode === 'group'
-                ? 'Date già fissate. Entri e vedi i voli.'
-                : 'Scegli il giorno. Poi partono voli, hotel e attrazioni.')}
-          </p>
-        </div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
+              {step === 'plan' && 'Questo è il piano.'}
+              {step === 'who' && 'Come vuoi partire?'}
+              {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
+            </h1>
+            <p className="mx-auto max-w-xl text-base text-slate-600">
+              {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
+              {step === 'who' && 'Stesso piano. Cambiano solo date e con chi vai.'}
+              {step === 'when' &&
+                (mode === 'group'
+                  ? 'Date già fissate. Entri e vedi i voli.'
+                  : 'Scegli il giorno. Poi partono voli, hotel e attrazioni.')}
+            </p>
+          </div>
+        ) : null}
 
         <div className="flex-1">
           <AnimatePresence mode="wait">

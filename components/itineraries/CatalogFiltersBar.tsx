@@ -36,7 +36,6 @@ export function CatalogFiltersBar({
   searchPlaceholder?: string;
   showPublished?: boolean;
   resultsId?: string;
-  /** Giorni disponibili nei risultati (se assenti usa default). */
   durationOptions?: number[];
   publishedLabels?: { all: string; yes: string; no: string };
 }) {
@@ -69,11 +68,8 @@ export function CatalogFiltersBar({
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 shadow-sm">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Continente
-        </p>
-        <div className="flex flex-wrap gap-1.5">
+      <div className="-mx-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max min-w-full items-center gap-1.5 px-1">
           {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
             <FilterChip
               key={r}
@@ -84,53 +80,49 @@ export function CatalogFiltersBar({
               label={r}
             />
           ))}
-        </div>
 
-        <div className="mt-3">
+          <span className="mx-0.5 h-5 w-px shrink-0 bg-slate-200" aria-hidden />
+
           <button
             type="button"
             onClick={() => setDaysOpen((o) => !o)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition',
+              'inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold transition',
               value.duration != null || daysOpen
                 ? 'border-primary bg-primary text-white shadow-sm'
                 : 'border-slate-200 bg-white text-slate-700 hover:border-primary/40 hover:text-primary'
             )}
             aria-expanded={daysOpen}
           >
-            {value.duration != null ? `${value.duration} giorni` : 'Giorni'}
-            <ChevronDown
-              className={cn('h-4 w-4 transition', daysOpen && 'rotate-180')}
-            />
+            {value.duration != null ? `${value.duration}g` : 'Giorni'}
+            <ChevronDown className={cn('h-3.5 w-3.5 transition', daysOpen && 'rotate-180')} />
           </button>
-          {daysOpen ? (
-            <div className="mt-2 flex flex-wrap gap-1.5 rounded-xl border border-slate-200 bg-white p-2.5">
-              <FilterChip
-                active={value.duration === null}
-                onClick={() => set('duration', null)}
-                label="Tutti"
-              />
-              {days.map((n) => (
-                <FilterChip
-                  key={n}
-                  active={value.duration === n}
-                  onClick={() => {
-                    set('duration', value.duration === n ? null : n);
-                    setDaysOpen(true);
-                  }}
-                  label={`${n}g`}
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
 
-        {showPublished ? (
-          <div className="mt-3">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Disponibilità
-            </p>
-            <div className="flex flex-wrap gap-1.5">
+          {daysOpen
+            ? [
+                <FilterChip
+                  key="days-all"
+                  active={value.duration === null}
+                  onClick={() => set('duration', null)}
+                  label="Tutti"
+                />,
+                ...days.map((n) => (
+                  <FilterChip
+                    key={n}
+                    active={value.duration === n}
+                    onClick={() => {
+                      set('duration', value.duration === n ? null : n);
+                      setDaysOpen(true);
+                    }}
+                    label={`${n}g`}
+                  />
+                )),
+              ]
+            : null}
+
+          {showPublished ? (
+            <>
+              <span className="mx-0.5 h-5 w-px shrink-0 bg-slate-200" aria-hidden />
               <FilterChip
                 active={value.published === null}
                 onClick={() => set('published', null)}
@@ -138,21 +130,17 @@ export function CatalogFiltersBar({
               />
               <FilterChip
                 active={value.published === true}
-                onClick={() =>
-                  set('published', value.published === true ? null : true)
-                }
+                onClick={() => set('published', value.published === true ? null : true)}
                 label={publishedLabels.yes}
               />
               <FilterChip
                 active={value.published === false}
-                onClick={() =>
-                  set('published', value.published === false ? null : false)
-                }
+                onClick={() => set('published', value.published === false ? null : false)}
                 label={publishedLabels.no}
               />
-            </div>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -172,7 +160,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full px-3 py-1.5 text-sm font-medium transition',
+        'shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition',
         active
           ? 'bg-primary text-white shadow-sm'
           : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40 hover:text-primary'
