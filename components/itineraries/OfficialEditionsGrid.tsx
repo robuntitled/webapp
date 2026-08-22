@@ -42,7 +42,7 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
           days,
           open,
           cover: uniqueCover(slug || ed.template_id, i),
-          name: (tpl?.destination_name ?? slug || ed.template_id).toLowerCase(),
+          name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',
         };
       }),
