@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import {
-  getLiteApiPaymentEnv,
-  getLiteApiStripePublishableKey,
-  isLiteApiConfigured,
-} from '@/lib/liteapi/config';
+import { getLiteApiPaymentEnv, isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { prebookHotel } from '@/lib/liteapi/hotel-booking';
 
@@ -39,24 +35,15 @@ export async function POST(request: Request) {
 
   try {
     const result = await prebookHotel(parsed.data.offerId);
-    const { isStripeClientSecret } = await import('@/lib/travel/stripe-client-secret');
-    const { fetchLiteApiStripePublishableKey } = await import(
-      '@/lib/liteapi/payment-wrapper'
-    );
     const env = getLiteApiPaymentEnv();
-    const publishableKey =
-      result.publishableKey ??
-      getLiteApiStripePublishableKey() ??
-      (await fetchLiteApiStripePublishableKey(env));
-    const useStripe = Boolean(publishableKey && isStripeClientSecret(result.secretKey));
     return NextResponse.json({
       ok: true,
       prebookId: result.prebookId,
       transactionId: result.transactionId,
       secretKey: result.secretKey,
-      publishableKey,
+      publishableKey: result.publishableKey,
       paymentEnv: env,
-      paymentMode: useStripe ? 'stripe_elements' : 'liteapi_sdk',
+      paymentMode: 'liteapi_sdk',
       price: result.price,
       currency: result.currency,
     });

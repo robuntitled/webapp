@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, subYears } from 'date-fns';
@@ -12,11 +12,8 @@ import {
   Loader2,
   Plane,
 } from 'lucide-react';
-import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
-import { LiteApiStripePayForm } from '@/components/travel/LiteApiStripePayForm';
 import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -33,7 +30,6 @@ import {
   type FlightLegDraft,
 } from '@/lib/travel/flight-checkout-draft';
 import { cn } from '@/lib/utils';
-import { isStripeClientSecret } from '@/lib/travel/stripe-client-secret';
 
 type Step = 'details' | 'payment' | 'done';
 type Title = 'MR' | 'MRS' | 'MS' | 'MISS';
@@ -291,17 +287,6 @@ export function FlightCheckoutClient({
     amountEur: number;
   } | null>(null);
 
-  const stripePromise = useMemo(() => {
-    if (
-      !payment?.publishableKey ||
-      payment.paymentMode !== 'stripe_elements' ||
-      !isStripeClientSecret(payment.secretKey)
-    ) {
-      return null;
-    }
-    return loadStripe(payment.publishableKey) as Promise<Stripe | null>;
-  }, [payment?.paymentMode, payment?.publishableKey]);
-
   const finalizeBooking = useCallback(
     async (prebookId: string, transactionId: string) => {
       setSubmitting(true);
@@ -383,7 +368,9 @@ export function FlightCheckoutClient({
         );
         return;
       }
-      if (pending) {
+      if (pending?.paymentMode === 'stripe_elements') {
+        clearFlightPaymentPending();
+      } else if (pending) {
         setPayment({
           prebookId: pending.prebookId,
           transactionId: pending.transactionId,
@@ -539,17 +526,13 @@ export function FlightCheckoutClient({
         return;
       }
       const paymentEnv = data.paymentEnv ?? 'sandbox';
-      const paymentMode: 'stripe_elements' | 'liteapi_sdk' =
-        data.publishableKey && isStripeClientSecret(data.secretKey)
-          ? 'stripe_elements'
-          : 'liteapi_sdk';
       const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,
         secretKey: data.secretKey,
         publishableKey: data.publishableKey ?? null,
         paymentEnv,
-        paymentMode,
+        paymentMode: 'liteapi_sdk' as const,
         price: roundMoney(data.price ?? displayPrice),
         currency: data.currency ?? displayCurrency,
         createdAt: Date.now(),
@@ -910,41 +893,12 @@ export function FlightCheckoutClient({
               </p>
             </div>
             <div className="space-y-4 p-5 sm:p-6">
-              {payment.paymentMode === 'stripe_elements' &&
-              payment.publishableKey &&
-              stripePromise ? (
-                <Elements
-                  key={payment.secretKey}
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret: payment.secretKey,
-                    locale: 'it',
-                    appearance: {
-                      theme: 'stripe',
-                      variables: {
-                        colorPrimary: '#365f73',
-                        borderRadius: '12px',
-                      },
-                    },
-                  }}
-                >
-                  <LiteApiStripePayForm
-                    returnUrl={paymentReturnUrl}
-                    onPaid={() =>
-                      finalizeBooking(payment.prebookId, payment.transactionId)
-                    }
-                  />
-                </Elements>
-              ) : paymentReturnUrl ? (
+              {paymentReturnUrl ? (
                 <LiteApiPaymentWidget
                   key={payment.secretKey}
                   secretKey={payment.secretKey}
                   paymentEnv={payment.paymentEnv}
                   returnUrl={paymentReturnUrl}
-                  publishableKey={payment.publishableKey}
-                  onPaid={() =>
-                    void finalizeBooking(payment.prebookId, payment.transactionId)
-                  }
                 />
               ) : null}
               {submitting ? (

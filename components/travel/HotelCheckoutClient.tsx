@@ -1,10 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
 import {
   BedDouble,
   CheckCircle2,
@@ -14,10 +12,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
-import { LiteApiStripePayForm } from '@/components/travel/LiteApiStripePayForm';
 import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
 import { Button } from '@/components/ui/button';
-import { isStripeClientSecret } from '@/lib/travel/stripe-client-secret';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -75,17 +71,6 @@ export function HotelCheckoutClient({
     status: string | null;
     amountEur: number;
   } | null>(null);
-
-  const stripePromise = useMemo(() => {
-    if (
-      !payment?.publishableKey ||
-      payment.paymentMode !== 'stripe_elements' ||
-      !isStripeClientSecret(payment.secretKey)
-    ) {
-      return null;
-    }
-    return loadStripe(payment.publishableKey) as Promise<Stripe | null>;
-  }, [payment?.paymentMode, payment?.publishableKey]);
 
   const displayPrice = roundMoney(
     payment?.price ?? draft?.totalAmount ?? 0
@@ -244,17 +229,13 @@ export function HotelCheckoutClient({
         return;
       }
       const paymentEnv = data.paymentEnv ?? 'sandbox';
-      const paymentMode: 'stripe_elements' | 'liteapi_sdk' =
-        data.publishableKey && isStripeClientSecret(data.secretKey)
-          ? 'stripe_elements'
-          : 'liteapi_sdk';
       const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,
         secretKey: data.secretKey,
         publishableKey: data.publishableKey ?? null,
         paymentEnv,
-        paymentMode,
+        paymentMode: 'liteapi_sdk' as const,
         price: roundMoney(data.price ?? draft.totalAmount),
         currency: data.currency ?? draft.currency,
         holder: {
@@ -411,44 +392,12 @@ export function HotelCheckoutClient({
               </p>
             </div>
             <div className="space-y-4 p-5 sm:p-6">
-              {payment.paymentMode === 'stripe_elements' &&
-              payment.publishableKey &&
-              stripePromise ? (
-                <Elements
-                  key={payment.secretKey}
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret: payment.secretKey,
-                    locale: 'it',
-                    appearance: {
-                      theme: 'stripe',
-                      variables: {
-                        colorPrimary: '#365f73',
-                        borderRadius: '12px',
-                      },
-                    },
-                  }}
-                >
-                  <LiteApiStripePayForm
-                    returnUrl={
-                      paymentReturnUrl ??
-                      `${window.location.origin}/prenota/hotel/checkout?paid=1&tid=${encodeURIComponent(payment.transactionId)}`
-                    }
-                    onPaid={() =>
-                      finalizeBooking(payment.prebookId, payment.transactionId)
-                    }
-                  />
-                </Elements>
-              ) : paymentReturnUrl ? (
+              {paymentReturnUrl ? (
                 <LiteApiPaymentWidget
                   key={payment.secretKey}
                   secretKey={payment.secretKey}
                   paymentEnv={payment.paymentEnv}
                   returnUrl={paymentReturnUrl}
-                  publishableKey={payment.publishableKey}
-                  onPaid={() =>
-                    void finalizeBooking(payment.prebookId, payment.transactionId)
-                  }
                 />
               ) : null}
               {submitting ? (

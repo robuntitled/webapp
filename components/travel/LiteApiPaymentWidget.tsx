@@ -1,12 +1,7 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
+import { useEffect, useId, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { LiteApiStripePayForm } from '@/components/travel/LiteApiStripePayForm';
-import { fetchLiteApiStripePublishableKey } from '@/lib/liteapi/payment-wrapper';
-import { isStripeClientSecret } from '@/lib/travel/stripe-client-secret';
 
 type LiteApiPaymentCtor = new (config: {
   publicKey: 'sandbox' | 'live';
@@ -53,55 +48,36 @@ function loadPaymentScript(): Promise<void> {
   });
 }
 
+function formMounted(host: HTMLElement) {
+  return Boolean(
+    host.querySelector(
+      'iframe, form, input, .lp-submit-button, .StripeElement, [class*="Stripe"]'
+    )
+  );
+}
+
 type LiteApiPaymentWidgetProps = {
   secretKey: string;
   paymentEnv: 'sandbox' | 'live';
   returnUrl: string;
   businessName?: string;
-  publishableKey?: string | null;
-  onPaid?: () => void;
 };
 
+/** Form carta ufficiale LiteAPI. Non usare Stripe.js v9 / Checkout Sessions: LiteAPI possiede il PI. */
 export function LiteApiPaymentWidget({
   secretKey,
   paymentEnv,
   returnUrl,
   businessName = 'NomadLink',
-  publishableKey,
-  onPaid,
 }: LiteApiPaymentWidgetProps) {
   const reactId = useId().replace(/:/g, '');
   const targetId = `nomadlink-payment-${reactId}`;
-  const mounted = useRef(false);
-  const [pk, setPk] = useState<string | null>(publishableKey ?? null);
   const [error, setError] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
-  const canUseStripe = Boolean(pk && isStripeClientSecret(secretKey));
-  const stripePromise = useMemo(
-    () => (canUseStripe && pk ? loadStripe(pk) : null),
-    [canUseStripe, pk]
-  );
-
   useEffect(() => {
-    if (publishableKey) {
-      setPk(publishableKey);
-      return;
-    }
     let cancelled = false;
-    void fetchLiteApiStripePublishableKey(paymentEnv).then((key) => {
-      if (!cancelled && key) setPk(key);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [paymentEnv, publishableKey]);
-
-  useEffect(() => {
-    if (canUseStripe) return;
-    let cancelled = false;
-    mounted.current = false;
     setSdkReady(false);
     setError(null);
 
@@ -114,8 +90,7 @@ export function LiteApiPaymentWidget({
         await new Promise<void>((r) => requestAnimationFrame(() => r()));
         const host = document.getElementById(targetId);
         if (!host) throw new Error('Contenitore pagamento non trovato');
-        if (mounted.current) return;
-        mounted.current = true;
+        host.innerHTML = '';
 
         const payment = new window.LiteAPIPayment({
           publicKey: paymentEnv,
@@ -128,8 +103,8 @@ export function LiteApiPaymentWidget({
         payment.handlePayment();
 
         const started = Date.now();
-        while (!cancelled && Date.now() - started < 12000) {
-          if (host.querySelector('iframe, form, input, .lp-submit-button')) {
+        while (!cancelled && Date.now() - started < 15000) {
+          if (formMounted(host)) {
             setSdkReady(true);
             return;
           }
@@ -137,7 +112,7 @@ export function LiteApiPaymentWidget({
         }
         if (!cancelled) {
           setSdkReady(true);
-          if (!host.querySelector('iframe, form, input, .lp-submit-button')) {
+          if (!formMounted(host)) {
             setError('Il form carta non si è caricato. Riprova.');
           }
         }
@@ -151,32 +126,7 @@ export function LiteApiPaymentWidget({
     return () => {
       cancelled = true;
     };
-  }, [attempt, businessName, canUseStripe, paymentEnv, returnUrl, secretKey, targetId]);
-
-  if (canUseStripe && stripePromise) {
-    return (
-      <div className="space-y-3">
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret: secretKey,
-                    locale: 'it',
-                    appearance: {
-                      theme: 'stripe',
-                      variables: { colorPrimary: '#0F766E', borderRadius: '12px' },
-                    },
-                  }}
-                >
-          <LiteApiStripePayForm returnUrl={returnUrl} onPaid={onPaid} />
-        </Elements>
-        {paymentEnv === 'sandbox' ? (
-          <p className="text-center text-[11px] text-muted-foreground">
-            Sandbox: usa carta test 4242 4242 4242 4242, qualsiasi CVC e data futura.
-          </p>
-        ) : null}
-      </div>
-    );
-  }
+  }, [attempt, businessName, paymentEnv, returnUrl, secretKey, targetId]);
 
   return (
     <div className="space-y-3">
@@ -192,12 +142,7 @@ export function LiteApiPaymentWidget({
           <button
             type="button"
             className="ml-2 font-semibold underline"
-            onClick={() => {
-              mounted.current = false;
-              const el = document.getElementById(targetId);
-              if (el) el.innerHTML = '';
-              setAttempt((n) => n + 1);
-            }}
+            onClick={() => setAttempt((n) => n + 1)}
           >
             Riprova
           </button>
@@ -205,7 +150,7 @@ export function LiteApiPaymentWidget({
       ) : null}
       <div
         id={targetId}
-        className="min-h-[320px] rounded-2xl bg-white p-2 [&_iframe]:min-h-[300px] [&_iframe]:w-full"
+        className="liteapi-pay min-h-[320px] rounded-2xl bg-white p-1 [&_iframe]:min-h-[260px] [&_iframe]:w-full [&_.lp-submit-button]:mt-4 [&_.lp-submit-button]:h-12 [&_.lp-submit-button]:w-full [&_.lp-submit-button]:rounded-xl [&_.lp-submit-button]:bg-primary [&_.lp-submit-button]:text-base [&_.lp-submit-button]:font-semibold [&_.lp-submit-button]:text-white"
         aria-busy={!sdkReady && !error}
       />
       {paymentEnv === 'sandbox' ? (
