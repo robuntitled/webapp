@@ -426,9 +426,9 @@ export function StartTripWizard({
             ) : null}
 
             {step === 'plan' && template ? (
-              <motion.div key="plan" {...phaseMotion} className="flex items-start gap-3 sm:gap-4">
-              <div className="min-w-0 flex-1 space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-                <div className="flex flex-wrap gap-2">
+              <motion.div key="plan" {...phaseMotion}>
+              <div className="mx-auto w-full max-w-5xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+                <div className="relative flex flex-wrap items-center justify-center gap-2 pr-14">
                   {templatesForDestination(template.destination_slug).map((t) => (
                     <button
                       key={t.template_id}
@@ -444,9 +444,17 @@ export function StartTripWizard({
                       {t.duration_days} giorni
                     </button>
                   ))}
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                    <PlanSaveButton
+                      key={template.template_id}
+                      templateId={template.template_id}
+                      initialSaved={favoriteTemplateIds.includes(template.template_id)}
+                      isLoggedIn={Boolean(session?.user)}
+                    />
+                  </div>
                 </div>
-                <p className="text-slate-700">{template.summary}</p>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-center text-slate-700">{template.summary}</p>
+                <div className="mx-auto flex max-w-md items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <Wallet className="h-4 w-4 text-accent" />
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-slate-500">
@@ -458,21 +466,15 @@ export function StartTripWizard({
                   </div>
                 </div>
                 <div>
-                  <h2 className="mb-3 font-display text-lg font-semibold text-slate-900">
+                  <h2 className="mb-3 text-center font-display text-lg font-semibold text-slate-900">
                     Giorno per giorno
                   </h2>
                   <ItineraryDaysWithMap template={template} />
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-center text-xs text-slate-500">
                   {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
                 </p>
               </div>
-              <PlanSaveButton
-                key={template.template_id}
-                templateId={template.template_id}
-                initialSaved={favoriteTemplateIds.includes(template.template_id)}
-                isLoggedIn={Boolean(session?.user)}
-              />
               </motion.div>
             ) : null}
 

@@ -45,16 +45,16 @@ export function PlanSaveButton({
       aria-pressed={saved}
       aria-label={saved ? 'Togli dai salvati' : 'Salva itinerario'}
       className={cn(
-        'flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition',
+        'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition sm:h-12 sm:w-12',
         saved
           ? 'border-accent bg-accent text-white shadow-md shadow-accent/30'
           : 'border-border bg-white text-accent hover:border-accent hover:bg-accent/10'
       )}
     >
       {pending ? (
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
-        <Heart className={cn('h-6 w-6', saved && 'fill-current')} />
+        <Heart className={cn('h-5 w-5', saved && 'fill-current')} />
       )}
     </button>
   );

@@ -63,7 +63,6 @@ export function ItineraryWorldMap({
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Mappa · {pins.length} tappe
         </p>
-        <p className="text-[10px] font-medium text-slate-400">Solo dati in archivio</p>
       </div>
       <div className="h-[min(52vh,420px)] w-full lg:h-[min(70vh,560px)]">
         <ReactLeafletTripMap

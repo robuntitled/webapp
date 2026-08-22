@@ -33,8 +33,6 @@ const ROUTE_COLOR = '#0F766E';
 
 /** Tiles chiari stilizzati (Positron). */
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const TILE_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
 
 function isStopPin(pin: MapPin): boolean {
   return pin.id !== 'destination' && Boolean(pin.blockId);
@@ -129,11 +127,12 @@ export function ReactLeafletTripMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={11}
-        className="h-full w-full z-0 grayscale-[20%] contrast-[1.05]"
+        className="h-full w-full z-0 grayscale-[20%] contrast-[1.05] [&_.leaflet-control-attribution]:!hidden"
         scrollWheelZoom
         zoomControl={false}
+        attributionControl={false}
       >
-        <TileLayer url={TILE_URL} attribution={TILE_ATTR} maxZoom={19} />
+        <TileLayer url={TILE_URL} attribution="" maxZoom={19} />
         <FitBounds pins={fitPins} animate />
         <MapClickHandler onMapClick={onMapClick} />
 
