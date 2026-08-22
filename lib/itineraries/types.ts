@@ -56,6 +56,20 @@ export type TravelMode = 'solo' | 'friends' | 'group';
 
 export type PracticeStatus = 'draft' | 'confirmed' | 'preparing' | 'ready' | 'cancelled';
 
+export type PracticeRow = {
+  id: string;
+  user_id: string;
+  template_id: string;
+  edition_id: string | null;
+  mode: TravelMode;
+  date_from: string;
+  date_to: string;
+  status: PracticeStatus;
+  flight_confirmed_at: string | null;
+  hotel_confirmed_at: string | null;
+  activity_confirmed_at: string | null;
+};
+
 export type EditionType = 'official' | 'private';
 
 export type EditionStatus = 'open' | 'formed' | 'locked' | 'closed';
@@ -67,4 +81,14 @@ export type OfficialEditionSeed = {
   date_from: string;
   date_to: string;
   min_confirmed: number;
+};
+
+export type OfficialEditionCard = {
+  id: string;
+  template_id: string;
+  date_from: string;
+  date_to: string;
+  min_confirmed: number;
+  confirmed_count: number;
+  status: string;
 };

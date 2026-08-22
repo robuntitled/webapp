@@ -1,4 +1,4 @@
-import { CatalogHome } from '@/components/itineraries/CatalogHome';
+import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
 import { listOfficialEditions } from '@/lib/data/editions';
 import { publishedDestinations } from '@/lib/itineraries/catalog';
 
@@ -9,5 +9,18 @@ export default async function DestinazioniPage() {
     Promise.resolve(publishedDestinations()),
     listOfficialEditions(),
   ]);
-  return <CatalogHome destinations={destinations} editions={editions} />;
+  return (
+    <StartTripWizard
+      destinations={destinations}
+      editions={editions.map((e) => ({
+        id: e.id,
+        template_id: e.template_id,
+        date_from: String(e.date_from).slice(0, 10),
+        date_to: String(e.date_to).slice(0, 10),
+        min_confirmed: e.min_confirmed,
+        confirmed_count: e.confirmed_count ?? 0,
+        status: e.status,
+      }))}
+    />
+  );
 }

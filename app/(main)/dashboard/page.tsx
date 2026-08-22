@@ -1,6 +1,4 @@
-import { CatalogHome } from '@/components/itineraries/CatalogHome';
-import { HeroBackground } from '@/components/brand/HeroBackground';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
 import { listOfficialEditions } from '@/lib/data/editions';
 import { publishedDestinations } from '@/lib/itineraries/catalog';
 
@@ -11,17 +9,18 @@ export default async function DashboardPage() {
     Promise.resolve(publishedDestinations()),
     listOfficialEditions(),
   ]);
-
   return (
-    <div className="relative min-h-[calc(100vh-4rem)]">
-      <HeroBackground
-        images={[BRAND_IMAGES.heroes.dashboard, ...BRAND_IMAGES.heroes.slideshow.slice(1, 4)]}
-        overlay="gradient"
-        parallax
-      />
-      <div className="relative z-0">
-        <CatalogHome destinations={destinations} editions={editions} />
-      </div>
-    </div>
+    <StartTripWizard
+      destinations={destinations}
+      editions={editions.map((e) => ({
+        id: e.id,
+        template_id: e.template_id,
+        date_from: String(e.date_from).slice(0, 10),
+        date_to: String(e.date_to).slice(0, 10),
+        min_confirmed: e.min_confirmed,
+        confirmed_count: e.confirmed_count ?? 0,
+        status: e.status,
+      }))}
+    />
   );
 }

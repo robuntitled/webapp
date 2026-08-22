@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -21,6 +21,7 @@ import {
 import {
   loadSearchFormCache,
   saveSearchFormCache,
+  type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
 import { cn } from '@/lib/utils';
 
@@ -58,12 +59,24 @@ type FormCache = {
   sort: AffiliateSortKey;
 };
 
-export function PrenotaAttractionsClient() {
+export function PrenotaAttractionsClient({
+  defaultCity = '',
+  defaultStartDate,
+  defaultEndDate,
+  autoSearch = false,
+  cacheKey = 'attractions',
+}: {
+  defaultCity?: string;
+  defaultStartDate?: string;
+  defaultEndDate?: string;
+  autoSearch?: boolean;
+  cacheKey?: SearchCacheKey | null;
+} = {}) {
   const defaults = defaultAffiliateDates();
-  const [cacheReady, setCacheReady] = useState(false);
-  const [city, setCity] = useState('');
-  const [startDate, setStartDate] = useState(defaults.startDate);
-  const [endDate, setEndDate] = useState(defaults.endDate);
+  const [cacheReady, setCacheReady] = useState(!cacheKey);
+  const [city, setCity] = useState(defaultCity);
+  const [startDate, setStartDate] = useState(defaultStartDate || defaults.startDate);
+  const [endDate, setEndDate] = useState(defaultEndDate || defaults.endDate);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -77,9 +90,13 @@ export function PrenotaAttractionsClient() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const cached = loadSearchFormCache<FormCache>('attractions');
+    if (!cacheKey) {
+      setCacheReady(true);
+      return;
+    }
+    const cached = loadSearchFormCache<FormCache>(cacheKey);
     if (cached) {
-      setCity(cached.city ?? '');
+      setCity(cached.city ?? defaultCity);
       if (cached.startDate) setStartDate(cached.startDate);
       if (cached.endDate) setEndDate(cached.endDate);
       if (cached.adults) setAdults(cached.adults);
@@ -88,10 +105,10 @@ export function PrenotaAttractionsClient() {
       if (cached.sort) setSort(cached.sort);
     }
     setCacheReady(true);
-  }, []);
+  }, [cacheKey, defaultCity]);
 
   useEffect(() => {
-    if (!cacheReady) return;
+    if (!cacheReady || !cacheKey) return;
     const payload: FormCache = {
       city,
       startDate,
@@ -101,11 +118,11 @@ export function PrenotaAttractionsClient() {
       minRating,
       sort,
     };
-    saveSearchFormCache('attractions', payload);
-    const onHide = () => saveSearchFormCache('attractions', payload);
+    saveSearchFormCache(cacheKey, payload);
+    const onHide = () => saveSearchFormCache(cacheKey, payload);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
-  }, [cacheReady, city, startDate, endDate, adults, children, minRating, sort]);
+  }, [cacheReady, cacheKey, city, startDate, endDate, adults, children, minRating, sort]);
 
   const visible = useMemo(() => {
     if (!results) return null;
@@ -234,6 +251,15 @@ export function PrenotaAttractionsClient() {
       setLoadingMore(false);
     }
   };
+
+  const autoSearched = useRef(false);
+  useEffect(() => {
+    if (!cacheReady || !autoSearch || autoSearched.current) return;
+    if (!city.trim()) return;
+    autoSearched.current = true;
+    void fetchPage(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSearch, cacheReady, city]);
 
   const cards: PrenotaAffiliateCardItem[] | null =
     visible?.map((r) => ({

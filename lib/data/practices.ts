@@ -3,21 +3,9 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { datesForDuration } from '@/lib/itineraries/dates';
-import type { PracticeStatus, TravelMode } from '@/lib/itineraries/types';
+import type { PracticeRow, PracticeStatus, TravelMode } from '@/lib/itineraries/types';
 
-export type PracticeRow = {
-  id: string;
-  user_id: string;
-  template_id: string;
-  edition_id: string | null;
-  mode: TravelMode;
-  date_from: string;
-  date_to: string;
-  status: PracticeStatus;
-  flight_confirmed_at: string | null;
-  hotel_confirmed_at: string | null;
-  activity_confirmed_at: string | null;
-};
+export type { PracticeRow };
 
 function missing(error: { code?: string; message?: string } | null) {
   return (

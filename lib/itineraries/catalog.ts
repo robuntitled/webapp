@@ -43,6 +43,10 @@ export function findItineraryBySlug(
   return list[Math.min(1, list.length - 1)] ?? list[0];
 }
 
+export function firstStayCity(t: ItineraryTemplate) {
+  return t.hotels[0]?.area_segment || t.destination_name;
+}
+
 export function assertTemplateShape(t: ItineraryTemplate): string[] {
   const issues: string[] = [];
   if (t.days.length !== t.duration_days) {

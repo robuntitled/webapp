@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -97,6 +97,7 @@ type LiteApiHotelSearchProps = {
   compact?: boolean;
   className?: string;
   preferredHotelIds?: string[];
+  autoSearch?: boolean;
 };
 
 type HotelFormCache = {
@@ -214,6 +215,7 @@ export function LiteApiHotelSearch({
   compact = false,
   className,
   preferredHotelIds,
+  autoSearch = false,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
   const hotelDefaults = defaultHotelDates();
@@ -444,6 +446,15 @@ export function LiteApiHotelSearch({
       setLoading(false);
     }
   };
+
+  const autoSearched = useRef(false);
+  useEffect(() => {
+    if (!cacheReady || !autoSearch || autoSearched.current) return;
+    if (!cityName.trim() || !checkin || !checkout) return;
+    autoSearched.current = true;
+    void search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSearch, cacheReady, checkin, checkout, cityName]);
 
   // Cancellazione gratis: rioserca su LiteAPI (refundableRatesOnly), non solo filtro locale
   useEffect(() => {

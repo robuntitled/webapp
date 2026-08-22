@@ -3,7 +3,6 @@ import Image from 'next/image';
 import { auth } from '@/auth';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { PrenotaNavMenu } from '@/components/layout/PrenotaNavMenu';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Heart, Map } from 'lucide-react';
@@ -47,7 +46,6 @@ export async function Navbar() {
               >
                 Partenze
               </Link>
-              <PrenotaNavMenu />
               <Link
                 href="/pratiche"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

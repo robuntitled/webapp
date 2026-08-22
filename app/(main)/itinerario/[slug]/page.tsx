@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
-import { ItineraryView } from '@/components/itineraries/ItineraryView';
-import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
+import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
+import { listOfficialEditions } from '@/lib/data/editions';
+import { findItineraryBySlug, publishedDestinations } from '@/lib/itineraries/catalog';
 import { parseDurationParam } from '@/lib/itineraries/params';
 
 type PageProps = {
@@ -8,19 +9,29 @@ type PageProps = {
   searchParams: Promise<{ d?: string }>;
 };
 
-export async function generateMetadata({ params, searchParams }: PageProps) {
-  const { slug } = await params;
-  const { d } = await searchParams;
-  const template = findItineraryBySlug(slug, parseDurationParam(d));
-  if (!template) return { title: 'Itinerario' };
-  return { title: `${template.destination_name} ${template.duration_days} giorni` };
-}
-
 export default async function ItinerarioPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const { d } = await searchParams;
-  const template = findItineraryBySlug(slug, parseDurationParam(d));
-  if (!template) notFound();
-  const durations = templatesForDestination(slug).map((t) => t.duration_days);
-  return <ItineraryView template={template} durations={durations} />;
+  const duration = parseDurationParam(d);
+  if (!findItineraryBySlug(slug, duration)) notFound();
+  const [destinations, editions] = await Promise.all([
+    Promise.resolve(publishedDestinations()),
+    listOfficialEditions(),
+  ]);
+  return (
+    <StartTripWizard
+      destinations={destinations}
+      initialSlug={slug}
+      initialDuration={duration}
+      editions={editions.map((e) => ({
+        id: e.id,
+        template_id: e.template_id,
+        date_from: String(e.date_from).slice(0, 10),
+        date_to: String(e.date_to).slice(0, 10),
+        min_confirmed: e.min_confirmed,
+        confirmed_count: e.confirmed_count ?? 0,
+        status: e.status,
+      }))}
+    />
+  );
 }

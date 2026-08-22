@@ -10,7 +10,7 @@ import {
   confirmHotelAction,
 } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
-import type { PracticeRow } from '@/lib/data/practices';
+import type { PracticeRow } from '@/lib/itineraries/types';
 
 export function PracticeChecklist({ practice }: { practice: PracticeRow }) {
   const [pending, startTransition] = useTransition();
