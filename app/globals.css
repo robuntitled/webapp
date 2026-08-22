@@ -226,12 +226,12 @@
   }
 
   /**
-   * Larghezza pagina globale: 25% margine sinistro e destro.
+   * Larghezza pagina globale: 20% margine sinistro e destro.
    */
   .nl-page {
     width: 100%;
     margin-inline: auto;
-    padding-inline: max(0.75rem, 25%);
+    padding-inline: max(0.75rem, 20%);
     box-sizing: border-box;
   }
 

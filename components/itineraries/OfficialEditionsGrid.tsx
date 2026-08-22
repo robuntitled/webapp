@@ -26,8 +26,21 @@ function scarcityLabel(confirmed: number): 'disponibile' | 'ultimi' {
   return confirmed >= 1 ? 'ultimi' : 'disponibile';
 }
 
-export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCard[] }) {
-  const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
+export function OfficialEditionsGrid({
+  editions,
+  filters: controlledFilters,
+  onFiltersChange,
+  showFiltersBar = true,
+}: {
+  editions: OfficialEditionCard[];
+  filters?: CatalogFilterState;
+  onFiltersChange?: (next: CatalogFilterState) => void;
+  showFiltersBar?: boolean;
+}) {
+  const [internalFilters, setInternalFilters] =
+    useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
+  const filters = controlledFilters ?? internalFilters;
+  const setFilters = onFiltersChange ?? setInternalFilters;
 
   const enriched = useMemo(
     () =>
@@ -81,15 +94,17 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
 
   return (
     <div className="space-y-5">
-      <CatalogFiltersBar
-        value={filters}
-        onChange={setFilters}
-        searchPlaceholder="Cerca destinazione o date"
-        showPublished
-        resultsId="risultati-partenze"
-        durationOptions={durationOptions}
-        publishedLabels={{ all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }}
-      />
+      {showFiltersBar ? (
+        <CatalogFiltersBar
+          value={filters}
+          onChange={setFilters}
+          searchPlaceholder="Cerca destinazione o date"
+          showPublished
+          resultsId="risultati-partenze"
+          durationOptions={durationOptions}
+          publishedLabels={{ all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }}
+        />
+      ) : null}
       <p className="text-center text-sm font-medium text-slate-600">
         {visible.length}{' '}
         {visible.length === 1 ? 'partenza' : 'partite'}

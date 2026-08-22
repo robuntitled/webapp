@@ -234,7 +234,7 @@ export function StartTripWizard({
             className="z-0"
             intervalMs={6500}
           />
-          <div className="relative z-10 nl-page flex w-full flex-col items-center gap-4 py-10 text-center sm:py-12">
+          <div className="relative z-10 nl-page flex w-full flex-col items-center gap-4 pb-4 pt-10 text-center sm:pt-12">
             <div className="inline-flex rounded-full border border-white/25 bg-black/35 p-1 shadow-lg backdrop-blur-md">
               <button
                 type="button"
@@ -290,10 +290,33 @@ export function StartTripWizard({
                 : 'Cerca o scegli il continente. Poi i giorni.'}
             </p>
           </div>
+          <div className="relative z-10 nl-page w-full pb-8 pt-2">
+            <CatalogFiltersBar
+              value={filters}
+              onChange={setFilters}
+              searchPlaceholder={
+                showPartenze
+                  ? 'Cerca destinazione o date'
+                  : 'Cerca nazione, continente o vibe'
+              }
+              resultsId={showPartenze ? 'risultati-partenze' : 'risultati-itinerari'}
+              durationOptions={durationOptions}
+              publishedLabels={
+                showPartenze
+                  ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
+                  : { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' }
+              }
+            />
+          </div>
         </section>
       ) : null}
 
-      <div className="relative z-10 nl-page flex min-h-[calc(100vh-4rem)] w-full flex-col pb-24 pt-6">
+      <div
+        className={cn(
+          'relative z-10 nl-page flex w-full flex-col pb-24',
+          step === 'dest' ? 'min-h-0 pt-6' : 'min-h-[calc(100vh-4rem)] pt-6'
+        )}
+      >
         {step !== 'dest' ? (
           <div className="mb-8 space-y-4 text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
@@ -331,19 +354,17 @@ export function StartTripWizard({
           <AnimatePresence mode="wait">
             {step === 'dest' && showPartenze ? (
               <motion.div key="partenze" {...phaseMotion}>
-                <OfficialEditionsGrid editions={editions} />
+                <OfficialEditionsGrid
+                  editions={editions}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  showFiltersBar={false}
+                />
               </motion.div>
             ) : null}
 
             {step === 'dest' && !showPartenze ? (
               <motion.div key="dest" {...phaseMotion} className="space-y-5">
-                <CatalogFiltersBar
-                  value={filters}
-                  onChange={setFilters}
-                  searchPlaceholder="Cerca nazione, continente o vibe"
-                  resultsId="risultati-itinerari"
-                  durationOptions={durationOptions}
-                />
                 <p className="text-center text-sm font-medium text-slate-600">
                   {filteredDestinations.length}{' '}
                   {filteredDestinations.length === 1 ? 'meta' : 'mete'}
