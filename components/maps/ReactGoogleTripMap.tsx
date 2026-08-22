@@ -14,12 +14,12 @@ import type { MapPin } from '@/lib/maps/pins';
 import type { MapViewMode } from '@/lib/maps/map-view-mode';
 import type { DestinationMeta } from '@/types/composer';
 import { resolveDestinationCoords } from '@/lib/maps/coordinates';
-import { GOOGLE_MAP_CIRCLE_PATH, GOOGLE_MAP_DARK_STYLES } from '@/lib/maps/google-map-styles';
+import { GOOGLE_MAP_PIN_PATH, GOOGLE_MAP_DARK_STYLES } from '@/lib/maps/google-map-styles';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
-const ROUTE_COLOR = '#f97316';
-const ROUTE_GLOW = '#fb923c';
+const ROUTE_COLOR = '#0F766E';
+const ROUTE_GLOW = '#99f6e4';
 
 /** Stable map id so @vis.gl can reuse the instance across prop updates. */
 const COMPOSER_MAP_ID = 'nomadlink-composer-map';
@@ -205,15 +205,15 @@ function RoutePolyline({ path }: { path: LatLng[] }) {
     const glow = new mapsLib.Polyline({
       path,
       strokeColor: ROUTE_GLOW,
-      strokeOpacity: 0.35,
-      strokeWeight: 8,
+      strokeOpacity: 0.25,
+      strokeWeight: 4,
       geodesic: true,
     });
     const line = new mapsLib.Polyline({
       path,
       strokeColor: ROUTE_COLOR,
-      strokeOpacity: 0.95,
-      strokeWeight: 3,
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
       geodesic: true,
     });
 
@@ -250,35 +250,29 @@ function TripPins({
   return (
     <>
       {pins.map((pin) => {
-        const stopIndex = stopPins.findIndex((p) => p.id === pin.id);
         const highlighted =
           highlightedPinId === pin.id || highlightedPinId === pin.blockId;
         const color =
           pin.dayIndex === activeDayIndex || mapMode === 'fullTrip'
-            ? '#f97316'
-            : '#a855f7';
-        const label = pin.emoji || (isStopPin(pin) ? String(stopIndex + 1) : '');
+            ? '#F97316'
+            : '#0F766E';
 
         return (
           <Marker
             key={pin.id}
             position={{ lat: pin.lat, lng: pin.lng }}
             onClick={() => onPinClick?.(pin)}
-            label={{
-              text: label,
-              color: '#ffffff',
-              fontSize: highlighted ? '14px' : '12px',
-              fontWeight: '700',
-            }}
-            icon={{
-              path: GOOGLE_MAP_CIRCLE_PATH,
-              fillColor: color,
-              fillOpacity: 1,
-              strokeColor: highlighted ? '#ffffff' : 'rgba(255,255,255,0.85)',
-              strokeWeight: highlighted ? 3 : 2,
-              scale: highlighted ? 14 : 11,
-            }}
+            title={pin.label}
             zIndex={highlighted ? 100 : 10}
+            icon={{
+              path: GOOGLE_MAP_PIN_PATH,
+              fillColor: color,
+              fillOpacity: 0.95,
+              strokeColor: '#ffffff',
+              strokeWeight: highlighted ? 2 : 1.25,
+              scale: highlighted ? 1.15 : 1,
+              anchor: { x: 12, y: 32 } as unknown as google.maps.Point,
+            }}
           />
         );
       })}

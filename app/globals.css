@@ -236,24 +236,19 @@
     box-sizing: border-box;
   }
 
-  /** Griglia schede: gap ampio + colonne auto così le card non si allargano troppo. */
+  /**
+   * Griglia schede catalogo: sempre max 2 colonne, gap comodo.
+   */
   .nl-card-grid {
     display: grid;
     gap: 1.5rem;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    grid-template-columns: 1fr;
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 640px) {
     .nl-card-grid {
       gap: 1.75rem;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .nl-card-grid {
-      gap: 2rem;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

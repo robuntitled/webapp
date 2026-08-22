@@ -52,3 +52,7 @@ export const GOOGLE_MAP_DARK_STYLES = [
 
 /** google.maps.SymbolPath.CIRCLE */
 export const GOOGLE_MAP_CIRCLE_PATH = 0;
+
+/** Pin a goccia (SVG path, viewBox ~24×32). */
+export const GOOGLE_MAP_PIN_PATH =
+  'M12 0C6.5 0 2 4.5 2 10c0 7.2 10 20 10 20s10-12.8 10-20C22 4.5 17.5 0 12 0z';

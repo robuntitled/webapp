@@ -54,7 +54,7 @@ export function CatalogFiltersBar({
   }, [durationOptions, value.duration]);
 
   return (
-    <div className="space-y-3">
+    <div className="mx-auto w-full max-w-xl space-y-3">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
@@ -62,14 +62,14 @@ export function CatalogFiltersBar({
           value={value.query}
           onChange={(e) => set('query', e.target.value)}
           placeholder={searchPlaceholder}
-          className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="h-11 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
           autoComplete="off"
           aria-controls={resultsId}
         />
       </div>
 
-      <div className="-mx-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max min-w-full items-center gap-1.5 px-1">
+      <div className="flex justify-center overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max items-center justify-center gap-1.5">
           {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
             <FilterChip
               key={r}
