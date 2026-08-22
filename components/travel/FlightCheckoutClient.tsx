@@ -9,19 +9,14 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
-  CreditCard,
   Loader2,
   Plane,
 } from 'lucide-react';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from '@stripe/react-stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
+import { LiteApiStripePayForm } from '@/components/travel/LiteApiStripePayForm';
 import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -255,64 +250,6 @@ function LegSummary({
   );
 }
 
-function PaymentStep({ onPaid }: { onPaid: () => Promise<void> }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [busy, setBusy] = useState(false);
-
-  const pay = async () => {
-    if (!stripe || !elements) return;
-    setBusy(true);
-    try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        redirect: 'if_required',
-        confirmParams: {
-          return_url:
-            typeof window !== 'undefined'
-              ? `${window.location.origin}/prenota/voli/checkout`
-              : undefined,
-        },
-      });
-      if (error) {
-        toast.error(error.message ?? 'Pagamento non riuscito');
-        return;
-      }
-      if (
-        paymentIntent &&
-        (paymentIntent.status === 'succeeded' ||
-          paymentIntent.status === 'processing')
-      ) {
-        await onPaid();
-      } else {
-        toast.error('Pagamento non completato. Riprova.');
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Errore pagamento');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <PaymentElement options={{ layout: 'tabs' }} />
-      <Button
-        type="button"
-        disabled={!stripe || busy}
-        onClick={() => void pay()}
-        className="h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
-      >
-        {busy ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <CreditCard className="mr-2 h-4 w-4" />
-        )}
-        Paga e conferma
-      </Button>
-    </div>
-  );
-}
 
 export function FlightCheckoutClient({
   defaultEmail = '',
@@ -435,10 +372,15 @@ export function FlightCheckoutClient({
       const pid = params.get('pid');
       const pending = loadFlightPaymentPending();
 
-      if (paid && tid && pid) {
+      const redirected =
+        params.get('redirect_status') === 'succeeded' || Boolean(params.get('payment_intent'));
+      if ((paid && tid && pid) || (redirected && pending)) {
         setStep('payment');
         setVerifying(false);
-        void finalizeBooking(pid, tid);
+        void finalizeBooking(
+          pid || pending?.prebookId || '',
+          tid || pending?.transactionId || ''
+        );
         return;
       }
       if (pending) {
@@ -975,6 +917,7 @@ export function FlightCheckoutClient({
                   stripe={stripePromise}
                   options={{
                     clientSecret: payment.secretKey,
+                    locale: 'it',
                     appearance: {
                       theme: 'stripe',
                       variables: {
@@ -984,7 +927,8 @@ export function FlightCheckoutClient({
                     },
                   }}
                 >
-                  <PaymentStep
+                  <LiteApiStripePayForm
+                    returnUrl={paymentReturnUrl}
                     onPaid={() =>
                       finalizeBooking(payment.prebookId, payment.transactionId)
                     }
