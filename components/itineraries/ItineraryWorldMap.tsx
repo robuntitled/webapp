@@ -115,9 +115,6 @@ export function ItineraryDaysWithMap({
               <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                 <MapPin className="h-3 w-3" />
                 {day.area_segment}
-                {day.lat != null && day.lng != null
-                  ? ` · ${day.lat.toFixed(2)}, ${day.lng.toFixed(2)}`
-                  : ''}
               </p>
             </button>
           </li>
