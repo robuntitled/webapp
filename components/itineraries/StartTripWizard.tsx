@@ -228,47 +228,16 @@ export function StartTripWizard({
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-white">
       {step === 'dest' ? (
-        <section className="relative isolate -mt-16 overflow-hidden pt-16">
-          <HeroBackground
-            images={BRAND_IMAGES.heroes.slideshow}
-            overlay="dark"
-            className="z-0"
-            intervalMs={6500}
-          />
+        <section className="relative isolate -mt-16 overflow-visible pt-16">
+          <div className="absolute inset-0 overflow-hidden">
+            <HeroBackground
+              images={BRAND_IMAGES.heroes.slideshow}
+              overlay="dark"
+              className="z-0"
+              intervalMs={6500}
+            />
+          </div>
           <div className="relative z-10 nl-page flex w-full flex-col items-center gap-4 pb-4 pt-10 text-center sm:pt-12">
-            <div className="inline-flex rounded-full border border-white/25 bg-black/35 p-1 shadow-lg backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => {
-                  setHomeView('itinerari');
-                  router.replace('/destinazioni', { scroll: false });
-                }}
-                className={cn(
-                  'rounded-full px-4 py-1.5 text-sm font-semibold transition',
-                  homeView === 'itinerari'
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-white/85 hover:text-white'
-                )}
-              >
-                Itinerari
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setHomeView('partenze');
-                  router.replace('/destinazioni?vista=partenze', { scroll: false });
-                }}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition',
-                  homeView === 'partenze'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-white/85 hover:text-white'
-                )}
-              >
-                <Users className="h-3.5 w-3.5" />
-                Partenze
-              </button>
-            </div>
             {!showPartenze ? (
               <div className="flex items-center justify-center gap-2">
                 {STEPS.map((s, i) => (
@@ -285,13 +254,13 @@ export function StartTripWizard({
             <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
               {showPartenze ? 'Partenze già aperte' : 'Viaggi, Risparmi, Zero Sbatti'}
             </h1>
-            <p className="mx-auto max-w-xl text-base text-white/90 drop-shadow">
+            <p className="mx-auto max-w-2xl text-[19px] leading-snug text-white/90 drop-shadow md:text-[22px]">
               {showPartenze
                 ? 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'
-                : 'Scegli la vibe, prenota, parti.'}
+                : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
             </p>
           </div>
-          <div className="relative z-10 nl-page w-full pb-8 pt-2">
+          <div className="relative z-10 nl-page w-full pb-10 pt-2">
             <CatalogFiltersBar
               value={filters}
               onChange={setFilters}
@@ -310,13 +279,49 @@ export function StartTripWizard({
               }
             />
           </div>
+          {/* Toggle a cavallo tra hero e bianco */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex -translate-y-1/2 justify-center">
+            <div className="pointer-events-auto inline-flex rounded-full border border-slate-200/80 bg-slate-900/90 p-1 shadow-xl backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => {
+                  setHomeView('itinerari');
+                  router.replace('/destinazioni', { scroll: false });
+                }}
+                className={cn(
+                  'rounded-full px-5 py-2 text-sm font-semibold transition',
+                  homeView === 'itinerari'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-white/85 hover:text-white'
+                )}
+              >
+                Itinerari
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHomeView('partenze');
+                  router.replace('/destinazioni?vista=partenze', { scroll: false });
+                }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold transition',
+                  homeView === 'partenze'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-white/85 hover:text-white'
+                )}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Partenze
+              </button>
+            </div>
+          </div>
         </section>
       ) : null}
 
       <div
         className={cn(
           'relative z-10 nl-page flex w-full flex-col pb-24',
-          step === 'dest' ? 'min-h-0 pt-6' : 'min-h-[calc(100vh-4rem)] pt-6'
+          step === 'dest' ? 'min-h-0 pt-12' : 'min-h-[calc(100vh-4rem)] pt-6'
         )}
       >
         {step !== 'dest' ? (

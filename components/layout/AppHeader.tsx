@@ -27,7 +27,7 @@ export function AppHeader({ children }: { children: React.ReactNode }) {
       className={cn(
         'group/nav fixed top-0 right-0 left-0 z-50 transition-[background-color,border-color,box-shadow] duration-300',
         overHero
-          ? 'border-transparent bg-gradient-to-b from-black/70 via-black/40 to-transparent text-white shadow-none'
+          ? 'border-transparent bg-transparent text-white shadow-none'
           : 'border-b border-slate-200 bg-white text-slate-900 shadow-[0_4px_20px_-12px_rgba(15,23,42,0.25)]'
       )}
     >
