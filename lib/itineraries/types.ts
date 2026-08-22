@@ -41,7 +41,7 @@ export type ItineraryTemplate = {
   destination_slug: string;
   destination_name: string;
   duration_days: number;
-  style?: 'relax' | 'avventura' | 'estremo';
+  style?: 'relax' | 'avventura' | 'estremo' | 'entertainment' | 'adventure';
   title: string;
   summary: string;
   budget_orientative_eur: ItineraryBudget;
@@ -50,6 +50,8 @@ export type ItineraryTemplate = {
   paid_activities: ItineraryPaidActivity[];
   logistics_notes?: string;
   status: 'draft' | 'published';
+  hub_iata?: string;
+  origin_iata_default?: string;
 };
 
 export type TravelMode = 'solo' | 'friends' | 'group';

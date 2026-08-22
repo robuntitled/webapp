@@ -2,7 +2,12 @@ import { THAILANDIA_TEMPLATES } from '@/lib/itineraries/thailandia';
 import { findCatalogDestination, wizardCatalogDestinations } from '@/lib/catalog/destinations';
 import type { ItineraryTemplate, OfficialEditionSeed } from '@/lib/itineraries/types';
 
-/** Solo itinerari published. Lancio: Thailandia 10/14/21. */
+/**
+ * Solo itinerari published in app. Lancio: Thailandia 10/14/21.
+ * Bundle Americas (99 template) è in DB `itinerary_templates` — vedi
+ * `lib/data/itinerary-templates.ts` e `npm run db:itineraries`. Non esposti
+ * ancora nel wizard finché non si attiva la destinazione.
+ */
 export const PUBLISHED_TEMPLATES: ItineraryTemplate[] = THAILANDIA_TEMPLATES.filter(
   (t) => t.status === 'published'
 );
