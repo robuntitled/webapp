@@ -21,7 +21,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
         variant="ghost"
         size="icon"
         aria-label={open ? 'Chiudi menu' : 'Apri menu'}
-        className="text-slate-700 hover:bg-slate-100 hover:text-primary"
+        className="text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15 group-data-[hero=true]/nav:hover:text-white"
         onClick={() => setOpen(!open)}
       >
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

@@ -32,7 +32,7 @@ export function UserNav({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full text-slate-700 hover:bg-slate-100 hover:text-primary"
+          className="relative h-10 w-10 rounded-full text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15"
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.image ?? ''} alt={user.name ?? ''} />

@@ -227,7 +227,7 @@ export function StartTripWizard({
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-white">
       {step === 'dest' ? (
-        <section className="relative isolate overflow-hidden">
+        <section className="relative isolate -mt-16 overflow-hidden pt-16">
           <HeroBackground
             images={BRAND_IMAGES.heroes.slideshow}
             overlay="dark"

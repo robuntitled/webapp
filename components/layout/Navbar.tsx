@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
 
+const navLinkClass =
+  'rounded-lg px-4 py-2 text-sm font-semibold transition-colors text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15 group-data-[hero=true]/nav:hover:text-white';
+
 export async function Navbar() {
   const session = await auth();
   const showCostsDashboard = isAdminEmail(session?.user?.email);
@@ -22,32 +25,23 @@ export async function Navbar() {
             alt="NomadLink"
             width={36}
             height={36}
-            className="rounded-lg transition-transform group-hover:scale-105"
+            className="rounded-lg ring-2 ring-transparent transition-transform group-hover:scale-105 group-data-[hero=true]/nav:ring-white/40"
           />
-          <span className="font-display text-xl font-semibold tracking-tight text-primary">
+          <span className="font-display text-xl font-semibold tracking-tight text-primary drop-shadow-sm group-data-[hero=true]/nav:text-white">
             NomadLink
           </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          <Link
-            href="/destinazioni"
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
-          >
+          <Link href="/destinazioni" className={navLinkClass}>
             Itinerari
           </Link>
           {session?.user && (
             <>
-              <Link
-                href="/pratiche"
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
-              >
+              <Link href="/pratiche" className={navLinkClass}>
                 I miei viaggi
               </Link>
-              <Link
-                href="/dashboard/bacheca"
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
-              >
+              <Link href="/dashboard/bacheca" className={navLinkClass}>
                 Bacheca
               </Link>
             </>
@@ -62,9 +56,9 @@ export async function Navbar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-accent hover:bg-accent/10 hover:text-accent"
+                  className="text-accent hover:bg-accent/10 hover:text-accent group-data-[hero=true]/nav:hover:bg-white/15"
                 >
-                  <Heart className="h-5 w-5 fill-accent" />
+                  <Heart className="h-5 w-5 fill-accent drop-shadow" />
                 </Button>
               </Link>
               <NotificationBell />
@@ -76,7 +70,7 @@ export async function Navbar() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="font-semibold text-slate-700 hover:bg-slate-100 hover:text-primary"
+                className="font-semibold text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15 group-data-[hero=true]/nav:hover:text-white"
               >
                 <Link href="/">Accedi</Link>
               </Button>
