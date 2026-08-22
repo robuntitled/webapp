@@ -14,7 +14,7 @@ import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { SlideshowWash } from '@/components/brand/SlideshowWash';
-import { coverForDestination, uniqueCover } from '@/lib/composer/destination-covers';
+import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
@@ -268,14 +268,16 @@ export function StartTripWizard({
                         {section.continent}
                       </h2>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        {section.items.map((dest, i) => (
+                        {(() => {
+                          const covers = uniqueCoversForSlugs(section.items.map((d) => d.slug));
+                          return section.items.map((dest, i) => (
                           <article
                             key={dest.slug}
                             className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1220]/75 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
                           >
                             <div className="relative h-44">
                               <Image
-                                src={coverForDestination(dest.slug)}
+                                src={covers[i] ?? coverForDestination(dest.slug)}
                                 alt={dest.name}
                                 fill
                                 className="object-cover"
@@ -305,7 +307,8 @@ export function StartTripWizard({
                               ))}
                             </div>
                           </article>
-                        ))}
+                          ));
+                        })()}
                       </div>
                     </section>
                   ))
