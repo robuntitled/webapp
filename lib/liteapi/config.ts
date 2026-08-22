@@ -36,14 +36,11 @@ export function getLiteApiPaymentEnv(): 'sandbox' | 'live' {
 }
 
 /**
- * Publishable key Stripe di LiteAPI (opzionale).
- * Se assente, il frontend usa il Payment SDK ufficiale (publicKey sandbox/live).
+ * Publishable key Stripe di LiteAPI (opzionale override).
+ * Non usare NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: è un altro account e il form resta vuoto.
  */
 export function getLiteApiStripePublishableKey(): string | null {
-  const raw =
-    process.env.LITEAPI_STRIPE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-    '';
+  const raw = process.env.LITEAPI_STRIPE_PUBLISHABLE_KEY || '';
   const key = raw.trim().replace(/^["']|["']$/g, '').trim();
-  return key || null;
+  return key.startsWith('pk_') ? key : null;
 }

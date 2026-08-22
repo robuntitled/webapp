@@ -462,7 +462,9 @@ export function HotelCheckoutClient({
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
                 Passo 2 di 2
               </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold">Pagamento</h2>
+              <h2 className="mt-0.5 font-display text-xl font-semibold text-white">
+                Pagamento
+              </h2>
               <p className="mt-1 text-sm text-white/75">
                 Totale{' '}
                 <span className="font-semibold text-white">
@@ -499,6 +501,10 @@ export function HotelCheckoutClient({
                   secretKey={payment.secretKey}
                   paymentEnv={payment.paymentEnv}
                   returnUrl={paymentReturnUrl}
+                  publishableKey={payment.publishableKey}
+                  onPaid={() =>
+                    void finalizeBooking(payment.prebookId, payment.transactionId)
+                  }
                 />
               ) : null}
               {submitting ? (

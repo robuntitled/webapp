@@ -40,16 +40,22 @@ export async function POST(request: Request) {
   try {
     const result = await prebookHotel(parsed.data.offerId);
     const { isStripeClientSecret } = await import('@/lib/travel/stripe-client-secret');
+    const { fetchLiteApiStripePublishableKey } = await import(
+      '@/lib/liteapi/payment-wrapper'
+    );
+    const env = getLiteApiPaymentEnv();
     const publishableKey =
-      result.publishableKey ?? getLiteApiStripePublishableKey();
+      result.publishableKey ??
+      getLiteApiStripePublishableKey() ??
+      (await fetchLiteApiStripePublishableKey(env));
     const useStripe = Boolean(publishableKey && isStripeClientSecret(result.secretKey));
     return NextResponse.json({
       ok: true,
       prebookId: result.prebookId,
       transactionId: result.transactionId,
       secretKey: result.secretKey,
-      publishableKey: useStripe ? publishableKey : null,
-      paymentEnv: getLiteApiPaymentEnv(),
+      publishableKey,
+      paymentEnv: env,
       paymentMode: useStripe ? 'stripe_elements' : 'liteapi_sdk',
       price: result.price,
       currency: result.currency,

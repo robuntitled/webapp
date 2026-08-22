@@ -165,13 +165,16 @@ export async function prebookFlight(params: {
 
   const prebookId = toStr(item.prebookId);
   const transactionId = toStr(item.transactionId);
-  const secretKey = toStr(item.secretKey);
+  const payment = asRecord(item.payment);
+  const secretKey =
+    toStr(item.secretKey) ??
+    toStr(payment?.secretKey) ??
+    toStr(payment?.clientSecret);
   if (!prebookId || !transactionId || !secretKey) {
     throw new Error('Prebook incompleto: mancano dati di pagamento');
   }
 
   const priced = extractPrice(item);
-  const payment = asRecord(item.payment);
   const publishableKey =
     toStr(item.publishableKey) ??
     toStr(payment?.publishableKey) ??

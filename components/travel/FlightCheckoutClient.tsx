@@ -957,7 +957,7 @@ export function FlightCheckoutClient({
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
                 Passo 2 di 2
               </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold">
+              <h2 className="mt-0.5 font-display text-xl font-semibold text-white">
                 Pagamento
               </h2>
               <p className="mt-1 text-sm text-white/75">
@@ -996,6 +996,10 @@ export function FlightCheckoutClient({
                   secretKey={payment.secretKey}
                   paymentEnv={payment.paymentEnv}
                   returnUrl={paymentReturnUrl}
+                  publishableKey={payment.publishableKey}
+                  onPaid={() =>
+                    void finalizeBooking(payment.prebookId, payment.transactionId)
+                  }
                 />
               ) : null}
               {submitting ? (
