@@ -31,7 +31,11 @@ export default async function BachecaPage() {
           </p>
         </header>
 
-        <CreatePostComposer compact tone="onDark" placeholder="Pubblica una foto del viaggio…" />
+        <CreatePostComposer
+          compact
+          tone="onDark"
+          placeholder="Scrivi un testo. La foto va sulla mappa."
+        />
         <CommunityMapSection photoPins={photoPins} />
       </div>
     </div>

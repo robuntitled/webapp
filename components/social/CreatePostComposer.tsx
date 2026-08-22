@@ -71,6 +71,7 @@ export function CreatePostComposer({
   const [placeQuery, setPlaceQuery] = useState('');
   const [showPlaceSearch, setShowPlaceSearch] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [dragOver, setDragOver] = useState(false);
   const onDark = tone === 'onDark';
 
   const onPickFile = async (f: File | null) => {
@@ -282,42 +283,38 @@ export function CreatePostComposer({
       </div>
     ) : null;
 
+  const pickFromList = (files: FileList | null) => {
+    const next = files?.[0];
+    if (!next) return;
+    if (!next.type.startsWith('image/')) {
+      toast.error('Carica solo un’immagine (jpg, png, webp, gif).');
+      return;
+    }
+    void onPickFile(next);
+  };
+
   return (
     <div
       className={cn(
-        'space-y-3 rounded-3xl p-4 sm:p-5',
-        onDark
-          ? 'nl-feed-composer'
-          : 'border border-border/60 bg-card shadow-sm',
+        'space-y-3 rounded-3xl border border-white/10 bg-[#0b1220]/80 p-4 shadow-[0_24px_60px_-32px_rgba(0,0,0,0.75)] sm:p-5',
         compact && 'p-4'
       )}
     >
-      {onDark ? (
-        <div className="mb-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
-          <Sparkles className="h-3.5 w-3.5 text-accent" />
-          Nuovo post
-        </div>
-      ) : null}
+      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
+        <Sparkles className="h-3.5 w-3.5 text-accent" />
+        Foto e testo
+      </div>
 
-      {/* Posizione sempre sopra testo e foto */}
-      {locationBlock}
-
-      <Textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder={placeholder}
-        maxLength={2000}
-        rows={compact ? 3 : 4}
-        className={cn(
-          'resize-none rounded-2xl',
-          onDark
-            ? 'border-white/10 bg-transparent text-white placeholder:text-white/40 focus-visible:ring-accent/40'
-            : 'border-border/50 bg-background/50'
-        )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+        className="hidden"
+        onChange={(e) => pickFromList(e.target.files)}
       />
 
       {preview ? (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10">
+        <div className="relative overflow-hidden rounded-2xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
@@ -342,33 +339,46 @@ export function CreatePostComposer({
             <X className="h-4 w-4" />
           </button>
         </div>
-      ) : null}
+      ) : (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => fileRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            pickFromList(e.dataTransfer.files);
+          }}
+          className={cn(
+            'flex min-h-[140px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-6 text-center transition',
+            dragOver
+              ? 'border-accent bg-accent/15 text-white'
+              : 'border-white/25 bg-white/5 text-white/80 hover:border-accent/70 hover:bg-white/8'
+          )}
+        >
+          <ImagePlus className="h-7 w-7 text-accent" />
+          <span className="text-sm font-semibold text-white">Aggiungi una foto</span>
+          <span className="text-xs text-white/50">Clicca o trascina. Poi un testo, se vuoi.</span>
+        </button>
+      )}
 
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
-            className="hidden"
-            onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              'rounded-full',
-              onDark &&
-                'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'
-            )}
-            disabled={pending}
-            onClick={() => fileRef.current?.click()}
-          >
-            <ImagePlus className="mr-1.5 h-4 w-4" />
-            Foto
-          </Button>
-        </div>
+      {locationBlock}
+
+      <Textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder={placeholder}
+        maxLength={2000}
+        rows={compact ? 3 : 4}
+        className="resize-none rounded-2xl border-white/15 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-accent/40"
+      />
+
+      <div className="flex items-center justify-end">
         <Button
           type="button"
           size="sm"
