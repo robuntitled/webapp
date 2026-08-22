@@ -1,12 +1,12 @@
 import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
 import { listOfficialEditions } from '@/lib/data/editions';
-import { publishedDestinations } from '@/lib/itineraries/catalog';
+import { wizardDestinationCards } from '@/lib/itineraries/catalog';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DestinazioniPage() {
   const [destinations, editions] = await Promise.all([
-    Promise.resolve(publishedDestinations()),
+    Promise.resolve(wizardDestinationCards()),
     listOfficialEditions(),
   ]);
   return (

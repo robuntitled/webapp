@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
 import { listOfficialEditions } from '@/lib/data/editions';
-import { findItineraryBySlug, publishedDestinations } from '@/lib/itineraries/catalog';
+import { findItineraryBySlug, wizardDestinationCards } from '@/lib/itineraries/catalog';
 import { parseDurationParam } from '@/lib/itineraries/params';
 
 type PageProps = {
@@ -15,7 +15,7 @@ export default async function ItinerarioPage({ params, searchParams }: PageProps
   const duration = parseDurationParam(d);
   if (!findItineraryBySlug(slug, duration)) notFound();
   const [destinations, editions] = await Promise.all([
-    Promise.resolve(publishedDestinations()),
+    Promise.resolve(wizardDestinationCards()),
     listOfficialEditions(),
   ]);
   return (

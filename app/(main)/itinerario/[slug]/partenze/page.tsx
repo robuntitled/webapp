@@ -59,7 +59,8 @@ export default async function PartenzePage({ params, searchParams }: PageProps) 
                   {formatItDate(String(ed.date_from))} – {formatItDate(String(ed.date_to))}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {ed.confirmed_count ?? 0}/{ed.min_confirmed} voli confermati · soglia del gruppo
+                  {ed.confirmed_count ?? 0}/{ed.min_confirmed} partecipanti confermati · soglia del
+                  gruppo
                   {tpl ? ` · ${tpl.duration_days} giorni` : ''}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">

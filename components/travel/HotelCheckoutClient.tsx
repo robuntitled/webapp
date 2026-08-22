@@ -415,6 +415,7 @@ export function HotelCheckoutClient({
               payment.publishableKey &&
               stripePromise ? (
                 <Elements
+                  key={payment.secretKey}
                   stripe={stripePromise}
                   options={{
                     clientSecret: payment.secretKey,

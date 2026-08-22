@@ -1,19 +1,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type {
-  CommunityMapPin,
-  CommunityPhotoPin,
-  MyMapLocation,
-} from '@/lib/data/community-map';
+import type { CommunityPhotoPin } from '@/lib/data/community-map';
 
 const CommunityMap = dynamic(
-  () =>
-    import('@/components/social/CommunityMap').then((m) => m.CommunityMap),
+  () => import('@/components/social/CommunityMap').then((m) => m.CommunityMap),
   {
     ssr: false,
     loading: () => (
-      <div className="nl-feed-card flex h-[340px] items-center justify-center rounded-[10px] text-sm text-muted-foreground">
+      <div className="flex h-[70vh] min-h-[420px] items-center justify-center rounded-[28px] border border-white/10 bg-[#0b1220]/70 text-sm text-white/60">
         Caricamento mappa…
       </div>
     ),
@@ -21,12 +16,9 @@ const CommunityMap = dynamic(
 );
 
 type CommunityMapSectionProps = {
-  pins: CommunityMapPin[];
   photoPins: CommunityPhotoPin[];
-  me: MyMapLocation | null;
-  currentUserId: string;
 };
 
-export function CommunityMapSection(props: CommunityMapSectionProps) {
-  return <CommunityMap {...props} />;
+export function CommunityMapSection({ photoPins }: CommunityMapSectionProps) {
+  return <CommunityMap photoPins={photoPins} />;
 }

@@ -51,7 +51,7 @@ export async function Navbar() {
                 href="/pratiche"
                 className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                Le mie pratiche
+                I miei viaggi
               </Link>
               <Link
                 href="/dashboard/bacheca"

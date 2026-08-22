@@ -3,11 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  confirmActivityAction,
-  confirmFlightAction,
-  confirmHotelAction,
-} from '@/actions/practices';
+import { confirmActivityAction, confirmHotelAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
@@ -83,14 +79,6 @@ export function PracticeBookingHub({
             autoSearch
             cacheKey={null}
           />
-          <Button
-            disabled={pending || Boolean(practice.flight_confirmed_at)}
-            className="rounded-full"
-            onClick={() => run(confirmFlightAction)}
-          >
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {practice.flight_confirmed_at ? 'Volo confermato' : 'Ho prenotato il volo'}
-          </Button>
         </div>
       ) : null}
 

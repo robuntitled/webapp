@@ -623,7 +623,7 @@ export function FlightCheckoutClient({
           className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
-          Torna alla pratica
+          Torna al viaggio
         </Link>
 
         {step === 'details' ? (
@@ -914,6 +914,7 @@ export function FlightCheckoutClient({
               payment.publishableKey &&
               stripePromise ? (
                 <Elements
+                  key={payment.secretKey}
                   stripe={stripePromise}
                   options={{
                     clientSecret: payment.secretKey,

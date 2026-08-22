@@ -88,7 +88,7 @@ export function CatalogHome({
                     {formatItDate(String(ed.date_from))} – {formatItDate(String(ed.date_to))}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {ed.confirmed_count ?? 0}/{ed.min_confirmed} voli confermati · {ed.status}
+                    {ed.confirmed_count ?? 0}/{ed.min_confirmed} partecipanti confermati · {ed.status}
                   </p>
                   <Link
                     href={`/edizione/${ed.id}`}

@@ -1,11 +1,23 @@
 import { THAILANDIA_TEMPLATES } from '@/lib/itineraries/thailandia';
-import { findCatalogDestination } from '@/lib/catalog/destinations';
+import { findCatalogDestination, wizardCatalogDestinations } from '@/lib/catalog/destinations';
 import type { ItineraryTemplate, OfficialEditionSeed } from '@/lib/itineraries/types';
 
 /** Solo itinerari published. Lancio: Thailandia 10/14/21. */
 export const PUBLISHED_TEMPLATES: ItineraryTemplate[] = THAILANDIA_TEMPLATES.filter(
   (t) => t.status === 'published'
 );
+
+export function wizardDestinationCards() {
+  return wizardCatalogDestinations().map((d) => ({
+    slug: d.slug,
+    name: d.name,
+    vibe: d.vibe,
+    emoji: d.emoji,
+    allowedDurations: d.allowedDurations,
+    continent: d.continent,
+    published: Boolean(findItineraryBySlug(d.slug)),
+  }));
+}
 
 export function publishedDestinations() {
   const slugs = [...new Set(PUBLISHED_TEMPLATES.map((t) => t.destination_slug))];

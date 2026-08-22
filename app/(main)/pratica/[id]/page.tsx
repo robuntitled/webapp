@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { auth } from '@/auth';
+import { SlideshowWash } from '@/components/brand/SlideshowWash';
 import { PracticeBookingHub } from '@/components/itineraries/PracticeBookingHub';
 import { getPractice } from '@/lib/data/practices';
 import { getEdition } from '@/lib/data/editions';
@@ -27,13 +28,14 @@ export default async function PraticaPage({ params }: PageProps) {
 
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
+      <SlideshowWash />
       <div className="relative z-10 container mx-auto max-w-4xl space-y-6 px-4 py-10">
         <Link
           href="/pratiche"
           className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Le mie pratiche
+          I miei viaggi
         </Link>
         <header className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">

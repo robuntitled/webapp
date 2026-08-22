@@ -12,6 +12,9 @@ export const LITEAPI_PAYMENT_ELEMENT_OPTIONS = {
     googlePay: 'auto' as const,
     link: 'never' as const,
   },
+  fields: {
+    billingDetails: 'auto' as const,
+  },
 };
 
 export function LiteApiStripePayForm({
@@ -25,6 +28,7 @@ export function LiteApiStripePayForm({
   const elements = useElements();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [mountKey, setMountKey] = useState(0);
 
   async function pay() {
     if (!stripe || !elements) return;
@@ -44,12 +48,14 @@ export function LiteApiStripePayForm({
 
       if (result.error) {
         setMessage(result.error.message ?? 'Pagamento non riuscito');
+        setMountKey((k) => k + 1);
         return;
       }
 
       await onPaid?.();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Errore pagamento');
+      setMessage(e instanceof Error ? e.message : 'Pagamento non riuscito. Riprova.');
+      setMountKey((k) => k + 1);
     } finally {
       setBusy(false);
     }
@@ -57,7 +63,9 @@ export function LiteApiStripePayForm({
 
   return (
     <div className="space-y-4">
-      <PaymentElement options={LITEAPI_PAYMENT_ELEMENT_OPTIONS} />
+      <div className="min-h-[280px] rounded-xl bg-white p-1 [&_iframe]:min-h-[220px] [&_iframe]:w-full">
+        <PaymentElement key={mountKey} options={LITEAPI_PAYMENT_ELEMENT_OPTIONS} />
+      </div>
       {message ? (
         <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {message}

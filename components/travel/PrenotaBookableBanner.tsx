@@ -16,7 +16,7 @@ export function PrenotaBookableBanner({ trips }: { trips: TripWithRelations[] })
           </Link>
           {' · '}
           <Link href="/pratiche" className="underline underline-offset-2">
-            Le mie pratiche
+            I miei viaggi
           </Link>
         </p>
       </div>

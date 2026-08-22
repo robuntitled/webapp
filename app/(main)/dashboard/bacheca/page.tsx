@@ -1,16 +1,9 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { listFeedPosts } from '@/lib/data/posts';
-import {
-  getMyMapLocation,
-  listCommunityMapPins,
-  listCommunityPhotoPins,
-} from '@/lib/data/community-map';
+import { listCommunityPhotoPins } from '@/lib/data/community-map';
 import { CreatePostComposer } from '@/components/social/CreatePostComposer';
-import { PostFeed } from '@/components/social/PostFeed';
 import { CommunityMapSection } from '@/components/social/CommunityMapSection';
-import { HeroBackground } from '@/components/brand/HeroBackground';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { SlideshowWash } from '@/components/brand/SlideshowWash';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,46 +13,26 @@ export default async function BachecaPage() {
     redirect('/?callbackUrl=/dashboard/bacheca');
   }
 
-  const userId = session.user.id;
-  const [posts, pins, photoPins, me] = await Promise.all([
-    listFeedPosts(userId, 50),
-    listCommunityMapPins(500),
-    listCommunityPhotoPins(200),
-    getMyMapLocation(userId),
-  ]);
+  const photoPins = await listCommunityPhotoPins(200);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      <HeroBackground
-        images={[BRAND_IMAGES.heroes.slideshow[0], BRAND_IMAGES.heroes.slideshow[2]]}
-        overlay="gradient"
-      />
-      <div className="nl-feed-shell pointer-events-none absolute inset-0 -z-0" />
-
-      <div className="nl-hero-chrome relative z-0 container mx-auto max-w-3xl space-y-7 px-4 py-10 pb-28">
+      <SlideshowWash />
+      <div className="relative z-10 container mx-auto max-w-6xl space-y-6 px-4 py-10 pb-24">
         <header className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
             Community
           </p>
-          <h1 className="nl-hero-title font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl">
             Bacheca
           </h1>
-          <p className="nl-hero-subtitle max-w-md text-base leading-relaxed">
-            Racconti, foto e la mappa dei viaggiatori NomadLink.
+          <p className="max-w-lg text-base leading-relaxed text-white/75">
+            Solo le foto che pubblicate, sul posto in cui sono state scattate.
           </p>
         </header>
 
-        <CommunityMapSection
-          pins={pins}
-          photoPins={photoPins}
-          me={me}
-          currentUserId={userId}
-        />
-        <CreatePostComposer />
-        <PostFeed
-          posts={posts}
-          currentUserId={userId}
-        />
+        <CreatePostComposer compact tone="onDark" placeholder="Pubblica una foto del viaggio…" />
+        <CommunityMapSection photoPins={photoPins} />
       </div>
     </div>
   );

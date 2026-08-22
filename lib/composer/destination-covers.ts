@@ -177,3 +177,28 @@ export function coverForDestination(idOrLabel: string): string {
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   return TRAVEL_PHOTO_POOL[hash % TRAVEL_PHOTO_POOL.length] ?? DEFAULT_TRIP_IMAGE;
 }
+
+const THAILANDIA_SHOTS = [
+  'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1528183429752-a91b0c5b0e6d?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1537953773345-d513d325864c?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1483683802025-11d0f9bfd68b?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=1400&q=80',
+];
+
+const UNIQUE_COVER_POOL = [
+  ...THAILANDIA_SHOTS,
+  ...TRAVEL_PHOTO_POOL,
+  ...Object.values(DESTINATION_COVERS),
+].filter((url, i, arr) => arr.indexOf(url) === i);
+
+/** Copertina unica per card: stesso seed, foto diverse per indice. */
+export function uniqueCover(seed: string, index = 0): string {
+  let hash = 0;
+  const key = seed.trim().toLowerCase();
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return UNIQUE_COVER_POOL[(hash + index) % UNIQUE_COVER_POOL.length] ?? coverForDestination(seed);
+}
