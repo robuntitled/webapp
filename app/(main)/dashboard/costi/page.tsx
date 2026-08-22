@@ -16,7 +16,7 @@ export default async function CostiDashboardPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
-      <div className="mx-auto w-full max-w-4xl px-4 py-10 pb-24">
+      <div className="nl-page w-full py-10 pb-24">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="nl-hero-subtitle text-sm">Admin · hub live</p>

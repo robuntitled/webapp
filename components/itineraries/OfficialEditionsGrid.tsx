@@ -101,7 +101,7 @@ export function OfficialEditionsGrid({ editions }: { editions: OfficialEditionCa
         {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
         {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
       </p>
-      <ul id="risultati-partenze" className="space-y-3">
+      <ul id="risultati-partenze" className="space-y-4">
         {visible.length === 0 ? (
           <li className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
             Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.

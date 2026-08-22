@@ -234,7 +234,7 @@ export function StartTripWizard({
             className="z-0"
             intervalMs={6500}
           />
-          <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-10 text-center sm:py-12">
+          <div className="relative z-10 nl-page flex w-full flex-col items-center gap-4 py-10 text-center sm:py-12">
             <div className="inline-flex rounded-full border border-white/25 bg-black/35 p-1 shadow-lg backdrop-blur-md">
               <button
                 type="button"
@@ -293,12 +293,7 @@ export function StartTripWizard({
         </section>
       ) : null}
 
-      <div
-        className={cn(
-          'relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full flex-col px-4 pb-24 pt-6',
-          step === 'plan' ? 'max-w-6xl' : 'max-w-4xl'
-        )}
-      >
+      <div className="relative z-10 nl-page flex min-h-[calc(100vh-4rem)] w-full flex-col pb-24 pt-6">
         {step !== 'dest' ? (
           <div className="mb-8 space-y-4 text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
@@ -369,7 +364,7 @@ export function StartTripWizard({
                             {section.items.length}
                           </span>
                         </h2>
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="nl-card-grid">
                           {section.items.map((dest) => (
                             <article
                               key={dest.slug}

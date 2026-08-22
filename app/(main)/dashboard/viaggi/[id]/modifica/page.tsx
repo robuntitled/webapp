@@ -30,7 +30,7 @@ export default async function EditTripPage({ params }: PageProps) {
   const boundUpdateTrip = updateTrip.bind(null, id);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="nl-page w-full py-4 sm:py-6 lg:py-8">
       <div className="bg-white dark:bg-slate-950 p-8 rounded-xl shadow-lg my-10">
         <h1 className="text-3xl font-bold mb-8">Modifica Viaggio</h1>
         <TripForm action={boundUpdateTrip} submitLabel="Salva Modifiche" initialTrip={trip} />

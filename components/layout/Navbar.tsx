@@ -15,7 +15,7 @@ export async function Navbar() {
 
   return (
     <AppHeader>
-      <div className="mx-auto flex h-16 w-full max-w-4xl items-center justify-between px-4">
+      <div className="nl-page flex h-16 w-full items-center justify-between">
         <Link href="/destinazioni" className="group flex items-center gap-2.5">
           <Image
             src="/assets/logo.png"

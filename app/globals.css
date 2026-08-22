@@ -225,6 +225,38 @@
     background: #ffffff;
   }
 
+  /**
+   * Larghezza pagina globale: ~15% margine sinistro e destro.
+   * Sostituisce i vecchi max-w-4xl stretti.
+   */
+  .nl-page {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: max(0.75rem, 15%);
+    box-sizing: border-box;
+  }
+
+  /** Griglia schede: gap ampio + colonne auto così le card non si allargano troppo. */
+  .nl-card-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  }
+
+  @media (min-width: 768px) {
+    .nl-card-grid {
+      gap: 1.75rem;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .nl-card-grid {
+      gap: 2rem;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    }
+  }
+
   .composer-aurora {
     display: none;
   }

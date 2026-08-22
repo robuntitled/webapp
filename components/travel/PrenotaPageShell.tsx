@@ -29,7 +29,7 @@ export async function PrenotaPageShell({
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(0.55_0.1_200_/0.12),transparent_55%),radial-gradient(ellipse_at_top_right,oklch(0.68_0.16_45_/0.1),transparent_50%)]"
         />
-        <div className="relative mx-auto w-full max-w-4xl px-4 py-4 sm:py-5">
+        <div className="relative nl-page w-full py-4 sm:py-5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
               Prenota
@@ -52,7 +52,7 @@ export async function PrenotaPageShell({
           )}
         </div>
       </div>
-      <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:py-5">
+      <div className="nl-page w-full py-4 sm:py-5">
         {simple ? null : <PrenotaBookableBanner trips={bookable} />}
         {children}
       </div>

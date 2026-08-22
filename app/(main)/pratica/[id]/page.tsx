@@ -27,7 +27,7 @@ export default async function PraticaPage({ params }: PageProps) {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
-      <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-10">
+      <div className="nl-page w-full space-y-6 py-10">
         <Link
           href="/pratiche"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"

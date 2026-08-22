@@ -14,7 +14,7 @@ export default async function FavoritesPage() {
   const favoriteTrips = await fetchFavoriteTrips(session.user.id);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-12">
+    <div className="nl-page w-full py-12">
       <div className="flex items-center space-x-3 mb-8">
         <Heart className="h-8 w-8 text-red-500" />
         <h1 className="text-4xl font-bold">I Tuoi Viaggi Preferiti</h1>

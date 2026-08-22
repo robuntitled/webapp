@@ -55,7 +55,7 @@ export function TripSearchResultsClient({
         priceBounds={priceBounds}
       />
 
-      <div className="mx-auto w-full max-w-4xl px-4 py-8 pb-24">
+      <div className="nl-page w-full py-8 pb-24">
         <div className="mb-8 text-center">
           <h1 className="font-display text-2xl md:text-3xl font-semibold text-white">
             Viaggi sulla mappa

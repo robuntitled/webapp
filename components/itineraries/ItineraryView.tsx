@@ -31,7 +31,7 @@ export function ItineraryView({
       <div className="relative h-[34vh] min-h-[240px] max-h-[340px] w-full">
         <Image src={cover} alt={template.destination_name} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-slate-950/20" />
-        <div className="absolute top-20 left-0 right-0 mx-auto w-full max-w-4xl px-4">
+        <div className="absolute top-20 left-0 right-0 nl-page w-full">
           <Button
             asChild
             variant="ghost"
@@ -43,7 +43,7 @@ export function ItineraryView({
             </Link>
           </Button>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-4xl px-4 pb-6">
+        <div className="absolute bottom-0 left-0 right-0 nl-page w-full pb-6">
           <Badge className="mb-2 border-white/20 bg-white/15 text-white backdrop-blur-sm">
             Piano di riferimento · {template.duration_days} giorni
           </Badge>
@@ -54,7 +54,7 @@ export function ItineraryView({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-8">
+      <div className="nl-page w-full space-y-8 py-8">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Durata</span>
           {durations.map((d) => (

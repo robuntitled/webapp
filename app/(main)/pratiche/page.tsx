@@ -16,7 +16,7 @@ export default async function PratichePage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
-      <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-12">
+      <div className="nl-page w-full space-y-8 py-12">
         <PraticheHub practices={practices} likedTemplateIds={[...liked]} />
       </div>
     </div>
