@@ -285,6 +285,7 @@ export function FlightCheckoutClient({
     bookingRef: string | null;
     status: string | null;
     amountEur: number;
+    practiceId?: string;
   } | null>(null);
 
   const finalizeBooking = useCallback(
@@ -329,6 +330,7 @@ export function FlightCheckoutClient({
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
           amountEur,
+          practiceId: draft?.practiceId,
         });
         clearFlightCheckoutDraft();
         clearFlightPaymentPending();
@@ -599,7 +601,9 @@ export function FlightCheckoutClient({
         </div>
         <BookingCashbackNote />
         <Button asChild className="w-full rounded-xl bg-primary">
-          <Link href="/prenota/voli">Nuova ricerca</Link>
+          <Link href={confirmation.practiceId ? `/pratica/${confirmation.practiceId}` : '/pratiche'}>
+            Vedi i dettagli nel viaggio
+          </Link>
         </Button>
       </div>
     );

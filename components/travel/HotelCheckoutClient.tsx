@@ -70,6 +70,7 @@ export function HotelCheckoutClient({
     bookingRef: string | null;
     status: string | null;
     amountEur: number;
+    practiceId?: string;
   } | null>(null);
 
   const displayPrice = roundMoney(
@@ -153,6 +154,7 @@ export function HotelCheckoutClient({
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
           amountEur,
+          practiceId: hotelDraft?.practiceId,
         });
         clearHotelOfferDraft();
         clearHotelPaymentPending();
@@ -306,8 +308,15 @@ export function HotelCheckoutClient({
               : 'Riceverai i dettagli via email.'}
         </p>
         <BookingCashbackNote />
-        <Button className="rounded-xl" onClick={() => router.push('/prenota/hotel')}>
-          Altre ricerche
+        <Button
+          className="rounded-xl"
+          onClick={() =>
+            router.push(
+              confirmation?.practiceId ? `/pratica/${confirmation.practiceId}` : '/pratiche'
+            )
+          }
+        >
+          Vedi i dettagli nel viaggio
         </Button>
       </div>
     );

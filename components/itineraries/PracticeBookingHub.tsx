@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { confirmActivityAction, confirmHotelAction } from '@/actions/practices';
+import { BookingRecap } from '@/components/itineraries/BookingRecap';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
@@ -27,8 +28,16 @@ export function PracticeBookingHub({
   practice: PracticeRow;
   template: ItineraryTemplate;
 }) {
+  const flightBooked = Boolean(practice.flight_booking || practice.flight_confirmed_at);
+  const hotels = practice.hotel_bookings ?? [];
+  const hotelBooked = hotels.length > 0 || Boolean(practice.hotel_confirmed_at);
+  const activities = practice.activity_bookings ?? [];
+  const activityBooked = activities.length > 0 || Boolean(practice.activity_confirmed_at);
+
   const [step, setStep] = useState<BookStep>('flight');
   const [stayIdx, setStayIdx] = useState(0);
+  const [addHotel, setAddHotel] = useState(!hotelBooked);
+  const [addActivity, setAddActivity] = useState(!activityBooked);
   const [pending, startTransition] = useTransition();
   const [activityTitle, setActivityTitle] = useState('');
   const [activityRef, setActivityRef] = useState('');
@@ -68,6 +77,7 @@ export function PracticeBookingHub({
       clearLastActivityDraft();
       setActivityTitle('');
       setActivityRef('');
+      setAddActivity(false);
       toast.success('Attività salvata nel recap. Ti abbiamo inviato l’email.');
     });
   }
@@ -97,24 +107,28 @@ export function PracticeBookingHub({
       </div>
 
       {step === 'flight' ? (
-        <div className="space-y-3">
-          <p className="text-sm text-white/80">
-            Offerte da tutta Italia sulle date del viaggio. Scegli andata, poi ritorno.
-          </p>
-          <FlightSearchPanel
-            variant="composer"
-            hideSearchForm
-            defaultOrigin="Italia"
-            defaultDestination={template.destination_name}
-            defaultStartDate={from}
-            defaultEndDate={to}
-            defaultTripType="roundtrip"
-            defaultAdults={1}
-            autoSearch
-            cacheKey={null}
-            practiceId={practice.id}
-          />
-        </div>
+        flightBooked ? (
+          <BookingRecap practice={practice} section="flight" />
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-white/80">
+              Offerte da tutta Italia sulle date del viaggio. Scegli andata, poi ritorno.
+            </p>
+            <FlightSearchPanel
+              variant="composer"
+              hideSearchForm
+              defaultOrigin="Italia"
+              defaultDestination={template.destination_name}
+              defaultStartDate={from}
+              defaultEndDate={to}
+              defaultTripType="roundtrip"
+              defaultAdults={1}
+              autoSearch
+              cacheKey={null}
+              practiceId={practice.id}
+            />
+          </div>
+        )
       ) : null}
 
       {step === 'hotel' ? (
@@ -124,50 +138,62 @@ export function PracticeBookingHub({
           </p>
         ) : (
           <div className="space-y-3">
-            {stays.length > 1 ? (
-              <div className="flex flex-wrap gap-2">
-                {stays.map((s, i) => (
-                  <button
-                    key={`${s.city}-${s.checkin}`}
-                    type="button"
-                    onClick={() => setStayIdx(i)}
-                    className={cn(
-                      'rounded-full px-3.5 py-1.5 text-sm font-medium',
-                      i === stayIdx ? 'bg-accent text-[#0b1220]' : 'bg-[#161d2b] text-white'
-                    )}
-                  >
-                    {i + 1}. {s.label}
-                  </button>
-                ))}
-              </div>
+            {hotelBooked ? <BookingRecap practice={practice} section="hotel" /> : null}
+            {!addHotel && hotelBooked ? (
+              <Button variant="secondary" className="rounded-full" onClick={() => setAddHotel(true)}>
+                Prenota un altro hotel
+              </Button>
             ) : null}
-            <p className="text-sm text-white/80">
-              {stay
-                ? `${stay.label}: stessa zona, camera tua. ${stay.checkin} → ${stay.checkout}`
-                : 'Hotel del piano.'}
-            </p>
-            {stay ? (
-              <LiteApiHotelSearch
-                key={`${stay.city}-${stay.checkin}`}
-                defaultCity={stay.city}
-                defaultCheckin={stay.checkin}
-                defaultCheckout={stay.checkout}
-                defaultAdults={1}
-                autoSearch
-                hideSearchForm
-                cacheKey={null}
-                className="rounded-3xl bg-white p-4"
-                practiceId={practice.id}
-              />
+            {addHotel ? (
+              <>
+                {stays.length > 1 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {stays.map((s, i) => (
+                      <button
+                        key={`${s.city}-${s.checkin}`}
+                        type="button"
+                        onClick={() => setStayIdx(i)}
+                        className={cn(
+                          'rounded-full px-3.5 py-1.5 text-sm font-medium',
+                          i === stayIdx ? 'bg-accent text-[#0b1220]' : 'bg-[#161d2b] text-white'
+                        )}
+                      >
+                        {i + 1}. {s.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="text-sm text-white/80">
+                  {stay
+                    ? `${stay.label}: stessa zona, camera tua. ${stay.checkin} → ${stay.checkout}`
+                    : 'Hotel del piano.'}
+                </p>
+                {stay ? (
+                  <LiteApiHotelSearch
+                    key={`${stay.city}-${stay.checkin}`}
+                    defaultCity={stay.city}
+                    defaultCheckin={stay.checkin}
+                    defaultCheckout={stay.checkout}
+                    defaultAdults={1}
+                    autoSearch
+                    hideSearchForm
+                    cacheKey={null}
+                    className="rounded-3xl bg-white p-4"
+                    practiceId={practice.id}
+                  />
+                ) : null}
+                <Button
+                  variant="secondary"
+                  disabled={pending || Boolean(practice.hotel_confirmed_at && hotels.length === 0)}
+                  className="rounded-full"
+                  onClick={() => run(confirmHotelAction)}
+                >
+                  {practice.hotel_confirmed_at && hotels.length === 0
+                    ? 'Hotel confermato'
+                    : 'Ho prenotato l’hotel'}
+                </Button>
+              </>
             ) : null}
-            <Button
-              variant="secondary"
-              disabled={pending || Boolean(practice.hotel_confirmed_at)}
-              className="rounded-full"
-              onClick={() => run(confirmHotelAction)}
-            >
-              {practice.hotel_confirmed_at ? 'Hotel confermato' : 'Ho prenotato l’hotel'}
-            </Button>
           </div>
         )
       ) : null}
@@ -179,54 +205,64 @@ export function PracticeBookingHub({
           </p>
         ) : (
           <div className="space-y-6">
-            <div className="rounded-3xl bg-white p-4">
-              <p className="mb-3 text-sm font-medium text-slate-900">Attrazioni</p>
-              <PrenotaAttractionsClient
-                defaultCity={stay?.city ?? template.destination_name}
-                defaultStartDate={from}
-                defaultEndDate={to}
-                autoSearch
-                hideSearchForm
-                cacheKey={null}
-              />
-            </div>
-            <div className="rounded-3xl bg-white p-4">
-              <p className="mb-3 text-sm font-medium text-slate-900">Attività</p>
-              <PrenotaActivitiesClient
-                defaultCity={stay?.city ?? template.destination_name}
-                defaultStartDate={from}
-                defaultEndDate={to}
-                autoSearch
-                hideSearchForm
-                cacheKey={null}
-              />
-            </div>
-            <div className="space-y-2 rounded-3xl bg-[#161d2b] p-4">
-              <p className="text-sm text-white/80">
-                Dopo Viator, salva qui titolo e codice così non perdi la conferma.
-              </p>
-              <Input
-                value={activityTitle}
-                onChange={(e) => setActivityTitle(e.target.value)}
-                placeholder="Titolo attività"
-                className="bg-white"
-              />
-              <Input
-                value={activityRef}
-                onChange={(e) => setActivityRef(e.target.value)}
-                placeholder="Codice prenotazione (opzionale)"
-                className="bg-white"
-              />
-              <Button
-                variant="secondary"
-                disabled={pending}
-                className="rounded-full"
-                onClick={saveActivity}
-              >
-                {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Salva nel recap
+            {activityBooked ? <BookingRecap practice={practice} section="activity" /> : null}
+            {!addActivity && activityBooked ? (
+              <Button variant="secondary" className="rounded-full" onClick={() => setAddActivity(true)}>
+                Aggiungi un’attività
               </Button>
-            </div>
+            ) : null}
+            {addActivity ? (
+              <>
+                <div className="rounded-3xl bg-white p-4">
+                  <p className="mb-3 text-sm font-medium text-slate-900">Attrazioni</p>
+                  <PrenotaAttractionsClient
+                    defaultCity={stay?.city ?? template.destination_name}
+                    defaultStartDate={from}
+                    defaultEndDate={to}
+                    autoSearch
+                    hideSearchForm
+                    cacheKey={null}
+                  />
+                </div>
+                <div className="rounded-3xl bg-white p-4">
+                  <p className="mb-3 text-sm font-medium text-slate-900">Attività</p>
+                  <PrenotaActivitiesClient
+                    defaultCity={stay?.city ?? template.destination_name}
+                    defaultStartDate={from}
+                    defaultEndDate={to}
+                    autoSearch
+                    hideSearchForm
+                    cacheKey={null}
+                  />
+                </div>
+                <div className="space-y-2 rounded-3xl bg-[#161d2b] p-4">
+                  <p className="text-sm text-white/80">
+                    Dopo Viator, salva qui titolo e codice così non perdi la conferma.
+                  </p>
+                  <Input
+                    value={activityTitle}
+                    onChange={(e) => setActivityTitle(e.target.value)}
+                    placeholder="Titolo attività"
+                    className="bg-white"
+                  />
+                  <Input
+                    value={activityRef}
+                    onChange={(e) => setActivityRef(e.target.value)}
+                    placeholder="Codice prenotazione (opzionale)"
+                    className="bg-white"
+                  />
+                  <Button
+                    variant="secondary"
+                    disabled={pending}
+                    className="rounded-full"
+                    onClick={saveActivity}
+                  >
+                    {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Salva nel recap
+                  </Button>
+                </div>
+              </>
+            ) : null}
           </div>
         )
       ) : null}
