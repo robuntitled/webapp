@@ -738,7 +738,7 @@ export function FlightSearchPanel({
                   className={cn(
                     'inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold shadow-sm transition',
                     composer
-                      ? 'border-white/15 bg-white/8 text-white hover:bg-white/12'
+                      ? 'border-[#2a3344] bg-[#0b1220] text-white hover:bg-[#1c2436]'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   )}
                 >
@@ -776,7 +776,7 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex items-center justify-center gap-2 rounded-2xl py-10 text-sm',
-            composer ? 'bg-white/[0.04] text-white/60' : 'bg-slate-50 py-14 text-slate-500'
+            composer ? 'bg-[#0b1220] text-white/60' : 'bg-slate-50 py-14 text-slate-500'
           )}
         >
           <Loader2 className="h-5 w-5 animate-spin text-accent" />
@@ -794,7 +794,7 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex flex-col items-center gap-3 rounded-2xl px-4 py-8 text-center',
-            composer ? 'bg-white/[0.04]' : 'bg-slate-50 py-10'
+            composer ? 'bg-[#0b1220]' : 'bg-slate-50 py-10'
           )}
         >
           <p className={cn('max-w-sm text-sm', composer ? 'text-white/65' : 'text-slate-600')}>
@@ -820,7 +820,7 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3',
-            composer ? 'bg-white/[0.05]' : 'bg-slate-50'
+            composer ? 'bg-[#0b1220]' : 'bg-slate-50'
           )}
         >
           <button
@@ -835,7 +835,7 @@ export function FlightSearchPanel({
               pickStep === 'outbound'
                 ? 'bg-accent text-[#0b1220]'
                 : composer
-                  ? 'bg-white/8 text-white/70 hover:bg-white/12'
+                  ? 'bg-[#161d2b] text-white/70 hover:bg-[#1c2436]'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             )}
           >
@@ -851,7 +851,7 @@ export function FlightSearchPanel({
               pickStep === 'return'
                 ? 'bg-accent text-[#0b1220]'
                 : composer
-                  ? 'bg-white/8 text-white/70 hover:bg-white/12 disabled:opacity-40'
+                  ? 'bg-[#161d2b] text-white/70 hover:bg-[#1c2436] disabled:opacity-40'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40'
             )}
           >

@@ -123,7 +123,7 @@ export function FlightOfferCard({
         dark
           ? saved
             ? 'bg-accent/12 ring-accent/50'
-            : 'bg-white/[0.04] ring-white/10 hover:bg-white/[0.07] hover:ring-white/20'
+            : 'bg-[#161d2b] ring-[#2a3344] hover:bg-[#1c2436] hover:ring-[#3a4558]'
           : 'rounded-3xl bg-slate-50/80 ring-slate-100 hover:bg-white hover:ring-slate-200'
       )}
     >

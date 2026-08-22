@@ -51,7 +51,7 @@ export default async function PraticaPage({ params }: PageProps) {
           </p>
         </header>
         {edition?.invite_token ? (
-          <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/80">
+          <p className="rounded-2xl bg-[#161d2b] p-4 text-sm text-white/80">
             Invito amici:{' '}
             <Link href={`/invito/${edition.invite_token}`} className="font-semibold underline">
               /invito/{edition.invite_token}

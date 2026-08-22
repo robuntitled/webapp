@@ -147,17 +147,6 @@ export function StartTripWizard({
 
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      {slug ? (
-        <Image
-          src={coverForDestination(slug)}
-          alt=""
-          fill
-          className="object-cover"
-          sizes="100vw"
-          priority
-        />
-      ) : null}
-      <div className="absolute inset-0 bg-[#0b1220]/70" />
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col px-4 pb-8 pt-10">
         <div className="mb-8 space-y-4 text-center">
           <p className="inline-flex items-center gap-2 rounded-full bg-[#161d2b] px-4 py-1.5 text-sm text-white">
@@ -201,7 +190,7 @@ export function StartTripWizard({
                   return (
                     <article
                       key={dest.slug}
-                      className="overflow-hidden rounded-3xl border border-white/10 bg-black/30 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
+                      className="overflow-hidden rounded-3xl bg-[#161d2b] shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
                     >
                       <div className="relative h-44">
                         <Image
@@ -211,8 +200,8 @@ export function StartTripWizard({
                           className="object-cover"
                           sizes="(max-width: 640px) 100vw, 50vw"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                        <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-[#0b1220]/50 to-transparent" />
+                        <p className="absolute left-4 top-4 rounded-full bg-[#0b1220] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
                           {catalog?.continent ?? dest.slug}
                         </p>
                         <div className="absolute bottom-3 left-4 right-4">
@@ -229,7 +218,7 @@ export function StartTripWizard({
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="rounded-full border-white/20 bg-white/8 text-white hover:bg-accent hover:text-[#0b1220]"
+                            className="rounded-full border-[#2a3344] bg-[#0b1220] text-white hover:bg-accent hover:text-[#0b1220]"
                             onClick={() => pickDuration(dest.slug, n)}
                           >
                             {n} giorni
@@ -254,7 +243,7 @@ export function StartTripWizard({
                         'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
                         t.duration_days === template.duration_days
                           ? 'bg-accent text-[#0b1220]'
-                          : 'border border-white/15 bg-white/8 text-white/80 hover:bg-white/12'
+                          : 'border border-[#2a3344] bg-[#0b1220] text-white/80 hover:bg-[#1c2436]'
                       )}
                     >
                       {t.duration_days} giorni
@@ -262,7 +251,7 @@ export function StartTripWizard({
                   ))}
                 </div>
                 <p className="text-white/85">{template.summary}</p>
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <div className="flex items-center gap-3 rounded-2xl bg-[#0b1220] px-4 py-3">
                   <Wallet className="h-4 w-4 text-accent" />
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-white/45">
@@ -275,7 +264,7 @@ export function StartTripWizard({
                 </div>
                 <ol className="space-y-2">
                   {template.days.map((day) => (
-                    <li key={day.day_number} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <li key={day.day_number} className="rounded-2xl bg-[#0b1220] px-4 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
                         Giorno {day.day_number}
                       </p>
@@ -368,12 +357,12 @@ export function StartTripWizard({
         </div>
 
         {step !== 'dest' ? (
-          <div className="mt-6 shrink-0 border-t border-white/10 bg-[#0a101c]/90 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+          <div className="mt-6 shrink-0 border-t border-[#2a3344] bg-[#0b1220] pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="ghost"
-                className="rounded-full text-white hover:bg-white/10"
+                className="rounded-full text-white hover:bg-[#161d2b]"
                 onClick={goBack}
               >
                 <ArrowLeft className="h-4 w-4" />

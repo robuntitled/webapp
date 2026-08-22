@@ -35,7 +35,7 @@ export function PhotoChoiceCard({
         sizes="(max-width: 640px) 100vw, 33vw"
         className="object-cover transition duration-700 group-hover:scale-105"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-black/15" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-[#0b1220]/70 to-transparent" />
       <div className="relative z-10 flex h-full min-h-[210px] flex-col justify-end p-5">
         {kicker ? (
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">{kicker}</p>
