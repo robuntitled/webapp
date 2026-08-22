@@ -27,6 +27,7 @@ export function CatalogFiltersBar({
   onChange,
   searchPlaceholder = 'Cerca destinazione',
   showPublished = true,
+  showContinents = true,
   resultsId = 'risultati-catalogo',
   durationOptions,
   publishedLabels = { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' },
@@ -35,6 +36,8 @@ export function CatalogFiltersBar({
   onChange: (next: CatalogFilterState) => void;
   searchPlaceholder?: string;
   showPublished?: boolean;
+  /** Chip continente (Tutte / Europa / …). */
+  showContinents?: boolean;
   resultsId?: string;
   durationOptions?: number[];
   publishedLabels?: { all: string; yes: string; no: string };
@@ -69,18 +72,22 @@ export function CatalogFiltersBar({
       </div>
 
       <div className="flex w-full flex-wrap items-center gap-1.5">
-        {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
-          <FilterChip
-            key={r}
-            active={value.continent === r}
-            onClick={() =>
-              set('continent', value.continent === r && r !== 'Tutte' ? 'Tutte' : r)
-            }
-            label={r}
-          />
-        ))}
+        {showContinents
+          ? ['Tutte', ...CATALOG_CONTINENTS].map((r) => (
+              <FilterChip
+                key={r}
+                active={value.continent === r}
+                onClick={() =>
+                  set('continent', value.continent === r && r !== 'Tutte' ? 'Tutte' : r)
+                }
+                label={r}
+              />
+            ))
+          : null}
 
-        <span className="mx-0.5 h-5 w-px shrink-0 bg-slate-200" aria-hidden />
+        {showContinents ? (
+          <span className="mx-0.5 h-5 w-px shrink-0 bg-slate-200" aria-hidden />
+        ) : null}
 
         <button
           type="button"
@@ -140,6 +147,35 @@ export function CatalogFiltersBar({
           </>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/** Chip continente su fondo bianco (sotto l’hero). */
+export function ContinentFilterRow({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (continent: string) => void;
+}) {
+  return (
+    <div className="flex w-full flex-wrap items-center justify-center gap-2">
+      {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
+        <button
+          key={r}
+          type="button"
+          onClick={() => onChange(value === r && r !== 'Tutte' ? 'Tutte' : r)}
+          className={cn(
+            'rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition',
+            value === r
+              ? 'bg-primary text-white'
+              : 'border border-slate-300 bg-white text-slate-800 hover:border-primary hover:text-primary'
+          )}
+        >
+          {r}
+        </button>
+      ))}
     </div>
   );
 }

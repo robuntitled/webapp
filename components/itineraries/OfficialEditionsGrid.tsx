@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   CatalogFiltersBar,
+  ContinentFilterRow,
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
@@ -111,6 +112,12 @@ export function OfficialEditionsGrid({
         {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
         {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
       </p>
+      {!showFiltersBar ? (
+        <ContinentFilterRow
+          value={filters.continent}
+          onChange={(continent) => setFilters({ ...filters, continent })}
+        />
+      ) : null}
       <ul id="risultati-partenze" className="grid gap-4 sm:grid-cols-2">
         {visible.length === 0 ? (
           <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">

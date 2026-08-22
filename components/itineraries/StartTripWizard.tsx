@@ -20,6 +20,7 @@ import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import {
   CatalogFiltersBar,
+  ContinentFilterRow,
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
@@ -301,6 +302,7 @@ export function StartTripWizard({
               }
               resultsId={showPartenze ? 'risultati-partenze' : 'risultati-itinerari'}
               durationOptions={durationOptions}
+              showContinents={false}
               publishedLabels={
                 showPartenze
                   ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
@@ -371,6 +373,10 @@ export function StartTripWizard({
                   {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
                   {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
                 </p>
+                <ContinentFilterRow
+                  value={filters.continent}
+                  onChange={(continent) => setFilters({ ...filters, continent })}
+                />
                 {destSections.length === 0 ? (
                   <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 shadow-sm">
                     Nessuna destinazione con questo filtro.
@@ -379,12 +385,14 @@ export function StartTripWizard({
                   <div id="risultati-itinerari" className="space-y-6">
                     {destSections.map((section) => (
                       <section key={section.continent} className="space-y-3">
-                        <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-slate-900">
-                          {section.continent}
-                          <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-slate-400">
-                            {section.items.length}
-                          </span>
-                        </h2>
+                        {filters.continent === 'Tutte' ? (
+                          <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-slate-900">
+                            {section.continent}
+                            <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-slate-400">
+                              {section.items.length}
+                            </span>
+                          </h2>
+                        ) : null}
                         <div className="nl-card-grid">
                           {section.items.map((dest) => (
                             <article
