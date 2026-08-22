@@ -184,46 +184,53 @@ export function StartTripWizard({
         <div className="flex-1">
           <AnimatePresence mode="wait">
             {step === 'dest' ? (
-              <motion.div key="dest" {...phaseMotion} className="grid gap-4 sm:grid-cols-2">
+              <motion.div
+                key="dest"
+                {...phaseMotion}
+                className={cn(
+                  'grid gap-4',
+                  destinations.length === 1 ? 'mx-auto max-w-xl' : 'sm:grid-cols-2'
+                )}
+              >
                 {destinations.map((dest) => {
                   const catalog = findCatalogDestination(dest.slug);
+                  const cover = coverForDestination(dest.slug);
                   return (
                     <article
                       key={dest.slug}
-                      className="overflow-hidden rounded-3xl bg-[#161d2b] shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
+                      className="relative isolate overflow-hidden rounded-3xl bg-[#161d2b] shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]"
                     >
-                      <div className="relative h-44">
+                      <div className="relative h-[min(62vh,520px)] min-h-[320px] w-full">
                         <Image
-                          src={coverForDestination(dest.slug)}
+                          src={cover}
                           alt={dest.name}
                           fill
+                          priority
                           className="object-cover"
-                          sizes="(max-width: 640px) 100vw, 50vw"
+                          sizes="(max-width: 640px) 100vw, 520px"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-[#0b1220]/50 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-[#0b1220]/40 to-transparent" />
                         <p className="absolute left-4 top-4 rounded-full bg-[#0b1220] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
                           {catalog?.continent ?? dest.slug}
                         </p>
-                        <div className="absolute bottom-3 left-4 right-4">
-                          <h3 className="font-display text-2xl font-semibold text-white">
+                        <div className="absolute inset-x-0 bottom-0 space-y-3 p-5">
+                          <h3 className="font-display text-3xl font-semibold text-white">
                             {dest.emoji} {dest.name}
                           </h3>
-                          <p className="mt-0.5 text-sm text-white/85">{dest.vibe}</p>
+                          <p className="text-sm text-white">{dest.vibe}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {dest.allowedDurations.map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() => pickDuration(dest.slug, n)}
+                                className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-[#0b1220]"
+                              >
+                                {n} giorni
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                        {dest.allowedDurations.map((n) => (
-                          <Button
-                            key={n}
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="rounded-full border-[#2a3344] bg-[#0b1220] text-white hover:bg-accent hover:text-[#0b1220]"
-                            onClick={() => pickDuration(dest.slug, n)}
-                          >
-                            {n} giorni
-                          </Button>
-                        ))}
                       </div>
                     </article>
                   );

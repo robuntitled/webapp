@@ -164,13 +164,12 @@ export function coverForDestination(idOrLabel: string): string {
   const dest = findDestination(idOrLabel);
   const key = idOrLabel.trim().toLowerCase();
 
-  // 1) Cover generate per-paese (uniche e pertinenti al luogo, via Wikipedia).
-  if (dest && GENERATED_DESTINATION_COVERS[dest.id]) return GENERATED_DESTINATION_COVERS[dest.id];
-  if (GENERATED_DESTINATION_COVERS[key]) return GENERATED_DESTINATION_COVERS[key];
-
-  // 2) Cover curate (città/isole non presenti nella lista paesi).
+  // Curate Unsplash first — Wikimedia originals are multi-MB and blow the card layout.
   if (dest && DESTINATION_COVERS[dest.id]) return DESTINATION_COVERS[dest.id];
   if (DESTINATION_COVERS[key]) return DESTINATION_COVERS[key];
+
+  if (dest && GENERATED_DESTINATION_COVERS[dest.id]) return GENERATED_DESTINATION_COVERS[dest.id];
+  if (GENERATED_DESTINATION_COVERS[key]) return GENERATED_DESTINATION_COVERS[key];
 
   // 3) Fallback deterministico dal pool.
   const seed = dest?.id ?? key;

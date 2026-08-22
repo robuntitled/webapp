@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { CompanyProfile } from '@/lib/privacy/company';
+import { isComposerPath } from '@/lib/ui/app-chrome';
 
 type FooterProps = {
   company: CompanyProfile;
@@ -11,7 +12,7 @@ type FooterProps = {
 
 export function Footer({ company }: FooterProps) {
   const pathname = usePathname();
-  if (pathname === '/') return null;
+  if (pathname === '/' || isComposerPath(pathname)) return null;
 
   return (
     <footer className="mt-auto border-t border-border bg-card text-foreground">

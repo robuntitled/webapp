@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/auth';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { NotificationBell } from '@/components/layout/NotificationBell';
@@ -13,7 +14,7 @@ export async function Navbar() {
   const showCostsDashboard = isAdminEmail(session?.user?.email);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background">
+    <AppHeader>
       <div className="container mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-5">
         <Link
           href={session?.user ? '/dashboard' : '/'}
@@ -97,6 +98,6 @@ export async function Navbar() {
           )}
         </div>
       </div>
-    </header>
+    </AppHeader>
   );
 }
