@@ -22,12 +22,40 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilterState = {
   published: null,
 };
 
+export function CatalogSearchField({
+  value,
+  onChange,
+  placeholder = 'Cerca destinazione',
+  resultsId,
+}: {
+  value: string;
+  onChange: (query: string) => void;
+  placeholder?: string;
+  resultsId?: string;
+}) {
+  return (
+    <div className="relative w-full">
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-11 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-md outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+        autoComplete="off"
+        aria-controls={resultsId}
+      />
+    </div>
+  );
+}
+
 export function CatalogFiltersBar({
   value,
   onChange,
   searchPlaceholder = 'Cerca destinazione',
   showPublished = true,
   showContinents = true,
+  showSearch = true,
   resultsId = 'risultati-catalogo',
   durationOptions,
   publishedLabels = { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' },
@@ -38,6 +66,7 @@ export function CatalogFiltersBar({
   showPublished?: boolean;
   /** Chip continente (Tutte / Europa / …). */
   showContinents?: boolean;
+  showSearch?: boolean;
   resultsId?: string;
   durationOptions?: number[];
   publishedLabels?: { all: string; yes: string; no: string };
@@ -58,18 +87,14 @@ export function CatalogFiltersBar({
 
   return (
     <div className="w-full space-y-3">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          type="search"
+      {showSearch ? (
+        <CatalogSearchField
           value={value.query}
-          onChange={(e) => set('query', e.target.value)}
+          onChange={(query) => set('query', query)}
           placeholder={searchPlaceholder}
-          className="h-11 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          autoComplete="off"
-          aria-controls={resultsId}
+          resultsId={resultsId}
         />
-      </div>
+      ) : null}
 
       <div className="flex w-full flex-wrap items-center gap-1.5">
         {showContinents
