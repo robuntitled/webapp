@@ -28,6 +28,7 @@ export function CatalogFiltersBar({
   searchPlaceholder = 'Cerca destinazione',
   showPublished = true,
   showContinents = true,
+  showSearch = true,
   resultsId = 'risultati-catalogo',
   durationOptions,
   publishedLabels = { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' },
@@ -38,6 +39,7 @@ export function CatalogFiltersBar({
   showPublished?: boolean;
   /** Chip continente (Tutte / Europa / …). */
   showContinents?: boolean;
+  showSearch?: boolean;
   resultsId?: string;
   durationOptions?: number[];
   publishedLabels?: { all: string; yes: string; no: string };
@@ -58,20 +60,16 @@ export function CatalogFiltersBar({
 
   return (
     <div className="w-full space-y-3">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          type="search"
+      {showSearch ? (
+        <CatalogSearchField
           value={value.query}
-          onChange={(e) => set('query', e.target.value)}
+          onChange={(query) => set('query', query)}
           placeholder={searchPlaceholder}
-          className="h-11 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          autoComplete="off"
-          aria-controls={resultsId}
+          resultsId={resultsId}
         />
-      </div>
+      ) : null}
 
-      <div className="flex w-full flex-wrap items-center gap-1.5">
+      <div className="flex w-full flex-wrap items-center justify-center gap-1.5">
         {showContinents
           ? ['Tutte', ...CATALOG_CONTINENTS].map((r) => (
               <FilterChip
@@ -147,6 +145,34 @@ export function CatalogFiltersBar({
           </>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/** Campo cerca a piena larghezza (allineato a navbar / griglia). */
+export function CatalogSearchField({
+  value,
+  onChange,
+  placeholder,
+  resultsId,
+}: {
+  value: string;
+  onChange: (query: string) => void;
+  placeholder: string;
+  resultsId?: string;
+}) {
+  return (
+    <div className="relative w-full">
+      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-12 w-full rounded-full border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 shadow-[0_10px_28px_-12px_rgba(15,23,42,0.45)] outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+        autoComplete="off"
+        aria-controls={resultsId}
+      />
     </div>
   );
 }
