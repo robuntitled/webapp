@@ -80,7 +80,7 @@ export function CatalogHeroSearchBar({
         autoComplete="off"
         aria-controls={resultsId}
       />
-      <div className="hidden shrink-0 items-center sm:flex">
+      <div className="flex shrink-0 items-center overflow-x-auto">
         <span className="mx-0.5 h-6 w-px bg-slate-200" aria-hidden />
         <Popover>
           <PopoverTrigger type="button" className={cn(inlineFilterBtn, value.duration != null && 'text-primary')}>
