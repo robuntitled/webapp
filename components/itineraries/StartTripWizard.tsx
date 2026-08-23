@@ -38,12 +38,13 @@ const WHO_COVERS = {
   solo: 'https://images.unsplash.com/photo-1504150558240-0b4fd8946624?auto=format&fit=crop&w=900&q=80',
   friends:
     'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
-  group: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=900&q=80',
 } as const;
 
 type Step = 'dest' | 'plan' | 'who' | 'when';
+type TripKind = 'privati' | 'pubblici';
 
-const STEPS: Step[] = ['dest', 'plan', 'who', 'when'];
+const PRIVATE_STEPS: Step[] = ['dest', 'plan', 'who', 'when'];
+const PUBLIC_STEPS: Step[] = ['dest', 'plan', 'when'];
 
 const phaseMotion = {
   initial: { opacity: 0, y: 12 },
@@ -72,7 +73,7 @@ export function StartTripWizard({
   editions: OfficialEditionCard[];
   initialSlug?: string;
   initialDuration?: number;
-  /** Toggle home: catalogo nazioni vs partenze già aperte. */
+  /** Toggle home: viaggi privati vs partenze pubbliche. */
   initialHomeView?: 'itinerari' | 'partenze';
   favoriteTemplateIds?: string[];
 }) {
@@ -82,6 +83,9 @@ export function StartTripWizard({
   const [step, setStep] = useState<Step>(startTemplate ? 'plan' : 'dest');
   const [homeView, setHomeView] = useState<'itinerari' | 'partenze'>(
     startTemplate ? 'itinerari' : initialHomeView
+  );
+  const [tripKind, setTripKind] = useState<TripKind>(
+    startTemplate ? 'privati' : initialHomeView === 'partenze' ? 'pubblici' : 'privati'
   );
   const [slug, setSlug] = useState(startTemplate?.destination_slug ?? '');
   const [duration, setDuration] = useState(startTemplate?.duration_days ?? 0);
@@ -93,10 +97,12 @@ export function StartTripWizard({
   const { data: session } = useSession();
   const router = useRouter();
 
-  const showPartenze = step === 'dest' && homeView === 'partenze';
+  const showPubblici = step === 'dest' && homeView === 'partenze';
+  const isPubblici = tripKind === 'pubblici';
+  const flowSteps = isPubblici ? PUBLIC_STEPS : PRIVATE_STEPS;
 
   const template = slug && duration ? findItineraryBySlug(slug, duration) : undefined;
-  const idx = STEPS.indexOf(step);
+  const idx = flowSteps.indexOf(step);
   const range = date && template ? datesForDuration(format(date, 'yyyy-MM-dd'), template.duration_days) : null;
   const officialForTemplate = useMemo(
     () => editions.filter((e) => e.template_id === template?.template_id),
@@ -156,30 +162,30 @@ export function StartTripWizard({
     }
     setSlug(dest.slug);
     setDuration(days);
+    setTripKind('privati');
+    setMode(null);
     setStep('plan');
   };
 
   const goBack = () => {
-    const prev = STEPS[idx - 1];
+    const prev = flowSteps[idx - 1];
     if (prev) setStep(prev);
   };
 
   const goNext = () => {
     if (step === 'plan') {
-      setStep('who');
+      if (isPubblici) {
+        setMode('group');
+        setStep('when');
+      } else {
+        setStep('who');
+      }
       return;
     }
     if (step === 'who') {
       if (!mode) {
         toast.error('Scegli come vuoi partire.');
         return;
-      }
-      if (mode === 'group') {
-        const eds = editions.filter((e) => e.template_id === template?.template_id);
-        if (eds.length === 1) {
-          confirmWithEdition(eds[0].id);
-          return;
-        }
       }
       setStep('when');
     }
@@ -246,10 +252,10 @@ export function StartTripWizard({
           </div>
           <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-3 pb-8 pt-4 text-center">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
-              {showPartenze ? 'In Partenza' : 'Viaggia, Risparmia, Zero Sbatti'}
+              {showPubblici ? 'In Partenza' : 'Viaggia, Risparmia, Zero Sbatti'}
             </h1>
             <p className="mx-auto max-w-2xl text-[19px] leading-snug text-white/90 drop-shadow md:text-[22px]">
-              {showPartenze
+              {showPubblici
                 ? 'Viaggia insieme ad altri, prenota, divertiti.'
                 : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
             </p>
@@ -261,11 +267,11 @@ export function StartTripWizard({
                 value={filters}
                 onChange={setFilters}
                 placeholder={
-                  showPartenze
+                  showPubblici
                     ? 'Cerca destinazione o date'
                     : 'Cerca nazione, continente o vibe'
                 }
-                resultsId={showPartenze ? 'risultati-partenze' : 'risultati-itinerari'}
+                resultsId={showPubblici ? 'risultati-partenze' : 'risultati-itinerari'}
                 durationOptions={durationOptions}
               />
             </div>
@@ -295,7 +301,7 @@ export function StartTripWizard({
                     : 'text-slate-700 hover:text-primary'
                 )}
               >
-                Itinerari
+                Privati
               </button>
               <button
                 type="button"
@@ -311,7 +317,7 @@ export function StartTripWizard({
                 )}
               >
                 <Users className="h-3.5 w-3.5" />
-                Partenze
+                Pubblici
               </button>
             </div>
           </div>
@@ -321,10 +327,10 @@ export function StartTripWizard({
           <div className="mb-8 space-y-4 text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-              Step {idx + 1} di {STEPS.length}
+              Step {idx + 1} di {flowSteps.length}
             </p>
             <div className="flex items-center justify-center gap-2">
-              {STEPS.map((s, i) => (
+              {flowSteps.map((s, i) => (
                 <div
                   key={s}
                   className={cn(
@@ -337,13 +343,16 @@ export function StartTripWizard({
             <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               {step === 'plan' && 'Questo è il piano.'}
               {step === 'who' && 'Come vuoi partire?'}
-              {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
+              {step === 'when' && (isPubblici ? 'Scegli la partenza' : 'Quando parti?')}
             </h1>
             <p className="mx-auto max-w-xl text-base text-slate-600">
-              {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
+              {step === 'plan' &&
+                (isPubblici
+                  ? 'Riferimento condiviso. Avanti per unirti agli altri viaggiatori.'
+                  : 'Riferimento, non pacchetto. Avanti per date e compagni.')}
               {step === 'who' && 'Stesso piano. Cambiano solo date e con chi vai.'}
               {step === 'when' &&
-                (mode === 'group'
+                (isPubblici
                   ? 'Date già fissate. Entri e vedi i voli.'
                   : 'Scegli il giorno. Poi partono voli, hotel e attrazioni.')}
             </p>
@@ -352,8 +361,8 @@ export function StartTripWizard({
 
         <div className="flex-1">
           <AnimatePresence mode="wait">
-            {step === 'dest' && showPartenze ? (
-              <motion.div key="partenze" {...phaseMotion}>
+            {step === 'dest' && showPubblici ? (
+              <motion.div key="pubblici" {...phaseMotion}>
                 <OfficialEditionsGrid
                   editions={editions}
                   filters={filters}
@@ -363,7 +372,7 @@ export function StartTripWizard({
               </motion.div>
             ) : null}
 
-            {step === 'dest' && !showPartenze ? (
+            {step === 'dest' && !showPubblici ? (
               <motion.div key="dest" {...phaseMotion} className="space-y-5">
                 <p className="text-center text-sm font-medium text-slate-600">
                   {filteredDestinations.length}{' '}
@@ -508,8 +517,12 @@ export function StartTripWizard({
               </motion.div>
             ) : null}
 
-            {step === 'who' ? (
-              <motion.div key="who" {...phaseMotion} className="grid gap-3 sm:grid-cols-3">
+            {step === 'who' && !isPubblici ? (
+              <motion.div
+                key="who"
+                {...phaseMotion}
+                className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2"
+              >
                 <PhotoChoiceCard
                   cover={WHO_COVERS.solo}
                   active={mode === 'solo'}
@@ -526,20 +539,12 @@ export function StartTripWizard({
                   title="Con amici"
                   body="Stesse date. Invito."
                 />
-                <PhotoChoiceCard
-                  cover={WHO_COVERS.group}
-                  active={mode === 'group'}
-                  onClick={() => setMode('group')}
-                  kicker="Viaggio Condiviso"
-                  title="In gruppo"
-                  body="Date già aperte. Subito i voli."
-                />
               </motion.div>
             ) : null}
 
             {step === 'when' ? (
               <motion.div key="when" {...phaseMotion}>
-                {mode === 'group' ? (
+                {isPubblici ? (
                   officialForTemplate.length === 0 ? (
                     <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 shadow-sm">
                       Nessuna partenza ufficiale su questa durata.
@@ -657,7 +662,7 @@ export function StartTripWizard({
                 <ArrowLeft className="h-4 w-4" />
                 Indietro
               </Button>
-              {step === 'when' && mode !== 'group' ? (
+              {step === 'when' && !isPubblici ? (
                 <Button
                   type="button"
                   size="lg"
@@ -669,7 +674,7 @@ export function StartTripWizard({
                   Conferma e vedi i voli
                   <ArrowRight className="h-4 w-4" />
                 </Button>
-              ) : step === 'when' && mode === 'group' ? (
+              ) : step === 'when' && isPubblici ? (
                 <span />
               ) : (
                 <Button
