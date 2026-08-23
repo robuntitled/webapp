@@ -246,11 +246,11 @@ export function StartTripWizard({
           </div>
           <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-3 pb-8 pt-4 text-center">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
-              {showPartenze ? 'Partenze già aperte' : 'Viaggi, Risparmi, Zero Sbatti'}
+              {showPartenze ? 'In Partenza' : 'Viaggia, Risparmia, Zero Sbatti'}
             </h1>
             <p className="mx-auto max-w-2xl text-[19px] leading-snug text-white/90 drop-shadow md:text-[22px]">
               {showPartenze
-                ? 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'
+                ? 'Viaggia insieme ad altri, prenota, divertiti.'
                 : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
             </p>
           </div>
