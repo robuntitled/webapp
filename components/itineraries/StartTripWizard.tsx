@@ -19,8 +19,7 @@ import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import {
-  CatalogFiltersBar,
-  CatalogSearchField,
+  CatalogHeroSearchBar,
   ContinentFilterRow,
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
@@ -29,7 +28,7 @@ import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsG
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
 import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
-import { findItineraryBySlug, templatesForDestination } from '@/lib/itineraries/catalog';
+import { findItineraryBySlug, minBudgetHintForDestination, templatesForDestination } from '@/lib/itineraries/catalog';
 import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
@@ -109,8 +108,10 @@ export function StartTripWizard({
     return destinations.filter((d) => {
       if (filters.continent !== 'Tutte' && d.continent !== filters.continent) return false;
       if (filters.duration != null && !d.allowedDurations.includes(filters.duration)) return false;
-      if (filters.published === true && d.published !== true) return false;
-      if (filters.published === false && d.published !== false) return false;
+      if (filters.priceMax != null) {
+        const minBudget = minBudgetHintForDestination(d.slug);
+        if (minBudget != null && minBudget > filters.priceMax) return false;
+      }
       if (!q) return true;
       return (
         d.name.toLowerCase().includes(q) ||
@@ -256,15 +257,16 @@ export function StartTripWizard({
           {/* Search sul confine foto / bianco, stessa larghezza di navbar e schede */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 translate-y-1/2">
             <div className="nl-page pointer-events-auto w-full">
-              <CatalogSearchField
-                value={filters.query}
-                onChange={(query) => setFilters({ ...filters, query })}
+              <CatalogHeroSearchBar
+                value={filters}
+                onChange={setFilters}
                 placeholder={
                   showPartenze
                     ? 'Cerca destinazione o date'
                     : 'Cerca nazione, continente o vibe'
                 }
                 resultsId={showPartenze ? 'risultati-partenze' : 'risultati-itinerari'}
+                durationOptions={durationOptions}
               />
             </div>
           </div>
@@ -278,7 +280,7 @@ export function StartTripWizard({
         )}
       >
         {step === 'dest' ? (
-          <div className="mb-5 flex w-full flex-col items-center gap-4">
+          <div className="mb-5 flex w-full flex-col items-center">
             <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
               <button
                 type="button"
@@ -311,20 +313,6 @@ export function StartTripWizard({
                 <Users className="h-3.5 w-3.5" />
                 Partenze
               </button>
-            </div>
-            <div className="w-full">
-              <CatalogFiltersBar
-                value={filters}
-                onChange={setFilters}
-                showSearch={false}
-                showContinents={false}
-                durationOptions={durationOptions}
-                publishedLabels={
-                  showPartenze
-                    ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
-                    : { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' }
-                }
-              />
             </div>
           </div>
         ) : null}
@@ -381,6 +369,9 @@ export function StartTripWizard({
                   {filteredDestinations.length}{' '}
                   {filteredDestinations.length === 1 ? 'meta' : 'mete'}
                   {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
+                  {filters.priceMax != null
+                    ? ` · ≤ ${filters.priceMax.toLocaleString('it-IT')} €`
+                    : ''}
                   {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
                 </p>
                 <ContinentFilterRow
