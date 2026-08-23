@@ -233,7 +233,7 @@ export function StartTripWizard({
       )}
     >
       {step === 'dest' ? (
-        <section className="relative isolate -mt-16 overflow-visible pt-16 pb-[15vh]">
+        <section className="relative isolate -mt-16 flex min-h-[70vh] flex-col overflow-visible pt-16 pb-[15vh]">
           <div className="absolute inset-0 overflow-hidden">
             <HeroBackground
               images={BRAND_IMAGES.heroes.slideshow}
@@ -242,20 +242,7 @@ export function StartTripWizard({
               intervalMs={6500}
             />
           </div>
-          <div className="relative z-10 nl-page flex w-full flex-col items-center gap-4 pb-4 pt-10 text-center sm:pt-12">
-            {!showPartenze ? (
-              <div className="flex items-center justify-center gap-2">
-                {STEPS.map((s, i) => (
-                  <div
-                    key={s}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all duration-500',
-                      i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-white/35'
-                    )}
-                  />
-                ))}
-              </div>
-            ) : null}
+          <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
               {showPartenze ? 'Partenze già aperte' : 'Viaggi, Risparmi, Zero Sbatti'}
             </h1>
@@ -264,25 +251,25 @@ export function StartTripWizard({
                 ? 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'
                 : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
             </p>
-          </div>
-          <div className="relative z-10 nl-page w-full pb-6 pt-2">
-            <CatalogFiltersBar
-              value={filters}
-              onChange={setFilters}
-              searchPlaceholder={
-                showPartenze
-                  ? 'Cerca destinazione o date'
-                  : 'Cerca nazione, continente o vibe'
-              }
-              resultsId={showPartenze ? 'risultati-partenze' : 'risultati-itinerari'}
-              durationOptions={durationOptions}
-              showContinents={false}
-              publishedLabels={
-                showPartenze
-                  ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
-                  : { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' }
-              }
-            />
+            <div className="w-full max-w-3xl">
+              <CatalogFiltersBar
+                value={filters}
+                onChange={setFilters}
+                searchPlaceholder={
+                  showPartenze
+                    ? 'Cerca destinazione o date'
+                    : 'Cerca nazione, continente o vibe'
+                }
+                resultsId={showPartenze ? 'risultati-partenze' : 'risultati-itinerari'}
+                durationOptions={durationOptions}
+                showContinents={false}
+                publishedLabels={
+                  showPartenze
+                    ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
+                    : { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' }
+                }
+              />
+            </div>
           </div>
           {/* Esattamente a metà del confine foto / bianco */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex translate-y-1/2 justify-center">
