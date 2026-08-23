@@ -50,6 +50,19 @@ export function templatesForDestination(slug: string): ItineraryTemplate[] {
   );
 }
 
+/** Budget orientativo minimo tra le durate pubblicate di una meta (null se nessun template). */
+export function minBudgetHintForDestination(slug: string): number | null {
+  const templates = templatesForDestination(slug);
+  if (!templates.length) return null;
+  return Math.min(...templates.map((t) => t.budget_orientative_eur.total_hint));
+}
+
+export function catalogBudgetBounds(): { min: number; max: number } {
+  const totals = PUBLISHED_TEMPLATES.map((t) => t.budget_orientative_eur.total_hint);
+  if (!totals.length) return { min: 0, max: 5000 };
+  return { min: Math.min(...totals), max: Math.max(...totals) };
+}
+
 export function findItineraryTemplate(templateId: string): ItineraryTemplate | undefined {
   return PUBLISHED_TEMPLATES.find((t) => t.template_id === templateId);
 }

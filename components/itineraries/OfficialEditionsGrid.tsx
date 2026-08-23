@@ -78,6 +78,10 @@ export function OfficialEditionsGrid({
     return enriched.filter(({ ed, tpl, dest, name, continent, days, scarcity }) => {
       if (filters.continent !== 'Tutte' && continent !== filters.continent) return false;
       if (filters.duration != null && (days == null || days !== filters.duration)) return false;
+      if (filters.priceMax != null) {
+        const budget = tpl?.budget_orientative_eur.total_hint;
+        if (budget != null && budget > filters.priceMax) return false;
+      }
       if (filters.published === true && scarcity !== 'disponibile') return false;
       if (filters.published === false && scarcity !== 'ultimi') return false;
       if (!q) return true;
@@ -100,16 +104,19 @@ export function OfficialEditionsGrid({
           value={filters}
           onChange={setFilters}
           searchPlaceholder="Cerca destinazione o date"
-          showPublished
+          showPublished={false}
+          showContinents={false}
           resultsId="risultati-partenze"
           durationOptions={durationOptions}
-          publishedLabels={{ all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }}
         />
       ) : null}
       <p className="text-center text-sm font-medium text-slate-600">
         {visible.length}{' '}
         {visible.length === 1 ? 'partenza' : 'partite'}
         {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
+        {filters.priceMax != null
+          ? ` · ≤ ${filters.priceMax.toLocaleString('it-IT')} €`
+          : ''}
         {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
       </p>
       {!showFiltersBar ? (
