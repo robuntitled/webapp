@@ -584,28 +584,40 @@ export function StartTripWizard({
                         );
                       })}
                     </div>
-                    <Calendar
-                      mode="single"
-                      locale={itDayPicker}
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(d) => d < startOfDay(new Date())}
-                      modifiers={
-                        range ? { tripEnd: [new Date(`${range.date_to}T12:00:00`)] } : undefined
-                      }
-                      modifiersClassNames={{
-                        tripEnd: 'bg-primary/15 text-primary rounded-md',
-                      }}
-                      className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 [--cell-size:2.6rem] sm:[--cell-size:2.9rem]"
-                      classNames={{
-                        root: 'w-full',
-                        month: 'w-full',
-                        weekday: 'text-slate-400',
-                        today: 'bg-slate-100 text-slate-900 rounded-md',
-                        disabled: 'text-slate-300 opacity-40',
-                        outside: 'text-slate-300',
-                      }}
-                    />
+                    <div className="mx-auto w-full max-w-md">
+                      <Calendar
+                        mode="single"
+                        locale={itDayPicker}
+                        selected={date}
+                        onSelect={setDate}
+                        disabled={(d) => d < startOfDay(new Date())}
+                        modifiers={
+                          range ? { tripEnd: [new Date(`${range.date_to}T12:00:00`)] } : undefined
+                        }
+                        modifiersClassNames={{
+                          tripEnd: 'bg-primary/15 text-primary rounded-md',
+                        }}
+                        className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 [--cell-size:2.75rem] sm:[--cell-size:3rem]"
+                        classNames={{
+                          root: 'w-full',
+                          months: 'relative w-full',
+                          month: 'w-full gap-3',
+                          month_caption: 'relative mb-1 flex h-10 items-center justify-center',
+                          caption_label: 'text-base font-semibold capitalize text-slate-900',
+                          nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
+                          button_previous: 'size-9',
+                          button_next: 'size-9',
+                          weekdays: 'flex w-full',
+                          weekday:
+                            'flex-1 select-none text-center text-[0.7rem] font-semibold uppercase tracking-wide text-slate-400',
+                          week: 'mt-1 flex w-full',
+                          day: 'aspect-square flex-1 p-0 text-center',
+                          today: 'rounded-md bg-slate-100 font-semibold text-slate-900',
+                          disabled: 'text-slate-300 opacity-40',
+                          outside: 'text-slate-300 opacity-60',
+                        }}
+                      />
+                    </div>
                     {date && range ? (
                       <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <CalendarDays className="mt-0.5 h-4 w-4 text-accent" />
