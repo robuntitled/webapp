@@ -15,7 +15,7 @@ export function AppHeader({ children }: { children: React.ReactNode }) {
       setOverHero(false);
       return;
     }
-    const update = () => setOverHero(window.scrollY < 480);
+    const update = () => setOverHero(window.scrollY < window.innerHeight * 0.7 - 64);
     update();
     window.addEventListener('scroll', update, { passive: true });
     return () => window.removeEventListener('scroll', update);
