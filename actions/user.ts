@@ -15,7 +15,6 @@ import {
   buildPrivacyConsentFields,
 } from '@/lib/privacy/consent';
 import { isUsernameAvailable, normalizeUsername } from '@/lib/auth/username';
-import { awardPoints } from '@/lib/commerce/points-ledger';
 
 export async function updateUserAvatar(formData: FormData) {
   const session = await auth();
@@ -52,7 +51,6 @@ export async function updateUserAvatar(formData: FormData) {
   }
 
   revalidatePath('/dashboard/profilo');
-  await maybeAwardProfilePoints(userId);
   return { success: true, newImageUrl: publicUrl };
 }
 
@@ -107,7 +105,6 @@ export async function updateUserProfile(formData: FormData) {
   }
 
   revalidatePath('/dashboard/profilo');
-  await maybeAwardProfilePoints(userId);
   return { success: true, message: 'Profilo aggiornato con successo!' };
 }
 
@@ -187,14 +184,4 @@ export async function changeUserEmail(newEmail: string) {
     success: true,
     message: "A breve riceverai un'email di conferma al nuovo indirizzo.",
   };
-}
-
-async function maybeAwardProfilePoints(userId: string) {
-  const { data } = await supabaseAdmin
-    .from('users')
-    .select('username, first_name, last_name, image')
-    .eq('id', userId)
-    .maybeSingle();
-  if (!data?.username || !data.first_name || !data.last_name || !data.image) return;
-  await awardPoints({ userId, action: 'profile_completed', ref: userId });
 }

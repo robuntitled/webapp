@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
-import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
+import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -307,7 +307,7 @@ export function HotelCheckoutClient({
               ? `ID: ${confirmation.bookingId}`
               : 'Riceverai i dettagli via email.'}
         </p>
-        <BookingCashbackNote />
+        <BookingComplianceNote />
         <Button
           className="rounded-xl"
           onClick={() =>

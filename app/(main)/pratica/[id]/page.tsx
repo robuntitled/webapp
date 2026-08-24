@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { auth } from '@/auth';
-import { BookingRecap } from '@/components/itineraries/BookingRecap';
 import {
   PracticeChatCta,
   PracticeEditionMembers,
@@ -77,14 +76,6 @@ export default async function PraticaPage({ params }: PageProps) {
               chatUnlocked={chatUnlocked}
             />
           </>
-        ) : null}
-        {flightBooked ? (
-          <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-              Le tue prenotazioni
-            </p>
-            <BookingRecap practice={practice} />
-          </div>
         ) : null}
         <PracticeBookingHub practice={practice} template={template} />
       </div>

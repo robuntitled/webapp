@@ -21,7 +21,6 @@ const checks = [
   { label: 'favorite_itineraries', path: 'favorite_itineraries?select=id&limit=0' },
   { label: 'planner_profiles', path: 'planner_profiles?select=*&limit=0' },
   { label: 'composer_drafts', path: 'composer_drafts?select=*&limit=0' },
-  { label: 'nomad_points_ledger', path: 'nomad_points_ledger?select=id&limit=0' },
 ];
 
 let failed = false;

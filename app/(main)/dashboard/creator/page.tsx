@@ -3,7 +3,6 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
-import { POINTS } from '@/lib/commerce/points';
 
 export const metadata = {
   title: 'Per i Creator — NomadLink',
@@ -18,26 +17,24 @@ export default async function CreatorPage() {
       <div className="container mx-auto max-w-3xl px-4 py-16">
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Per i creator</p>
         <h1 className="mt-3 font-display text-4xl font-semibold text-foreground md:text-5xl">
-          Lancia tu. I punti premiano le azioni.
+          Lancia tu. Il gruppo fa il resto.
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">{COMPLIANCE_COPY.guide}</p>
         <p className="mt-3 text-foreground">
-          Crei un Trip: +{POINTS.create_trip_published.points} punti. Soglia del gruppo: +
-          {POINTS.group_formed.points} (×3 nei primi 90 giorni e per i Founding Creator). I primi 50
-          Trip alla soglia: badge permanente, ×3 e boost 14 giorni.
+          Parti da un template, pubblichi in formazione e raggiungi la soglia del gruppo. Ognuno
+          prenota voli e hotel per conto proprio — niente markup da tour operator.
         </p>
-        <p className="mt-3 text-sm text-muted-foreground">{COMPLIANCE_COPY.pointsNoMoney}</p>
         <ul className="mt-8 space-y-3 text-foreground">
           <li>Parti da un template: pochi minuti, itinerario già strutturato.</li>
           <li>Pubblichi in formazione. Il viaggio parte alla soglia del gruppo.</li>
-          <li>Niente markup da tour operator: ognuno prenota col proprio fornitore.</li>
+          <li>Niente pacchetto: ognuno prenota col proprio fornitore.</li>
         </ul>
         <Button asChild className="mt-10">
           <Link href="/destinazioni">Scegli un itinerario</Link>
         </Button>
         <p className="mt-4 text-sm text-muted-foreground">
-          <Link href="/dashboard/punti" className="text-primary underline underline-offset-4 hover:text-[var(--color-primary-hover)]">
-            I miei NomadPoints
+          <Link href="/pratiche" className="text-primary underline underline-offset-4 hover:text-[var(--color-primary-hover)]">
+            I miei viaggi
           </Link>
         </p>
       </div>

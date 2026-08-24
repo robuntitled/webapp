@@ -24,7 +24,7 @@ export const COMPLIANCE_COPY = {
     'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
   /** Responsabilità. */
   responsibility:
-    'NomadLink fornisce account, gruppo, itinerario e crediti. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
+    'NomadLink fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
   /** Messaggio guida (onboarding, homepage, Trip). */
   guide:
     'Su NomadLink scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
@@ -33,9 +33,6 @@ export const COMPLIANCE_COPY = {
   budgetFilterLabel: 'Fascia di spesa stimata',
   budgetClarifier:
     'I costi reali dipendono dai servizi che ogni partecipante prenota separatamente.',
-  /** Loyalty: nessun valore monetario. */
-  pointsNoMoney:
-    'I NomadPoints non hanno valore monetario, non sono convertibili in denaro e si riscattano solo in vantaggi interni alla piattaforma.',
 } as const;
 
 export const POST_THRESHOLD_CHECKLIST = [

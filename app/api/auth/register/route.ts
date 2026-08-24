@@ -11,7 +11,6 @@ import { issueEmailVerification } from '@/lib/auth/email-verification';
 import { allocateUniqueUsername, slugFromPerson } from '@/lib/auth/username';
 import { verifyTurnstileToken } from '@/lib/auth/turnstile';
 import { clientIp } from '@/lib/api/request-guard';
-import { awardPoints } from '@/lib/commerce/points-ledger';
 import { ZodError } from 'zod';
 
 export async function POST(request: Request) {
@@ -100,14 +99,6 @@ export async function POST(request: Request) {
     }
 
     const issued = await issueEmailVerification(newUser.id, newUser.email);
-
-    if (referredBy && referredBy !== newUser.id) {
-      await awardPoints({
-        userId: referredBy,
-        action: 'invite_register',
-        ref: newUser.id,
-      });
-    }
 
     return NextResponse.json(
       {

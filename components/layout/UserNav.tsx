@@ -52,7 +52,7 @@ export function UserNav({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/dashboard/punti">NomadPoints</Link>
+            <Link href="/pratiche">I miei viaggi</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/profilo">Modifica profilo</Link>

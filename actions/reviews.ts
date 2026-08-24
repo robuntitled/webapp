@@ -6,7 +6,6 @@ import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { haveSharedTrip } from '@/lib/data/public-profile';
 import { profilePath } from '@/lib/profile/paths';
-import { awardPoints } from '@/lib/commerce/points-ledger';
 
 const schema = z.object({
   revieweeId: z.string().uuid(),
@@ -98,14 +97,6 @@ export async function leaveUserReview(input: {
 
   const path = profilePath(user?.username as string | null, revieweeId);
   if (path) revalidatePath(path);
-
-  if (shared && body.trim().length >= 40 && rating >= 4) {
-    await awardPoints({
-      userId: reviewerId,
-      action: 'review_verified',
-      ref: `${reviewerId}:${revieweeId}`,
-    });
-  }
 
   return { ok: true };
 }

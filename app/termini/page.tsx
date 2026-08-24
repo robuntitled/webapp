@@ -72,21 +72,9 @@ export default function TermsPage() {
             La fornitura, l&apos;esatta esecuzione, le modifiche, le cancellazioni e i rimborsi di
             ogni servizio sono di esclusiva responsabilità del fornitore che lo eroga.{' '}
             {company.tradeName} risponde unicamente del funzionamento della piattaforma (account,
-            gruppo, itinerario, programma punti).
+            gruppo, itinerario).
           </li>
         </ul>
-      </LegalSection>
-
-      <LegalSection title="4-bis. NomadPoints">
-        <p>
-          I NomadPoints sono un programma di fidelizzazione interno. Si ottengono per azioni sulla
-          piattaforma (creare un Trip, raggiungere o raddoppiare la soglia del gruppo, inviti,
-          profilo, recensioni). <strong>Non hanno valore monetario</strong>, non sono convertibili
-          in denaro, non sono un cashback percentuale sulla spesa e si riscattano solo in vantaggi
-          interni (boost, template, badge, priorità in Esplora, accesso anticipato). I Founding
-          Creator (primi 50 Trip che raggiungono la soglia) ricevono badge permanente, moltiplicatore
-          ×3 e boost 14 giorni.
-        </p>
       </LegalSection>
 
       <LegalSection title="5. Contenuti e viaggi creati dagli utenti">

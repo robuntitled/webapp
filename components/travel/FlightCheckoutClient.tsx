@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
-import { BookingCashbackNote } from '@/components/commerce/BookingCashbackNote';
+import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -599,7 +599,7 @@ export function FlightCheckoutClient({
             {confirmation.bookingRef || confirmation.bookingId || '—'}
           </p>
         </div>
-        <BookingCashbackNote />
+        <BookingComplianceNote />
         <Button asChild className="w-full rounded-xl bg-primary">
           <Link href={confirmation.practiceId ? `/pratica/${confirmation.practiceId}` : '/pratiche'}>
             Vedi i dettagli nel viaggio

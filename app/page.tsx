@@ -266,7 +266,6 @@ export default function LoginPage() {
           </ul>
           <LandingDestinations />
           <p className="mt-4 text-sm text-white/90">
-            {COMPLIANCE_COPY.pointsNoMoney}{' '}
             <Link href="/destinazioni" className="underline underline-offset-4">
               Itinerari
             </Link>

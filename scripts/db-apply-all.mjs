@@ -43,6 +43,7 @@ const MIGRATIONS = [
   'supabase/migrations/037_favorite_itineraries.sql',
   'supabase/migrations/038_itinerary_days_coords.sql',
   'supabase/migrations/039_drop_unused_legacy.sql',
+  'supabase/migrations/040_drop_nomad_points.sql',
 ];
 
 await withPgClient(async (client) => {
