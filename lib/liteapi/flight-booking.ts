@@ -192,22 +192,7 @@ export async function prebookFlight(params: {
   };
 }
 
-export async function bookFlight(params: {
-  prebookId: string;
-  transactionId: string;
-}): Promise<FlightBookResult> {
-  const raw = await liteApiFetch<unknown>('/flights/bookings', {
-    method: 'POST',
-    body: JSON.stringify({
-      prebookId: params.prebookId,
-      payment: {
-        method: 'TRANSACTION_ID',
-        transactionId: params.transactionId,
-      },
-    }),
-    timeoutMs: 60_000,
-  });
-
+function parseFlightBookPayload(raw: unknown): FlightBookResult {
   const item = unwrapDataItem(raw);
   const booking = asRecord(item?.booking) ?? item;
 
@@ -224,4 +209,31 @@ export async function bookFlight(params: {
     status: toStr(item?.status) ?? toStr(booking?.status),
     raw,
   };
+}
+
+export async function bookFlight(params: {
+  prebookId: string;
+  transactionId: string;
+}): Promise<FlightBookResult> {
+  const raw = await liteApiFetch<unknown>('/flights/bookings', {
+    method: 'POST',
+    body: JSON.stringify({
+      prebookId: params.prebookId,
+      payment: {
+        method: 'TRANSACTION_ID',
+        transactionId: params.transactionId,
+      },
+    }),
+    timeoutMs: 60_000,
+  });
+
+  return parseFlightBookPayload(raw);
+}
+
+export async function getFlightBooking(bookingId: string): Promise<FlightBookResult> {
+  const raw = await liteApiFetch<unknown>(
+    `/flights/bookings/${encodeURIComponent(bookingId)}`,
+    { method: 'GET', timeoutMs: 35_000 }
+  );
+  return parseFlightBookPayload(raw);
 }

@@ -104,3 +104,72 @@ export function flightFingerprint(recap: FlightBookingRecap): string {
     r?.departureAt ?? '',
   ].join('|');
 }
+
+export type FlightStatusKind = 'pending' | 'confirmed' | 'failed' | 'cancelled' | 'unknown';
+
+const PENDING_STATUSES = new Set([
+  'PENDING_CONFIRMATION',
+  'CREATED',
+  'PENDING',
+]);
+
+const CONFIRMED_STATUSES = new Set(['CONFIRMED', 'TICKETED']);
+
+const FAILED_STATUSES = new Set(['FAILED', 'EXPIRED']);
+
+const CANCELLED_STATUSES = new Set(['CANCELLED', 'CANCELLED_WITH_CHARGES']);
+
+export function parseFlightStatus(status: string | null | undefined): FlightStatusKind {
+  const s = status?.trim().toUpperCase();
+  if (!s) return 'unknown';
+  if (PENDING_STATUSES.has(s)) return 'pending';
+  if (CONFIRMED_STATUSES.has(s)) return 'confirmed';
+  if (FAILED_STATUSES.has(s)) return 'failed';
+  if (CANCELLED_STATUSES.has(s)) return 'cancelled';
+  return 'unknown';
+}
+
+export function isFlightPendingConfirmation(status: string | null | undefined): boolean {
+  return parseFlightStatus(status) === 'pending';
+}
+
+export function formatFlightBookingStatus(status: string | null | undefined): {
+  label: string;
+  description: string;
+  kind: FlightStatusKind;
+} {
+  const kind = parseFlightStatus(status);
+  switch (kind) {
+    case 'pending':
+      return {
+        kind,
+        label: 'Pagato · compagnia in elaborazione',
+        description:
+          'Il pagamento è andato a buon fine e il codice è valido. La compagnia sta confermando il biglietto — di solito entro pochi minuti.',
+      };
+    case 'confirmed':
+      return {
+        kind,
+        label: 'Confermato dalla compagnia',
+        description: 'Biglietto emesso. Usa il codice per il check-in.',
+      };
+    case 'failed':
+      return {
+        kind,
+        label: 'Conferma non riuscita',
+        description: 'Contattaci o riprova dalla ricerca voli.',
+      };
+    case 'cancelled':
+      return {
+        kind,
+        label: 'Prenotazione annullata',
+        description: 'Il volo risulta cancellato.',
+      };
+    default:
+      return {
+        kind: 'unknown',
+        label: status?.trim() || 'Stato in aggiornamento',
+        description: 'Stiamo sincronizzando lo stato con la compagnia.',
+      };
+  }
+}

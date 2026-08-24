@@ -21,6 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { COUNTRY_OPTIONS } from '@/lib/travel/countries';
 import {
+  formatFlightBookingStatus,
+  isFlightPendingConfirmation,
+} from '@/lib/itineraries/bookings';
+import {
   clearFlightCheckoutDraft,
   clearFlightPaymentPending,
   loadFlightCheckoutDraft,
@@ -335,7 +339,12 @@ export function FlightCheckoutClient({
         clearFlightCheckoutDraft();
         clearFlightPaymentPending();
         setStep('done');
-        toast.success('Prenotazione confermata');
+        const pending = isFlightPendingConfirmation(data.status);
+        toast.success(
+          pending
+            ? 'Pagamento ok — la compagnia sta confermando il biglietto'
+            : 'Prenotazione confermata'
+        );
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href);
           url.search = '';
@@ -578,31 +587,59 @@ export function FlightCheckoutClient({
   }
 
   if (step === 'done' && confirmation) {
+    const pending = isFlightPendingConfirmation(confirmation.status);
+    const statusInfo = formatFlightBookingStatus(confirmation.status);
+    const practiceHref = confirmation.practiceId
+      ? `/pratica/${confirmation.practiceId}?step=hotel`
+      : '/pratiche';
+
     return (
-      <div className="mx-auto max-w-lg space-y-6 rounded-3xl border border-emerald-200 bg-gradient-to-b from-emerald-50/80 to-white p-6 shadow-sm sm:p-8">
-        <div className="flex items-center gap-3 text-emerald-700">
+      <div
+        className={cn(
+          'mx-auto max-w-lg space-y-6 rounded-3xl border p-6 shadow-sm sm:p-8',
+          pending
+            ? 'border-amber-200 bg-gradient-to-b from-amber-50/80 to-white'
+            : 'border-emerald-200 bg-gradient-to-b from-emerald-50/80 to-white'
+        )}
+      >
+        <div
+          className={cn(
+            'flex items-center gap-3',
+            pending ? 'text-amber-800' : 'text-emerald-700'
+          )}
+        >
           <CheckCircle2 className="h-9 w-9" />
           <div>
             <h2 className="font-display text-2xl font-semibold">
-              Prenotazione confermata
+              {pending ? 'Pagamento confermato' : 'Prenotazione confermata'}
             </h2>
-            <p className="text-sm text-emerald-800/80">
-              Conserva il codice per il check-in.
+            <p className={cn('text-sm', pending ? 'text-amber-900/80' : 'text-emerald-800/80')}>
+              {pending
+                ? statusInfo.description
+                : 'Conserva il codice per il check-in.'}
             </p>
           </div>
         </div>
-        <div className="rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-emerald-100">
+        <div
+          className={cn(
+            'rounded-2xl bg-white px-4 py-4 shadow-sm ring-1',
+            pending ? 'ring-amber-100' : 'ring-emerald-100'
+          )}
+        >
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Codice prenotazione
+            {pending ? 'Codice prenotazione (valido)' : 'Codice prenotazione'}
           </p>
           <p className="mt-1 font-display text-3xl font-semibold tracking-wide text-slate-900">
             {confirmation.bookingRef || confirmation.bookingId || '—'}
           </p>
+          {pending ? (
+            <p className="mt-2 text-xs text-amber-800/90">{statusInfo.label}</p>
+          ) : null}
         </div>
         <BookingComplianceNote />
         <Button asChild className="w-full rounded-xl bg-primary">
-          <Link href={confirmation.practiceId ? `/pratica/${confirmation.practiceId}` : '/pratiche'}>
-            Vedi i dettagli nel viaggio
+          <Link href={practiceHref}>
+            {confirmation.practiceId ? 'Continua con hotel e attività' : 'Vai ai tuoi viaggi'}
           </Link>
         </Button>
       </div>

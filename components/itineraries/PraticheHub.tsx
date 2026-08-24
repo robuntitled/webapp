@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   Heart,
   History,
+  MapPin,
   Plane,
   Sparkles,
 } from 'lucide-react';
@@ -15,20 +16,18 @@ import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
 import { itineraryPath } from '@/lib/itineraries/params';
+import {
+  getPracticeLifecyclePhase,
+  hasFlightBooked,
+  LIFECYCLE_COPY,
+  type PracticeLifecyclePhase,
+} from '@/lib/itineraries/practice-lifecycle';
 import type { PracticeRow } from '@/lib/itineraries/types';
 import { cn } from '@/lib/utils';
 
 const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
 
-type SectionId = 'liked' | 'interested' | 'booked' | 'past';
-
-function isPast(dateTo: string) {
-  return new Date(`${dateTo}T23:59:59`) < new Date();
-}
-
-function isBooked(p: PracticeRow) {
-  return Boolean(p.flight_confirmed_at || p.flight_booking);
-}
+type SectionId = 'liked' | PracticeLifecyclePhase;
 
 const SECTIONS: {
   id: SectionId;
@@ -44,20 +43,26 @@ const SECTIONS: {
   },
   {
     id: 'interested',
-    label: 'In valutazione',
-    description: 'Partenze a cui ti sei aggiunto, volo non ancora prenotato',
+    label: LIFECYCLE_COPY.interested.label,
+    description: LIFECYCLE_COPY.interested.description,
     icon: Sparkles,
   },
   {
     id: 'booked',
-    label: 'Prenotati',
-    description: 'Volo confermato — hotel e attività nel recap',
+    label: LIFECYCLE_COPY.booked.label,
+    description: LIFECYCLE_COPY.booked.description,
     icon: Plane,
   },
   {
+    id: 'active',
+    label: LIFECYCLE_COPY.active.label,
+    description: LIFECYCLE_COPY.active.description,
+    icon: MapPin,
+  },
+  {
     id: 'past',
-    label: 'Viaggi passati',
-    description: 'Partenze già concluse',
+    label: LIFECYCLE_COPY.past.label,
+    description: LIFECYCLE_COPY.past.description,
     icon: History,
   },
 ];
@@ -83,15 +88,24 @@ export function PraticheHub({
   );
 
   const buckets = useMemo(() => {
-    const interested = activePractices.filter((p) => !isBooked(p) && !isPast(p.date_to));
-    const booked = activePractices.filter((p) => isBooked(p) && !isPast(p.date_to));
-    const past = activePractices.filter((p) => isBooked(p) && isPast(p.date_to));
-    return { liked, interested, booked, past };
+    const interested: PracticeRow[] = [];
+    const booked: PracticeRow[] = [];
+    const active: PracticeRow[] = [];
+    const past: PracticeRow[] = [];
+    for (const p of activePractices) {
+      const phase = getPracticeLifecyclePhase(p);
+      if (phase === 'interested') interested.push(p);
+      else if (phase === 'booked') booked.push(p);
+      else if (phase === 'active') active.push(p);
+      else past.push(p);
+    }
+    return { liked, interested, booked, active, past };
   }, [activePractices, liked]);
 
   const [active, setActive] = useState<SectionId>(() => {
     if (buckets.interested.length) return 'interested';
     if (buckets.booked.length) return 'booked';
+    if (buckets.active.length) return 'active';
     if (buckets.liked.length) return 'liked';
     if (buckets.past.length) return 'past';
     return 'liked';
@@ -101,6 +115,7 @@ export function PraticheHub({
     liked: buckets.liked.length,
     interested: buckets.interested.length,
     booked: buckets.booked.length,
+    active: buckets.active.length,
     past: buckets.past.length,
   };
 
@@ -112,12 +127,12 @@ export function PraticheHub({
         </p>
         <h1 className="mt-2 font-display text-4xl font-semibold text-foreground">I miei viaggi</h1>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Salva i piani che ti piacciono, prenota il volo quando sei pronto. Solo dopo la conferma
-          del volo il viaggio compare tra i prenotati.
+          Interessato → volo prenotato → in viaggio. Un solo filo: prenoti il volo quando sei
+          pronto, poi hotel e attività sul piano.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           const isActive = active === section.id;
@@ -198,7 +213,7 @@ function PracticeGrid({
   empty,
 }: {
   items: PracticeRow[];
-  empty: SectionId;
+  empty: PracticeLifecyclePhase;
 }) {
   if (items.length === 0) {
     const copy = {
@@ -207,11 +222,14 @@ function PracticeGrid({
         'Unisciti a una partenza o crea un viaggio: finché non prenoti il volo resta qui.',
       ],
       booked: [
-        'Nessun viaggio prenotato',
-        'Dopo la conferma del volo trovi qui hotel, attività e recap completo.',
+        'Nessun volo prenotato in attesa',
+        'Dopo la conferma del volo completa hotel e attività dal recap.',
+      ],
+      active: [
+        'Nessun viaggio in corso',
+        'Quando parti, il viaggio compare qui con chat e recap.',
       ],
       past: ['Nessun viaggio passato', 'I viaggi conclusi compariranno qui.'],
-      liked: ['', ''],
     }[empty];
     return <Empty title={copy[0]} body={copy[1]} />;
   }
@@ -220,7 +238,9 @@ function PracticeGrid({
     <ul className="grid gap-5 sm:grid-cols-2">
       {items.map((p, i) => {
         const tpl = findItineraryTemplate(p.template_id);
-        const booked = isBooked(p);
+        const booked = hasFlightBooked(p);
+        const phase = getPracticeLifecyclePhase(p);
+        const badge = LIFECYCLE_COPY[phase].badge;
         return (
           <li key={p.id}>
             <Link
@@ -243,7 +263,7 @@ function PracticeGrid({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
                 <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                  {booked ? 'Prenotato' : MODE_LABEL[p.mode]}
+                  {booked ? badge : MODE_LABEL[p.mode]}
                 </p>
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="font-display text-2xl font-semibold text-white">
@@ -259,7 +279,7 @@ function PracticeGrid({
                     </div>
                   ) : (
                     <p className="mt-2 text-xs font-medium text-white/70">
-                      Volo da confermare per completare l&apos;iscrizione
+                      Prenota il volo per passare al passo successivo
                     </p>
                   )}
                 </div>

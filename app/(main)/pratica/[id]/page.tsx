@@ -12,18 +12,24 @@ import { getEdition, listEditionMembers } from '@/lib/data/editions';
 import { isEditionChatUnlocked } from '@/lib/data/trip-chat';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
+import {
+  getPracticeLifecyclePhase,
+  LIFECYCLE_COPY,
+} from '@/lib/itineraries/practice-lifecycle';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ step?: string }>;
 };
 
 const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
 
-export default async function PraticaPage({ params }: PageProps) {
+export default async function PraticaPage({ params, searchParams }: PageProps) {
   const session = await auth();
   if (!session?.user?.id) redirect('/');
   const { id } = await params;
+  const { step } = await searchParams;
   const practice = await getPractice(id, session.user.id);
   if (!practice) notFound();
   const template = findItineraryTemplate(practice.template_id);
@@ -33,7 +39,8 @@ export default async function PraticaPage({ params }: PageProps) {
   const chatUnlocked = practice.edition_id
     ? await isEditionChatUnlocked(practice.edition_id)
     : false;
-  const flightBooked = Boolean(practice.flight_confirmed_at || practice.flight_booking);
+  const phase = getPracticeLifecyclePhase(practice);
+  const phaseCopy = LIFECYCLE_COPY[phase];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
@@ -47,7 +54,7 @@ export default async function PraticaPage({ params }: PageProps) {
         </Link>
         <header className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-            {MODE_LABEL[practice.mode]} · {flightBooked ? 'Prenotato' : 'In valutazione'}
+            {MODE_LABEL[practice.mode]} · {phaseCopy.badge}
           </p>
           <h1 className="font-display text-3xl font-semibold text-foreground md:text-4xl">
             {template.destination_name} · {template.duration_days} giorni
@@ -77,7 +84,7 @@ export default async function PraticaPage({ params }: PageProps) {
             />
           </>
         ) : null}
-        <PracticeBookingHub practice={practice} template={template} />
+        <PracticeBookingHub practice={practice} template={template} initialStep={step} />
       </div>
     </div>
   );

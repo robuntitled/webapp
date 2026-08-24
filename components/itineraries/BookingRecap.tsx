@@ -1,11 +1,14 @@
 'use client';
 
-import { Check, Copy, ExternalLink, Hotel, Plane, Ticket } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Copy, ExternalLink, Hotel, Loader2, Plane, Ticket } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   formatBookingMoney,
+  formatFlightBookingStatus,
   formatFlightWhen,
+  isFlightPendingConfirmation,
   type ActivityBookingRecap,
   type FlightBookingRecap,
   type FlightLegRecap,
@@ -67,9 +70,57 @@ function Leg({ label, leg }: { label: string; leg: FlightLegRecap }) {
   );
 }
 
-export function FlightBookingCard({ flight }: { flight: FlightBookingRecap }) {
-  const money = formatBookingMoney(flight.amountEur, flight.currency);
-  const ref = flight.bookingRef || flight.bookingId;
+export function FlightBookingCard({
+  flight,
+  practiceId,
+}: {
+  flight: FlightBookingRecap;
+  practiceId?: string;
+}) {
+  const router = useRouter();
+  const [live, setLive] = useState(flight);
+  const [syncing, setSyncing] = useState(false);
+
+  const statusInfo = formatFlightBookingStatus(live.status);
+  const pending = isFlightPendingConfirmation(live.status);
+  const money = formatBookingMoney(live.amountEur, live.currency);
+  const ref = live.bookingRef || live.bookingId;
+
+  const sync = useCallback(async () => {
+    if (!practiceId || !pending) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/practices/${practiceId}/sync-flight`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      const data = (await res.json()) as {
+        updated?: boolean;
+        status?: string | null;
+        bookingRef?: string | null;
+      };
+      if (res.ok) {
+        setLive((prev) => ({
+          ...prev,
+          status: data.status ?? prev.status,
+          bookingRef: data.bookingRef ?? prev.bookingRef,
+        }));
+        if (data.updated) router.refresh();
+      }
+    } catch {
+      /* silent — cron will retry */
+    } finally {
+      setSyncing(false);
+    }
+  }, [pending, practiceId, router]);
+
+  useEffect(() => {
+    if (!practiceId || !pending) return;
+    void sync();
+    const id = window.setInterval(() => void sync(), 20_000);
+    return () => window.clearInterval(id);
+  }, [pending, practiceId, sync]);
+
   return (
     <section className="space-y-3 rounded-3xl bg-[#161d2b] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -79,11 +130,20 @@ export function FlightBookingCard({ flight }: { flight: FlightBookingRecap }) {
         </p>
         {ref ? <CopyRef value={ref} /> : null}
       </div>
-      <Leg label="Andata" leg={flight.outbound} />
-      {flight.returnLeg ? <Leg label="Ritorno" leg={flight.returnLeg} /> : null}
-      <p className="text-sm text-white/70">
-        {[money, flight.status].filter(Boolean).join(' · ')}
-      </p>
+      {pending ? (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2.5">
+          <p className="flex items-center gap-2 text-sm font-semibold text-amber-100">
+            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            {statusInfo.label}
+          </p>
+          <p className="mt-1 text-xs text-amber-100/80">{statusInfo.description}</p>
+        </div>
+      ) : statusInfo.kind !== 'unknown' ? (
+        <p className="text-xs text-white/60">{statusInfo.label}</p>
+      ) : null}
+      <Leg label="Andata" leg={live.outbound} />
+      {live.returnLeg ? <Leg label="Ritorno" leg={live.returnLeg} /> : null}
+      <p className="text-sm text-white/70">{money}</p>
     </section>
   );
 }
@@ -159,8 +219,17 @@ export function BookingRecap({
   const showActivity = section === 'all' || section === 'activity';
 
   if (compact) {
+    const flightBit =
+      showFlight &&
+      (flight?.bookingRef
+        ? `Volo ${flight.bookingRef}`
+        : practice.flight_confirmed_at
+          ? isFlightPendingConfirmation(flight?.status)
+            ? 'Volo · in elaborazione'
+            : 'Volo'
+          : null);
     const bits = [
-      showFlight && (flight?.bookingRef ? `Volo ${flight.bookingRef}` : practice.flight_confirmed_at ? 'Volo' : null),
+      flightBit,
       showHotel &&
         (hotels[0]?.bookingRef
           ? `Hotel ${hotels[0].bookingRef}`
@@ -180,7 +249,9 @@ export function BookingRecap({
 
   return (
     <div className="space-y-3">
-      {showFlight && flight ? <FlightBookingCard flight={flight} /> : null}
+      {showFlight && flight ? (
+        <FlightBookingCard flight={flight} practiceId={practice.id} />
+      ) : null}
       {showFlight && !flight && practice.flight_confirmed_at ? (
         <p className="rounded-3xl bg-[#161d2b] p-4 text-sm text-white/80">
           Volo confermato. Il codice è nella tua email di conferma.

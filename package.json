@@ -41,6 +41,7 @@
     "db:scale-indexes": "node scripts/db-exec.mjs supabase/migrations/013_scale_indexes.sql",
     "db:ai-jobs": "node scripts/db-exec.mjs supabase/migrations/014_ai_jobs_and_cost_events.sql",
     "db:apply-all": "node scripts/db-apply-all.mjs",
+    "db:bootstrap-prod": "node scripts/db-bootstrap-prod.mjs",
     "db:exec": "node scripts/db-exec.mjs",
     "db:status": "node scripts/db-status.mjs",
     "deploy:vercel": "node scripts/vercel-deploy.mjs"

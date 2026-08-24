@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { confirmActivityAction, confirmHotelAction } from '@/actions/practices';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
@@ -12,6 +12,7 @@ import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
 import { PrenotaActivitiesClient } from '@/components/travel/PrenotaActivitiesClient';
 import { PrenotaAttractionsClient } from '@/components/travel/PrenotaAttractionsClient';
 import { staysFromTemplate } from '@/lib/itineraries/dates';
+import { nextPostFlightStep } from '@/lib/itineraries/practice-lifecycle';
 import {
   clearLastActivityDraft,
   loadLastActivityDraft,
@@ -21,20 +22,38 @@ import type { ItineraryTemplate, PracticeRow } from '@/lib/itineraries/types';
 
 type BookStep = 'flight' | 'hotel' | 'sights';
 
+function resolveInitialStep(
+  practice: PracticeRow,
+  initialStep?: string | null
+): BookStep {
+  if (initialStep === 'hotel' || initialStep === 'sights' || initialStep === 'flight') {
+    return initialStep;
+  }
+  const flightBooked = Boolean(practice.flight_booking || practice.flight_confirmed_at);
+  if (!flightBooked) return 'flight';
+  const next = nextPostFlightStep(practice);
+  if (next === 'hotel') return 'hotel';
+  if (next === 'sights') return 'sights';
+  return 'flight';
+}
+
 export function PracticeBookingHub({
   practice,
   template,
+  initialStep,
 }: {
   practice: PracticeRow;
   template: ItineraryTemplate;
+  initialStep?: string | null;
 }) {
   const flightBooked = Boolean(practice.flight_booking || practice.flight_confirmed_at);
   const hotels = practice.hotel_bookings ?? [];
   const hotelBooked = hotels.length > 0 || Boolean(practice.hotel_confirmed_at);
   const activities = practice.activity_bookings ?? [];
   const activityBooked = activities.length > 0 || Boolean(practice.activity_confirmed_at);
+  const postFlightNext = nextPostFlightStep(practice);
 
-  const [step, setStep] = useState<BookStep>('flight');
+  const [step, setStep] = useState<BookStep>(() => resolveInitialStep(practice, initialStep));
   const [stayIdx, setStayIdx] = useState(0);
   const [addHotel, setAddHotel] = useState(!hotelBooked);
   const [addActivity, setAddActivity] = useState(!activityBooked);
@@ -84,6 +103,25 @@ export function PracticeBookingHub({
 
   return (
     <div className="space-y-5">
+      {flightBooked && postFlightNext !== 'done' && !groupLocked ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/30 bg-accent/5 px-4 py-3">
+          <p className="text-sm text-foreground">
+            {postFlightNext === 'hotel'
+              ? 'Prossimo passo: hotel sul piano di viaggio.'
+              : 'Prossimo passo: attrazioni e attività Viator.'}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setStep(postFlightNext === 'hotel' ? 'hotel' : 'sights')}
+          >
+            Continua
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         {(
           [
