@@ -490,6 +490,8 @@ export function FlightSearchPanel({
   }, [onOriginChange, originPlace, originQuery]);
 
   const composer = variant === 'composer';
+  /** Pannello incastrato in pratica/partenze: risultati su sfondo bianco. */
+  const darkUi = composer && !hideSearchForm;
 
   const originLabel = hideSearchForm
     ? originPlace?.kind === 'country'
@@ -523,8 +525,9 @@ export function FlightSearchPanel({
     <div
       className={cn(
         'space-y-5',
-        composer &&
-          'composer-panel rounded-[1.25rem] p-4 sm:p-5',
+        darkUi && 'composer-panel rounded-[1.25rem] p-4 sm:p-5',
+        hideSearchForm &&
+          'rounded-2xl bg-white p-4 ring-1 ring-slate-200/90 shadow-sm sm:p-5',
         className
       )}
     >
@@ -672,7 +675,7 @@ export function FlightSearchPanel({
             <p
               className={cn(
                 'text-[11px] font-semibold uppercase tracking-[0.18em]',
-                composer ? 'text-white/45' : 'text-slate-500'
+                darkUi ? 'text-white/45' : 'text-slate-500'
               )}
             >
               Tratta
@@ -680,12 +683,12 @@ export function FlightSearchPanel({
             <p
               className={cn(
                 'mt-1 font-display text-xl font-semibold',
-                composer ? 'text-white' : 'text-slate-900'
+                darkUi ? 'text-white' : 'text-slate-900'
               )}
             >
               {originLabel} → {destLabel}
             </p>
-            <p className={cn('mt-1 text-sm', composer ? 'text-white/55' : 'text-slate-500')}>
+            <p className={cn('mt-1 text-sm', darkUi ? 'text-white/55' : 'text-slate-500')}>
               {dateSummary}
             </p>
           </div>
@@ -695,7 +698,7 @@ export function FlightSearchPanel({
               onClick={onEditDates}
               className={cn(
                 'text-sm font-semibold underline underline-offset-4',
-                composer
+                darkUi
                   ? 'text-white/80 decoration-white/25 hover:text-white hover:decoration-white'
                   : 'text-slate-900 decoration-slate-300 hover:decoration-slate-900'
               )}
@@ -730,7 +733,7 @@ export function FlightSearchPanel({
 
         {offers && offers.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
-            <p className={cn('text-xs font-medium', composer ? 'text-white/50' : 'text-slate-500')}>
+            <p className={cn('text-xs font-medium', darkUi ? 'text-white/50' : 'text-slate-500')}>
               {offers.length} offerte
             </p>
             <DropdownMenu>
@@ -739,14 +742,14 @@ export function FlightSearchPanel({
                   type="button"
                   className={cn(
                     'inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold shadow-sm transition',
-                    composer
+                    darkUi
                       ? 'border-[#2a3344] bg-[#0b1220] text-white hover:bg-[#1c2436]'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   )}
                 >
-                  <ArrowDownWideNarrow className={cn('h-3.5 w-3.5', composer ? 'text-accent' : 'text-primary')} />
+                  <ArrowDownWideNarrow className={cn('h-3.5 w-3.5', darkUi ? 'text-accent' : 'text-primary')} />
                   {sortLabel}
-                  <ChevronDown className={cn('h-3.5 w-3.5', composer ? 'text-white/40' : 'text-slate-400')} />
+                  <ChevronDown className={cn('h-3.5 w-3.5', darkUi ? 'text-white/40' : 'text-slate-400')} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -778,7 +781,7 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex items-center justify-center gap-2 rounded-2xl py-10 text-sm',
-            composer ? 'bg-[#0b1220] text-white/60' : 'bg-slate-50 py-14 text-slate-500'
+            darkUi ? 'bg-[#0b1220] text-white/60' : 'bg-slate-50 py-14 text-slate-500'
           )}
         >
           <Loader2 className="h-5 w-5 animate-spin text-accent" />
@@ -796,10 +799,10 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex flex-col items-center gap-3 rounded-2xl px-4 py-8 text-center',
-            composer ? 'bg-[#0b1220]' : 'bg-slate-50 py-10'
+            darkUi ? 'bg-slate-50' : 'bg-slate-50 py-10'
           )}
         >
-          <p className={cn('max-w-sm text-sm', composer ? 'text-white/65' : 'text-slate-600')}>
+          <p className={cn('max-w-sm text-sm', darkUi ? 'text-white/65' : 'text-slate-600')}>
             {message ?? 'Pronto a cercare i voli per questa tratta.'}
           </p>
           <Button
@@ -807,7 +810,7 @@ export function FlightSearchPanel({
             onClick={() => void search()}
             className={cn(
               'px-6 font-semibold text-white',
-              composer
+              darkUi
                 ? 'rounded-full bg-accent text-[#0b1220] hover:bg-accent/90'
                 : 'rounded-xl bg-primary hover:bg-primary/90'
             )}
@@ -822,7 +825,7 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3',
-            composer ? 'bg-[#0b1220]' : 'bg-slate-50'
+            darkUi ? 'bg-slate-50' : 'bg-slate-50'
           )}
         >
           <button
@@ -836,14 +839,14 @@ export function FlightSearchPanel({
               'rounded-full px-3 py-1.5 text-xs font-semibold transition',
               pickStep === 'outbound'
                 ? 'bg-accent text-[#0b1220]'
-                : composer
+                : darkUi
                   ? 'bg-[#161d2b] text-white/70 hover:bg-[#1c2436]'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             )}
           >
             1. Andata
           </button>
-          <span className={composer ? 'text-white/30' : 'text-slate-300'}>→</span>
+          <span className={darkUi ? 'text-white/30' : 'text-slate-300'}>→</span>
           <button
             type="button"
             disabled={!selectedOutboundKey}
@@ -852,7 +855,7 @@ export function FlightSearchPanel({
               'rounded-full px-3 py-1.5 text-xs font-semibold transition',
               pickStep === 'return'
                 ? 'bg-accent text-[#0b1220]'
-                : composer
+                : darkUi
                   ? 'bg-[#161d2b] text-white/70 hover:bg-[#1c2436] disabled:opacity-40'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40'
             )}
@@ -860,12 +863,12 @@ export function FlightSearchPanel({
             2. Ritorno
           </button>
           {selectedOutboundOffer ? (
-            <p className={cn('ml-auto text-xs', composer ? 'text-white/50' : 'text-slate-500')}>
+            <p className={cn('ml-auto text-xs', darkUi ? 'text-white/50' : 'text-slate-500')}>
               Andata {formatTime(selectedOutboundOffer.departureAt)}{' '}
               {selectedOutboundOffer.origin}→{selectedOutboundOffer.destination}
             </p>
           ) : (
-            <p className={cn('ml-auto text-xs', composer ? 'text-white/50' : 'text-slate-500')}>
+            <p className={cn('ml-auto text-xs', darkUi ? 'text-white/50' : 'text-slate-500')}>
               Seleziona prima l’andata, poi il ritorno
             </p>
           )}
@@ -920,7 +923,7 @@ export function FlightSearchPanel({
                     layovers,
                     cabinClass: o.cabinClass,
                   }}
-                  dark={composer}
+                  dark={darkUi}
                   saved={saved}
                   kicker={
                     tripType === 'roundtrip'
