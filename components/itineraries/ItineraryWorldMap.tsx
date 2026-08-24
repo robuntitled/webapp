@@ -14,14 +14,14 @@ const ReactLeafletTripMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[280px] w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-500">
+      <div className="flex h-full min-h-[220px] w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-500">
         Caricamento mappa…
       </div>
     ),
   }
 );
 
-/** Mappa locale (Leaflet) accanto all’itinerario: solo pin con lat/lng nel modello. */
+/** Mappa locale (Leaflet) sotto l’itinerario: solo pin con lat/lng nel modello. */
 export function ItineraryWorldMap({
   template,
   className,
@@ -42,7 +42,7 @@ export function ItineraryWorldMap({
     return (
       <div
         className={cn(
-          'flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center text-sm text-slate-500',
+          'flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center text-sm text-slate-500',
           className
         )}
       >
@@ -64,7 +64,7 @@ export function ItineraryWorldMap({
           Mappa · {pins.length} tappe
         </p>
       </div>
-      <div className="h-[min(52vh,420px)] w-full lg:h-[min(70vh,560px)]">
+      <div className="h-[240px] w-full sm:h-[280px]">
         <ReactLeafletTripMap
           destination={template.destination_name}
           destinationMeta={
@@ -89,44 +89,52 @@ export function ItineraryDaysWithMap({
   template: ItineraryTemplate;
   className?: string;
 }) {
-  const [activeDay, setActiveDay] = useState<number | null>(null);
+  const firstDay = template.days[0]?.day_number ?? 1;
+  const [activeDay, setActiveDay] = useState(firstDay);
+  const safeDay = template.days.some((d) => d.day_number === activeDay)
+    ? activeDay
+    : firstDay;
+  const day = template.days.find((d) => d.day_number === safeDay) ?? template.days[0];
 
   return (
-    <div className={cn('grid gap-4 lg:grid-cols-2 lg:items-start', className)}>
-      <ol className="space-y-2">
-        {template.days.map((day) => (
-          <li key={day.day_number}>
-            <button
-              type="button"
-              onClick={() => setActiveDay(day.day_number)}
-              onMouseEnter={() => setActiveDay(day.day_number)}
-              className={cn(
-                'w-full rounded-2xl border px-4 py-3 text-left transition',
-                activeDay === day.day_number
-                  ? 'border-primary bg-primary/5 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-primary/30'
-              )}
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                Giorno {day.day_number}
-              </p>
-              <p className="font-semibold text-slate-900">{day.title}</p>
-              <p className="mt-1 text-sm text-slate-600">{day.description}</p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                <MapPin className="h-3 w-3" />
-                {day.area_segment}
-              </p>
-            </button>
-          </li>
+    <div className={cn('space-y-4', className)}>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
+        {template.days.map((d) => (
+          <button
+            key={d.day_number}
+            type="button"
+            onClick={() => setActiveDay(d.day_number)}
+            className={cn(
+              'shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition',
+              safeDay === d.day_number
+                ? 'bg-primary text-white shadow-sm'
+                : 'border border-slate-200 bg-white text-slate-800 hover:border-primary hover:text-primary'
+            )}
+          >
+            Giorno {d.day_number}
+          </button>
         ))}
-      </ol>
-      <div className="lg:sticky lg:top-20">
-        <ItineraryWorldMap
-          template={template}
-          highlightedDay={activeDay}
-          onDaySelect={setActiveDay}
-        />
       </div>
+
+      {day ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+            Giorno {day.day_number}
+          </p>
+          <p className="mt-1 font-display text-xl font-semibold text-slate-900">{day.title}</p>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">{day.description}</p>
+          <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <MapPin className="h-3.5 w-3.5" />
+            {day.area_segment}
+          </p>
+        </div>
+      ) : null}
+
+      <ItineraryWorldMap
+        template={template}
+        highlightedDay={safeDay}
+        onDaySelect={setActiveDay}
+      />
     </div>
   );
 }

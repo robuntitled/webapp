@@ -3,7 +3,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { createPractice } from '@/lib/data/practices';
+import { createOrReuseDraftPractice, createPractice } from '@/lib/data/practices';
 import { createPrivateEdition, joinEdition } from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import {
@@ -22,6 +22,7 @@ function requireUser() {
   });
 }
 
+/** Salva/riusa bozza e apre la pratica per vedere i voli (niente duplicati). */
 export async function startPracticeAction(input: {
   templateId: string;
   mode: TravelMode;
@@ -49,7 +50,7 @@ export async function startPracticeAction(input: {
     redirect(`/pratica/${result.practice.id}`);
   }
 
-  const result = await createPractice({
+  const result = await createOrReuseDraftPractice({
     userId,
     templateId: input.templateId,
     mode: 'solo',

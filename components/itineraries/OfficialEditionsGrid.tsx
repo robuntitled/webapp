@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  CatalogFiltersBar,
+  CatalogHeroSearchBar,
   ContinentFilterRow,
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
@@ -75,15 +75,13 @@ export function OfficialEditionsGrid({
 
   const visible = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
-    return enriched.filter(({ ed, tpl, dest, name, continent, days, scarcity }) => {
+    return enriched.filter(({ ed, tpl, dest, name, continent, days }) => {
       if (filters.continent !== 'Tutte' && continent !== filters.continent) return false;
       if (filters.duration != null && (days == null || days !== filters.duration)) return false;
       if (filters.priceMax != null) {
         const budget = tpl?.budget_orientative_eur.total_hint;
         if (budget != null && budget > filters.priceMax) return false;
       }
-      if (filters.published === true && scarcity !== 'disponibile') return false;
-      if (filters.published === false && scarcity !== 'ultimi') return false;
       if (!q) return true;
       return (
         name.includes(q) ||
@@ -100,12 +98,10 @@ export function OfficialEditionsGrid({
   return (
     <div className="space-y-5">
       {showFiltersBar ? (
-        <CatalogFiltersBar
+        <CatalogHeroSearchBar
           value={filters}
           onChange={setFilters}
-          searchPlaceholder="Cerca destinazione o date"
-          showPublished={false}
-          showContinents={false}
+          placeholder="Cerca destinazione o date"
           resultsId="risultati-partenze"
           durationOptions={durationOptions}
         />

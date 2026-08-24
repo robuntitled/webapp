@@ -34,6 +34,67 @@ export async function findPracticeForEdition(userId: string, editionId: string) 
   return data as PracticeRow;
 }
 
+export async function findDraftPractice(input: {
+  userId: string;
+  templateId: string;
+  mode: TravelMode;
+}): Promise<PracticeRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from('practices')
+    .select('*')
+    .eq('user_id', input.userId)
+    .eq('template_id', input.templateId)
+    .eq('mode', input.mode)
+    .eq('status', 'draft')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as PracticeRow;
+}
+
+/** Riusa una bozza esistente (stesso template+mode) invece di creare duplicati. */
+export async function createOrReuseDraftPractice(input: {
+  userId: string;
+  templateId: string;
+  mode: TravelMode;
+  dateFrom: string;
+  editionId?: string | null;
+}): Promise<{ practice: PracticeRow } | { error: string }> {
+  const template = findItineraryTemplate(input.templateId);
+  if (!template) return { error: 'Template non trovato.' };
+  const dates = datesForDuration(input.dateFrom, template.duration_days);
+
+  const existing = await findDraftPractice({
+    userId: input.userId,
+    templateId: input.templateId,
+    mode: input.mode,
+  });
+  if (existing) {
+    if (
+      existing.date_from === dates.date_from &&
+      existing.date_to === dates.date_to &&
+      (input.editionId == null || existing.edition_id === input.editionId)
+    ) {
+      return { practice: existing };
+    }
+    const { data, error } = await supabaseAdmin
+      .from('practices')
+      .update({
+        date_from: dates.date_from,
+        date_to: dates.date_to,
+        edition_id: input.editionId ?? existing.edition_id,
+      })
+      .eq('id', existing.id)
+      .eq('user_id', input.userId)
+      .select('*')
+      .single();
+    if (!error && data) return { practice: data as PracticeRow };
+  }
+
+  return createPractice(input);
+}
+
 export async function createPractice(input: {
   userId: string;
   templateId: string;

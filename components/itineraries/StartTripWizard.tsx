@@ -167,6 +167,19 @@ export function StartTripWizard({
     setStep('plan');
   };
 
+  const openDestination = (dest: (typeof destinations)[number]) => {
+    const preferred =
+      filters.duration != null && dest.allowedDurations.includes(filters.duration)
+        ? filters.duration
+        : dest.allowedDurations[Math.min(1, dest.allowedDurations.length - 1)] ??
+          dest.allowedDurations[0];
+    if (!preferred) {
+      toast.error('Presto. Ora parti da Thailandia.');
+      return;
+    }
+    pickDuration(dest, preferred);
+  };
+
   const goBack = () => {
     const prev = flowSteps[idx - 1];
     if (prev) setStep(prev);
@@ -207,8 +220,12 @@ export function StartTripWizard({
   const confirm = () => {
     if (!template) return;
     if (!session?.user) {
-      toast.error('Accedi per confermare.');
-      router.push(`/?callbackUrl=/itinerario/${template.destination_slug}?d=${template.duration_days}`);
+      toast.error('Accedi per salvare la bozza.');
+      router.push(
+        `/?callbackUrl=${encodeURIComponent(
+          `/itinerario/${template.destination_slug}?d=${template.duration_days}`
+        )}`
+      );
       return;
     }
     if (mode === 'group') {
@@ -241,7 +258,7 @@ export function StartTripWizard({
       )}
     >
       {step === 'dest' ? (
-        <section className="relative isolate -mt-16 flex h-[min(46vh,28rem)] min-h-[20rem] flex-col overflow-visible pt-16">
+        <section className="relative isolate -mt-16 flex h-[min(38vh,22rem)] min-h-[16rem] flex-col overflow-visible pt-16 sm:h-[min(46vh,28rem)] sm:min-h-[20rem]">
           <div className="absolute inset-0 overflow-hidden">
             <HeroBackground
               images={BRAND_IMAGES.heroes.slideshow}
@@ -250,11 +267,11 @@ export function StartTripWizard({
               intervalMs={6500}
             />
           </div>
-          <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-3 pb-8 pt-4 text-center">
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-white drop-shadow md:text-5xl">
+          <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-2 pb-7 pt-3 text-center sm:gap-3 sm:pb-8 sm:pt-4">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-white drop-shadow sm:text-3xl md:text-5xl">
               {showPubblici ? 'In Partenza' : 'Viaggia, Risparmia, Zero Sbatti'}
             </h1>
-            <p className="mx-auto max-w-2xl text-[19px] leading-snug text-white/90 drop-shadow md:text-[22px]">
+            <p className="mx-auto max-w-2xl text-base leading-snug text-white/90 drop-shadow sm:text-[19px] md:text-[22px]">
               {showPubblici
                 ? 'Viaggia insieme ad altri, prenota, divertiti.'
                 : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
@@ -404,58 +421,81 @@ export function StartTripWizard({
                           </h2>
                         ) : null}
                         <div className="nl-card-grid">
-                          {section.items.map((dest) => (
-                            <article
-                              key={dest.slug}
-                              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary/30 hover:shadow-md"
-                            >
-                              <div className="relative h-44">
-                                <Image
-                                  src={destCoverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
-                                  alt={dest.name}
-                                  fill
-                                  className="object-cover"
-                                  sizes="(max-width: 640px) 100vw, 50vw"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                                <p className="absolute left-4 top-4 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                                  {dest.continent ?? section.continent}
-                                </p>
-                                {dest.published === false ? (
-                                  <p className="absolute right-4 top-4 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                                    Presto
-                                  </p>
-                                ) : dest.published ? (
-                                  <p className="absolute right-4 top-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                                    Aperta
-                                  </p>
-                                ) : null}
-                                <div className="absolute bottom-3 left-4 right-4">
-                                  <h3 className="font-display text-2xl font-semibold text-white drop-shadow">
-                                    {dest.emoji} {dest.name}
-                                  </h3>
-                                  <p className="mt-0.5 text-sm text-white/95 drop-shadow">{dest.vibe}</p>
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-3">
-                                {dest.allowedDurations.map((n) => (
-                                  <button
-                                    key={n}
-                                    type="button"
-                                    onClick={() => pickDuration(dest, n)}
-                                    className={cn(
-                                      'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
-                                      filters.duration === n
-                                        ? 'bg-primary text-white'
-                                        : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
-                                    )}
-                                  >
-                                    {n} giorni
-                                  </button>
-                                ))}
-                              </div>
-                            </article>
-                          ))}
+                          {section.items.map((dest) => {
+                            const durations = [...dest.allowedDurations].sort((a, b) => a - b);
+                            const durationLabel =
+                              durations.length === 0
+                                ? null
+                                : durations.length === 1
+                                  ? `${durations[0]} giorni`
+                                  : `${durations[0]}–${durations[durations.length - 1]} giorni`;
+                            const budget = minBudgetHintForDestination(dest.slug);
+                            return (
+                              <article
+                                key={dest.slug}
+                                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary/30 hover:shadow-md"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => openDestination(dest)}
+                                  className="block w-full text-left"
+                                >
+                                  <div className="relative h-40 sm:h-44">
+                                    <Image
+                                      src={
+                                        destCoverBySlug[dest.slug] ??
+                                        coverForDestination(dest.slug)
+                                      }
+                                      alt={dest.name}
+                                      fill
+                                      className="object-cover"
+                                      sizes="(max-width: 640px) 100vw, 50vw"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                                    <p className="absolute left-4 top-4 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                                      {dest.continent ?? section.continent}
+                                    </p>
+                                    {dest.published === false ? (
+                                      <p className="absolute right-4 top-4 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                                        Presto
+                                      </p>
+                                    ) : dest.published ? (
+                                      <p className="absolute right-4 top-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                                        Aperta
+                                      </p>
+                                    ) : null}
+                                    <div className="absolute bottom-3 left-4 right-4">
+                                      <h3 className="font-display text-xl font-semibold text-white drop-shadow sm:text-2xl">
+                                        {dest.emoji} {dest.name}
+                                      </h3>
+                                      <p className="mt-0.5 text-sm text-white/95 drop-shadow">
+                                        {dest.vibe}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3 bg-white px-4 py-3">
+                                    <div className="min-w-0">
+                                      {durationLabel ? (
+                                        <p className="text-sm font-semibold text-slate-900">
+                                          {durationLabel}
+                                        </p>
+                                      ) : null}
+                                      <p className="truncate text-xs text-slate-500">
+                                        {budget != null
+                                          ? `Budget orientativo da ~${budget.toLocaleString('it-IT')} €`
+                                          : dest.published === false
+                                            ? 'In arrivo'
+                                            : 'Apri e scegli il ritmo'}
+                                      </p>
+                                    </div>
+                                    <span className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-white">
+                                      Vedi piano
+                                    </span>
+                                  </div>
+                                </button>
+                              </article>
+                            );
+                          })}
                         </div>
                       </section>
                     ))}
@@ -466,7 +506,7 @@ export function StartTripWizard({
 
             {step === 'plan' && template ? (
               <motion.div key="plan" {...phaseMotion}>
-              <div className="mx-auto w-full max-w-5xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+              <div className="mx-auto w-full max-w-5xl space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:space-y-5 sm:p-6 md:p-8">
                 <div className="relative flex flex-wrap items-center justify-center gap-2 pr-14">
                   {templatesForDestination(template.destination_slug).map((t) => (
                     <button
@@ -508,7 +548,7 @@ export function StartTripWizard({
                   <h2 className="mb-3 text-center font-display text-lg font-semibold text-slate-900">
                     Giorno per giorno
                   </h2>
-                  <ItineraryDaysWithMap template={template} />
+                  <ItineraryDaysWithMap key={template.template_id} template={template} />
                 </div>
                 <p className="text-center text-xs text-slate-500">
                   {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
@@ -666,12 +706,12 @@ export function StartTripWizard({
                 <Button
                   type="button"
                   size="lg"
-                  className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
+                  className="rounded-full px-6 font-semibold shadow-lg shadow-accent/20 sm:px-8"
                   disabled={pending}
                   onClick={confirm}
                 >
                   {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Conferma e vedi i voli
+                  Salva bozza e vedi i voli
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : step === 'when' && isPubblici ? (

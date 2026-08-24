@@ -31,7 +31,6 @@ const MIGRATIONS = [
   'supabase/migrations/023_post_geo.sql',
   'supabase/migrations/024_user_onboarding.sql',
   'supabase/migrations/025_trip_forming.sql',
-  'supabase/migrations/026_cashback_ledger.sql',
   'supabase/migrations/027_nomad_points.sql',
   'supabase/migrations/028_points_loyalty.sql',
   'supabase/migrations/030_destinations_templates.sql',
@@ -42,6 +41,8 @@ const MIGRATIONS = [
   'supabase/migrations/035_cleanup_creator_trips.sql',
   'supabase/migrations/036_itinerary_templates_normalized.sql',
   'supabase/migrations/037_favorite_itineraries.sql',
+  'supabase/migrations/038_itinerary_days_coords.sql',
+  'supabase/migrations/039_drop_unused_legacy.sql',
 ];
 
 await withPgClient(async (client) => {

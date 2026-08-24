@@ -4,7 +4,12 @@ import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { OFFICIAL_EDITION_SEEDS, findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { datesForDuration } from '@/lib/itineraries/dates';
-import { createPractice, findPracticeForEdition } from '@/lib/data/practices';
+import {
+  createPractice,
+  createOrReuseDraftPractice,
+  findDraftPractice,
+  findPracticeForEdition,
+} from '@/lib/data/practices';
 import type { EditionMemberCard } from '@/lib/itineraries/bookings';
 import type { EditionStatus, EditionType } from '@/lib/itineraries/types';
 
@@ -106,6 +111,37 @@ export async function createPrivateEdition(input: {
   const template = findItineraryTemplate(input.templateId);
   if (!template) return { error: 'Template non trovato.' };
   const dates = datesForDuration(input.dateFrom, template.duration_days);
+
+  const existingDraft = await findDraftPractice({
+    userId: input.userId,
+    templateId: input.templateId,
+    mode: 'friends',
+  });
+  if (existingDraft?.edition_id) {
+    const edition = await getEdition(existingDraft.edition_id);
+    if (edition) {
+      const reused = await createOrReuseDraftPractice({
+        userId: input.userId,
+        templateId: input.templateId,
+        mode: 'friends',
+        dateFrom: dates.date_from,
+        editionId: edition.id,
+      });
+      if ('error' in reused) return reused;
+      if (edition.date_from !== dates.date_from || edition.date_to !== dates.date_to) {
+        await supabaseAdmin
+          .from('editions')
+          .update({ date_from: dates.date_from, date_to: dates.date_to })
+          .eq('id', edition.id);
+      }
+      return {
+        edition: { ...edition, date_from: dates.date_from, date_to: dates.date_to },
+        practice: reused.practice,
+        invitePath: edition.invite_token ? `/invito/${edition.invite_token}` : null,
+      };
+    }
+  }
+
   const token = randomUUID();
 
   const { data: edition, error } = await supabaseAdmin
@@ -126,7 +162,7 @@ export async function createPrivateEdition(input: {
     return { error: error?.message ?? 'Impossibile creare l’edizione privata.' };
   }
 
-  const practice = await createPractice({
+  const practice = await createOrReuseDraftPractice({
     userId: input.userId,
     templateId: input.templateId,
     mode: 'friends',

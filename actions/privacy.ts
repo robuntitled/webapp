@@ -49,8 +49,6 @@ export async function exportUserData() {
     joinedResult,
     plannerResult,
     draftsResult,
-    watchesResult,
-    messagesResult,
   ] = await Promise.all([
     supabaseAdmin.from('users').select('*').eq('id', userId).single(),
     supabaseAdmin.from('favorite_trips').select('trip_id').eq('user_id', userId),
@@ -61,13 +59,6 @@ export async function exportUserData() {
       .eq('user_id', userId),
     supabaseAdmin.from('planner_profiles').select('*').eq('user_id', userId).maybeSingle(),
     supabaseAdmin.from('composer_drafts').select('*').eq('user_id', userId).maybeSingle(),
-    supabaseAdmin.from('price_watches').select('*').eq('created_by', userId),
-    supabaseAdmin
-      .from('trip_messages')
-      .select('id, trip_id, body, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(2000),
   ]);
 
   if (userResult.error || !userResult.data) {
@@ -114,8 +105,6 @@ export async function exportUserData() {
     createdTripDays: tripDays,
     createdTripBlocks: tripBlocks,
     joinedTrips: joinedResult.data ?? [],
-    priceWatches: watchesResult.data ?? [],
-    tripMessagesAuthored: messagesResult.data ?? [],
   };
 }
 
@@ -141,11 +130,9 @@ export async function deleteUserAccount(confirmation: string) {
 
   const tripIds = createdTrips?.map((t) => t.id) ?? [];
 
-  // 1) Dati legati all’utente (bozze, profilo planner, messaggi, watch)
+  // 1) Dati legati all’utente (bozze, profilo planner)
   await supabaseAdmin.from('composer_drafts').delete().eq('user_id', userId);
   await supabaseAdmin.from('planner_profiles').delete().eq('user_id', userId);
-  await supabaseAdmin.from('trip_messages').delete().eq('user_id', userId);
-  await supabaseAdmin.from('price_watches').delete().eq('created_by', userId);
   await supabaseAdmin.from('favorite_trips').delete().eq('user_id', userId);
   await supabaseAdmin.from('user_reviews').delete().eq('reviewer_id', userId);
   await supabaseAdmin.from('user_reviews').delete().eq('reviewee_id', userId);
@@ -153,10 +140,8 @@ export async function deleteUserAccount(confirmation: string) {
   await supabaseAdmin.from('trip_invites').delete().eq('to_user_id', userId);
   await supabaseAdmin.from('trip_participants').delete().eq('user_id', userId);
 
-  // 2) Viaggi creati: dipendenti + trip (cascade days/blocks/messages/watches residue)
+  // 2) Viaggi creati: dipendenti + trip (cascade days/blocks residue)
   if (tripIds.length > 0) {
-    await supabaseAdmin.from('price_watches').delete().in('trip_id', tripIds);
-    await supabaseAdmin.from('trip_messages').delete().in('trip_id', tripIds);
     await supabaseAdmin.from('favorite_trips').delete().in('trip_id', tripIds);
     await supabaseAdmin.from('trip_participants').delete().in('trip_id', tripIds);
     // trip_blocks → trip_days → trips (CASCADE su days/blocks)
