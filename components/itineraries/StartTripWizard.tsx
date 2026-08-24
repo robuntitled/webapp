@@ -269,7 +269,7 @@ export function StartTripWizard({
           </div>
           <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-2 pb-7 pt-3 text-center sm:gap-3 sm:pb-8 sm:pt-4">
             <h1 className="font-display text-2xl font-semibold tracking-tight text-white drop-shadow sm:text-3xl md:text-5xl">
-              {showPubblici ? 'In Partenza' : 'Viaggia, Risparmia, Zero Sbatti'}
+              {showPubblici ? 'In Partenza' : 'La tua vacanza, in tre click'}
             </h1>
             <p className="mx-auto max-w-2xl text-base leading-snug text-white/90 drop-shadow sm:text-[19px] md:text-[22px]">
               {showPubblici
