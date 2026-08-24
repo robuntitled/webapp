@@ -20,7 +20,7 @@ import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ step?: string }>;
+  searchParams: Promise<{ step?: string; stay?: string }>;
 };
 
 const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
@@ -29,13 +29,15 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
   const session = await auth();
   if (!session?.user?.id) redirect('/');
   const { id } = await params;
-  const { step } = await searchParams;
+  const { step, stay } = await searchParams;
   const practice = await getPractice(id, session.user.id);
   if (!practice) notFound();
   const template = findItineraryTemplate(practice.template_id);
   if (!template) notFound();
   const edition = practice.edition_id ? await getEdition(practice.edition_id) : null;
-  const members = practice.edition_id ? await listEditionMembers(practice.edition_id) : [];
+  const members = practice.edition_id
+    ? await listEditionMembers(practice.edition_id, { withRatings: true })
+    : [];
   const chatUnlocked = practice.edition_id
     ? await isEditionChatUnlocked(practice.edition_id)
     : false;
@@ -84,7 +86,12 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
             />
           </>
         ) : null}
-        <PracticeBookingHub practice={practice} template={template} initialStep={step} />
+        <PracticeBookingHub
+          practice={practice}
+          template={template}
+          initialStep={step}
+          initialStay={stay}
+        />
       </div>
     </div>
   );

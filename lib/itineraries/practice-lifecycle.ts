@@ -62,11 +62,14 @@ export function nextPostFlightStep(
   p: Pick<
     PracticeRow,
     'hotel_confirmed_at' | 'hotel_bookings' | 'activity_confirmed_at' | 'activity_bookings'
-  >
+  >,
+  options?: { hotelsComplete?: boolean }
 ): PostFlightStep {
   const hotels = p.hotel_bookings ?? [];
   const activities = p.activity_bookings ?? [];
-  const hotelDone = hotels.length > 0 || Boolean(p.hotel_confirmed_at);
+  const hotelDone =
+    options?.hotelsComplete ??
+    (hotels.length > 0 || Boolean(p.hotel_confirmed_at));
   const activityDone = activities.length > 0 || Boolean(p.activity_confirmed_at);
   if (!hotelDone) return 'hotel';
   if (!activityDone) return 'sights';

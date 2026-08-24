@@ -55,11 +55,17 @@ describe('practice lifecycle', () => {
   it('next post-flight step is hotel then sights', () => {
     expect(nextPostFlightStep(practice({ flight_confirmed_at: '2026-06-01' }))).toBe('hotel');
     expect(
+      nextPostFlightStep(practice({ flight_confirmed_at: '2026-06-01' }), {
+        hotelsComplete: true,
+      })
+    ).toBe('sights');
+    expect(
       nextPostFlightStep(
         practice({
           flight_confirmed_at: '2026-06-01',
           hotel_confirmed_at: '2026-06-02',
-        })
+        }),
+        { hotelsComplete: true }
       )
     ).toBe('sights');
     expect(
@@ -68,7 +74,8 @@ describe('practice lifecycle', () => {
           flight_confirmed_at: '2026-06-01',
           hotel_confirmed_at: '2026-06-02',
           activity_confirmed_at: '2026-06-03',
-        })
+        }),
+        { hotelsComplete: true }
       )
     ).toBe('done');
   });

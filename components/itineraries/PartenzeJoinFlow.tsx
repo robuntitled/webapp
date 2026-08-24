@@ -8,6 +8,7 @@ import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { Button } from '@/components/ui/button';
 import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
+import { MemberRatingBadge } from '@/components/itineraries/EditionTrust';
 import { formatBookingMoney, formatFlightWhen } from '@/lib/itineraries/bookings';
 import { formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -51,6 +52,7 @@ export function PartenzeJoinFlow({
   dateTo,
   members,
   peerFlights,
+  editionStats,
 }: {
   practiceId: string;
   template: ItineraryTemplate;
@@ -58,6 +60,11 @@ export function PartenzeJoinFlow({
   dateTo: string;
   members: EditionMemberCard[];
   peerFlights: EditionPeerFlight[];
+  editionStats?: {
+    confirmed: number;
+    interested: number;
+    minConfirmed: number;
+  };
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('plan');
@@ -152,31 +159,43 @@ export function PartenzeJoinFlow({
         ) : null}
 
         {step === 'people' ? (
-          confirmedMembers.length === 0 ? (
-            <p className="rounded-3xl border border-border bg-white p-6 text-sm text-muted-foreground shadow-sm">
-              Sei tra i primi. Il gruppo si forma quando qualcuno conferma il volo — poi potrai
-              scrivergli in chat.
-            </p>
-          ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {confirmedMembers.map((m) => (
-                <li
-                  key={m.userId}
-                  className="rounded-2xl border border-border bg-white p-4 shadow-sm"
-                >
-                  <UserProfileLink
-                    userId={m.userId}
-                    username={m.username}
-                    firstName={m.firstName}
-                    lastName={m.lastName}
-                    image={m.image}
-                    size="lg"
-                    subtitle="Volo confermato"
-                  />
-                </li>
-              ))}
-            </ul>
-          )
+          <>
+            {editionStats ? (
+              <p className="rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-foreground">
+                {editionStats.interested}{' '}
+                {editionStats.interested === 1 ? 'persona interessata' : 'persone interessate'} ·{' '}
+                {editionStats.confirmed}/{editionStats.minConfirmed} voli confermati
+              </p>
+            ) : null}
+            {confirmedMembers.length === 0 ? (
+              <p className="rounded-3xl border border-border bg-white p-6 text-sm text-muted-foreground shadow-sm">
+                Sei tra i primi. Il gruppo si forma quando qualcuno conferma il volo — poi potrai
+                scrivergli in chat.
+              </p>
+            ) : (
+              <ul className="grid gap-4 sm:grid-cols-2">
+                {confirmedMembers.map((m) => (
+                  <li
+                    key={m.userId}
+                    className="rounded-2xl border border-border bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <UserProfileLink
+                        userId={m.userId}
+                        username={m.username}
+                        firstName={m.firstName}
+                        lastName={m.lastName}
+                        image={m.image}
+                        size="lg"
+                        subtitle="Volo confermato"
+                      />
+                      <MemberRatingBadge avg={m.ratingAvg ?? null} count={m.ratingCount ?? 0} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         ) : null}
 
         {step === 'flights' ? (

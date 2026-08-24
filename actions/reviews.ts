@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { haveSharedTrip } from '@/lib/data/public-profile';
+import { haveSharedTravel } from '@/lib/data/public-profile';
 import { profilePath } from '@/lib/profile/paths';
 
 const schema = z.object({
@@ -38,7 +38,7 @@ export async function leaveUserReview(input: {
     return { ok: false, error: 'Non puoi recensire te stesso.' };
   }
 
-  const shared = await haveSharedTrip(reviewerId, revieweeId);
+  const shared = await haveSharedTravel(reviewerId, revieweeId);
   if (!shared) {
     return {
       ok: false,

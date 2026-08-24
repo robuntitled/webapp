@@ -310,13 +310,15 @@ export function HotelCheckoutClient({
         <BookingComplianceNote />
         <Button
           className="rounded-xl"
-          onClick={() =>
-            router.push(
-              confirmation?.practiceId ? `/pratica/${confirmation.practiceId}` : '/pratiche'
-            )
-          }
+          onClick={() => {
+            if (!confirmation?.practiceId) {
+              router.push('/pratiche');
+              return;
+            }
+            router.push(`/pratica/${confirmation.practiceId}?step=hotel`);
+          }}
         >
-          Vedi i dettagli nel viaggio
+          Continua con hotel e attività
         </Button>
       </div>
     );

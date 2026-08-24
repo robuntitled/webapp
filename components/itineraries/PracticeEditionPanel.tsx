@@ -3,6 +3,7 @@
 import { MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
+import { MemberRatingBadge } from '@/components/itineraries/EditionTrust';
 import type { EditionMemberCard } from '@/lib/itineraries/bookings';
 
 export function PracticeChatCta({
@@ -56,7 +57,7 @@ export function PracticeEditionMembers({
         {confirmed.map((m) => (
           <li
             key={m.userId}
-            className="rounded-xl border border-border bg-muted/20 px-3 py-2.5"
+            className="flex items-start justify-between gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5"
           >
             <UserProfileLink
               userId={m.userId}
@@ -66,6 +67,7 @@ export function PracticeEditionMembers({
               image={m.image}
               size="md"
             />
+            <MemberRatingBadge avg={m.ratingAvg ?? null} count={m.ratingCount ?? 0} />
           </li>
         ))}
       </ul>

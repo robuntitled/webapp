@@ -6,7 +6,7 @@ import {
   getPublicOrganizedTrips,
   getPublicProfile,
   getPublicReviews,
-  haveSharedTrip,
+  haveSharedTravel,
 } from '@/lib/data/public-profile';
 import { listUserPosts } from '@/lib/data/posts';
 import { PublicProfileView } from '@/components/profile/PublicProfileView';
@@ -32,7 +32,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
       getPublicJoinedTrips(profile.id),
       getPublicReviews(profile.id),
       viewerId && viewerId !== profile.id
-        ? haveSharedTrip(viewerId, profile.id)
+        ? haveSharedTravel(viewerId, profile.id)
         : Promise.resolve(false),
       viewerId && viewerId !== profile.id
         ? getExistingReview(profile.id, viewerId)

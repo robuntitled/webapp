@@ -32,7 +32,9 @@ export default async function DestinazioniPage({ searchParams }: PageProps) {
         date_to: String(e.date_to).slice(0, 10),
         min_confirmed: e.min_confirmed,
         confirmed_count: e.confirmed_count ?? 0,
+        interested_count: e.interested_count ?? 0,
         status: e.status,
+        edition_type: e.edition_type,
       }))}
     />
   );

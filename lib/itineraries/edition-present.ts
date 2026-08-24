@@ -59,15 +59,27 @@ export function editionScarcity(input: {
 export function editionJoinReason(input: {
   confirmed_count: number;
   min_confirmed: number;
+  interested_count?: number;
   days?: number;
 }): string {
-  const { confirmed_count: confirmed, min_confirmed: min } = input;
+  const { confirmed_count: confirmed, min_confirmed: min, interested_count = 0 } = input;
   const spotsLeft = Math.max(0, min - confirmed);
+  const social =
+    interested_count > confirmed
+      ? `${interested_count} ${interested_count === 1 ? 'persona segue' : 'persone seguono'} questa partenza`
+      : null;
+
   if (confirmed >= min) {
-    return 'Gruppo formato — unisciti e prenota lo stesso volo dei partecipanti.';
+    return [social, 'Gruppo formato — prenota lo stesso volo dei partecipanti.'].filter(Boolean).join(' · ');
   }
   if (confirmed >= 1) {
-    return `${confirmed} ${confirmed === 1 ? 'persona ha' : 'persone hanno'} già il volo — ${spotsLeft} posti per formare il gruppo.`;
+    return [
+      social,
+      `${confirmed}/${min} con volo — ${spotsLeft} ${spotsLeft === 1 ? 'manca' : 'mancano'} per la soglia`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
   }
+  if (social) return `${social} — sii tra i primi a confermare il volo.`;
   return 'Sii tra i primi: prenota il volo e sblocca hotel e chat di gruppo.';
 }

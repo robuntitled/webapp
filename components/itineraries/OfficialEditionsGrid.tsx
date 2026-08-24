@@ -15,6 +15,7 @@ import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
 import {
+  daysUntilDeparture,
   editionJoinReason,
   editionScarcity,
   editionThresholdProgress,
@@ -34,6 +35,92 @@ const SCARCITY_STYLES = {
   closing: 'bg-amber-600',
   formed: 'bg-emerald-600',
 } as const;
+
+function featuredScore(ed: OfficialEditionCard): number {
+  const scarcity = editionScarcity(ed);
+  if (scarcity.variant === 'closing') return 4;
+  if (scarcity.variant === 'formed') return 3;
+  if (scarcity.variant === 'warming') return 2;
+  if ((ed.interested_count ?? 0) > 0) return 1;
+  return 0;
+}
+
+function EditionCard({
+  ed,
+  tpl,
+  cover,
+  days,
+  scarcity,
+  progress,
+  joinReason,
+  highlight = false,
+}: {
+  ed: OfficialEditionCard;
+  tpl: ReturnType<typeof findItineraryTemplate>;
+  cover: string;
+  days: number | null;
+  scarcity: ReturnType<typeof editionScarcity>;
+  progress: number;
+  joinReason: string;
+  highlight?: boolean;
+}) {
+  const daysLeft = daysUntilDeparture(ed.date_from);
+  return (
+    <li
+      className={cn(
+        'relative flex gap-3 overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition hover:shadow-md',
+        highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
+      )}
+    >
+      <span
+        className={cn(
+          'absolute right-3 top-3 z-10 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm',
+          SCARCITY_STYLES[scarcity.variant]
+        )}
+      >
+        {scarcity.label}
+      </span>
+      <div className="relative h-[4.75rem] w-[5.5rem] shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-28">
+        <Image src={cover} alt="" fill className="object-cover" sizes="112px" />
+        {days != null ? (
+          <p className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            {days}g
+          </p>
+        ) : null}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5 pr-14">
+        <p className="font-display text-lg font-semibold leading-tight text-slate-900">
+          {tpl?.destination_name ?? ed.template_id}
+        </p>
+        <p className="text-sm font-medium text-slate-600">
+          {formatItDate(ed.date_from)} – {formatItDate(ed.date_to)}
+          {daysLeft > 0 && daysLeft <= 45 ? (
+            <span className="text-accent"> · tra {daysLeft} giorni</span>
+          ) : null}
+        </p>
+        <p className="text-xs text-slate-500">{joinReason}</p>
+        <div className="mt-1.5 space-y-1">
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-slate-500">{scarcity.sublabel}</p>
+            <Button
+              asChild
+              size="sm"
+              className="rounded-full bg-accent text-white hover:bg-accent/90"
+            >
+              <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
 
 export function OfficialEditionsGrid({
   editions,
@@ -70,7 +157,12 @@ export function OfficialEditionsGrid({
           cover: uniqueCover(slug || ed.template_id, i),
           name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',
-          joinReason: editionJoinReason(ed),
+          joinReason: editionJoinReason({
+            confirmed_count: ed.confirmed_count ?? 0,
+            min_confirmed: ed.min_confirmed,
+            interested_count: ed.interested_count ?? 0,
+          }),
+          featured: featuredScore(ed),
         };
       }),
     [editions]
@@ -106,6 +198,21 @@ export function OfficialEditionsGrid({
     });
   }, [enriched, filters]);
 
+  const featured = useMemo(
+    () =>
+      [...visible]
+        .filter((e) => e.featured > 0)
+        .sort((a, b) => b.featured - a.featured)
+        .slice(0, 2),
+    [visible]
+  );
+
+  const featuredIds = useMemo(() => new Set(featured.map((e) => e.ed.id)), [featured]);
+  const regular = useMemo(
+    () => visible.filter((e) => !featuredIds.has(e.ed.id)),
+    [visible, featuredIds]
+  );
+
   return (
     <div className="space-y-5">
       {showFiltersBar ? (
@@ -132,64 +239,26 @@ export function OfficialEditionsGrid({
           onChange={(continent) => setFilters({ ...filters, continent })}
         />
       ) : null}
+      {featured.length > 0 && filters.query.trim() === '' && filters.continent === 'Tutte' ? (
+        <section className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+            In evidenza
+          </p>
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {featured.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
+              <EditionCard key={item.ed.id} {...item} highlight />
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <ul id="risultati-partenze" className="grid gap-4 sm:grid-cols-2">
         {visible.length === 0 ? (
           <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
             Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.
           </li>
         ) : (
-          visible.map(({ ed, tpl, cover, days, scarcity, progress, joinReason }) => (
-            <li
-              key={ed.id}
-              className={cn(
-                'relative flex gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm',
-                'transition hover:border-primary/30 hover:shadow-md'
-              )}
-            >
-              <span
-                className={cn(
-                  'absolute right-3 top-3 z-10 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm',
-                  SCARCITY_STYLES[scarcity.variant]
-                )}
-              >
-                {scarcity.label}
-              </span>
-              <div className="relative h-[4.75rem] w-[5.5rem] shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-28">
-                <Image src={cover} alt="" fill className="object-cover" sizes="112px" />
-                {days != null ? (
-                  <p className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                    {days}g
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5 pr-14">
-                <p className="font-display text-lg font-semibold leading-tight text-slate-900">
-                  {tpl?.destination_name ?? ed.template_id}
-                </p>
-                <p className="text-sm font-medium text-slate-600">
-                  {formatItDate(ed.date_from)} – {formatItDate(ed.date_to)}
-                </p>
-                <p className="text-xs text-slate-500">{joinReason}</p>
-                <div className="mt-1.5 space-y-1">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-accent transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-slate-500">{scarcity.sublabel}</p>
-                    <Button
-                      asChild
-                      size="sm"
-                      className="rounded-full bg-accent text-white hover:bg-accent/90"
-                    >
-                      <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </li>
+          regular.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
+            <EditionCard key={item.ed.id} {...item} />
           ))
         )}
       </ul>

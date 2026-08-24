@@ -1,9 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { JoinEditionButton } from '@/components/itineraries/JoinEditionButton';
-import { getEditionByToken } from '@/lib/data/editions';
+import { EditionHostCard } from '@/components/itineraries/EditionTrust';
+import { ShareTripLink } from '@/components/itineraries/ShareTripLink';
+import { getEditionByToken, getEditionHost } from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
+import { editionJoinReason } from '@/lib/itineraries/edition-present';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 type PageProps = {
@@ -19,6 +22,8 @@ export default async function InvitoPage({ params }: PageProps) {
     redirect(`/?callbackUrl=/invito/${token}`);
   }
   const template = findItineraryTemplate(edition.template_id);
+  const host = await getEditionHost(edition.id);
+  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://nomadlink.it'}/invito/${token}`;
 
   return (
     <div className="nl-page w-full space-y-4 py-12">
@@ -31,7 +36,19 @@ export default async function InvitoPage({ params }: PageProps) {
       <p className="text-muted-foreground">
         {formatItDate(String(edition.date_from))} – {formatItDate(String(edition.date_to))}
       </p>
+      <p className="text-sm text-muted-foreground">
+        {editionJoinReason({
+          confirmed_count: 0,
+          min_confirmed: edition.min_confirmed,
+        })}
+      </p>
       <p className="text-sm text-muted-foreground">{COMPLIANCE_COPY.separateBooking}</p>
+      {host ? <EditionHostCard host={host} /> : null}
+      <ShareTripLink
+        url={shareUrl}
+        title={`Invito ${template?.destination_name ?? 'viaggio'}`}
+        message="Unisciti al nostro viaggio — stesso piano, voli separati."
+      />
       <JoinEditionButton editionId={edition.id} />
     </div>
   );

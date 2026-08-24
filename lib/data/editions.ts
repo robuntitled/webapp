@@ -12,6 +12,7 @@ import {
 } from '@/lib/data/practices';
 import type { EditionMemberCard } from '@/lib/itineraries/bookings';
 import type { EditionStatus, EditionType } from '@/lib/itineraries/types';
+import { getUserRatingSummaries } from '@/lib/data/user-ratings';
 
 export type { EditionMemberCard };
 
@@ -24,7 +25,19 @@ export type EditionRow = {
   min_confirmed: number;
   status: EditionStatus;
   invite_token: string | null;
+  created_by?: string | null;
   confirmed_count?: number;
+  interested_count?: number;
+};
+
+export type EditionHost = {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  image: string | null;
+  ratingAvg: number | null;
+  ratingCount: number;
 };
 
 function missing(error: { code?: string; message?: string } | null) {
@@ -48,12 +61,23 @@ export async function listOfficialEditions(templateId?: string): Promise<Edition
   const rows = data as EditionRow[];
   const withCounts = await Promise.all(
     rows.map(async (row) => {
-      const { count } = await supabaseAdmin
-        .from('edition_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('edition_id', row.id)
-        .eq('status', 'confirmed');
-      return { ...row, confirmed_count: count ?? 0 };
+      const [{ count: confirmed }, { count: interested }] = await Promise.all([
+        supabaseAdmin
+          .from('edition_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('edition_id', row.id)
+          .eq('status', 'confirmed'),
+        supabaseAdmin
+          .from('edition_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('edition_id', row.id)
+          .eq('status', 'interested'),
+      ]);
+      return {
+        ...row,
+        confirmed_count: confirmed ?? 0,
+        interested_count: interested ?? 0,
+      };
     })
   );
   return withCounts;
@@ -81,16 +105,60 @@ export async function getEdition(id: string): Promise<EditionRow | null> {
   }
   const { data, error } = await supabaseAdmin
     .from('editions')
-    .select('id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token')
+    .select(
+      'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by'
+    )
     .eq('id', id)
     .maybeSingle();
   if (error || !data) return null;
-  const { count } = await supabaseAdmin
-    .from('edition_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('edition_id', id)
-    .eq('status', 'confirmed');
-  return { ...(data as EditionRow), confirmed_count: count ?? 0 };
+  const [{ count: confirmed }, { count: interested }] = await Promise.all([
+    supabaseAdmin
+      .from('edition_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('edition_id', id)
+      .eq('status', 'confirmed'),
+    supabaseAdmin
+      .from('edition_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('edition_id', id)
+      .eq('status', 'interested'),
+  ]);
+  return {
+    ...(data as EditionRow),
+    confirmed_count: confirmed ?? 0,
+    interested_count: interested ?? 0,
+  };
+}
+
+export async function getEditionHost(editionId: string): Promise<EditionHost | null> {
+  if (editionId.startsWith('seed-')) return null;
+  const { data: edition } = await supabaseAdmin
+    .from('editions')
+    .select('created_by, edition_type')
+    .eq('id', editionId)
+    .maybeSingle();
+  const hostId = edition?.created_by as string | null | undefined;
+  if (!hostId || edition?.edition_type === 'official') return null;
+
+  const { data: user } = await supabaseAdmin
+    .from('users')
+    .select('id, first_name, last_name, username, image')
+    .eq('id', hostId)
+    .maybeSingle();
+  if (!user) return null;
+
+  const ratings = await getUserRatingSummaries([hostId]);
+  const summary = ratings.get(hostId);
+
+  return {
+    userId: hostId,
+    firstName: (user.first_name as string | null) ?? null,
+    lastName: (user.last_name as string | null) ?? null,
+    username: (user.username as string | null) ?? null,
+    image: (user.image as string | null) ?? null,
+    ratingAvg: summary?.avg ?? null,
+    ratingCount: summary?.count ?? 0,
+  };
 }
 
 export async function getEditionByToken(token: string): Promise<EditionRow | null> {
@@ -187,7 +255,10 @@ export async function createPrivateEdition(input: {
   };
 }
 
-export async function listEditionMembers(editionId: string): Promise<EditionMemberCard[]> {
+export async function listEditionMembers(
+  editionId: string,
+  options?: { withRatings?: boolean }
+): Promise<EditionMemberCard[]> {
   if (editionId.startsWith('seed-')) return [];
   const { data, error } = await supabaseAdmin
     .from('edition_members')
@@ -202,8 +273,11 @@ export async function listEditionMembers(editionId: string): Promise<EditionMemb
     .select('id, first_name, last_name, username, image')
     .in('id', ids);
   const map = new Map((users ?? []).map((u) => [u.id as string, u]));
+  const ratings = options?.withRatings ? await getUserRatingSummaries(ids) : null;
+
   return data.map((row) => {
     const u = map.get(row.user_id as string);
+    const rating = ratings?.get(row.user_id as string);
     return {
       userId: row.user_id as string,
       firstName: (u?.first_name as string | null) ?? null,
@@ -211,6 +285,8 @@ export async function listEditionMembers(editionId: string): Promise<EditionMemb
       username: (u?.username as string | null) ?? null,
       image: (u?.image as string | null) ?? null,
       status: row.status as EditionMemberCard['status'],
+      ratingAvg: rating?.avg ?? null,
+      ratingCount: rating?.count ?? 0,
     };
   });
 }

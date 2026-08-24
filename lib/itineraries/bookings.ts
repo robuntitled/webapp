@@ -85,6 +85,8 @@ export type EditionMemberCard = {
   username: string | null;
   image: string | null;
   status: 'interested' | 'confirmed' | 'left';
+  ratingAvg?: number | null;
+  ratingCount?: number;
 };
 
 export type EditionPeerFlight = {

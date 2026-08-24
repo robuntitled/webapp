@@ -98,5 +98,7 @@ export type OfficialEditionCard = {
   date_to: string;
   min_confirmed: number;
   confirmed_count: number;
+  interested_count?: number;
   status: string;
+  edition_type?: 'official' | 'private';
 };

@@ -71,7 +71,8 @@ export async function getPublicProfile(
     return null;
   }
 
-  const [{ count: organized }, { count: joined }, reviewsAgg] = await Promise.all([
+  const [{ count: organizedLegacy }, { count: joinedLegacy }, { count: editionsHosted }, { count: editionsJoined }, reviewsAgg] =
+    await Promise.all([
     supabaseAdmin
       .from('trips')
       .select('*', { count: 'exact', head: true })
@@ -81,6 +82,15 @@ export async function getPublicProfile(
       .select('*', { count: 'exact', head: true })
       .eq('user_id', data.id)
       .neq('role', 'owner'),
+    supabaseAdmin
+      .from('editions')
+      .select('*', { count: 'exact', head: true })
+      .eq('created_by', data.id),
+    supabaseAdmin
+      .from('edition_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', data.id)
+      .eq('status', 'confirmed'),
     supabaseAdmin
       .from('user_reviews')
       .select('rating')
@@ -110,8 +120,8 @@ export async function getPublicProfile(
     city: data.address_city,
     phoneVerified: Boolean(data.phone_verified_at),
     emailVerified: Boolean(data.email_verified_at),
-    tripsOrganized: organized ?? 0,
-    tripsJoined: joined ?? 0,
+    tripsOrganized: (organizedLegacy ?? 0) + (editionsHosted ?? 0),
+    tripsJoined: (joinedLegacy ?? 0) + (editionsJoined ?? 0),
     ratingAvg,
     ratingCount,
   };
@@ -237,7 +247,34 @@ export async function getPublicReviews(
   });
 }
 
-/** True se i due utenti hanno condiviso almeno un viaggio. */
+/** True se i due utenti hanno condiviso almeno un viaggio (legacy trips o edizioni). */
+export async function haveSharedTravel(
+  userA: string,
+  userB: string
+): Promise<boolean> {
+  if (!userA || !userB || userA === userB) return false;
+  if (await haveSharedTrip(userA, userB)) return true;
+
+  const { data: aEditions, error: aErr } = await supabaseAdmin
+    .from('edition_members')
+    .select('edition_id')
+    .eq('user_id', userA)
+    .neq('status', 'left');
+
+  if (aErr || !aEditions?.length) return false;
+  const editionIds = aEditions.map((e) => e.edition_id as string);
+
+  const { count, error } = await supabaseAdmin
+    .from('edition_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userB)
+    .in('edition_id', editionIds)
+    .neq('status', 'left');
+
+  return !error && (count ?? 0) > 0;
+}
+
+/** @deprecated Usa haveSharedTravel */
 export async function haveSharedTrip(
   userA: string,
   userB: string
