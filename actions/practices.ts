@@ -27,6 +27,7 @@ export async function startPracticeAction(input: {
   templateId: string;
   mode: TravelMode;
   dateFrom: string;
+  dateTo?: string;
 }): Promise<{ error: string } | never> {
   const userId = await requireUser();
   if (input.mode === 'group') {
@@ -44,6 +45,7 @@ export async function startPracticeAction(input: {
       userId,
       templateId: input.templateId,
       dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
     });
     if ('error' in result) return result;
     revalidatePath('/pratiche');
@@ -55,6 +57,7 @@ export async function startPracticeAction(input: {
     templateId: input.templateId,
     mode: 'solo',
     dateFrom: input.dateFrom,
+    dateTo: input.dateTo,
   });
   if ('error' in result) return result;
   revalidatePath('/pratiche');

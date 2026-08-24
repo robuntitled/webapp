@@ -107,10 +107,13 @@ export async function createPrivateEdition(input: {
   userId: string;
   templateId: string;
   dateFrom: string;
+  dateTo?: string;
 }) {
   const template = findItineraryTemplate(input.templateId);
   if (!template) return { error: 'Template non trovato.' };
-  const dates = datesForDuration(input.dateFrom, template.duration_days);
+  const dates = input.dateTo
+    ? { date_from: input.dateFrom.slice(0, 10), date_to: input.dateTo.slice(0, 10) }
+    : datesForDuration(input.dateFrom, template.duration_days);
 
   const existingDraft = await findDraftPractice({
     userId: input.userId,

@@ -5,14 +5,12 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { addDays, format, nextFriday, startOfDay } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { it as itDayPicker } from 'react-day-picker/locale';
-import { ArrowLeft, ArrowRight, CalendarDays, Loader2, Users, Wallet } from 'lucide-react';
+import { format } from 'date-fns';
+import { ArrowLeft, ArrowRight, Loader2, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { TripWhenPicker, type TripWhenSelection } from '@/components/itineraries/TripWhenPicker';
 
 import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
@@ -29,7 +27,7 @@ import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
 import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
 import { findItineraryBySlug, minBudgetHintForDestination, templatesForDestination } from '@/lib/itineraries/catalog';
-import { datesForDuration, formatItDate } from '@/lib/itineraries/dates';
+import { formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
 import type { OfficialEditionCard, TravelMode } from '@/lib/itineraries/types';
@@ -90,7 +88,7 @@ export function StartTripWizard({
   const [slug, setSlug] = useState(startTemplate?.destination_slug ?? '');
   const [duration, setDuration] = useState(startTemplate?.duration_days ?? 0);
   const [mode, setMode] = useState<TravelMode | null>(null);
-  const [date, setDate] = useState<Date>();
+  const [whenSelection, setWhenSelection] = useState<TripWhenSelection | null>(null);
   const [editionId, setEditionId] = useState<string | null>(null);
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
   const [pending, startTransition] = useTransition();
@@ -103,7 +101,6 @@ export function StartTripWizard({
 
   const template = slug && duration ? findItineraryBySlug(slug, duration) : undefined;
   const idx = flowSteps.indexOf(step);
-  const range = date && template ? datesForDuration(format(date, 'yyyy-MM-dd'), template.duration_days) : null;
   const officialForTemplate = useMemo(
     () => editions.filter((e) => e.template_id === template?.template_id),
     [editions, template?.template_id]
@@ -149,11 +146,6 @@ export function StartTripWizard({
       [...new Set(destinations.flatMap((d) => d.allowedDurations))].sort((a, b) => a - b),
     [destinations]
   );
-
-  const fridayHints = useMemo(() => {
-    const first = nextFriday(startOfDay(new Date()));
-    return [0, 1, 2, 3].map((w) => addDays(first, w * 7));
-  }, []);
 
   const pickDuration = (dest: (typeof destinations)[number], days: number) => {
     if (dest.published === false) {
@@ -236,15 +228,16 @@ export function StartTripWizard({
       confirmWithEdition(editionId);
       return;
     }
-    if (!date) {
-      toast.error('Scegli il giorno di partenza.');
+    if (!whenSelection) {
+      toast.error('Scegli partenza e rientro (o almeno la partenza).');
       return;
     }
     startTransition(async () => {
       const result = await startPracticeAction({
-        templateId: template.template_id,
+        templateId: whenSelection.template.template_id,
         mode: mode === 'friends' ? 'friends' : 'solo',
-        dateFrom: format(date, 'yyyy-MM-dd'),
+        dateFrom: format(whenSelection.dateFrom, 'yyyy-MM-dd'),
+        dateTo: format(whenSelection.dateTo, 'yyyy-MM-dd'),
       });
       if (result?.error) toast.error(result.error);
     });
@@ -371,7 +364,7 @@ export function StartTripWizard({
               {step === 'when' &&
                 (isPubblici
                   ? 'Date già fissate. Entri e vedi i voli.'
-                  : 'Scegli il giorno. Poi partono voli, hotel e attrazioni.')}
+                  : 'Quanti giorni hai? Scegli le date — il piano si adatta.')}
             </p>
           </div>
         ) : null}
@@ -607,84 +600,14 @@ export function StartTripWizard({
                       ))}
                     </div>
                   )
-                ) : (
-                  <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">
-                    <div className="flex flex-wrap gap-2">
-                      {fridayHints.map((d) => {
-                        const active = date && format(date, 'yyyy-MM-dd') === format(d, 'yyyy-MM-dd');
-                        return (
-                          <button
-                            key={d.toISOString()}
-                            type="button"
-                            onClick={() => setDate(d)}
-                            className={cn(
-                              'rounded-full px-3.5 py-1.5 text-sm font-semibold transition',
-                              active
-                                ? 'bg-primary text-white'
-                                : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-primary hover:text-primary'
-                            )}
-                          >
-                            Ven {format(d, 'd MMM', { locale: it })}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="mx-auto w-full max-w-md">
-                      <Calendar
-                        mode="single"
-                        locale={itDayPicker}
-                        selected={date}
-                        onSelect={setDate}
-                        disabled={(d) => d < startOfDay(new Date())}
-                        modifiers={
-                          range ? { tripEnd: [new Date(`${range.date_to}T12:00:00`)] } : undefined
-                        }
-                        modifiersClassNames={{
-                          tripEnd: 'bg-primary/15 text-primary rounded-md',
-                        }}
-                        className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 [--cell-size:2.75rem] sm:[--cell-size:3rem]"
-                        classNames={{
-                          root: 'w-full',
-                          months: 'relative w-full',
-                          month: 'w-full gap-3',
-                          month_caption: 'relative mb-1 flex h-10 items-center justify-center',
-                          caption_label: 'text-base font-semibold capitalize text-slate-900',
-                          nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
-                          button_previous: 'size-9',
-                          button_next: 'size-9',
-                          weekdays: 'flex w-full',
-                          weekday:
-                            'flex-1 select-none text-center text-[0.7rem] font-semibold uppercase tracking-wide text-slate-400',
-                          week: 'mt-1 flex w-full',
-                          day: 'aspect-square flex-1 p-0 text-center',
-                          today: 'rounded-md bg-slate-100 font-semibold text-slate-900',
-                          disabled: 'text-slate-300 opacity-40',
-                          outside: 'text-slate-300 opacity-60',
-                        }}
-                      />
-                    </div>
-                    {date && range ? (
-                      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <CalendarDays className="mt-0.5 h-4 w-4 text-accent" />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {format(date, 'EEEE d MMMM yyyy', { locale: it })} →{' '}
-                            {format(new Date(`${range.date_to}T12:00:00`), 'EEEE d MMMM yyyy', {
-                              locale: it,
-                            })}
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-500">
-                            {template?.duration_days} giorni · partenza e rientro
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-center text-sm text-slate-600">
-                        Tocca un venerdì o un giorno sul calendario.
-                      </p>
-                    )}
-                  </div>
-                )}
+                ) : template ? (
+                  <TripWhenPicker
+                    destinationSlug={template.destination_slug}
+                    baseTemplate={template}
+                    value={whenSelection}
+                    onChange={setWhenSelection}
+                  />
+                ) : null}
               </motion.div>
             ) : null}
           </AnimatePresence>

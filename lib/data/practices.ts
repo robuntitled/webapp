@@ -59,11 +59,14 @@ export async function createOrReuseDraftPractice(input: {
   templateId: string;
   mode: TravelMode;
   dateFrom: string;
+  dateTo?: string;
   editionId?: string | null;
 }): Promise<{ practice: PracticeRow } | { error: string }> {
   const template = findItineraryTemplate(input.templateId);
   if (!template) return { error: 'Template non trovato.' };
-  const dates = datesForDuration(input.dateFrom, template.duration_days);
+  const dates = input.dateTo
+    ? { date_from: input.dateFrom.slice(0, 10), date_to: input.dateTo.slice(0, 10) }
+    : datesForDuration(input.dateFrom, template.duration_days);
 
   const existing = await findDraftPractice({
     userId: input.userId,
@@ -100,11 +103,14 @@ export async function createPractice(input: {
   templateId: string;
   mode: TravelMode;
   dateFrom: string;
+  dateTo?: string;
   editionId?: string | null;
 }): Promise<{ practice: PracticeRow } | { error: string }> {
   const template = findItineraryTemplate(input.templateId);
   if (!template) return { error: 'Template non trovato.' };
-  const dates = datesForDuration(input.dateFrom, template.duration_days);
+  const dates = input.dateTo
+    ? { date_from: input.dateFrom.slice(0, 10), date_to: input.dateTo.slice(0, 10) }
+    : datesForDuration(input.dateFrom, template.duration_days);
 
   const { data, error } = await supabaseAdmin
     .from('practices')
