@@ -54,3 +54,6 @@ yarn-error.log*
 next-env.d.ts
 
 brand-names-*.txt
+
+# supabase cli temp
+supabase/.temp/

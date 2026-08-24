@@ -6,7 +6,6 @@ import { getAiConfig, isAiComposerConfigured } from '@/lib/ai/config';
 import { generateGeminiStructured } from '@/lib/ai/gemini';
 import { generateOpenAiCompatibleStructured } from '@/lib/ai/openai-compatible';
 import { estimateTypicalCallCostUsd } from '@/lib/ai/pricing';
-import { normalizeAiDayPlan } from '@/lib/composer/ai-day-normalize';
 
 export type StructuredGenerationResult<T> = {
   data: T;
@@ -84,7 +83,7 @@ export async function generateStructured<T>(params: {
 
   const normalized = params.normalize
     ? (params.normalize(result.data) ?? result.data)
-    : (normalizeAiDayPlan(result.data) ?? result.data);
+    : result.data;
   let parsed = params.schema.safeParse(normalized);
   if (!parsed.success && normalized !== result.data) {
     parsed = params.schema.safeParse(result.data);

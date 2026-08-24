@@ -1,8 +1,6 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { syncTripFormationMilestones } from '@/lib/commerce/trip-milestones';
-import { tripMinSeats } from '@/lib/trips/formation';
 
 function isMissing(error: { code?: string; message?: string } | null): boolean {
   return (
@@ -10,6 +8,10 @@ function isMissing(error: { code?: string; message?: string } | null): boolean {
     error?.code === '42703' ||
     Boolean(error?.message && /seat_status|flight_confirmed|hotel_confirmed/i.test(error.message))
   );
+}
+
+function tripMinSeats(minParticipants: number): number {
+  return Number.isFinite(minParticipants) && minParticipants > 0 ? minParticipants : 1;
 }
 
 async function participantRow(tripId: string, userId: string) {
@@ -23,6 +25,7 @@ async function participantRow(tripId: string, userId: string) {
   return data;
 }
 
+/** Legacy creator-trip seat confirm (still used when booking passes tripId). */
 export async function confirmParticipantFlight(opts: {
   tripId: string;
   userId: string;
@@ -48,7 +51,6 @@ export async function confirmParticipantFlight(opts: {
     throw new Error(error.message);
   }
 
-  await syncTripFormationMilestones(opts.tripId).catch(() => undefined);
   return { ok: true };
 }
 
@@ -76,7 +78,7 @@ export async function confirmParticipantHotel(opts: {
       .eq('trip_id', opts.tripId)
       .eq('seat_status', 'confirmed');
 
-    const min = tripMinSeats({ minParticipants: Number(trip.data.min_participants) || 0 });
+    const min = tripMinSeats(Number(trip.data.min_participants) || 0);
     if ((count ?? 0) < min) {
       return { ok: false, reason: 'flight_threshold' };
     }
@@ -108,7 +110,7 @@ export async function tripAllowsHotelBooking(tripId: string): Promise<boolean> {
   if (error || !trip) return false;
   if (!trip.template_id) return true;
 
-  const min = tripMinSeats({ minParticipants: Number(trip.min_participants) || 0 });
+  const min = tripMinSeats(Number(trip.min_participants) || 0);
   const { count } = await supabaseAdmin
     .from('trip_participants')
     .select('*', { count: 'exact', head: true })

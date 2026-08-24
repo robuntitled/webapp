@@ -59,7 +59,7 @@ function Stars({ value, size = 'md' }: { value: number; size?: 'sm' | 'md' }) {
 function TripStrip({ trip }: { trip: PublicProfileTrip }) {
   return (
     <Link
-      href={`/viaggi/${trip.id}`}
+      href="/pratiche"
       className="group relative block overflow-hidden rounded-2xl ring-1 ring-black/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <div className="relative aspect-[16/10] w-full">

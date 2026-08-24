@@ -1,9 +1,6 @@
 import type { ReactNode } from 'react';
-import { auth } from '@/auth';
 import { PrenotaNavTabs } from '@/components/travel/PrenotaNavTabs';
-import { PrenotaBookableBanner } from '@/components/travel/PrenotaBookableBanner';
 import { ComplianceNotes } from '@/components/legal/ComplianceNotes';
-import { fetchBookableTripsForUser } from '@/lib/data/bookable-trips';
 
 export async function PrenotaPageShell({
   title,
@@ -19,9 +16,6 @@ export async function PrenotaPageShell({
   badge?: string;
   simple?: boolean;
 }) {
-  const session = await auth();
-  const bookable = session?.user?.id ? await fetchBookableTripsForUser(session.user.id) : [];
-
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background">
       <div className="relative overflow-hidden border-b border-border/70">
@@ -46,16 +40,13 @@ export async function PrenotaPageShell({
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
           {simple ? null : <ComplianceNotes className="mt-3 max-w-2xl" />}
           {simple ? null : (
-          <div className="mt-3">
-            <PrenotaNavTabs />
-          </div>
+            <div className="mt-3">
+              <PrenotaNavTabs />
+            </div>
           )}
         </div>
       </div>
-      <div className="nl-page w-full py-4 sm:py-5">
-        {simple ? null : <PrenotaBookableBanner trips={bookable} />}
-        {children}
-      </div>
+      <div className="nl-page w-full py-4 sm:py-5">{children}</div>
     </div>
   );
 }

@@ -144,7 +144,7 @@ export function TripChatPanel({
     return (
       <Card className="rounded-2xl border-dashed">
         <CardContent className="p-5 text-sm text-muted-foreground">
-          Chat crew disponibile dopo <code className="text-xs">npm run db:chat</code>.
+          Chat crew non ancora disponibile per questa edizione.
         </CardContent>
       </Card>
     );

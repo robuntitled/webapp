@@ -14,13 +14,14 @@ if (!url || !key) {
 }
 
 const checks = [
-  { label: 'trips.composer_version', path: 'trips?select=composer_version,planning_mode,status&limit=0' },
-  { label: 'trip_participants.role', path: 'trip_participants?select=role&limit=0' },
-  { label: 'trip_days', path: 'trip_days?select=*&limit=0' },
-  { label: 'trip_blocks', path: 'trip_blocks?select=*&limit=0' },
-  { label: 'trip_chat (005)', path: 'trip_messages?select=*&limit=0' },
+  { label: 'practices', path: 'practices?select=id&limit=0' },
+  { label: 'editions', path: 'editions?select=id&limit=0' },
+  { label: 'edition_messages', path: 'edition_messages?select=id&limit=0' },
+  { label: 'itinerary_templates', path: 'itinerary_templates?select=template_id&limit=0' },
+  { label: 'favorite_itineraries', path: 'favorite_itineraries?select=id&limit=0' },
   { label: 'planner_profiles', path: 'planner_profiles?select=*&limit=0' },
   { label: 'composer_drafts', path: 'composer_drafts?select=*&limit=0' },
+  { label: 'nomad_points_ledger', path: 'nomad_points_ledger?select=id&limit=0' },
 ];
 
 let failed = false;

@@ -137,7 +137,7 @@ export default async function PointsPage() {
             <Link href="/dashboard/creator">Per i Creator</Link>
           </Button>
           <Button asChild variant="outline" className="rounded-full">
-            <Link href="/dashboard/miei-viaggi">I miei viaggi</Link>
+            <Link href="/pratiche">I miei viaggi</Link>
           </Button>
         </div>
       </div>

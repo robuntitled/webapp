@@ -6,7 +6,6 @@ import {
   DAY_PLAN_JSON_RETRY_SUFFIX,
   DAY_PLAN_JSON_SUFFIX,
 } from '@/lib/ai/prompts';
-import { aiDayPlanGeminiSchema } from '@/lib/composer/ai-day-schema';
 import {
   GeminiQuotaError,
   getQuotaCooldownRemainingMsAsync,
@@ -85,8 +84,8 @@ async function callGeminiOnce<T>(params: {
           temperature: 0.25,
           maxOutputTokens: params.maxOutputTokens,
           responseMimeType: 'application/json',
-          ...(params.useResponseSchema !== false
-            ? { responseSchema: params.responseSchema ?? aiDayPlanGeminiSchema }
+          ...(params.useResponseSchema !== false && params.responseSchema
+            ? { responseSchema: params.responseSchema }
             : {}),
         },
       }),

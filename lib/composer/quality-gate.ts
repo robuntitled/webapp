@@ -1,7 +1,4 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { buildTripDescriptionFromDays, estimateTripBudget } from '@/lib/composer/days';
-import type { ComposerDraft } from '@/types/composer';
-import type { PublishComposerInput } from '@/lib/composer/schemas';
 
 export type QualityGateIssue = {
   code: 'description' | 'dates' | 'budget' | 'min_participants';
@@ -24,13 +21,13 @@ function daysSpan(start: string, end: string): number | null {
   }
 }
 
+/** Gate usato dai perk boost su Trip legacy (ancora in `trips` se presenti). */
 export function evaluateQualityGate(input: {
   title: string;
   destination: string;
   startDate: string;
   endDate: string;
   description?: string;
-  days?: ComposerDraft['days'];
   budgetOrientativo?: number;
   minParticipants?: number;
   maxParticipants?: number;
@@ -45,13 +42,7 @@ export function evaluateQualityGate(input: {
     });
   }
 
-  const generated =
-    input.description?.trim() ||
-    (input.days?.length
-      ? buildTripDescriptionFromDays(input.days, input.destination)
-      : '');
-  const dayTitles = (input.days ?? []).map((d) => d.title.trim()).join(' ');
-  const prose = `${generated} ${dayTitles}`.trim();
+  const prose = (input.description ?? '').trim();
   if (prose.length < MIN_DESC) {
     issues.push({
       code: 'description',
@@ -67,8 +58,7 @@ export function evaluateQualityGate(input: {
     });
   }
 
-  const estimate = input.days?.length ? estimateTripBudget(input.days) : 0;
-  const budget = Number(input.budgetOrientativo || 0) || (estimate > 1 ? estimate : 0);
+  const budget = Number(input.budgetOrientativo || 0);
   if (budget < MIN_BUDGET || budget > MAX_BUDGET) {
     issues.push({
       code: 'budget',
@@ -93,20 +83,6 @@ export function evaluateQualityGate(input: {
   }
 
   return issues;
-}
-
-export function evaluatePublishQuality(input: PublishComposerInput): QualityGateIssue[] {
-  return evaluateQualityGate({
-    title: input.title,
-    destination: input.destination,
-    startDate: input.startDate,
-    endDate: input.endDate,
-    days: input.days,
-    budgetOrientativo: input.budgetOrientativo,
-    minParticipants: input.minParticipants,
-    maxParticipants: input.maxParticipants,
-    planningMode: input.planningMode,
-  });
 }
 
 export function canPassQualityGate(input: Parameters<typeof evaluateQualityGate>[0]): boolean {

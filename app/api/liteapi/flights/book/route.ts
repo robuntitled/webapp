@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         tripId: parsed.data.tripId,
         userId: session.user.id,
         bookingRef: result.bookingRef,
-      }).catch((err) => console.error('[flights/book] confirm seat', err));
+      }).catch((err: unknown) => console.error('[flights/book] confirm seat', err));
     }
     if (parsed.data.practiceId && parsed.data.snapshot) {
       const recap = {

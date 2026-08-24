@@ -4,8 +4,6 @@ import { afterOnboardingPath, ONBOARDING_STEPS, postLoginPath } from '@/lib/onbo
 import { plannerFromKeywordIds } from '@/lib/onboarding/planner-from-keywords';
 import { completeOnboardingSchema } from '@/lib/validations/onboarding';
 import { coordsFromDestinationLabel } from '@/lib/trips/destination-coords';
-import { defaultTripServices, servicesFromItinerary } from '@/lib/cart/trip-services';
-import { cartTotal, emptyTripCart } from '@/lib/cart/trip-cart';
 
 describe('onboarding keywords', () => {
   it('covers trip_type, setting and experience', () => {
@@ -70,36 +68,5 @@ describe('destination coords', () => {
       lat: 38.7223,
       lng: -9.1393,
     });
-  });
-});
-
-describe('trip cart services', () => {
-  it('builds default services when itinerary is empty', () => {
-    const items = defaultTripServices('t1', 'Bali');
-    expect(items.map((i) => i.kind)).toEqual(['flight', 'hotel', 'activity']);
-    expect(servicesFromItinerary('t1', [])).toEqual([]);
-  });
-
-  it('sums priced cart items', () => {
-    const cart = emptyTripCart('t1');
-    cart.items = [
-      {
-        id: 'a',
-        kind: 'flight',
-        title: 'Volo',
-        price: 120,
-        checkoutHref: '#',
-        provider: 'LiteAPI',
-      },
-      {
-        id: 'b',
-        kind: 'hotel',
-        title: 'Hotel',
-        price: 80,
-        checkoutHref: '#',
-        provider: 'LiteAPI',
-      },
-    ];
-    expect(cartTotal(cart)).toBe(200);
   });
 });

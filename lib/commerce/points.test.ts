@@ -41,7 +41,7 @@ describe('quality gate', () => {
       destination: 'Kenya',
       startDate: '2026-09-01',
       endDate: '2026-09-01',
-      days: [{ dayIndex: 1, date: '2026-09-01', title: 'x', blocks: [] }],
+      description: 'x',
       minParticipants: 1,
       maxParticipants: 8,
       planningMode: 'group',

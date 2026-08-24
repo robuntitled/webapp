@@ -63,14 +63,14 @@ async function main() {
   }
 
   const { data: favorites, error: favError } = await supabase
-    .from('favorite_trips')
-    .select('trip_id')
+    .from('favorite_itineraries')
+    .select('template_id')
     .limit(1);
   if (!favError && favorites?.length) {
-    console.error('❌ CRITICO: anon può leggere favorite_trips');
+    console.error('❌ CRITICO: anon può leggere favorite_itineraries');
     failed = true;
   } else {
-    console.log('✅ favorite_trips: accesso negato ad anon');
+    console.log('✅ favorite_itineraries: accesso negato ad anon');
   }
 
   if (failed) {

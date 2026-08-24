@@ -1,5 +1,4 @@
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
-import { tripDestinationCountryLabel } from '@/lib/composer/destination-context';
 import type { DestinationMeta } from '@/types/composer';
 
 export type FlightLegKind = 'outbound' | 'hop' | 'domestic' | 'return';
@@ -30,6 +29,13 @@ const WIDE_COUNTRIES = new Set([
   'thailandia',
   'filippine',
 ]);
+
+function tripDestinationCountryLabel(destination: string, meta?: Partial<DestinationMeta>): string {
+  const fromMeta = meta?.country?.trim();
+  if (fromMeta) return fromMeta;
+  const first = destination.split(',')[0]?.trim() || destination.trim();
+  return first;
+}
 
 function countryOf(dest: DestinationMeta): string {
   return tripDestinationCountryLabel(dest.label, dest).trim() || dest.label;

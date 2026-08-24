@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         matchesGroup: true,
         bookingRef: result.bookingRef,
-      }).catch((err) => console.error('[hotels/book] confirm hotel', err));
+      }).catch((err: unknown) => console.error('[hotels/book] confirm hotel', err));
     }
     if (parsed.data.practiceId && parsed.data.snapshot) {
       const recap = {

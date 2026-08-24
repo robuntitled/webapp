@@ -51,7 +51,7 @@ export async function exportUserData() {
     draftsResult,
   ] = await Promise.all([
     supabaseAdmin.from('users').select('*').eq('id', userId).single(),
-    supabaseAdmin.from('favorite_trips').select('trip_id').eq('user_id', userId),
+    supabaseAdmin.from('favorite_itineraries').select('template_id').eq('user_id', userId),
     supabaseAdmin.from('trips').select('*').eq('creator_id', userId),
     supabaseAdmin
       .from('trip_participants')
@@ -100,7 +100,7 @@ export async function exportUserData() {
     personalData: safeUser,
     plannerProfile: plannerResult.data ?? null,
     composerDraft: draftsResult.data ?? null,
-    favoriteTrips: favoritesResult.data ?? [],
+    favoriteItineraries: favoritesResult.data ?? [],
     createdTrips: createdResult.data ?? [],
     createdTripDays: tripDays,
     createdTripBlocks: tripBlocks,
@@ -133,7 +133,7 @@ export async function deleteUserAccount(confirmation: string) {
   // 1) Dati legati all’utente (bozze, profilo planner)
   await supabaseAdmin.from('composer_drafts').delete().eq('user_id', userId);
   await supabaseAdmin.from('planner_profiles').delete().eq('user_id', userId);
-  await supabaseAdmin.from('favorite_trips').delete().eq('user_id', userId);
+  await supabaseAdmin.from('favorite_itineraries').delete().eq('user_id', userId);
   await supabaseAdmin.from('user_reviews').delete().eq('reviewer_id', userId);
   await supabaseAdmin.from('user_reviews').delete().eq('reviewee_id', userId);
   await supabaseAdmin.from('trip_invites').delete().eq('from_user_id', userId);
@@ -142,7 +142,6 @@ export async function deleteUserAccount(confirmation: string) {
 
   // 2) Viaggi creati: dipendenti + trip (cascade days/blocks residue)
   if (tripIds.length > 0) {
-    await supabaseAdmin.from('favorite_trips').delete().in('trip_id', tripIds);
     await supabaseAdmin.from('trip_participants').delete().in('trip_id', tripIds);
     // trip_blocks → trip_days → trips (CASCADE su days/blocks)
     await supabaseAdmin.from('trips').delete().eq('creator_id', userId);
