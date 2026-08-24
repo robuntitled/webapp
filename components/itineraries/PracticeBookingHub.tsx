@@ -111,7 +111,7 @@ export function PracticeBookingHub({
           <BookingRecap practice={practice} section="flight" />
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-white/80">
+            <p className="text-sm text-muted-foreground">
               Offerte da tutta Italia sulle date del viaggio. Scegli andata, poi ritorno.
             </p>
             <FlightSearchPanel
