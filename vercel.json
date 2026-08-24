@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/sync-flight-bookings",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
