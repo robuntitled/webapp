@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { buildPinsFromItineraryTemplate } from '@/lib/itineraries/geo';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
@@ -91,49 +91,107 @@ export function ItineraryDaysWithMap({
 }) {
   const firstDay = template.days[0]?.day_number ?? 1;
   const [activeDay, setActiveDay] = useState(firstDay);
-  const safeDay = template.days.some((d) => d.day_number === activeDay)
-    ? activeDay
-    : firstDay;
-  const day = template.days.find((d) => d.day_number === safeDay) ?? template.days[0];
+  const dayRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const listRef = useRef<HTMLDivElement>(null);
+  const scrollingFromClick = useRef(false);
+
+  const scrollToDay = useCallback((dayNumber: number) => {
+    const el = dayRefs.current.get(dayNumber);
+    if (!el) return;
+    scrollingFromClick.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveDay(dayNumber);
+    window.setTimeout(() => {
+      scrollingFromClick.current = false;
+    }, 600);
+  }, []);
+
+  useEffect(() => {
+    const root = listRef.current;
+    if (!root) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (scrollingFromClick.current) return;
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0];
+        if (!top?.target) return;
+        const day = Number((top.target as HTMLElement).dataset.day);
+        if (day) setActiveDay(day);
+      },
+      { root, rootMargin: '-8% 0px -55% 0px', threshold: [0.15, 0.4, 0.7] }
+    );
+
+    for (const el of dayRefs.current.values()) {
+      observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [template.days.length]);
 
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-display text-lg font-semibold text-slate-900">Giorno per giorno</p>
+        <p className="text-xs text-slate-500">Scorri la timeline · tocca un giorno per saltare</p>
+      </div>
+
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
         {template.days.map((d) => (
           <button
             key={d.day_number}
             type="button"
-            onClick={() => setActiveDay(d.day_number)}
+            onClick={() => scrollToDay(d.day_number)}
             className={cn(
-              'shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition',
-              safeDay === d.day_number
+              'shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition',
+              activeDay === d.day_number
                 ? 'bg-primary text-white shadow-sm'
-                : 'border border-slate-200 bg-white text-slate-800 hover:border-primary hover:text-primary'
+                : 'border border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary'
             )}
           >
-            Giorno {d.day_number}
+            {d.day_number}
           </button>
         ))}
       </div>
 
-      {day ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-            Giorno {day.day_number}
-          </p>
-          <p className="mt-1 font-display text-xl font-semibold text-slate-900">{day.title}</p>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">{day.description}</p>
-          <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-            <MapPin className="h-3.5 w-3.5" />
-            {day.area_segment}
-          </p>
-        </div>
-      ) : null}
+      <div
+        ref={listRef}
+        className="max-h-[min(52vh,420px)] space-y-3 overflow-y-auto pr-1 [scrollbar-width:thin]"
+      >
+        {template.days.map((day) => (
+          <article
+            key={day.day_number}
+            ref={(el) => {
+              if (el) dayRefs.current.set(day.day_number, el);
+              else dayRefs.current.delete(day.day_number);
+            }}
+            data-day={day.day_number}
+            onMouseEnter={() => setActiveDay(day.day_number)}
+            className={cn(
+              'scroll-mt-3 rounded-2xl border bg-white px-4 py-4 shadow-sm transition sm:px-5',
+              activeDay === day.day_number
+                ? 'border-primary/40 ring-2 ring-primary/15'
+                : 'border-slate-200 hover:border-slate-300'
+            )}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+              Giorno {day.day_number}
+            </p>
+            <p className="mt-1 font-display text-xl font-semibold text-slate-900">{day.title}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{day.description}</p>
+            <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <MapPin className="h-3.5 w-3.5" />
+              {day.area_segment}
+            </p>
+          </article>
+        ))}
+      </div>
 
       <ItineraryWorldMap
         template={template}
-        highlightedDay={safeDay}
-        onDaySelect={setActiveDay}
+        highlightedDay={activeDay}
+        onDaySelect={scrollToDay}
       />
     </div>
   );

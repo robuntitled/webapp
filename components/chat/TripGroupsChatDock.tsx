@@ -133,6 +133,19 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
   }, [open, tab, listQuery]);
 
   useEffect(() => {
+    const onOpen = (e: Event) => {
+      const tripId = (e as CustomEvent<{ tripId?: string }>).detail?.tripId;
+      if (!tripId) return;
+      setOpen(true);
+      setTab('chats');
+      setActiveTripId(tripId);
+      void fetch(`/api/chat/groups/${tripId}/read`, { method: 'POST' }).then(() => loadGroups());
+    };
+    window.addEventListener('nomadlink:open-trip-chat', onOpen);
+    return () => window.removeEventListener('nomadlink:open-trip-chat', onOpen);
+  }, [loadGroups]);
+
+  useEffect(() => {
     if (!open) {
       setActiveTripId(null);
       setListQuery('');

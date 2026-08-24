@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { isTripMember, markTripChatRead } from '@/lib/data/trip-chat';
+import { canAccessTripChat, markTripChatRead } from '@/lib/data/trip-chat';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function POST(_request: Request, context: Ctx) {
   }
 
   const { tripId } = await context.params;
-  const allowed = await isTripMember(tripId, session.user.id);
+  const allowed = await canAccessTripChat(tripId, session.user.id);
   if (!allowed) {
     return NextResponse.json({ error: 'Accesso non consentito' }, { status: 403 });
   }

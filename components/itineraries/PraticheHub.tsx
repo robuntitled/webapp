@@ -6,9 +6,8 @@ import Link from 'next/link';
 import {
   Heart,
   History,
-  Palmtree,
-  User,
-  Users,
+  Plane,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
@@ -21,7 +20,15 @@ import { cn } from '@/lib/utils';
 
 const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
 
-type SectionId = 'liked' | 'solo' | 'friends' | 'group' | 'past';
+type SectionId = 'liked' | 'interested' | 'booked' | 'past';
+
+function isPast(dateTo: string) {
+  return new Date(`${dateTo}T23:59:59`) < new Date();
+}
+
+function isBooked(p: PracticeRow) {
+  return Boolean(p.flight_confirmed_at || p.flight_booking);
+}
 
 const SECTIONS: {
   id: SectionId;
@@ -31,39 +38,29 @@ const SECTIONS: {
 }[] = [
   {
     id: 'liked',
-    label: 'Viaggi che ti interessano',
-    description: 'Salvati con il like sul piano',
+    label: 'Itinerari salvati',
+    description: 'Piani che ti interessano',
     icon: Heart,
   },
   {
-    id: 'solo',
-    label: 'Viaggi solo',
-    description: 'Date tue, da solo',
-    icon: User,
+    id: 'interested',
+    label: 'In valutazione',
+    description: 'Partenze a cui ti sei aggiunto, volo non ancora prenotato',
+    icon: Sparkles,
   },
   {
-    id: 'friends',
-    label: 'Viaggi con gli amici',
-    description: 'Stesso piano, invito privato',
-    icon: Users,
-  },
-  {
-    id: 'group',
-    label: 'Viaggi a cui partecipi',
-    description: 'Partenze condivise',
-    icon: Palmtree,
+    id: 'booked',
+    label: 'Prenotati',
+    description: 'Volo confermato — hotel e attività nel recap',
+    icon: Plane,
   },
   {
     id: 'past',
     label: 'Viaggi passati',
-    description: 'Già conclusi',
+    description: 'Partenze già concluse',
     icon: History,
   },
 ];
-
-function isPast(dateTo: string) {
-  return new Date(`${dateTo}T23:59:59`) < new Date();
-}
 
 export function PraticheHub({
   practices,
@@ -72,14 +69,11 @@ export function PraticheHub({
   practices: PracticeRow[];
   likedTemplateIds: string[];
 }) {
-  const upcoming = useMemo(
-    () => practices.filter((p) => p.status !== 'cancelled' && !isPast(p.date_to)),
+  const activePractices = useMemo(
+    () => practices.filter((p) => p.status !== 'cancelled'),
     [practices]
   );
-  const past = useMemo(
-    () => practices.filter((p) => p.status !== 'cancelled' && isPast(p.date_to)),
-    [practices]
-  );
+
   const liked = useMemo(
     () =>
       likedTemplateIds
@@ -88,30 +82,25 @@ export function PraticheHub({
     [likedTemplateIds]
   );
 
-  const buckets = useMemo(
-    () => ({
-      liked,
-      solo: upcoming.filter((p) => p.mode === 'solo'),
-      friends: upcoming.filter((p) => p.mode === 'friends'),
-      group: upcoming.filter((p) => p.mode === 'group'),
-      past,
-    }),
-    [liked, upcoming, past]
-  );
+  const buckets = useMemo(() => {
+    const interested = activePractices.filter((p) => !isBooked(p) && !isPast(p.date_to));
+    const booked = activePractices.filter((p) => isBooked(p) && !isPast(p.date_to));
+    const past = activePractices.filter((p) => isBooked(p) && isPast(p.date_to));
+    return { liked, interested, booked, past };
+  }, [activePractices, liked]);
 
   const [active, setActive] = useState<SectionId>(() => {
-    if (liked.length) return 'liked';
-    if (upcoming.some((p) => p.mode === 'group')) return 'group';
-    if (upcoming.some((p) => p.mode === 'friends')) return 'friends';
-    if (upcoming.some((p) => p.mode === 'solo')) return 'solo';
+    if (buckets.interested.length) return 'interested';
+    if (buckets.booked.length) return 'booked';
+    if (buckets.liked.length) return 'liked';
+    if (buckets.past.length) return 'past';
     return 'liked';
   });
 
   const counts = {
     liked: buckets.liked.length,
-    solo: buckets.solo.length,
-    friends: buckets.friends.length,
-    group: buckets.group.length,
+    interested: buckets.interested.length,
+    booked: buckets.booked.length,
     past: buckets.past.length,
   };
 
@@ -122,9 +111,13 @@ export function PraticheHub({
           Account
         </p>
         <h1 className="mt-2 font-display text-4xl font-semibold text-foreground">I miei viaggi</h1>
+        <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+          Salva i piani che ti piacciono, prenota il volo quando sei pronto. Solo dopo la conferma
+          del volo il viaggio compare tra i prenotati.
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           const isActive = active === section.id;
@@ -209,9 +202,14 @@ function PracticeGrid({
 }) {
   if (items.length === 0) {
     const copy = {
-      solo: ['Nessun viaggio da solo', 'Parti da un itinerario e scegli “Da solo”.'],
-      friends: ['Nessun viaggio con amici', 'Stesso piano, date tue, inviti chi vuoi.'],
-      group: ['Non partecipi ancora a una partenza', 'Apri Partenze e unisciti a un gruppo.'],
+      interested: [
+        'Nessun viaggio in valutazione',
+        'Unisciti a una partenza o crea un viaggio: finché non prenoti il volo resta qui.',
+      ],
+      booked: [
+        'Nessun viaggio prenotato',
+        'Dopo la conferma del volo trovi qui hotel, attività e recap completo.',
+      ],
       past: ['Nessun viaggio passato', 'I viaggi conclusi compariranno qui.'],
       liked: ['', ''],
     }[empty];
@@ -222,10 +220,17 @@ function PracticeGrid({
     <ul className="grid gap-5 sm:grid-cols-2">
       {items.map((p, i) => {
         const tpl = findItineraryTemplate(p.template_id);
+        const booked = isBooked(p);
         return (
           <li key={p.id}>
             <Link
-              href={`/pratica/${p.id}`}
+              href={
+                booked
+                  ? `/pratica/${p.id}`
+                  : p.edition_id
+                    ? `/partenze/${p.edition_id}`
+                    : `/pratica/${p.id}`
+              }
               className="block overflow-hidden rounded-[28px] border border-border bg-white shadow-sm transition hover:border-accent/40"
             >
               <div className="relative h-52">
@@ -238,7 +243,7 @@ function PracticeGrid({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
                 <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                  {MODE_LABEL[p.mode]}
+                  {booked ? 'Prenotato' : MODE_LABEL[p.mode]}
                 </p>
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="font-display text-2xl font-semibold text-white">
@@ -248,9 +253,15 @@ function PracticeGrid({
                   <p className="mt-1 text-sm text-white/80">
                     {formatItDate(p.date_from)} – {formatItDate(p.date_to)}
                   </p>
-                  <div className="mt-2">
-                    <BookingRecap practice={p} compact />
-                  </div>
+                  {booked ? (
+                    <div className="mt-2">
+                      <BookingRecap practice={p} compact />
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs font-medium text-white/70">
+                      Volo da confermare per completare l&apos;iscrizione
+                    </p>
+                  )}
                 </div>
               </div>
             </Link>

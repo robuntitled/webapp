@@ -2,9 +2,15 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { auth } from '@/auth';
+import { BookingRecap } from '@/components/itineraries/BookingRecap';
+import {
+  PracticeChatCta,
+  PracticeEditionMembers,
+} from '@/components/itineraries/PracticeEditionPanel';
 import { PracticeBookingHub } from '@/components/itineraries/PracticeBookingHub';
 import { getPractice } from '@/lib/data/practices';
-import { getEdition } from '@/lib/data/editions';
+import { getEdition, listEditionMembers } from '@/lib/data/editions';
+import { isEditionChatUnlocked } from '@/lib/data/trip-chat';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -24,6 +30,11 @@ export default async function PraticaPage({ params }: PageProps) {
   const template = findItineraryTemplate(practice.template_id);
   if (!template) notFound();
   const edition = practice.edition_id ? await getEdition(practice.edition_id) : null;
+  const members = practice.edition_id ? await listEditionMembers(practice.edition_id) : [];
+  const chatUnlocked = practice.edition_id
+    ? await isEditionChatUnlocked(practice.edition_id)
+    : false;
+  const flightBooked = Boolean(practice.flight_confirmed_at || practice.flight_booking);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
@@ -37,7 +48,7 @@ export default async function PraticaPage({ params }: PageProps) {
         </Link>
         <header className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-            {MODE_LABEL[practice.mode]} · {practice.status}
+            {MODE_LABEL[practice.mode]} · {flightBooked ? 'Prenotato' : 'In valutazione'}
           </p>
           <h1 className="font-display text-3xl font-semibold text-foreground md:text-4xl">
             {template.destination_name} · {template.duration_days} giorni
@@ -57,6 +68,23 @@ export default async function PraticaPage({ params }: PageProps) {
               /invito/{edition.invite_token}
             </Link>
           </p>
+        ) : null}
+        {practice.edition_id ? (
+          <>
+            <PracticeEditionMembers members={members} />
+            <PracticeChatCta
+              editionId={practice.edition_id}
+              chatUnlocked={chatUnlocked}
+            />
+          </>
+        ) : null}
+        {flightBooked ? (
+          <div className="space-y-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+              Le tue prenotazioni
+            </p>
+            <BookingRecap practice={practice} />
+          </div>
         ) : null}
         <PracticeBookingHub practice={practice} template={template} />
       </div>

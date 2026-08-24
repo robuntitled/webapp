@@ -170,7 +170,15 @@ export async function confirmPracticeFlight(practiceId: string, userId: string) 
       .eq('user_id', userId);
     await maybeFormEdition(practice.edition_id);
     const { notifyEditionFlightConfirmed } = await import('@/lib/notifications/edition');
+    const { countConfirmedEditionMembers, postFirstFlightChatUnlock, postJoinRequestChatPing } =
+      await import('@/lib/data/trip-chat');
     void notifyEditionFlightConfirmed({ editionId: practice.edition_id, userId });
+    const confirmed = await countConfirmedEditionMembers(practice.edition_id);
+    if (confirmed === 1) {
+      void postFirstFlightChatUnlock(practice.edition_id, userId);
+    } else if (confirmed > 1) {
+      void postJoinRequestChatPing(practice.edition_id, userId);
+    }
   }
   return { practice };
 }
@@ -255,10 +263,18 @@ export async function savePracticeFlightBooking(input: {
       .eq('user_id', input.userId);
     await maybeFormEdition(practice.edition_id);
     const { notifyEditionFlightConfirmed } = await import('@/lib/notifications/edition');
+    const { countConfirmedEditionMembers, postFirstFlightChatUnlock, postJoinRequestChatPing } =
+      await import('@/lib/data/trip-chat');
     void notifyEditionFlightConfirmed({
       editionId: practice.edition_id,
       userId: input.userId,
     });
+    const confirmed = await countConfirmedEditionMembers(practice.edition_id);
+    if (confirmed === 1) {
+      void postFirstFlightChatUnlock(practice.edition_id, input.userId);
+    } else if (confirmed > 1) {
+      void postJoinRequestChatPing(practice.edition_id, input.userId);
+    }
   }
   return { practice };
 }

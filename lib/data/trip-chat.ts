@@ -46,6 +46,27 @@ export async function isTripMember(editionId: string, userId: string): Promise<b
   return Boolean(data);
 }
 
+export async function countConfirmedEditionMembers(editionId: string): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from('edition_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('edition_id', editionId)
+    .eq('status', 'confirmed');
+  return count ?? 0;
+}
+
+/** Chat si apre quando almeno un partecipante ha confermato il volo. */
+export async function isEditionChatUnlocked(editionId: string): Promise<boolean> {
+  return (await countConfirmedEditionMembers(editionId)) >= 1;
+}
+
+/** Membro attivo + chat sbloccata (primo volo pagato nel gruppo). */
+export async function canAccessTripChat(editionId: string, userId: string): Promise<boolean> {
+  const member = await isTripMember(editionId, userId);
+  if (!member) return false;
+  return isEditionChatUnlocked(editionId);
+}
+
 export async function getTripMessages(
   editionId: string,
   since?: string
@@ -104,6 +125,29 @@ export async function postJoinRequestChatPing(
   }
 }
 
+/** Primo volo confermato nel gruppo: sblocca la chat per chi si unisce dopo. */
+export async function postFirstFlightChatUnlock(
+  editionId: string,
+  confirmerId: string
+): Promise<void> {
+  const confirmed = await countConfirmedEditionMembers(editionId);
+  if (confirmed !== 1) return;
+
+  await supabaseAdmin
+    .from('edition_chat_hides')
+    .delete()
+    .eq('edition_id', editionId);
+
+  const { error } = await supabaseAdmin.from('edition_messages').insert({
+    edition_id: editionId,
+    user_id: confirmerId,
+    body: 'Ho confermato il volo ✈️ Scrivimi se vuoi unirti al gruppo!',
+  });
+  if (error && error.code !== '42P01') {
+    console.error('[postFirstFlightUnlock]', error.message);
+  }
+}
+
 export async function postTripMessage(
   editionId: string,
   userId: string,
@@ -112,8 +156,8 @@ export async function postTripMessage(
   const trimmed = body.trim();
   if (!trimmed) throw new Error('Messaggio vuoto');
 
-  const member = await isTripMember(editionId, userId);
-  if (!member) throw new Error('Non fai parte di questo viaggio');
+  const allowed = await canAccessTripChat(editionId, userId);
+  if (!allowed) throw new Error('La chat si apre dopo il primo volo confermato nel gruppo');
 
   await supabaseAdmin
     .from('edition_chat_hides')
@@ -148,8 +192,8 @@ export async function markTripChatRead(editionId: string, userId: string): Promi
 }
 
 export async function hideTripChat(editionId: string, userId: string): Promise<void> {
-  const member = await isTripMember(editionId, userId);
-  if (!member) throw new Error('Non fai parte di questo viaggio');
+  const allowed = await canAccessTripChat(editionId, userId);
+  if (!allowed) throw new Error('La chat si apre dopo il primo volo confermato nel gruppo');
 
   const { error } = await supabaseAdmin.from('edition_chat_hides').upsert(
     {
@@ -246,6 +290,8 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
 
   for (const ed of editions) {
     if (hidden.has(ed.id)) continue;
+    const confirmedCount = await countConfirmedEditionMembers(ed.id);
+    if (confirmedCount < 1) continue;
     const participantCount = ed.memberIds.length;
     const since = readAt.get(ed.id) ?? '1970-01-01T00:00:00.000Z';
     const tpl = findItineraryTemplate(ed.template_id);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { getTripMessages, isTripMember, postTripMessage } from '@/lib/data/trip-chat';
+import { getTripMessages, canAccessTripChat, postTripMessage } from '@/lib/data/trip-chat';
 import { moderatePostContent } from '@/lib/moderation/moderate-post';
 import { z } from 'zod';
 
@@ -17,9 +17,12 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const { tripId } = await context.params;
-  const allowed = await isTripMember(tripId, session.user.id);
+  const allowed = await canAccessTripChat(tripId, session.user.id);
   if (!allowed) {
-    return NextResponse.json({ error: 'Accesso chat non consentito' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'La chat si apre dopo il primo volo confermato nel gruppo' },
+      { status: 403 }
+    );
   }
 
   const since = new URL(request.url).searchParams.get('since') ?? undefined;
@@ -63,7 +66,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ message });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Invio fallito';
-    const status = message.includes('Non fai parte') ? 403 : 500;
+    const status = message.includes('chat si apre') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
