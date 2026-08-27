@@ -33,12 +33,15 @@ export default function PublicPointsPage() {
           </li>
         ))}
       </ul>
-      <div className="mt-10 flex gap-3">
-        <Link href="/destinazioni" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-[#0b1220]">
-          Itinerari
+      <div className="mt-10 flex flex-wrap gap-3">
+        <Link href="/destinazioni?mode=solo" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-[#0b1220]">
+          Solo
         </Link>
-        <Link href="/destinazioni?vista=partenze" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
-          Partenze
+        <Link href="/destinazioni?mode=friends" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
+          Tra amici
+        </Link>
+        <Link href="/destinazioni?mode=group" className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold">
+          In gruppo
         </Link>
       </div>
     </main>

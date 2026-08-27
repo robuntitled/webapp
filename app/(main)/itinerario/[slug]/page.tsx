@@ -5,15 +5,21 @@ import { listOfficialEditions } from '@/lib/data/editions';
 import { loadFavoriteItineraryIds } from '@/lib/data/favorites';
 import { findItineraryBySlug, wizardDestinationCards } from '@/lib/itineraries/catalog';
 import { parseDurationParam } from '@/lib/itineraries/params';
+import type { TravelMode } from '@/lib/itineraries/types';
+
+function parseMode(raw?: string): TravelMode | null {
+  if (raw === 'solo' || raw === 'friends' || raw === 'group') return raw;
+  return null;
+}
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ d?: string }>;
+  searchParams: Promise<{ d?: string; mode?: string }>;
 };
 
 export default async function ItinerarioPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const { d } = await searchParams;
+  const { d, mode } = await searchParams;
   const duration = parseDurationParam(d);
   if (!findItineraryBySlug(slug, duration)) notFound();
   const session = await auth();
@@ -30,6 +36,7 @@ export default async function ItinerarioPage({ params, searchParams }: PageProps
       favoriteTemplateIds={[...favoriteIds]}
       initialSlug={slug}
       initialDuration={duration}
+      initialMode={parseMode(mode)}
       editions={editions.map((e) => ({
         id: e.id,
         template_id: e.template_id,

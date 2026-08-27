@@ -13,7 +13,7 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
+const MODE_LABEL = { solo: 'Solo', friends: 'Tra amici', group: 'In gruppo' } as const;
 
 export default async function PraticaPage({ params }: PageProps) {
   const session = await auth();

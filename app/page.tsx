@@ -267,12 +267,16 @@ export default function LoginPage() {
           <LandingDestinations />
           <p className="mt-4 text-sm text-white/90">
             {COMPLIANCE_COPY.pointsNoMoney}{' '}
-            <Link href="/destinazioni" className="underline underline-offset-4">
-              Itinerari
+            <Link href="/destinazioni?mode=solo" className="underline underline-offset-4">
+              Solo
             </Link>
             {' · '}
-            <Link href="/destinazioni?vista=partenze" className="underline underline-offset-4">
-              Partenze
+            <Link href="/destinazioni?mode=friends" className="underline underline-offset-4">
+              Tra amici
+            </Link>
+            {' · '}
+            <Link href="/destinazioni?mode=group" className="underline underline-offset-4">
+              In gruppo
             </Link>
           </p>
         </div>

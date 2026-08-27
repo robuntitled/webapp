@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { addDays, format, nextFriday, startOfDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { it as itDayPicker } from 'react-day-picker/locale';
-import { ArrowLeft, ArrowRight, CalendarDays, Loader2, Users, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Loader2, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
@@ -42,9 +42,20 @@ const WHO_COVERS = {
   group: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=900&q=80',
 } as const;
 
-type Step = 'dest' | 'plan' | 'who' | 'when';
+type Step = 'dest' | 'plan' | 'when';
 
-const STEPS: Step[] = ['dest', 'plan', 'who', 'when'];
+const STEPS: Step[] = ['dest', 'plan', 'when'];
+
+const MODE_OPTIONS: {
+  id: TravelMode;
+  title: string;
+  body: string;
+  cover: (typeof WHO_COVERS)[keyof typeof WHO_COVERS];
+}[] = [
+  { id: 'solo', title: 'Solo', body: 'Date tue. Poi i voli.', cover: WHO_COVERS.solo },
+  { id: 'friends', title: 'Tra amici', body: 'Stesse date. Invito.', cover: WHO_COVERS.friends },
+  { id: 'group', title: 'In gruppo', body: 'Partenze aperte. Subito i voli.', cover: WHO_COVERS.group },
+];
 
 const phaseMotion = {
   initial: { opacity: 0, y: 12 },
@@ -58,7 +69,7 @@ export function StartTripWizard({
   editions,
   initialSlug,
   initialDuration,
-  initialHomeView = 'itinerari',
+  initialMode = null,
   favoriteTemplateIds = [],
 }: {
   destinations: {
@@ -73,20 +84,19 @@ export function StartTripWizard({
   editions: OfficialEditionCard[];
   initialSlug?: string;
   initialDuration?: number;
-  /** Toggle home: catalogo nazioni vs partenze già aperte. */
-  initialHomeView?: 'itinerari' | 'partenze';
+  /** Solo | friends | group — scelta in home. */
+  initialMode?: TravelMode | null;
   favoriteTemplateIds?: string[];
 }) {
   const startTemplate = initialSlug
     ? findItineraryBySlug(initialSlug, initialDuration)
     : undefined;
   const [step, setStep] = useState<Step>(startTemplate ? 'plan' : 'dest');
-  const [homeView, setHomeView] = useState<'itinerari' | 'partenze'>(
-    startTemplate ? 'itinerari' : initialHomeView
-  );
   const [slug, setSlug] = useState(startTemplate?.destination_slug ?? '');
   const [duration, setDuration] = useState(startTemplate?.duration_days ?? 0);
-  const [mode, setMode] = useState<TravelMode | null>(null);
+  const [mode, setMode] = useState<TravelMode | null>(
+    initialMode ?? (startTemplate ? 'solo' : null)
+  );
   const [date, setDate] = useState<Date>();
   const [editionId, setEditionId] = useState<string | null>(null);
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
@@ -94,7 +104,8 @@ export function StartTripWizard({
   const { data: session } = useSession();
   const router = useRouter();
 
-  const showPartenze = step === 'dest' && homeView === 'partenze';
+  const showPartenze = step === 'dest' && mode === 'group';
+  const showItinerari = step === 'dest' && (mode === 'solo' || mode === 'friends');
 
   const template = slug && duration ? findItineraryBySlug(slug, duration) : undefined;
   const idx = STEPS.indexOf(step);
@@ -149,6 +160,10 @@ export function StartTripWizard({
   }, []);
 
   const pickDuration = (dest: (typeof destinations)[number], days: number) => {
+    if (!mode || mode === 'group') {
+      toast.error('Scegli Solo o Tra amici per un itinerario su misura.');
+      return;
+    }
     if (dest.published === false) {
       toast.error('Presto. Ora parti da Thailandia.');
       return;
@@ -163,12 +178,15 @@ export function StartTripWizard({
     if (prev) setStep(prev);
   };
 
+  const selectMode = (next: TravelMode) => {
+    setMode(next);
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    params.set('mode', next);
+    router.replace(`/destinazioni?${params.toString()}`, { scroll: false });
+  };
+
   const goNext = () => {
     if (step === 'plan') {
-      setStep('who');
-      return;
-    }
-    if (step === 'who') {
       if (!mode) {
         toast.error('Scegli come vuoi partire.');
         return;
@@ -249,8 +267,10 @@ export function StartTripWizard({
             </h1>
             <p className="mx-auto max-w-2xl text-[19px] leading-snug text-white/90 drop-shadow md:text-[22px]">
               {showPartenze
-                ? 'Istanze già avviate. Entri e vedi i voli. Ognuno prenota da solo.'
-                : 'Scegli il tuo itinerario e condividilo con chi vuoi.'}
+                ? 'Entri nel gruppo e prenoti il volo. Ognuno al proprio ritmo.'
+                : mode === 'friends'
+                  ? 'Stesso piano, invito agli amici, voli separati.'
+                  : 'Scegli il tuo itinerario e parti quando vuoi.'}
             </p>
           </div>
           {/* Search sul confine foto / bianco, stessa larghezza di navbar e schede */}
@@ -278,54 +298,40 @@ export function StartTripWizard({
         )}
       >
         {step === 'dest' ? (
-          <div className="mb-5 flex w-full flex-col items-center gap-4">
-            <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setHomeView('itinerari');
-                  router.replace('/destinazioni', { scroll: false });
-                }}
-                className={cn(
-                  'rounded-full px-5 py-2 text-sm font-semibold transition',
-                  homeView === 'itinerari'
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-700 hover:text-primary'
-                )}
-              >
-                Itinerari
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setHomeView('partenze');
-                  router.replace('/destinazioni?vista=partenze', { scroll: false });
-                }}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold transition',
-                  homeView === 'partenze'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-slate-700 hover:text-primary'
-                )}
-              >
-                <Users className="h-3.5 w-3.5" />
-                Partenze
-              </button>
+          <div className="mb-5 flex w-full flex-col items-center gap-5">
+            <div className="grid w-full max-w-4xl gap-3 sm:grid-cols-3">
+              {MODE_OPTIONS.map((opt) => (
+                <PhotoChoiceCard
+                  key={opt.id}
+                  cover={opt.cover}
+                  active={mode === opt.id}
+                  onClick={() => selectMode(opt.id)}
+                  title={opt.title}
+                  body={opt.body}
+                  className="min-h-[180px] w-full"
+                />
+              ))}
             </div>
-            <div className="w-full">
-              <CatalogFiltersBar
-                value={filters}
-                onChange={setFilters}
-                showSearch={false}
-                showContinents={false}
-                durationOptions={durationOptions}
-                publishedLabels={
-                  showPartenze
-                    ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
-                    : { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' }
-                }
-              />
-            </div>
+            {mode ? (
+              <div className="w-full">
+                <CatalogFiltersBar
+                  value={filters}
+                  onChange={setFilters}
+                  showSearch={false}
+                  showContinents={false}
+                  durationOptions={durationOptions}
+                  publishedLabels={
+                    showPartenze
+                      ? { all: 'Tutte', yes: 'Disponibile', no: 'Ultimi posti' }
+                      : { all: 'Tutte', yes: 'Prenotabili', no: 'In arrivo' }
+                  }
+                />
+              </div>
+            ) : (
+              <p className="text-center text-sm text-slate-600">
+                Scegli come vuoi viaggiare — poi itinerario o partenza.
+              </p>
+            )}
           </div>
         ) : null}
 
@@ -348,16 +354,17 @@ export function StartTripWizard({
             </div>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               {step === 'plan' && 'Questo è il piano.'}
-              {step === 'who' && 'Come vuoi partire?'}
               {step === 'when' && (mode === 'group' ? 'Scegli la partenza' : 'Quando parti?')}
             </h1>
             <p className="mx-auto max-w-xl text-base text-slate-600">
-              {step === 'plan' && 'Riferimento, non pacchetto. Avanti per date e compagni.'}
-              {step === 'who' && 'Stesso piano. Cambiano solo date e con chi vai.'}
+              {step === 'plan' &&
+                (mode === 'friends'
+                  ? 'Stesso piano per tutti. Avanti per le date e l’invito.'
+                  : 'Riferimento, non pacchetto. Avanti per la data di partenza.')}
               {step === 'when' &&
                 (mode === 'group'
-                  ? 'Date già fissate. Entri e vedi i voli.'
-                  : 'Scegli il giorno. Poi partono voli, hotel e attrazioni.')}
+                  ? 'Date già fissate. Entri e vedi i voli del gruppo.'
+                  : 'Scegli il giorno. Poi voli, hotel e attività sul piano.')}
             </p>
           </div>
         ) : null}
@@ -375,7 +382,7 @@ export function StartTripWizard({
               </motion.div>
             ) : null}
 
-            {step === 'dest' && !showPartenze ? (
+            {step === 'dest' && showItinerari ? (
               <motion.div key="dest" {...phaseMotion} className="space-y-5">
                 <p className="text-center text-sm font-medium text-slate-600">
                   {filteredDestinations.length}{' '}
@@ -514,35 +521,6 @@ export function StartTripWizard({
                   {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.notAPackage}
                 </p>
               </div>
-              </motion.div>
-            ) : null}
-
-            {step === 'who' ? (
-              <motion.div key="who" {...phaseMotion} className="grid gap-3 sm:grid-cols-3">
-                <PhotoChoiceCard
-                  cover={WHO_COVERS.solo}
-                  active={mode === 'solo'}
-                  onClick={() => setMode('solo')}
-                  kicker="Viaggio Privato"
-                  title="Da solo"
-                  body="Date tue. Poi i voli."
-                />
-                <PhotoChoiceCard
-                  cover={WHO_COVERS.friends}
-                  active={mode === 'friends'}
-                  onClick={() => setMode('friends')}
-                  kicker="Viaggio Privato"
-                  title="Con amici"
-                  body="Stesse date. Invito."
-                />
-                <PhotoChoiceCard
-                  cover={WHO_COVERS.group}
-                  active={mode === 'group'}
-                  onClick={() => setMode('group')}
-                  kicker="Viaggio Condiviso"
-                  title="In gruppo"
-                  body="Date già aperte. Subito i voli."
-                />
               </motion.div>
             ) : null}
 

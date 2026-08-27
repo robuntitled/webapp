@@ -19,7 +19,7 @@ import { itineraryPath } from '@/lib/itineraries/params';
 import type { PracticeRow } from '@/lib/itineraries/types';
 import { cn } from '@/lib/utils';
 
-const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
+const MODE_LABEL = { solo: 'Solo', friends: 'Tra amici', group: 'In gruppo' } as const;
 
 type SectionId = 'liked' | 'solo' | 'friends' | 'group' | 'past';
 
@@ -209,9 +209,9 @@ function PracticeGrid({
 }) {
   if (items.length === 0) {
     const copy = {
-      solo: ['Nessun viaggio da solo', 'Parti da un itinerario e scegli “Da solo”.'],
-      friends: ['Nessun viaggio con amici', 'Stesso piano, date tue, inviti chi vuoi.'],
-      group: ['Non partecipi ancora a una partenza', 'Apri Partenze e unisciti a un gruppo.'],
+      solo: ['Nessun viaggio in solitaria', 'Parti da un itinerario e scegli Solo.'],
+      friends: ['Nessun viaggio tra amici', 'Stesso piano, date tue, inviti chi vuoi.'],
+      group: ['Non partecipi ancora a una partenza', 'Scegli In gruppo e unisciti a una partenza.'],
       past: ['Nessun viaggio passato', 'I viaggi conclusi compariranno qui.'],
       liked: ['', ''],
     }[empty];

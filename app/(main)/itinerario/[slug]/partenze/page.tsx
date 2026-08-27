@@ -46,7 +46,7 @@ export default async function PartenzePage({ params, searchParams }: PageProps) 
       </header>
       {editions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nessuna edizione ufficiale aperta su questa durata. Scegli da solo o con amici, oppure
+          Nessuna edizione ufficiale aperta su questa durata. Scegli Solo o Tra amici, oppure
           un’altra durata.
         </p>
       ) : (

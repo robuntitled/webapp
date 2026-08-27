@@ -158,12 +158,12 @@ export function ItineraryView({
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <ModeCard
               href={`/itinerario/${slug}/partire?d=${template.duration_days}&mode=solo`}
-              title="Da solo"
+              title="Solo"
               body="Scegli le tue date. Pratica privata."
             />
             <ModeCard
               href={`/itinerario/${slug}/partire?d=${template.duration_days}&mode=friends`}
-              title="Con amici"
+              title="Tra amici"
               body="Stesse date, edizione privata + invito."
             />
             <ModeCard
