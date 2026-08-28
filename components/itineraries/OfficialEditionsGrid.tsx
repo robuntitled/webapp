@@ -24,6 +24,11 @@ import {
 } from '@/lib/itineraries/edition-present';
 import { cn } from '@/lib/utils';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
+import {
+  editionDestinationName,
+  editionDestinationSlug,
+  filterEditionsByDestinationSlug,
+} from '@/lib/itineraries/public-destinations';
 
 function durationFromId(templateId: string, fallback?: number | null) {
   if (fallback != null) return fallback;
@@ -190,22 +195,42 @@ export function OfficialEditionsGrid({
   filters: controlledFilters,
   onFiltersChange,
   showFiltersBar = true,
+  destinationSlug,
+  destinationName,
+  onBack,
 }: {
   editions: OfficialEditionCard[];
   filters?: CatalogFilterState;
   onFiltersChange?: (next: CatalogFilterState) => void;
   showFiltersBar?: boolean;
+  /** Filtra le partenze per meta (livello istanze). */
+  destinationSlug?: string;
+  destinationName?: string;
+  onBack?: () => void;
 }) {
   const [internalFilters, setInternalFilters] =
     useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
   const filters = controlledFilters ?? internalFilters;
   const setFilters = onFiltersChange ?? setInternalFilters;
 
+  const scopedEditions = useMemo(
+    () =>
+      destinationSlug ? filterEditionsByDestinationSlug(editions, destinationSlug) : editions,
+    [editions, destinationSlug]
+  );
+
+  const resolvedDestinationName = useMemo(() => {
+    if (destinationName) return destinationName;
+    if (!destinationSlug) return null;
+    const first = scopedEditions[0];
+    return first ? editionDestinationName(first) : destinationSlug;
+  }, [destinationName, destinationSlug, scopedEditions]);
+
   const enriched = useMemo(
     () =>
-      editions.map((ed, i) => {
+      scopedEditions.map((ed, i) => {
         const tpl = findItineraryTemplate(ed.template_id);
-        const slug = tpl?.destination_slug ?? ed.template_id.split('-')[0] ?? '';
+        const slug = editionDestinationSlug(ed);
         const dest = findCatalogDestination(slug) ?? findCatalogDestination(ed.template_id);
         const days = durationFromId(ed.template_id, tpl?.duration_days);
         const scarcity = editionScarcity(ed);
@@ -223,7 +248,7 @@ export function OfficialEditionsGrid({
           featured: featuredScore(ed),
         };
       }),
-    [editions]
+    [scopedEditions]
   );
 
   const durationOptions = useMemo(
@@ -282,16 +307,33 @@ export function OfficialEditionsGrid({
           durationOptions={durationOptions}
         />
       ) : null}
-      <p className="text-center text-sm font-medium text-slate-600">
+      {destinationSlug && onBack ? (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition hover:text-primary"
+          >
+            ← Tutte le destinazioni
+          </button>
+          {resolvedDestinationName ? (
+            <h2 className="font-display text-[clamp(1.35rem,1.8vw,1.75rem)] font-semibold tracking-tight text-slate-900">
+              {resolvedDestinationName}
+            </h2>
+          ) : null}
+        </div>
+      ) : null}
+      <p className="text-center text-sm font-medium text-slate-600 sm:text-left">
         {visible.length}{' '}
-        {visible.length === 1 ? 'partenza' : 'partite'}
+        {visible.length === 1 ? 'partenza' : 'partenze'}
+        {resolvedDestinationName ? ` · ${resolvedDestinationName}` : ''}
         {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
         {filters.priceMax != null
           ? ` · ≤ ${filters.priceMax.toLocaleString('it-IT')} €`
           : ''}
-        {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
+        {!destinationSlug && filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
       </p>
-      {!showFiltersBar ? (
+      {!showFiltersBar && !destinationSlug ? (
         <ContinentFilterRow
           value={filters.continent}
           onChange={(continent) => setFilters({ ...filters, continent })}

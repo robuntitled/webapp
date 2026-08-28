@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -23,10 +23,12 @@ import {
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
 import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
+import { PublicDestinationsGrid } from '@/components/itineraries/PublicDestinationsGrid';
 import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
 import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
 import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
 import { findItineraryBySlug, minBudgetHintForDestination, templatesForDestination } from '@/lib/itineraries/catalog';
+import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { formatItDate } from '@/lib/itineraries/dates';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
@@ -57,6 +59,7 @@ export function StartTripWizard({
   initialSlug,
   initialDuration,
   initialHomeView = 'itinerari',
+  initialPublicDest,
   favoriteTemplateIds = [],
 }: {
   destinations: {
@@ -73,6 +76,8 @@ export function StartTripWizard({
   initialDuration?: number;
   /** Toggle home: viaggi privati vs partenze pubbliche. */
   initialHomeView?: 'itinerari' | 'partenze';
+  /** Meta selezionata nel flusso Pubblici (?dest=slug). */
+  initialPublicDest?: string;
   favoriteTemplateIds?: string[];
 }) {
   const startTemplate = initialSlug
@@ -91,11 +96,42 @@ export function StartTripWizard({
   const [whenSelection, setWhenSelection] = useState<TripWhenSelection | null>(null);
   const [editionId, setEditionId] = useState<string | null>(null);
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
+  const [publicDestSlug, setPublicDestSlug] = useState(initialPublicDest ?? '');
   const [pending, startTransition] = useTransition();
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const dest = searchParams.get('dest') ?? '';
+    setPublicDestSlug(dest);
+  }, [searchParams]);
 
   const showPubblici = step === 'dest' && homeView === 'partenze';
+  const showPublicDestinations = showPubblici && !publicDestSlug;
+  const showPublicEditions = showPubblici && Boolean(publicDestSlug);
+
+  const publicDestinationName = useMemo(() => {
+    if (!publicDestSlug) return null;
+    return (
+      findCatalogDestination(publicDestSlug)?.name ??
+      findItineraryBySlug(publicDestSlug)?.destination_name ??
+      publicDestSlug
+    );
+  }, [publicDestSlug]);
+
+  const selectPublicDestination = (slug: string) => {
+    setPublicDestSlug(slug);
+    router.replace(
+      `/destinazioni?vista=partenze&dest=${encodeURIComponent(slug)}`,
+      { scroll: false }
+    );
+  };
+
+  const clearPublicDestination = () => {
+    setPublicDestSlug('');
+    router.replace('/destinazioni?vista=partenze', { scroll: false });
+  };
   const isPubblici = tripKind === 'pubblici';
   const flowSteps = isPubblici ? PUBLIC_STEPS : PRIVATE_STEPS;
 
@@ -278,7 +314,9 @@ export function StartTripWizard({
                 onChange={setFilters}
                 placeholder={
                   showPubblici
-                    ? 'Cerca destinazione o date'
+                    ? showPublicEditions
+                      ? 'Cerca date o durata'
+                      : 'Cerca destinazione'
                     : 'Cerca nazione, continente o vibe'
                 }
                 resultsId={showPubblici ? 'risultati-partenze' : 'risultati-itinerari'}
@@ -302,6 +340,7 @@ export function StartTripWizard({
                 type="button"
                 onClick={() => {
                   setHomeView('itinerari');
+                  setPublicDestSlug('');
                   router.replace('/destinazioni', { scroll: false });
                 }}
                 className={cn(
@@ -317,6 +356,7 @@ export function StartTripWizard({
                 type="button"
                 onClick={() => {
                   setHomeView('partenze');
+                  setPublicDestSlug('');
                   router.replace('/destinazioni?vista=partenze', { scroll: false });
                 }}
                 className={cn(
@@ -371,13 +411,26 @@ export function StartTripWizard({
 
         <div className="flex-1">
           <AnimatePresence mode="wait">
-            {step === 'dest' && showPubblici ? (
-              <motion.div key="pubblici" {...phaseMotion}>
+            {showPublicDestinations ? (
+              <motion.div key="pubblici-dest" {...phaseMotion}>
+                <PublicDestinationsGrid
+                  editions={editions}
+                  filters={filters}
+                  onSelectDestination={selectPublicDestination}
+                />
+              </motion.div>
+            ) : null}
+
+            {showPublicEditions ? (
+              <motion.div key={`pubblici-editions-${publicDestSlug}`} {...phaseMotion}>
                 <OfficialEditionsGrid
                   editions={editions}
                   filters={filters}
                   onFiltersChange={setFilters}
                   showFiltersBar={false}
+                  destinationSlug={publicDestSlug}
+                  destinationName={publicDestinationName ?? undefined}
+                  onBack={clearPublicDestination}
                 />
               </motion.div>
             ) : null}
