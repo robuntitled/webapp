@@ -9,9 +9,9 @@ const MODES: {
   label: string;
   Icon: typeof User;
 }[] = [
+  { id: 'group', label: 'Gruppo aperto', Icon: Globe },
   { id: 'solo', label: 'Solo', Icon: User },
   { id: 'friends', label: 'Con amici', Icon: Users },
-  { id: 'group', label: 'Gruppo aperto', Icon: Globe },
 ];
 
 export function HomeTravelModeSelector({

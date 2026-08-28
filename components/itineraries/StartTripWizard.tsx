@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -12,16 +11,15 @@ import { joinEditionAction, startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { TripWhenPicker, type TripWhenSelection } from '@/components/itineraries/TripWhenPicker';
 
-import { coverForDestination, uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
-import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
+import { uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import {
   CatalogHeroSearchBar,
-  ContinentFilterRow,
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
+import { DestinationExplorerPanel } from '@/components/itineraries/DestinationExplorerPanel';
 import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
 import { HomeTravelModeSelector } from '@/components/itineraries/HomeTravelModeSelector';
 import { TrendingDestinationsCarousel } from '@/components/itineraries/TrendingDestinationsCarousel';
@@ -31,7 +29,7 @@ import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap
 import { findItineraryBySlug, minBudgetHintForDestination, templatesForDestination } from '@/lib/itineraries/catalog';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { formatItDate } from '@/lib/itineraries/dates';
-import { PublicDestinationsGrid } from '@/components/itineraries/PublicDestinationsGrid';
+import { aggregatePublicDestinations } from '@/lib/itineraries/public-destinations';
 import {
   homeTravelModeToPath,
   homeTravelModeToTravelMode,
@@ -213,21 +211,21 @@ export function StartTripWizard({
     });
   }, [destinations, filters]);
 
-  const destSections = useMemo(() => {
-    const order = [...CATALOG_CONTINENTS];
-    return order
-      .map((c) => ({
-        continent: c,
-        items: filteredDestinations.filter((d) => d.continent === c),
-      }))
-      .filter((s) => s.items.length > 0);
-  }, [filteredDestinations]);
-
   const destCoverBySlug = useMemo(() => {
-    const slugs = destSections.flatMap((s) => s.items.map((d) => d.slug));
+    const slugs = filteredDestinations.map((d) => d.slug);
     const urls = uniqueCoversForSlugs(slugs);
     return Object.fromEntries(slugs.map((s, i) => [s, urls[i]]));
-  }, [destSections]);
+  }, [filteredDestinations]);
+
+  const explorerDestinations = useMemo(() => {
+    if (showGruppoAperto) {
+      const slugsWithEditions = new Set(
+        aggregatePublicDestinations(editions).map((d) => d.slug)
+      );
+      return filteredDestinations.filter((d) => slugsWithEditions.has(d.slug));
+    }
+    return filteredDestinations;
+  }, [filteredDestinations, showGruppoAperto, editions]);
 
   const durationOptions = useMemo(
     () =>
@@ -399,7 +397,7 @@ export function StartTripWizard({
               value={homeTravelMode}
               onChange={applyHomeTravelMode}
             />
-            {!showPublicEditions ? (
+            {showGruppoAperto && !showPublicEditions ? (
               <TrendingDestinationsCarousel
                 items={trendingCarouselItems}
                 onDestinationClick={openCarouselDestination}
@@ -447,10 +445,16 @@ export function StartTripWizard({
           <AnimatePresence mode="wait">
             {showPublicDestinations ? (
               <motion.div key="pubblici-dest" {...phaseMotion}>
-                <PublicDestinationsGrid
-                  editions={editions}
-                  filters={filters}
-                  onSelectDestination={selectPublicDestination}
+                <DestinationExplorerPanel
+                  destinations={explorerDestinations}
+                  continent={filters.continent}
+                  onContinentChange={(continent) =>
+                    setFilters({ ...filters, continent })
+                  }
+                  onSelectDestination={(dest) => selectPublicDestination(dest.slug)}
+                  coverBySlug={destCoverBySlug}
+                  ctaLabel="Esplora partenze"
+                  resultsId="risultati-partenze"
                 />
               </motion.div>
             ) : null}
@@ -470,117 +474,18 @@ export function StartTripWizard({
             ) : null}
 
             {step === 'dest' && !showGruppoAperto ? (
-              <motion.div key="dest" {...phaseMotion} className="space-y-5">
-                <p className="text-center text-sm font-medium text-slate-600">
-                  {filteredDestinations.length}{' '}
-                  {filteredDestinations.length === 1 ? 'meta' : 'mete'}
-                  {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
-                  {filters.priceMax != null
-                    ? ` · ≤ ${filters.priceMax.toLocaleString('it-IT')} €`
-                    : ''}
-                  {filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
-                </p>
-                <ContinentFilterRow
-                  value={filters.continent}
-                  onChange={(continent) => setFilters({ ...filters, continent })}
+              <motion.div key="dest" {...phaseMotion}>
+                <DestinationExplorerPanel
+                  destinations={explorerDestinations}
+                  continent={filters.continent}
+                  onContinentChange={(continent) =>
+                    setFilters({ ...filters, continent })
+                  }
+                  onSelectDestination={openDestination}
+                  coverBySlug={destCoverBySlug}
+                  ctaLabel="Vedi piano"
+                  resultsId="risultati-itinerari"
                 />
-                {destSections.length === 0 ? (
-                  <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 shadow-sm">
-                    Nessuna destinazione con questo filtro.
-                  </p>
-                ) : (
-                  <div id="risultati-itinerari" className="space-y-6">
-                    {destSections.map((section) => (
-                      <section key={section.continent} className="space-y-3">
-                        {filters.continent === 'Tutte' ? (
-                          <h2 className="font-display text-lg font-semibold uppercase tracking-[0.14em] text-slate-900">
-                            {section.continent}
-                            <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-slate-400">
-                              {section.items.length}
-                            </span>
-                          </h2>
-                        ) : null}
-                        <div className="nl-card-grid">
-                          {section.items.map((dest) => {
-                            const durations = [...dest.allowedDurations].sort((a, b) => a - b);
-                            const durationLabel =
-                              durations.length === 0
-                                ? null
-                                : durations.length === 1
-                                  ? `${durations[0]} giorni`
-                                  : `${durations[0]}–${durations[durations.length - 1]} giorni`;
-                            const budget = minBudgetHintForDestination(dest.slug);
-                            return (
-                              <article
-                                key={dest.slug}
-                                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary/30 hover:shadow-md"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => openDestination(dest)}
-                                  className="block w-full text-left"
-                                >
-                                  <div className="relative h-40 sm:h-44">
-                                    <Image
-                                      src={
-                                        destCoverBySlug[dest.slug] ??
-                                        coverForDestination(dest.slug)
-                                      }
-                                      alt={dest.name}
-                                      fill
-                                      className="object-cover"
-                                      sizes="(max-width: 640px) 100vw, 50vw"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                                    <p className="absolute left-4 top-4 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                                      {dest.continent ?? section.continent}
-                                    </p>
-                                    {dest.published === false ? (
-                                      <p className="absolute right-4 top-4 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                                        Presto
-                                      </p>
-                                    ) : dest.published ? (
-                                      <p className="absolute right-4 top-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                                        Aperta
-                                      </p>
-                                    ) : null}
-                                    <div className="absolute bottom-3 left-4 right-4">
-                                      <h3 className="font-display text-xl font-semibold text-white drop-shadow sm:text-2xl">
-                                        {dest.emoji} {dest.name}
-                                      </h3>
-                                      <p className="mt-0.5 text-sm text-white/95 drop-shadow">
-                                        {dest.vibe}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3 bg-white px-4 py-3">
-                                    <div className="min-w-0">
-                                      {durationLabel ? (
-                                        <p className="text-sm font-semibold text-slate-900">
-                                          {durationLabel}
-                                        </p>
-                                      ) : null}
-                                      <p className="truncate text-xs text-slate-500">
-                                        {budget != null
-                                          ? `Budget orientativo da ~${budget.toLocaleString('it-IT')} €`
-                                          : dest.published === false
-                                            ? 'In arrivo'
-                                            : 'Apri e scegli il ritmo'}
-                                      </p>
-                                    </div>
-                                    <span className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-white">
-                                      Vedi piano
-                                    </span>
-                                  </div>
-                                </button>
-                              </article>
-                            );
-                          })}
-                        </div>
-                      </section>
-                    ))}
-                  </div>
-                )}
               </motion.div>
             ) : null}
 
