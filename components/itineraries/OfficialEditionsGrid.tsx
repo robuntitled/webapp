@@ -83,35 +83,38 @@ function EditionCard({
   return (
     <li
       className={cn(
-        'relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md sm:flex-row sm:gap-4 sm:p-4',
+        'grid w-full overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md',
+        'grid-cols-1 sm:grid-cols-[minmax(160px,38%)_minmax(0,1fr)] sm:items-stretch sm:gap-5 sm:p-5',
         highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
       )}
     >
-      <span
-        className={cn(
-          'absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm',
-          SCARCITY_STYLES[scarcity.variant]
-        )}
-      >
-        {badgeLabel}
-      </span>
-
-      <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden sm:aspect-auto sm:h-28 sm:w-32 sm:rounded-xl">
+      <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-auto sm:min-h-[180px] sm:rounded-xl">
         <Image
           src={cover}
           alt={destination}
           fill
           className="object-cover sm:rounded-xl"
-          sizes="(max-width: 640px) 100vw, 128px"
+          sizes="(max-width: 640px) 100vw, 180px"
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 pt-3 sm:gap-3.5 sm:p-0 sm:pr-28">
-        <div className="space-y-1 pr-16 sm:pr-0">
-          <h3 className="font-display text-xl font-bold leading-tight text-slate-900">
+      <div className="flex min-w-0 flex-col gap-3 p-4 sm:gap-3.5 sm:p-0">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="min-w-0 flex-1 font-display text-xl font-bold leading-snug text-slate-900">
             {destination}
           </h3>
-          <p className="text-sm font-medium text-slate-700">
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold leading-tight tracking-wide shadow-sm',
+              SCARCITY_STYLES[scarcity.variant]
+            )}
+          >
+            {badgeLabel}
+          </span>
+        </div>
+
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium leading-snug text-slate-700 sm:whitespace-nowrap">
             {formatEditionDateRange(ed.date_from, ed.date_to)}
           </p>
           {tripDuration ? (
@@ -120,11 +123,11 @@ function EditionCard({
         </div>
 
         {participants ? (
-          <p className="text-sm text-slate-600">{participants}</p>
+          <p className="text-sm leading-snug text-slate-600 sm:whitespace-nowrap">{participants}</p>
         ) : null}
 
         <section
-          className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+          className="w-full space-y-2 border-t border-slate-100 pt-3"
           aria-labelledby={`group-status-${ed.id}`}
         >
           <p
@@ -133,7 +136,7 @@ function EditionCard({
           >
             Stato del gruppo
           </p>
-          <p className="text-sm font-medium text-slate-800">
+          <p className="text-sm font-medium leading-snug text-slate-800 sm:whitespace-nowrap">
             <span aria-hidden="true">✈ </span>
             {flightsStatus}
           </p>
@@ -143,7 +146,7 @@ function EditionCard({
             aria-valuemin={0}
             aria-valuemax={Math.max(minConfirmed, 1)}
             aria-label={flightsStatus}
-            className="h-2 overflow-hidden rounded-full bg-slate-200"
+            className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200"
           >
             <div
               className={cn(
@@ -153,7 +156,7 @@ function EditionCard({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-slate-500">{groupHint}</p>
+          <p className="text-xs leading-snug text-slate-500 sm:whitespace-nowrap">{groupHint}</p>
         </section>
 
         <div className="pt-0.5">
@@ -296,14 +299,14 @@ export function OfficialEditionsGrid({
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             In evidenza
           </p>
-          <ul className="grid gap-4 sm:grid-cols-2">
+          <ul className="grid gap-4 lg:grid-cols-2">
             {featured.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
               <EditionCard key={item.ed.id} {...item} highlight />
             ))}
           </ul>
         </section>
       ) : null}
-      <ul id="risultati-partenze" className="grid gap-4 sm:grid-cols-2">
+      <ul id="risultati-partenze" className="grid gap-4 lg:grid-cols-2">
         {visible.length === 0 ? (
           <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
             Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.
