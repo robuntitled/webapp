@@ -1,7 +1,7 @@
 /** Valori placeholder mostrati finché LEGAL_* non è compilato in .env.local */
 export const LEGAL_PLACEHOLDERS = {
   companyName: '[Ragione sociale da definire]',
-  tradeName: 'NomadLink',
+  tradeName: 'Bradigo',
   vatId: '[P.IVA da definire]',
   fiscalCode: '[Codice fiscale da definire]',
   addressLine: '[Indirizzo sede legale da definire]',

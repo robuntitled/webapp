@@ -3,7 +3,7 @@ import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
 export const metadata = {
-  title: 'Cookie Policy — NomadLink',
+  title: 'Cookie Policy — Bradigo',
 };
 
 export default function CookiePage() {
@@ -33,7 +33,7 @@ export default function CookiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="3. Cookie utilizzati da NomadLink">
+      <LegalSection title="3. Cookie utilizzati da Bradigo">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse mt-2">
             <thead>

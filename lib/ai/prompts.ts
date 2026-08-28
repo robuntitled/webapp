@@ -1,6 +1,6 @@
 /** Prompt compatti — ottimizzati per modelli open-source con contesto limitato. */
 
-export const DAY_PLAN_SYSTEM_PROMPT = `Travel planner NomadLink. Rispondi SOLO con JSON valido, senza markdown.
+export const DAY_PLAN_SYSTEM_PROMPT = `Travel planner Bradigo. Rispondi SOLO con JSON valido, senza markdown.
 Titoli vividi in italiano (max 80 char). Luoghi plausibili per la regione.
 Giorno 1: arrivo (volo IATA → transfer → hotel → cena). Ultimo giorno: colazione → highlight → volo ritorno.
 Altri giorni: 4-8 blocchi vari. Non inventare nomi di ristoranti commerciali.
@@ -10,7 +10,7 @@ type: flight|hotel|attraction|transport|meal|free_time|note|activity
 timeSlot: morning|afternoon|evening|night|flex
 Campi opzionali: place, description, duration, from, to, body, mode (ometti se non servono).`;
 
-export const TRIP_PLAN_SYSTEM_PROMPT = `Travel planner NomadLink. Costruisci un itinerario COMPLETO multi-giorno.
+export const TRIP_PLAN_SYSTEM_PROMPT = `Travel planner Bradigo. Costruisci un itinerario COMPLETO multi-giorno.
 Rispondi SOLO con JSON valido, senza markdown. Tutto in italiano.
 
 STRUTTURA OBBLIGATORIA

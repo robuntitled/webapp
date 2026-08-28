@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { CompanyProfile } from '@/lib/privacy/company';
 import { isComposerPath } from '@/lib/ui/app-chrome';
 
@@ -19,8 +19,8 @@ export function Footer({ company }: FooterProps) {
       <div className="nl-page py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <div className="flex items-center gap-2.5 mb-4">
-              <Image src="/assets/logo.png" alt="" width={32} height={32} className="rounded-[10px]" />
+            <div className="mb-4 flex items-center gap-2.5">
+              <BrandLogo size={40} className="ring-border" />
               <span className="font-display text-xl font-semibold">{company.tradeName}</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">

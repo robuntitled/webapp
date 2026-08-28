@@ -172,7 +172,7 @@ function ModelStep({ onNext }: { onNext: () => void }) {
           Thailandia · 14 giorni
         </p>
         <p className="mt-2 text-sm leading-relaxed text-white/80">
-          Piano ufficiale NomadLink. Marco parte da solo a novembre, Giulia entra su una partenza
+          Piano ufficiale Bradigo. Marco parte da solo a novembre, Giulia entra su una partenza
           di gruppo: stesso itinerario, voli e hotel prenotati ciascuno col proprio fornitore.
         </p>
       </div>

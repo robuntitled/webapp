@@ -9,7 +9,7 @@ import type { SponsoredCreative } from '@/lib/ads/types';
 export const BACHECA_SPONSORS: SponsoredCreative[] = [
   {
     id: 'nl-taxi',
-    advertiser: 'NomadLink · Taxi',
+    advertiser: 'Bradigo · Taxi',
     headline: 'Transfer aeroporto senza stress',
     body: 'Confronta i prezzi e prenota un taxi privato con prezzo fisso prima di arrivare.',
     cta: 'Prenota transfer',
@@ -19,7 +19,7 @@ export const BACHECA_SPONSORS: SponsoredCreative[] = [
   },
   {
     id: 'nl-treni',
-    advertiser: 'NomadLink · Treni',
+    advertiser: 'Bradigo · Treni',
     headline: 'Treni e bus in Europa',
     body: 'Cerca collegamenti e biglietti in un click. Ideale per spostarti tra città senza voli.',
     cta: 'Cerca treni',
@@ -29,7 +29,7 @@ export const BACHECA_SPONSORS: SponsoredCreative[] = [
   },
   {
     id: 'nl-bus',
-    advertiser: 'NomadLink · Bus',
+    advertiser: 'Bradigo · Bus',
     headline: 'Viaggia low cost in bus',
     body: 'Confronta le tratte bus e parti quando vuoi. Perfetto per itinerari flessibili.',
     cta: 'Cerca bus',
@@ -39,9 +39,9 @@ export const BACHECA_SPONSORS: SponsoredCreative[] = [
   },
   {
     id: 'nl-viaggio',
-    advertiser: 'NomadLink',
+    advertiser: 'Bradigo',
     headline: 'Scegli il prossimo itinerario',
-    body: 'Piano ufficiale NomadLink. Parti da solo, con amici o su una partenza di gruppo.',
+    body: 'Piano ufficiale Bradigo. Parti da solo, con amici o su una partenza di gruppo.',
     cta: 'Vedi itinerari',
     href: '/destinazioni',
     imageUrl: BRAND_IMAGES.heroes.slideshow[4] ?? BRAND_IMAGES.trips.placeholder,

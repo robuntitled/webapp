@@ -286,7 +286,7 @@ export default function ProfileForm({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Univoco su NomadLink. Solo lettere, numeri e underscore (3–24 caratteri).
+              Univoco su Bradigo. Solo lettere, numeri e underscore (3–24 caratteri).
             </p>
           </div>
           <div className="space-y-2">
@@ -478,7 +478,7 @@ export default function ProfileForm({
       <ProfileSection
         icon={FileCheck2}
         title="Consensi"
-        description="Obbligatori per usare NomadLink in conformità al GDPR"
+        description="Obbligatori per usare Bradigo in conformità al GDPR"
       >
         <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/30 p-5">
           <div className="flex items-start gap-3">

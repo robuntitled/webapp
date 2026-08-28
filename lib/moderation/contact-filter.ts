@@ -1,8 +1,9 @@
 import { deobfuscateForContact } from '@/lib/moderation/deobfuscate';
 
-/** Domini propri ammessi (link NomadLink ok). */
+/** Domini propri ammessi (link Bradigo ok). */
 const ALLOWED_HOST_SNIPPETS = [
   'nomadlink',
+  'bradigo',
   'webapp-bice-six-42.vercel.app',
 ];
 

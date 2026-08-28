@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 export const metadata = {
-  title: 'Per i Creator — NomadLink',
+  title: 'Per i Creator — Bradigo',
 };
 
 export default async function CreatorPage() {

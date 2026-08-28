@@ -39,11 +39,11 @@ export async function issueEmailVerification(userId: string, email: string): Pro
   }
 
   const verifyUrl = `${getAppBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
-  const subject = 'Conferma la tua email — NomadLink';
+  const subject = 'Conferma la tua email — Bradigo';
   const text = [
     'Ciao!',
     '',
-    'Conferma la tua email per attivare l’account NomadLink:',
+    'Conferma la tua email per attivare l’account Bradigo:',
     verifyUrl,
     '',
     'Il link scade tra 24 ore. Se non hai creato tu l’account, ignora questo messaggio.',
@@ -51,7 +51,7 @@ export async function issueEmailVerification(userId: string, email: string): Pro
 
   const html = `
     <p>Ciao!</p>
-    <p>Conferma la tua email per attivare l’account <strong>NomadLink</strong>.</p>
+    <p>Conferma la tua email per attivare l’account <strong>Bradigo</strong>.</p>
     <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 20px;background:#7c3aed;color:#fff;border-radius:999px;text-decoration:none;font-weight:600">Conferma email</a></p>
     <p style="color:#666;font-size:13px">Oppure apri questo link:<br/>${verifyUrl}</p>
     <p style="color:#666;font-size:13px">Scade tra 24 ore. Se non hai creato tu l’account, ignora questo messaggio.</p>

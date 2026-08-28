@@ -291,7 +291,7 @@ export function PracticeBookingHub({
                   />
                 ) : null}
                 <details className="text-xs text-white/60">
-                  <summary className="cursor-pointer">Ho prenotato fuori da NomadLink</summary>
+                  <summary className="cursor-pointer">Ho prenotato fuori da Bradigo</summary>
                   <Button
                     variant="secondary"
                     disabled={pending}

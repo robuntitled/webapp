@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { auth } from '@/auth';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { NotificationBell } from '@/components/layout/NotificationBell';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
@@ -19,17 +19,15 @@ export async function Navbar() {
   return (
     <AppHeader>
       <div className="nl-page flex h-16 w-full items-center justify-between">
-        <Link href="/destinazioni" className="group flex items-center gap-2.5">
-          <Image
-            src="/assets/logo.png"
-            alt="NomadLink"
-            width={36}
-            height={36}
-            className="rounded-lg ring-2 ring-transparent transition-transform group-hover:scale-105 group-data-[hero=true]/nav:ring-white/40"
+        <Link
+          href="/destinazioni"
+          className="group shrink-0 transition-transform hover:scale-[1.03]"
+          aria-label="Bradigo — home"
+        >
+          <BrandLogo
+            size={52}
+            className="ring-white/90 group-data-[hero=true]/nav:ring-white/50"
           />
-          <span className="font-display text-xl font-semibold tracking-tight text-primary drop-shadow-sm group-data-[hero=true]/nav:text-white">
-            NomadLink
-          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

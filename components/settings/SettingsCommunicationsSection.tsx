@@ -38,7 +38,7 @@ export function SettingsCommunicationsSection({
       <SettingsSection
         icon={Mail}
         title="Email di marketing"
-        description="Novità su viaggi, articoli e promozioni NomadLink. Puoi revocare il consenso in qualsiasi momento."
+        description="Novità su viaggi, articoli e promozioni Bradigo. Puoi revocare il consenso in qualsiasi momento."
       >
         <div className="rounded-2xl border border-border/70 bg-muted/20 p-5 flex items-center justify-between gap-4">
           <Label htmlFor="marketing_consent" className="flex flex-col space-y-1 cursor-pointer">

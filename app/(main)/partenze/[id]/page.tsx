@@ -52,7 +52,7 @@ export default async function PartenzeJoinPage({ params }: PageProps) {
       <ShareTripLink
         url={shareUrl}
         title={`Partenza ${template.destination_name}`}
-        message={`Unisciti a questa partenza su NomadLink — ${template.destination_name}`}
+        message={`Unisciti a questa partenza su Bradigo — ${template.destination_name}`}
       />
       <PartenzeJoinFlow
         practiceId={joined.practice.id}

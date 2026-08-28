@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { mapAuthError } from '@/lib/auth/oauth-errors';
 import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
 import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { LandingDestinations } from '@/components/brand/LandingDestinations';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
@@ -234,9 +234,9 @@ export default function LoginPage() {
         <div className="flex flex-col justify-end px-6 pt-14 pb-6 lg:w-[56%] lg:p-12 lg:pb-20">
           <ScrollReveal variant="decor">
             <div className="mb-5 flex items-center gap-3">
-              <Image src="/assets/logo.png" alt="" width={44} height={44} className="rounded-xl" />
+              <BrandLogo size={52} className="ring-white/40" priority />
               <span className="font-display text-2xl font-semibold text-white drop-shadow lg:text-3xl">
-                NomadLink
+                Bradigo
               </span>
             </div>
           </ScrollReveal>
@@ -280,7 +280,7 @@ export default function LoginPage() {
           <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
             <div>
               <h2 className="font-display text-2xl font-semibold text-foreground">
-                {isRegisterMode ? 'Crea il tuo account' : 'Entra in NomadLink'}
+                {isRegisterMode ? 'Crea il tuo account' : 'Entra in Bradigo'}
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 {isRegisterMode

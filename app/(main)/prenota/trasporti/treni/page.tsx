@@ -18,7 +18,7 @@ export default async function PrenotaTrasportiTreniPage() {
   return (
     <PrenotaPageShell
       title="Treni"
-      subtitle="Biglietti ferroviari in Europa. Ricerca su NomadLink · prenotazione Omio."
+      subtitle="Biglietti ferroviari in Europa. Ricerca su Bradigo · prenotazione Omio."
       badge="Omio"
     >
       <PrenotaTransportSubnav />
