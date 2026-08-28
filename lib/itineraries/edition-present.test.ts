@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { editionScarcity, editionThresholdProgress } from '@/lib/itineraries/edition-present';
+import { formatEditionDateRange } from '@/lib/itineraries/dates';
+import {
+  editionBadgeDisplay,
+  editionGroupHint,
+  editionParticipantsLabel,
+  editionScarcity,
+  editionThresholdProgress,
+} from '@/lib/itineraries/edition-present';
 
 describe('edition present', () => {
   it('computes threshold progress', () => {
@@ -27,5 +34,25 @@ describe('edition present', () => {
       status: 'formed',
     });
     expect(info.variant).toBe('formed');
+  });
+
+  it('formats badge labels for card display', () => {
+    expect(editionBadgeDisplay({ variant: 'open' }, 6)).toBe('Gruppo in formazione');
+    expect(editionBadgeDisplay({ variant: 'warming' }, 5)).toBe('Ultimi 5 posti');
+    expect(editionBadgeDisplay({ variant: 'formed' }, 0)).toBe('Gruppo confermato');
+  });
+
+  it('formats participants and group hints', () => {
+    expect(
+      editionParticipantsLabel({ interested_count: 2, confirmed_count: 1 })
+    ).toBe('👥 2 persone partecipano');
+    expect(editionGroupHint(1, 6)).toBe('Ancora 5 conferme necessarie');
+    expect(editionGroupHint(6, 6)).toBe('Soglia gruppo raggiunta');
+  });
+
+  it('formats edition date range', () => {
+    expect(formatEditionDateRange('2027-01-08', '2027-01-28')).toBe(
+      '08 → 28 gennaio 2027'
+    );
   });
 });

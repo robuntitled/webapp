@@ -13,10 +13,12 @@ import {
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
-import { formatItDate } from '@/lib/itineraries/dates';
+import { formatEditionDateRange, formatItDate } from '@/lib/itineraries/dates';
 import {
-  daysUntilDeparture,
-  editionJoinReason,
+  editionBadgeDisplay,
+  editionFlightsStatusLabel,
+  editionGroupHint,
+  editionParticipantsLabel,
   editionScarcity,
   editionThresholdProgress,
 } from '@/lib/itineraries/edition-present';
@@ -30,19 +32,22 @@ function durationFromId(templateId: string, fallback?: number | null) {
 }
 
 const SCARCITY_STYLES = {
+  open: 'bg-primary text-white',
+  warming: 'bg-accent text-white',
+  closing: 'bg-accent text-white',
+  formed: 'bg-emerald-600 text-white',
+} as const;
+
+const PROGRESS_STYLES = {
   open: 'bg-primary',
   warming: 'bg-accent',
-  closing: 'bg-amber-600',
+  closing: 'bg-accent',
   formed: 'bg-emerald-600',
 } as const;
 
-function featuredScore(ed: OfficialEditionCard): number {
-  const scarcity = editionScarcity(ed);
-  if (scarcity.variant === 'closing') return 4;
-  if (scarcity.variant === 'formed') return 3;
-  if (scarcity.variant === 'warming') return 2;
-  if ((ed.interested_count ?? 0) > 0) return 1;
-  return 0;
+function durationLabel(days: number | null): string | null {
+  if (days == null) return null;
+  return days === 1 ? '1 giorno' : `${days} giorni`;
 }
 
 function EditionCard({
@@ -52,7 +57,6 @@ function EditionCard({
   days,
   scarcity,
   progress,
-  joinReason,
   highlight = false,
 }: {
   ed: OfficialEditionCard;
@@ -61,65 +65,118 @@ function EditionCard({
   days: number | null;
   scarcity: ReturnType<typeof editionScarcity>;
   progress: number;
-  joinReason: string;
   highlight?: boolean;
 }) {
-  const daysLeft = daysUntilDeparture(ed.date_from);
+  const destination = tpl?.destination_name ?? ed.template_id;
+  const confirmed = ed.confirmed_count ?? 0;
+  const minConfirmed = ed.min_confirmed;
+  const spotsLeft = Math.max(0, minConfirmed - confirmed);
+  const badgeLabel = editionBadgeDisplay(scarcity, spotsLeft);
+  const participants = editionParticipantsLabel({
+    interested_count: ed.interested_count,
+    confirmed_count: confirmed,
+  });
+  const flightsStatus = editionFlightsStatusLabel(confirmed, minConfirmed);
+  const groupHint = editionGroupHint(confirmed, minConfirmed);
+  const tripDuration = durationLabel(days);
+
   return (
     <li
       className={cn(
-        'relative flex gap-3 overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition hover:shadow-md',
+        'relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md sm:flex-row sm:gap-4 sm:p-4',
         highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
       )}
     >
       <span
         className={cn(
-          'absolute right-3 top-3 z-10 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm',
+          'absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm',
           SCARCITY_STYLES[scarcity.variant]
         )}
       >
-        {scarcity.label}
+        {badgeLabel}
       </span>
-      <div className="relative h-[4.75rem] w-[5.5rem] shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-28">
-        <Image src={cover} alt="" fill className="object-cover" sizes="112px" />
-        {days != null ? (
-          <p className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-            {days}g
-          </p>
-        ) : null}
+
+      <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden sm:aspect-auto sm:h-28 sm:w-32 sm:rounded-xl">
+        <Image
+          src={cover}
+          alt={destination}
+          fill
+          className="object-cover sm:rounded-xl"
+          sizes="(max-width: 640px) 100vw, 128px"
+        />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5 pr-14">
-        <p className="font-display text-lg font-semibold leading-tight text-slate-900">
-          {tpl?.destination_name ?? ed.template_id}
-        </p>
-        <p className="text-sm font-medium text-slate-600">
-          {formatItDate(ed.date_from)} – {formatItDate(ed.date_to)}
-          {daysLeft > 0 && daysLeft <= 45 ? (
-            <span className="text-accent"> · tra {daysLeft} giorni</span>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 pt-3 sm:gap-3.5 sm:p-0 sm:pr-28">
+        <div className="space-y-1 pr-16 sm:pr-0">
+          <h3 className="font-display text-xl font-bold leading-tight text-slate-900">
+            {destination}
+          </h3>
+          <p className="text-sm font-medium text-slate-700">
+            {formatEditionDateRange(ed.date_from, ed.date_to)}
+          </p>
+          {tripDuration ? (
+            <p className="text-sm text-slate-500">{tripDuration}</p>
           ) : null}
-        </p>
-        <p className="text-xs text-slate-500">{joinReason}</p>
-        <div className="mt-1.5 space-y-1">
-          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+        </div>
+
+        {participants ? (
+          <p className="text-sm text-slate-600">{participants}</p>
+        ) : null}
+
+        <section
+          className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+          aria-labelledby={`group-status-${ed.id}`}
+        >
+          <p
+            id={`group-status-${ed.id}`}
+            className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+          >
+            Stato del gruppo
+          </p>
+          <p className="text-sm font-medium text-slate-800">
+            <span aria-hidden="true">✈ </span>
+            {flightsStatus}
+          </p>
+          <div
+            role="progressbar"
+            aria-valuenow={confirmed}
+            aria-valuemin={0}
+            aria-valuemax={Math.max(minConfirmed, 1)}
+            aria-label={flightsStatus}
+            className="h-2 overflow-hidden rounded-full bg-slate-200"
+          >
             <div
-              className="h-full rounded-full bg-accent transition-all"
+              className={cn(
+                'h-full rounded-full transition-all',
+                PROGRESS_STYLES[scarcity.variant]
+              )}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-slate-500">{scarcity.sublabel}</p>
-            <Button
-              asChild
-              size="sm"
-              className="rounded-full bg-accent text-white hover:bg-accent/90"
-            >
-              <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
-            </Button>
-          </div>
+          <p className="text-xs text-slate-500">{groupHint}</p>
+        </section>
+
+        <div className="pt-0.5">
+          <Button
+            asChild
+            size="sm"
+            className="rounded-full bg-accent px-5 text-white hover:bg-accent/90"
+          >
+            <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
+          </Button>
         </div>
       </div>
     </li>
   );
+}
+
+function featuredScore(ed: OfficialEditionCard): number {
+  const scarcity = editionScarcity(ed);
+  if (scarcity.variant === 'closing') return 4;
+  if (scarcity.variant === 'formed') return 3;
+  if (scarcity.variant === 'warming') return 2;
+  if ((ed.interested_count ?? 0) > 0) return 1;
+  return 0;
 }
 
 export function OfficialEditionsGrid({
@@ -157,11 +214,6 @@ export function OfficialEditionsGrid({
           cover: uniqueCover(slug || ed.template_id, i),
           name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',
-          joinReason: editionJoinReason({
-            confirmed_count: ed.confirmed_count ?? 0,
-            min_confirmed: ed.min_confirmed,
-            interested_count: ed.interested_count ?? 0,
-          }),
           featured: featuredScore(ed),
         };
       }),

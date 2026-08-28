@@ -1,4 +1,5 @@
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, isSameMonth, isSameYear, parseISO } from 'date-fns';
+import { it } from 'date-fns/locale';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
 
 const STAY_CITY: Record<string, string> = {
@@ -17,6 +18,23 @@ export function datesForDuration(dateFrom: string, durationDays: number) {
 
 export function formatItDate(iso: string) {
   return format(parseISO(iso.slice(0, 10)), 'dd/MM/yyyy');
+}
+
+/** Range leggibile per card partenze: "08 → 28 gennaio 2027" o "08 gen → 28 feb 2027". */
+export function formatEditionDateRange(dateFrom: string, dateTo: string): string {
+  const from = parseISO(dateFrom.slice(0, 10));
+  const to = parseISO(dateTo.slice(0, 10));
+  const dayFrom = format(from, 'dd', { locale: it });
+  const dayTo = format(to, 'dd', { locale: it });
+
+  if (isSameMonth(from, to) && isSameYear(from, to)) {
+    const monthYear = format(to, 'MMMM yyyy', { locale: it });
+    return `${dayFrom} → ${dayTo} ${monthYear}`;
+  }
+
+  const monthFrom = format(from, 'MMM', { locale: it });
+  const monthTo = format(to, 'MMM yyyy', { locale: it });
+  return `${dayFrom} ${monthFrom} → ${dayTo} ${monthTo}`;
 }
 
 export type HotelStay = {

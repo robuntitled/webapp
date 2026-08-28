@@ -56,6 +56,48 @@ export function editionScarcity(input: {
   };
 }
 
+export function editionBadgeDisplay(
+  scarcity: { variant: EditionScarcityVariant },
+  spotsLeft: number
+): string {
+  switch (scarcity.variant) {
+    case 'formed':
+      return 'Gruppo confermato';
+    case 'open':
+      return 'Gruppo in formazione';
+    case 'closing':
+      return spotsLeft > 0 ? `Ultimi ${spotsLeft} posti` : 'In chiusura';
+    case 'warming':
+      return spotsLeft > 0 ? `Ultimi ${spotsLeft} posti` : 'Ultimi posti';
+  }
+}
+
+export function editionParticipantsLabel(input: {
+  interested_count?: number;
+  confirmed_count?: number;
+}): string | null {
+  const interested = input.interested_count ?? 0;
+  const confirmed = input.confirmed_count ?? 0;
+  const count = Math.max(interested, confirmed);
+  if (count <= 0) return null;
+  return count === 1 ? '👥 1 persona partecipa' : `👥 ${count} persone partecipano`;
+}
+
+export function editionFlightsStatusLabel(confirmed: number, minConfirmed: number): string {
+  const min = Math.max(minConfirmed, 1);
+  const flightLabel = min === 1 ? 'volo confermato' : 'voli confermati';
+  return `${confirmed} di ${min} ${flightLabel}`;
+}
+
+export function editionGroupHint(confirmed: number, minConfirmed: number): string {
+  if (minConfirmed <= 0) return confirmed > 0 ? 'Soglia gruppo raggiunta' : 'In attesa delle prime conferme';
+  if (confirmed >= minConfirmed) return 'Soglia gruppo raggiunta';
+  const remaining = minConfirmed - confirmed;
+  return remaining === 1
+    ? 'Ancora 1 conferma necessaria'
+    : `Ancora ${remaining} conferme necessarie`;
+}
+
 export function editionJoinReason(input: {
   confirmed_count: number;
   min_confirmed: number;
