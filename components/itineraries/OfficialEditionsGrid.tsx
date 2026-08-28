@@ -83,60 +83,61 @@ function EditionCard({
   return (
     <li
       className={cn(
-        'grid w-full overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md',
-        'grid-cols-1 sm:grid-cols-[minmax(160px,38%)_minmax(0,1fr)] sm:items-stretch sm:gap-5 sm:p-5',
+        'flex w-full flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md',
         highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
       )}
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-auto sm:min-h-[180px] sm:rounded-xl">
+      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={cover}
           alt={destination}
           fill
-          className="object-cover sm:rounded-xl"
-          sizes="(max-width: 640px) 100vw, 180px"
+          className="object-cover"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
         />
+        <span
+          className={cn(
+            'absolute right-3 top-3 rounded-full px-2.5 py-1 text-[clamp(0.65rem,0.5vw+0.58rem,0.72rem)] font-semibold leading-tight tracking-wide shadow-md',
+            SCARCITY_STYLES[scarcity.variant]
+          )}
+        >
+          {badgeLabel}
+        </span>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-3 p-4 sm:gap-3.5 sm:p-0">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="min-w-0 flex-1 font-display text-xl font-bold leading-snug text-slate-900">
-            {destination}
-          </h3>
-          <span
-            className={cn(
-              'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold leading-tight tracking-wide shadow-sm',
-              SCARCITY_STYLES[scarcity.variant]
-            )}
-          >
-            {badgeLabel}
-          </span>
-        </div>
+      <div className="flex flex-col gap-[0.65rem] p-[clamp(0.9rem,1.2vw,1.15rem)]">
+        <h3 className="font-display text-[clamp(1.15rem,0.35vw+1.05rem,1.35rem)] font-bold leading-snug text-slate-900">
+          {destination}
+        </h3>
 
         <div className="space-y-0.5">
-          <p className="text-sm font-medium leading-snug text-slate-700 sm:whitespace-nowrap">
+          <p className="text-[clamp(0.92rem,0.2vw+0.86rem,1rem)] font-medium leading-snug text-slate-700">
             {formatEditionDateRange(ed.date_from, ed.date_to)}
           </p>
           {tripDuration ? (
-            <p className="text-sm text-slate-500">{tripDuration}</p>
+            <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-500">
+              {tripDuration}
+            </p>
           ) : null}
         </div>
 
         {participants ? (
-          <p className="text-sm leading-snug text-slate-600 sm:whitespace-nowrap">{participants}</p>
+          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-600">
+            {participants}
+          </p>
         ) : null}
 
         <section
-          className="w-full space-y-2 border-t border-slate-100 pt-3"
+          className="mt-1 w-full space-y-2 border-t border-slate-100 pt-3"
           aria-labelledby={`group-status-${ed.id}`}
         >
           <p
             id={`group-status-${ed.id}`}
-            className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+            className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-400"
           >
             Stato del gruppo
           </p>
-          <p className="text-sm font-medium leading-snug text-slate-800 sm:whitespace-nowrap">
+          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] font-medium leading-snug text-slate-800">
             <span aria-hidden="true">✈ </span>
             {flightsStatus}
           </p>
@@ -146,7 +147,7 @@ function EditionCard({
             aria-valuemin={0}
             aria-valuemax={Math.max(minConfirmed, 1)}
             aria-label={flightsStatus}
-            className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200"
+            className="h-2.5 w-full rounded-full bg-slate-200"
           >
             <div
               className={cn(
@@ -156,14 +157,16 @@ function EditionCard({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs leading-snug text-slate-500 sm:whitespace-nowrap">{groupHint}</p>
+          <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-500">
+            {groupHint}
+          </p>
         </section>
 
-        <div className="pt-0.5">
+        <div className="mt-1 pt-0.5">
           <Button
             asChild
             size="sm"
-            className="rounded-full bg-accent px-5 text-white hover:bg-accent/90"
+            className="rounded-full bg-accent px-5 text-[clamp(0.88rem,0.15vw+0.84rem,0.95rem)] text-white hover:bg-accent/90"
           >
             <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
           </Button>
@@ -294,29 +297,31 @@ export function OfficialEditionsGrid({
           onChange={(continent) => setFilters({ ...filters, continent })}
         />
       ) : null}
-      {featured.length > 0 && filters.query.trim() === '' && filters.continent === 'Tutte' ? (
-        <section className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-            In evidenza
-          </p>
-          <ul className="grid gap-4 lg:grid-cols-2">
-            {featured.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
-              <EditionCard key={item.ed.id} {...item} highlight />
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <ul id="risultati-partenze" className="grid gap-4 lg:grid-cols-2">
-        {visible.length === 0 ? (
-          <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
-            Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.
-          </li>
-        ) : (
-          regular.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
-            <EditionCard key={item.ed.id} {...item} />
-          ))
-        )}
-      </ul>
+      <div className="nl-editions-frame space-y-5">
+        {featured.length > 0 && filters.query.trim() === '' && filters.continent === 'Tutte' ? (
+          <section className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+              In evidenza
+            </p>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+              {featured.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
+                <EditionCard key={item.ed.id} {...item} highlight />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        <ul id="risultati-partenze" className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+          {visible.length === 0 ? (
+            <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
+              Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.
+            </li>
+          ) : (
+            regular.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
+              <EditionCard key={item.ed.id} {...item} />
+            ))
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

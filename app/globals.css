@@ -277,6 +277,36 @@
     }
   }
 
+  /**
+   * Frame lista partenze: leggermente più largo del content standard (.nl-page)
+   * senza modificare filtri/toggle sopra.
+   */
+  .nl-editions-frame {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .nl-editions-frame {
+      width: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .nl-editions-frame {
+      width: calc(100% + 6vw);
+      margin-inline: -3vw;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .nl-editions-frame {
+      width: calc(100% + 8vw);
+      margin-inline: -4vw;
+    }
+  }
+
   .composer-aurora {
     display: none;
   }
