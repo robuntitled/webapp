@@ -481,7 +481,10 @@ export function StartTripWizard({
                   onContinentChange={(continent) =>
                     setFilters({ ...filters, continent })
                   }
-                  onSelectDestination={openDestination}
+                  onSelectDestination={(dest) => {
+                    const full = destinations.find((d) => d.slug === dest.slug);
+                    if (full) openDestination(full);
+                  }}
                   coverBySlug={destCoverBySlug}
                   ctaLabel="Vedi piano"
                   resultsId="risultati-itinerari"
