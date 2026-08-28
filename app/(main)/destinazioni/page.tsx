@@ -4,15 +4,16 @@ import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
 import { listOfficialEditions } from '@/lib/data/editions';
 import { loadFavoriteItineraryIds } from '@/lib/data/favorites';
 import { wizardDestinationCards } from '@/lib/itineraries/catalog';
+import { parseHomeTravelMode } from '@/lib/itineraries/home-travel-mode';
 
 export const dynamic = 'force-dynamic';
 
 type PageProps = {
-  searchParams: Promise<{ vista?: string; dest?: string }>;
+  searchParams: Promise<{ vista?: string; dest?: string; modalita?: string }>;
 };
 
 export default async function DestinazioniPage({ searchParams }: PageProps) {
-  const { vista, dest } = await searchParams;
+  const { vista, dest, modalita } = await searchParams;
   const session = await auth();
   const [destinations, editions, favoriteIds] = await Promise.all([
     Promise.resolve(wizardDestinationCards()),
@@ -26,7 +27,7 @@ export default async function DestinazioniPage({ searchParams }: PageProps) {
       <StartTripWizard
         destinations={destinations}
         favoriteTemplateIds={[...favoriteIds]}
-        initialHomeView={vista === 'partenze' ? 'partenze' : 'itinerari'}
+        initialHomeTravelMode={parseHomeTravelMode(vista, modalita)}
         initialPublicDest={dest?.trim() || undefined}
         editions={editions.map((e) => ({
           id: e.id,
