@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { NavbarNav } from '@/components/layout/NavbarNav';
 import { UserNav } from '@/components/layout/UserNav';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { NotificationBell } from '@/components/layout/NotificationBell';
@@ -8,9 +9,14 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
+import { cn } from '@/lib/utils';
 
-const navLinkClass =
-  'rounded-lg px-4 py-2 text-sm font-semibold transition-colors text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15 group-data-[hero=true]/nav:hover:text-white';
+const iconBtnClass = cn(
+  'h-10 w-10 shrink-0 rounded-full text-slate-600 transition-colors',
+  'hover:bg-slate-900/[0.05] hover:text-primary',
+  'focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+  'group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white'
+);
 
 export async function Navbar() {
   const session = await auth();
@@ -18,45 +24,31 @@ export async function Navbar() {
 
   return (
     <AppHeader>
-      <div className="nl-page flex h-16 w-full items-center justify-between">
+      <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 md:gap-8 lg:gap-12">
         <Link
           href="/destinazioni"
-          className="group shrink-0 transition-transform hover:scale-[1.03]"
+          className="group shrink-0 transition-transform duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-full"
           aria-label="Bradigo — home"
         >
           <BrandLogo
-            size={52}
-            className="ring-white/90 group-data-[hero=true]/nav:ring-white/50"
+            responsive
+            className="ring-white/80 drop-shadow-[0_2px_12px_rgba(0,0,0,0.18)] group-data-[hero=true]/nav:ring-white/40 group-data-[hero=true]/nav:drop-shadow-[0_2px_16px_rgba(0,0,0,0.45)]"
           />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          <Link href="/destinazioni" className={navLinkClass}>
-            Itinerari
-          </Link>
-          {session?.user && (
-            <>
-              <Link href="/pratiche" className={navLinkClass}>
-                I miei viaggi
-              </Link>
-              <Link href="/dashboard/bacheca" className={navLinkClass}>
-                Bacheca
-              </Link>
-            </>
-          )}
-        </nav>
+        <NavbarNav isLoggedIn={!!session?.user} />
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-1 md:gap-1.5">
           <MobileNav isLoggedIn={!!session?.user} />
           {session?.user ? (
             <>
-              <Link href="/pratiche" className="hidden sm:block" title="I miei viaggi">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-accent hover:bg-accent/10 hover:text-accent group-data-[hero=true]/nav:hover:bg-white/15"
-                >
-                  <Heart className="h-5 w-5 fill-accent drop-shadow" />
+              <Link
+                href="/pratiche"
+                className="hidden sm:block"
+                aria-label="I miei viaggi"
+              >
+                <Button variant="ghost" size="icon" className={iconBtnClass}>
+                  <Heart className="h-[1.15rem] w-[1.15rem] fill-accent text-accent group-data-[hero=true]/nav:drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]" />
                 </Button>
               </Link>
               <NotificationBell />
@@ -68,14 +60,17 @@ export async function Navbar() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="font-semibold text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15 group-data-[hero=true]/nav:hover:text-white"
+                className={cn(
+                  'h-9 rounded-full px-4 font-medium text-slate-700 hover:bg-slate-900/[0.05] hover:text-primary',
+                  'group-data-[hero=true]/nav:text-white/95 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white group-data-[hero=true]/nav:[text-shadow:0_1px_8px_rgba(0,0,0,0.35)]'
+                )}
               >
                 <Link href="/">Accedi</Link>
               </Button>
               <Button
                 asChild
                 size="sm"
-                className="rounded-full bg-accent font-semibold text-white hover:bg-accent/90"
+                className="h-9 rounded-full bg-accent px-4 font-semibold text-white shadow-none hover:bg-accent/90"
               >
                 <Link href="/">Registrati</Link>
               </Button>

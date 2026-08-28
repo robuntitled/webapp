@@ -106,7 +106,7 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative rounded-full text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15 group-data-[hero=true]/nav:hover:text-white"
+          className="relative h-10 w-10 rounded-full text-slate-600 transition-colors hover:bg-slate-900/[0.05] hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white"
           aria-label={unread > 0 ? `Notifiche, ${unread} non lette` : 'Notifiche'}
         >
           <Bell className="h-5 w-5" />

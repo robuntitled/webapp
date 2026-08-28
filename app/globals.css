@@ -61,6 +61,7 @@
   --color-warning: #D97706;
 
   --radius: 0.625rem;
+  --nl-nav-height: 4.75rem;
   --background: #FFFFFF;
   --foreground: #1C1917;
   --card: #FFFFFF;
@@ -234,6 +235,23 @@
     margin-inline: auto;
     padding-inline: 1rem;
     box-sizing: border-box;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --nl-nav-height: 5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --nl-nav-height: 5.25rem;
+    }
+  }
+
+  .nl-nav-inner {
+    height: var(--nl-nav-height);
+    min-height: var(--nl-nav-height);
   }
 
   @media (min-width: 640px) {

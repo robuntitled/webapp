@@ -287,7 +287,7 @@ export function StartTripWizard({
       )}
     >
       {step === 'dest' ? (
-        <section className="relative isolate -mt-16 flex h-[min(38vh,22rem)] min-h-[16rem] flex-col overflow-visible pt-16 sm:h-[min(46vh,28rem)] sm:min-h-[20rem]">
+        <section className="relative isolate -mt-[var(--nl-nav-height)] flex h-[min(38vh,22rem)] min-h-[16rem] flex-col overflow-visible pt-[var(--nl-nav-height)] sm:h-[min(46vh,28rem)] sm:min-h-[20rem]">
           <div className="absolute inset-0 overflow-hidden">
             <HeroBackground
               images={BRAND_IMAGES.heroes.slideshow}

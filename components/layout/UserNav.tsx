@@ -32,9 +32,9 @@ export function UserNav({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full text-slate-700 hover:bg-slate-100 hover:text-primary group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:hover:bg-white/15"
+          className="relative h-10 w-10 rounded-full p-0 text-slate-600 transition-colors hover:bg-slate-900/[0.05] hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white"
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-10 w-10 ring-1 ring-slate-200/80 group-data-[hero=true]/nav:ring-white/30">
             <AvatarImage src={user.image ?? ''} alt={user.name ?? ''} />
             <AvatarFallback>
               {user.name ? getInitialsFromFullName(user.name) : 'U'}
