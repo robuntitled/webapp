@@ -2,16 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Loader2, Plane, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Plane } from 'lucide-react';
 import { toast } from 'sonner';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { Button } from '@/components/ui/button';
-import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
+import { EditionPlanExplorer } from '@/components/itineraries/EditionPlanExplorer';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { MemberRatingBadge } from '@/components/itineraries/EditionTrust';
 import { formatBookingMoney, formatFlightWhen } from '@/lib/itineraries/bookings';
 import { formatItDate } from '@/lib/itineraries/dates';
-import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { saveFlightCheckoutDraft } from '@/lib/travel/flight-checkout-draft';
 import type {
   EditionMemberCard,
@@ -53,6 +52,9 @@ export function PartenzeJoinFlow({
   members,
   peerFlights,
   editionStats,
+  shareUrl,
+  shareTitle,
+  shareMessage,
 }: {
   practiceId: string;
   template: ItineraryTemplate;
@@ -65,6 +67,9 @@ export function PartenzeJoinFlow({
     interested: number;
     minConfirmed: number;
   };
+  shareUrl: string;
+  shareTitle: string;
+  shareMessage: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('plan');
@@ -118,44 +123,36 @@ export function PartenzeJoinFlow({
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-white">
-      <div className="nl-page w-full space-y-6 py-10">
-        <header>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-            Partenza ufficiale
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-semibold text-foreground md:text-4xl">
-            {template.destination_name} · {template.duration_days} giorni
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            {formatItDate(dateFrom)} – {formatItDate(dateTo)}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {step === 'plan' && 'Stesso piano. Date già fissate. Per partecipare serve il volo.'}
-            {step === 'people' &&
-              'Partecipanti con volo confermato. Anche tu dovrai prenotare per unirti al gruppo.'}
-            {step === 'flights' && 'Voli già scelti dal gruppo. Ti va bene lo stesso?'}
-            {step === 'picked' && 'Solo questo volo, se è ancora disponibile.'}
-            {step === 'search' && 'Cerca da Italia verso destinazione.'}
-          </p>
-        </header>
-
+    <div className="min-h-[calc(100vh-var(--nl-nav-height))] bg-[#eef6f3]">
+      <div className="nl-home-content w-full space-y-4 py-8 md:py-10">
         {step === 'plan' ? (
-          <div className="space-y-5 rounded-3xl border border-border bg-white p-6 shadow-sm md:p-8">
-            <p className="text-muted-foreground">{template.summary}</p>
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-4 py-3">
-              <Wallet className="h-4 w-4 text-accent" />
-              <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {COMPLIANCE_COPY.budgetLabel}
-                </p>
-                <p className="text-sm font-medium text-foreground">
-                  ~{template.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € a persona
-                </p>
-              </div>
-            </div>
-            <ItineraryDaysWithMap template={template} />
-          </div>
+          <EditionPlanExplorer
+            template={template}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            shareUrl={shareUrl}
+            shareTitle={shareTitle}
+            shareMessage={shareMessage}
+          />
+        ) : (
+          <header className="rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+              Partenza ufficiale
+            </p>
+            <h1 className="mt-2 font-display text-2xl font-semibold text-foreground md:text-3xl">
+              {template.destination_name} · {template.duration_days} giorni
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {formatItDate(dateFrom)} – {formatItDate(dateTo)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {step === 'people' &&
+                'Partecipanti con volo confermato. Anche tu dovrai prenotare per unirti al gruppo.'}
+              {step === 'flights' && 'Voli già scelti dal gruppo. Ti va bene lo stesso?'}
+              {step === 'picked' && 'Solo questo volo, se è ancora disponibile.'}
+              {step === 'search' && 'Cerca da Italia verso destinazione.'}
+            </p>
+          </header>
         ) : null}
 
         {step === 'people' ? (
@@ -287,7 +284,7 @@ export function PartenzeJoinFlow({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 pt-2">
           {step !== 'plan' ? (
             <Button
               variant="ghost"
@@ -306,7 +303,7 @@ export function PartenzeJoinFlow({
           )}
           {step === 'plan' || step === 'people' ? (
             <Button
-              className="rounded-full"
+              className="ml-auto rounded-full px-6 shadow-md shadow-accent/20"
               onClick={() => setStep(step === 'plan' ? 'people' : 'flights')}
             >
               Avanti
