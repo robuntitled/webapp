@@ -24,6 +24,8 @@ type ReactLeafletTripMapProps = {
   highlightedPinId?: string | null;
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  /** Disabilita pan/zoom/click — mappa solo visualizzazione. */
+  interactive?: boolean;
   className?: string;
 };
 
@@ -102,6 +104,7 @@ export function ReactLeafletTripMap({
   highlightedPinId,
   onPinClick,
   onMapClick,
+  interactive = true,
   className = '',
 }: ReactLeafletTripMapProps) {
   const center = useMemo(() => {
@@ -128,13 +131,18 @@ export function ReactLeafletTripMap({
         center={[center.lat, center.lng]}
         zoom={11}
         className="h-full w-full z-0 grayscale-[20%] contrast-[1.05] [&_.leaflet-control-attribution]:!hidden"
-        scrollWheelZoom
+        scrollWheelZoom={interactive}
+        dragging={interactive}
+        doubleClickZoom={interactive}
+        touchZoom={interactive}
+        boxZoom={interactive}
+        keyboard={interactive}
         zoomControl={false}
         attributionControl={false}
       >
         <TileLayer url={TILE_URL} attribution="" maxZoom={19} />
-        <FitBounds pins={fitPins} animate />
-        <MapClickHandler onMapClick={onMapClick} />
+        <FitBounds pins={fitPins} animate={interactive} />
+        {interactive ? <MapClickHandler onMapClick={onMapClick} /> : null}
 
         {showRoute && routePositions.length >= 2 && (
           <Polyline
@@ -157,24 +165,29 @@ export function ReactLeafletTripMap({
               key={pin.id}
               position={[pin.lat, pin.lng]}
               icon={makeIcon(highlighted)}
-              eventHandlers={{
-                click: () => onPinClick?.(pin),
-              }}
+              interactive={interactive}
+              eventHandlers={
+                interactive && onPinClick
+                  ? { click: () => onPinClick(pin) }
+                  : undefined
+              }
             >
-              <Popup>
-                <strong>Giorno {pin.dayIndex}</strong>
-                <br />
-                {pin.label}
-                <br />
-                <a
-                  href={googleMapsPlaceUrl(pin.lat, pin.lng, pin.label)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-teal-700 text-xs"
-                >
-                  Apri in Google Maps
-                </a>
-              </Popup>
+              {interactive ? (
+                <Popup>
+                  <strong>Giorno {pin.dayIndex}</strong>
+                  <br />
+                  {pin.label}
+                  <br />
+                  <a
+                    href={googleMapsPlaceUrl(pin.lat, pin.lng, pin.label)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-teal-700 text-xs"
+                  >
+                    Apri in Google Maps
+                  </a>
+                </Popup>
+              ) : null}
             </Marker>
           );
         })}

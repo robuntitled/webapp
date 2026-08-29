@@ -27,6 +27,7 @@ export function ItineraryMapInset({ template }: { template: ItineraryTemplate })
         destinationMeta={{ label: dest.name, lat: dest.lat, lng: dest.lng }}
         pins={pins.slice(0, 3)}
         showRoute={false}
+        interactive={false}
         className="h-full w-full"
       />
     </div>

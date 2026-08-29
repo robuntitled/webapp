@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import {
   Building2,
@@ -75,7 +75,6 @@ export function EditionPlanExplorer({
   const [activeDay, setActiveDay] = useState(firstDay);
   const [page, setPage] = useState(0);
   const visibleCount = useVisibleTimelineCount();
-  const trackRef = useRef<HTMLDivElement>(null);
 
   const active = useMemo(
     () => template.days.find((d) => d.day_number === activeDay) ?? template.days[0],
@@ -170,7 +169,7 @@ export function EditionPlanExplorer({
                 <ItineraryWorldMap
                   template={template}
                   highlightedDay={activeDay}
-                  onDaySelect={selectDay}
+                  staticMap
                   className="rounded-none border-0 shadow-none [&>div:last-child]:h-[min(52vh,420px)] sm:[&>div:last-child]:h-[min(56vh,480px)]"
                 />
                 <ItineraryMapInset template={template} />
@@ -207,7 +206,7 @@ export function EditionPlanExplorer({
                 </div>
               </div>
 
-              <div ref={trackRef} className="relative">
+              <div className="relative">
                 <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${visibleCount}, minmax(0, 1fr))` }}>
                   {pageDays.map((day) => {
                     const Icon = iconForDay(day);
@@ -224,9 +223,6 @@ export function EditionPlanExplorer({
                             : 'border-slate-200 bg-white hover:border-primary/30'
                         )}
                       >
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                          Giorno {day.day_number}
-                        </span>
                         <span className="text-xs font-medium text-slate-600">
                           {dayDateLabel(dateFrom, day.day_number)}
                         </span>
@@ -242,14 +238,41 @@ export function EditionPlanExplorer({
                   })}
                 </div>
 
-                <div className="relative mx-6 mt-4 h-1 rounded-full bg-slate-200">
+                <div className="relative mx-2 mt-5 sm:mx-4">
+                  <div className="absolute inset-x-0 top-[0.45rem] h-px bg-slate-200" aria-hidden />
                   <div
-                    className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-primary transition-all duration-200"
-                    style={{
-                      left: `${((template.days.findIndex((d) => d.day_number === activeDay) + 0.5) / template.days.length) * 100}%`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  />
+                    className="relative grid gap-3"
+                    style={{ gridTemplateColumns: `repeat(${visibleCount}, minmax(0, 1fr))` }}
+                  >
+                    {pageDays.map((day) => {
+                      const selected = day.day_number === activeDay;
+                      return (
+                        <button
+                          key={`track-${day.day_number}`}
+                          type="button"
+                          onClick={() => selectDay(day.day_number)}
+                          className="flex flex-col items-center gap-1.5 pt-0"
+                          aria-label={`Giorno ${day.day_number}`}
+                          aria-current={selected ? 'true' : undefined}
+                        >
+                          <span
+                            className={cn(
+                              'relative z-10 h-2.5 w-2.5 rounded-full border-2 border-white transition',
+                              selected ? 'bg-primary shadow-[0_0_0_3px] shadow-primary/25' : 'bg-slate-300'
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'text-[10px] font-semibold leading-none',
+                              selected ? 'text-primary' : 'text-slate-500'
+                            )}
+                          >
+                            Giorno {day.day_number}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

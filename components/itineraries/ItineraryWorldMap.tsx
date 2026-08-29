@@ -27,11 +27,13 @@ export function ItineraryWorldMap({
   className,
   highlightedDay,
   onDaySelect,
+  staticMap = false,
 }: {
   template: ItineraryTemplate;
   className?: string;
   highlightedDay?: number | null;
   onDaySelect?: (dayNumber: number) => void;
+  staticMap?: boolean;
 }) {
   const pins = useMemo(() => buildPinsFromItineraryTemplate(template), [template]);
   const dest = findCatalogDestination(template.destination_slug);
@@ -64,7 +66,12 @@ export function ItineraryWorldMap({
           Mappa · {pins.length} tappe
         </p>
       </div>
-      <div className="h-[240px] w-full sm:h-[280px]">
+      <div
+        className={cn(
+          'h-[240px] w-full sm:h-[280px]',
+          staticMap && '[&_.leaflet-container]:cursor-default [&_.leaflet-grab]:cursor-default'
+        )}
+      >
         <ReactLeafletTripMap
           destination={template.destination_name}
           destinationMeta={
@@ -75,7 +82,8 @@ export function ItineraryWorldMap({
           pins={pins}
           showRoute
           highlightedPinId={highlightedPinId}
-          onPinClick={(pin) => onDaySelect?.(pin.dayIndex)}
+          interactive={!staticMap}
+          onPinClick={staticMap ? undefined : (pin) => onDaySelect?.(pin.dayIndex)}
         />
       </div>
     </div>
