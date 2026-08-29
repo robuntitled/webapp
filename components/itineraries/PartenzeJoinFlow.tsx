@@ -153,7 +153,7 @@ export function PartenzeJoinFlow({
               {step === 'search' && 'Cerca da Italia verso destinazione.'}
             </p>
           </header>
-        ) : null}
+        )}
 
         {step === 'people' ? (
           <>
