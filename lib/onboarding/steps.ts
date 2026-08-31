@@ -40,7 +40,7 @@ export function onboardingStepIndex(step: OnboardingStepId): number {
 
 /** Dopo onboarding: ramifica. Login successivi: itinerari. */
 export function afterOnboardingPath(intent: TravelIntent): string {
-  return intent === 'book' ? '/destinazioni?vista=partenze' : '/destinazioni';
+  return intent === 'book' ? '/partenze' : '/destinazioni';
 }
 
 export function postLoginPath(opts: {

@@ -62,23 +62,25 @@ function ContinentTabBar({
 function DestinationStateCard({
   dest,
   cover,
-  ctaLabel,
   onSelect,
 }: {
   dest: ExplorerDestination;
   cover: string;
-  ctaLabel: string;
   onSelect: () => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-200/90 bg-white transition duration-150 hover:border-primary/30">
-      <button type="button" onClick={onSelect} className="block w-full text-left">
+    <article className="group overflow-hidden rounded-xl border border-slate-200/90 bg-white transition duration-150 hover:border-primary/35 hover:shadow-sm">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+      >
         <div className="relative aspect-[4/3] w-full">
           <Image
             src={cover}
             alt={dest.name}
             fill
-            className="object-cover"
+            className="object-cover transition duration-200 group-hover:scale-[1.03]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
@@ -97,9 +99,6 @@ function DestinationStateCard({
             </p>
           </div>
         </div>
-        <div className="border-t border-slate-100 px-3 py-2.5">
-          <span className="text-sm font-semibold text-primary">{ctaLabel}</span>
-        </div>
       </button>
     </article>
   );
@@ -109,13 +108,11 @@ function ContinentSection({
   continent,
   items,
   coverBySlug,
-  ctaLabel,
   onSelect,
 }: {
   continent: string;
   items: ExplorerDestination[];
   coverBySlug: Record<string, string>;
-  ctaLabel: string;
   onSelect: (dest: ExplorerDestination) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -140,7 +137,6 @@ function ContinentSection({
             key={dest.slug}
             dest={dest}
             cover={coverBySlug[dest.slug] ?? coverForDestination(dest.slug)}
-            ctaLabel={ctaLabel}
             onSelect={() => onSelect(dest)}
           />
         ))}
@@ -167,7 +163,6 @@ export function DestinationExplorerPanel({
   onContinentChange,
   onSelectDestination,
   coverBySlug,
-  ctaLabel = 'Esplora',
   resultsId = 'risultati-destinazioni',
 }: {
   destinations: ExplorerDestination[];
@@ -175,6 +170,7 @@ export function DestinationExplorerPanel({
   onContinentChange: (continent: string) => void;
   onSelectDestination: (dest: ExplorerDestination) => void;
   coverBySlug: Record<string, string>;
+  /** @deprecated CTA rimosse: l'intera card è cliccabile */
   ctaLabel?: string;
   resultsId?: string;
 }) {
@@ -212,7 +208,6 @@ export function DestinationExplorerPanel({
               continent={section.continent}
               items={section.items}
               coverBySlug={coverBySlug}
-              ctaLabel={ctaLabel}
               onSelect={onSelectDestination}
             />
           ))

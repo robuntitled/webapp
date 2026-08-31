@@ -315,10 +315,10 @@ export function HotelCheckoutClient({
               router.push('/pratiche');
               return;
             }
-            router.push(`/pratica/${confirmation.practiceId}?step=hotel`);
+            router.push(`/pratica/${confirmation.practiceId}?tab=hotel`);
           }}
         >
-          Continua con hotel e attività
+            Continua il viaggio
         </Button>
       </div>
     );

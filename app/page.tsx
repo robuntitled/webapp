@@ -267,11 +267,11 @@ export default function LoginPage() {
           <LandingDestinations />
           <p className="mt-4 text-sm text-white/90">
             <Link href="/destinazioni" className="underline underline-offset-4">
-              Itinerari
+              Destinazioni
             </Link>
             {' · '}
-            <Link href="/destinazioni?vista=partenze" className="underline underline-offset-4">
-              Partenze
+            <Link href="/partenze" className="underline underline-offset-4">
+              Unisciti
             </Link>
           </p>
         </div>

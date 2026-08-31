@@ -1,58 +1,63 @@
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { PartenzeJoinFlow } from '@/components/itineraries/PartenzeJoinFlow';
-import { getEdition, joinEdition, listEditionMembers } from '@/lib/data/editions';
-import { listEditionPeerFlights } from '@/lib/data/practices';
+import { TripWorkspace } from '@/components/itineraries/workspace/TripWorkspace';
+import { getEdition, listEditionMembers } from '@/lib/data/editions';
+import { findPracticeForEdition } from '@/lib/data/practices';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 
 export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string; stay?: string }>;
 };
 
-export default async function PartenzeJoinPage({ params }: PageProps) {
+export default async function PartenzeJoinPage({ params, searchParams }: PageProps) {
   const session = await auth();
-  if (!session?.user?.id) redirect('/');
   const { id } = await params;
+  const { tab, stay } = await searchParams;
   if (id.startsWith('seed-')) {
-    redirect('/destinazioni?vista=partenze');
+    redirect('/partenze');
   }
 
   const edition = await getEdition(id);
-  if (!edition) redirect('/destinazioni?vista=partenze');
-
-  const joined = await joinEdition({ userId: session.user.id, editionId: id });
-  if ('error' in joined) {
-    redirect('/destinazioni?vista=partenze');
+  if (!edition) redirect('/partenze');
+  if (edition.status === 'closed' || edition.status === 'locked') {
+    redirect('/partenze');
   }
 
-  const template = findItineraryTemplate(joined.practice.template_id);
+  const template = findItineraryTemplate(edition.template_id);
   if (!template) notFound();
 
-  const [members, peerFlights] = await Promise.all([
-    listEditionMembers(id, { withRatings: true }),
-    listEditionPeerFlights(id, session.user.id),
-  ]);
+  if (session?.user?.id) {
+    const existing = await findPracticeForEdition(session.user.id, id);
+    if (existing) {
+      const qs = new URLSearchParams();
+      if (tab) qs.set('tab', tab);
+      if (stay) qs.set('stay', stay);
+      const suffix = qs.toString() ? `?${qs.toString()}` : '';
+      redirect(`/pratica/${existing.id}${suffix}`);
+    }
+  }
 
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://nomadlink.it'}/partenze/${id}`;
+  const members = await listEditionMembers(id, { withRatings: true });
+  const dateFrom = String(edition.date_from).slice(0, 10);
+  const dateTo = String(edition.date_to).slice(0, 10);
 
   return (
-    <PartenzeJoinFlow
-      practiceId={joined.practice.id}
+    <TripWorkspace
       template={template}
-      dateFrom={String(joined.practice.date_from).slice(0, 10)}
-      dateTo={String(joined.practice.date_to).slice(0, 10)}
+      dateFrom={dateFrom}
+      dateTo={dateTo}
+      editionId={edition.id}
+      editionType={edition.edition_type}
       members={members}
-      peerFlights={peerFlights}
-      editionStats={{
-        confirmed: edition.confirmed_count ?? 0,
-        interested: edition.interested_count ?? 0,
-        minConfirmed: edition.min_confirmed,
-      }}
-      shareUrl={shareUrl}
-      shareTitle={`Partenza ${template.destination_name}`}
-      shareMessage={`Unisciti a questa partenza su Bradigo — ${template.destination_name}`}
+      isMember={false}
+      canJoin
+      backHref="/partenze"
+      backLabel="Torna a Unisciti"
+      initialTab={tab}
+      initialStay={stay}
     />
   );
 }

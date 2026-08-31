@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const LINKS = [
-  { href: '/destinazioni', label: 'Itinerari' },
+  { href: '/destinazioni', label: 'Destinazioni' },
+  { href: '/partenze', label: 'Unisciti' },
   { href: '/pratiche', label: 'I miei viaggi', auth: true },
   { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },

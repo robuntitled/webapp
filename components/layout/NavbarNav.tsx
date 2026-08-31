@@ -7,11 +7,14 @@ import { cn } from '@/lib/utils';
 const LINKS = [
   {
     href: '/destinazioni',
-    label: 'Itinerari',
+    label: 'Destinazioni',
     match: (pathname: string) =>
-      pathname === '/destinazioni' ||
-      pathname.startsWith('/itinerario') ||
-      pathname.startsWith('/destinazioni'),
+      pathname === '/destinazioni' || pathname.startsWith('/itinerario'),
+  },
+  {
+    href: '/partenze',
+    label: 'Unisciti',
+    match: (pathname: string) => pathname.startsWith('/partenze'),
   },
   {
     href: '/pratiche',

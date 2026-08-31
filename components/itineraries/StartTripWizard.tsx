@@ -1,17 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, Loader2, Wallet } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { joinEditionAction, startPracticeAction } from '@/actions/practices';
+import { startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
 import { TripWhenPicker, type TripWhenSelection } from '@/components/itineraries/TripWhenPicker';
-
-import { uniqueCover, uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
+import { uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import {
@@ -20,31 +19,17 @@ import {
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
 import { DestinationExplorerPanel } from '@/components/itineraries/DestinationExplorerPanel';
-import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
-import { HomeTravelModeSelector } from '@/components/itineraries/HomeTravelModeSelector';
-import { TrendingDestinationsCarousel } from '@/components/itineraries/TrendingDestinationsCarousel';
-import { PhotoChoiceCard } from '@/components/itineraries/PhotoChoiceCard';
+import { HomePathSelector } from '@/components/itineraries/HomePathSelector';
 import { PlanSaveButton } from '@/components/itineraries/PlanSaveButton';
 import { ItineraryDaysWithMap } from '@/components/itineraries/ItineraryWorldMap';
 import { findItineraryBySlug, minBudgetHintForDestination, templatesForDestination } from '@/lib/itineraries/catalog';
-import { findCatalogDestination } from '@/lib/catalog/destinations';
-import { formatItDate } from '@/lib/itineraries/dates';
-import { aggregatePublicDestinations } from '@/lib/itineraries/public-destinations';
-import {
-  homeTravelModeToPath,
-  homeTravelModeToTravelMode,
-  type HomeTravelMode,
-} from '@/lib/itineraries/home-travel-mode';
-import { buildTrendingCarouselItems } from '@/lib/itineraries/trending-destinations';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
 import type { OfficialEditionCard, TravelMode } from '@/lib/itineraries/types';
 
 type Step = 'dest' | 'plan' | 'when';
-type TripKind = 'privati' | 'pubblici';
 
-const PRIVATE_STEPS: Step[] = ['dest', 'plan', 'when'];
-const PUBLIC_STEPS: Step[] = ['dest', 'plan', 'when'];
+const FLOW_STEPS: Step[] = ['dest', 'plan', 'when'];
 
 const phaseMotion = {
   initial: { opacity: 0, y: 12 },
@@ -55,11 +40,9 @@ const phaseMotion = {
 
 export function StartTripWizard({
   destinations,
-  editions,
+  editions: _editions,
   initialSlug,
   initialDuration,
-  initialHomeTravelMode = 'solo',
-  initialPublicDest,
   favoriteTemplateIds = [],
 }: {
   destinations: {
@@ -74,9 +57,7 @@ export function StartTripWizard({
   editions: OfficialEditionCard[];
   initialSlug?: string;
   initialDuration?: number;
-  /** Modalità scelta in Home: solo, amici o gruppo aperto. */
-  initialHomeTravelMode?: HomeTravelMode;
-  /** Meta selezionata nel flusso gruppo aperto (?dest=slug). */
+  initialHomeTravelMode?: string;
   initialPublicDest?: string;
   favoriteTemplateIds?: string[];
 }) {
@@ -84,113 +65,17 @@ export function StartTripWizard({
     ? findItineraryBySlug(initialSlug, initialDuration)
     : undefined;
   const [step, setStep] = useState<Step>(startTemplate ? 'plan' : 'dest');
-  const [homeTravelMode, setHomeTravelMode] = useState<HomeTravelMode>(
-    startTemplate ? 'solo' : initialHomeTravelMode
-  );
-  const [tripKind, setTripKind] = useState<TripKind>(
-    startTemplate
-      ? 'privati'
-      : initialHomeTravelMode === 'group'
-        ? 'pubblici'
-        : 'privati'
-  );
   const [slug, setSlug] = useState(startTemplate?.destination_slug ?? '');
   const [duration, setDuration] = useState(startTemplate?.duration_days ?? 0);
-  const [mode, setMode] = useState<TravelMode | null>(
-    startTemplate
-      ? null
-      : homeTravelModeToTravelMode(initialHomeTravelMode)
-  );
+  const [mode, setMode] = useState<TravelMode>('solo');
   const [whenSelection, setWhenSelection] = useState<TripWhenSelection | null>(null);
-  const [editionId, setEditionId] = useState<string | null>(null);
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
-  const [publicDestSlug, setPublicDestSlug] = useState(initialPublicDest ?? '');
   const [pending, startTransition] = useTransition();
   const { data: session } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const dest = searchParams.get('dest') ?? '';
-    setPublicDestSlug(dest);
-    const vista = searchParams.get('vista');
-    const modalita = searchParams.get('modalita');
-    if (step !== 'dest') return;
-    const parsed =
-      vista === 'partenze' ? 'group' : modalita === 'amici' ? 'friends' : 'solo';
-    setHomeTravelMode(parsed);
-    if (parsed === 'group') {
-      setTripKind('pubblici');
-      setMode('group');
-    } else {
-      setTripKind('privati');
-      setMode(homeTravelModeToTravelMode(parsed));
-    }
-  }, [searchParams, step]);
-
-  const showGruppoAperto = step === 'dest' && homeTravelMode === 'group';
-  const showPublicDestinations = showGruppoAperto && !publicDestSlug;
-  const showPublicEditions = showGruppoAperto && Boolean(publicDestSlug);
-
-  const trendingCarouselItems = useMemo(
-    () => buildTrendingCarouselItems(destinations, editions),
-    [destinations, editions]
-  );
-
-  const applyHomeTravelMode = (mode: HomeTravelMode) => {
-    setHomeTravelMode(mode);
-    setPublicDestSlug('');
-    router.replace(homeTravelModeToPath(mode), { scroll: false });
-    if (mode === 'group') {
-      setTripKind('pubblici');
-      setMode('group');
-    } else {
-      setTripKind('privati');
-      setMode(homeTravelModeToTravelMode(mode));
-    }
-  };
-
-  const openPublicHub = () => {
-    applyHomeTravelMode('group');
-  };
-
-  const openCarouselDestination = (slug: string) => {
-    setHomeTravelMode('group');
-    setTripKind('pubblici');
-    setMode('group');
-    selectPublicDestination(slug);
-  };
-
-  const publicDestinationName = useMemo(() => {
-    if (!publicDestSlug) return null;
-    return (
-      findCatalogDestination(publicDestSlug)?.name ??
-      findItineraryBySlug(publicDestSlug)?.destination_name ??
-      publicDestSlug
-    );
-  }, [publicDestSlug]);
-
-  const selectPublicDestination = (slug: string) => {
-    setPublicDestSlug(slug);
-    router.replace(
-      `/destinazioni?vista=partenze&dest=${encodeURIComponent(slug)}`,
-      { scroll: false }
-    );
-  };
-
-  const clearPublicDestination = () => {
-    setPublicDestSlug('');
-    router.replace('/destinazioni?vista=partenze', { scroll: false });
-  };
-  const isPubblici = tripKind === 'pubblici';
-  const flowSteps = isPubblici ? PUBLIC_STEPS : PRIVATE_STEPS;
 
   const template = slug && duration ? findItineraryBySlug(slug, duration) : undefined;
-  const idx = flowSteps.indexOf(step);
-  const officialForTemplate = useMemo(
-    () => editions.filter((e) => e.template_id === template?.template_id),
-    [editions, template?.template_id]
-  );
+  const idx = FLOW_STEPS.indexOf(step);
 
   const filteredDestinations = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
@@ -217,16 +102,6 @@ export function StartTripWizard({
     return Object.fromEntries(slugs.map((s, i) => [s, urls[i]]));
   }, [filteredDestinations]);
 
-  const explorerDestinations = useMemo(() => {
-    if (showGruppoAperto) {
-      const slugsWithEditions = new Set(
-        aggregatePublicDestinations(editions).map((d) => d.slug)
-      );
-      return filteredDestinations.filter((d) => slugsWithEditions.has(d.slug));
-    }
-    return filteredDestinations;
-  }, [filteredDestinations, showGruppoAperto, editions]);
-
   const durationOptions = useMemo(
     () =>
       [...new Set(destinations.flatMap((d) => d.allowedDurations))].sort((a, b) => a - b),
@@ -240,14 +115,6 @@ export function StartTripWizard({
     }
     setSlug(dest.slug);
     setDuration(days);
-    setTripKind('privati');
-    setMode(
-      homeTravelMode === 'friends'
-        ? 'friends'
-        : homeTravelMode === 'group'
-          ? 'group'
-          : 'solo'
-    );
     setStep('plan');
   };
 
@@ -265,54 +132,19 @@ export function StartTripWizard({
   };
 
   const goBack = () => {
-    const prev = flowSteps[idx - 1];
+    const prev = FLOW_STEPS[idx - 1];
     if (prev) setStep(prev);
-  };
-
-  const goNext = () => {
-    if (step === 'plan') {
-      if (isPubblici) {
-        setMode('group');
-        setStep('when');
-      } else {
-        if (!mode) {
-          setMode(homeTravelModeToTravelMode(homeTravelMode));
-        }
-        setStep('when');
-      }
-    }
-  };
-
-  const confirmWithEdition = (id: string) => {
-    if (!template) return;
-    if (!session?.user) {
-      toast.error('Accedi per confermare.');
-      router.push(`/?callbackUrl=/itinerario/${template.destination_slug}?d=${template.duration_days}`);
-      return;
-    }
-    startTransition(async () => {
-      const result = await joinEditionAction(id);
-      if (result?.error) toast.error(result.error);
-    });
   };
 
   const confirm = () => {
     if (!template) return;
     if (!session?.user) {
-      toast.error('Accedi per salvare la bozza.');
+      toast.error('Accedi per aprire il viaggio.');
       router.push(
         `/?callbackUrl=${encodeURIComponent(
           `/itinerario/${template.destination_slug}?d=${template.duration_days}`
         )}`
       );
-      return;
-    }
-    if (mode === 'group') {
-      if (!editionId) {
-        toast.error('Scegli una partenza ufficiale.');
-        return;
-      }
-      confirmWithEdition(editionId);
       return;
     }
     if (!whenSelection) {
@@ -349,34 +181,19 @@ export function StartTripWizard({
           </div>
           <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-2 pb-7 pt-3 text-center sm:gap-3 sm:pb-8 sm:pt-4">
             <h1 className="font-display text-2xl font-semibold tracking-tight text-white drop-shadow sm:text-3xl md:text-5xl">
-              {showGruppoAperto
-                ? 'In Partenza'
-                : homeTravelMode === 'friends'
-                  ? 'In compagnia, stesso piano'
-                  : 'La tua vacanza, in tre click'}
+              La tua vacanza, in tre click
             </h1>
             <p className="mx-auto max-w-2xl text-base leading-snug text-white/90 drop-shadow sm:text-[19px] md:text-[22px]">
-              {showGruppoAperto
-                ? 'Viaggia insieme ad altri, prenota, divertiti.'
-                : homeTravelMode === 'friends'
-                  ? 'Scegli l’itinerario e condividilo con chi vuoi.'
-                  : 'Scegli il tuo itinerario e parti quando vuoi.'}
+              Scegli la destinazione, definisci date e stile, configura il viaggio.
             </p>
           </div>
-          {/* Search sul confine foto / bianco, stessa larghezza di navbar e schede */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 translate-y-1/2">
             <div className="nl-page pointer-events-auto w-full">
               <CatalogHeroSearchBar
                 value={filters}
                 onChange={setFilters}
-                placeholder={
-                  showGruppoAperto
-                    ? showPublicEditions
-                      ? 'Cerca date o durata'
-                      : 'Cerca destinazione'
-                    : 'Cerca nazione, continente o vibe'
-                }
-                resultsId={showGruppoAperto ? 'risultati-partenze' : 'risultati-itinerari'}
+                placeholder="Cerca nazione, continente o vibe"
+                resultsId="risultati-itinerari"
                 durationOptions={durationOptions}
               />
             </div>
@@ -387,96 +204,35 @@ export function StartTripWizard({
       <div
         className={cn(
           'relative z-10 flex w-full flex-col pb-24',
-          step === 'dest' ? 'min-h-0 pt-12' : 'min-h-[calc(100vh-4rem)] pt-6',
+          step === 'dest' ? 'min-h-0 pt-16' : 'min-h-[calc(100vh-4rem)] pt-6',
           step === 'dest' ? 'nl-home-content' : 'nl-page'
         )}
       >
         {step === 'dest' ? (
-          <div className="mb-6 flex w-full flex-col items-center gap-6">
-            <HomeTravelModeSelector
-              value={homeTravelMode}
-              onChange={applyHomeTravelMode}
-            />
-            {showGruppoAperto && !showPublicEditions ? (
-              <TrendingDestinationsCarousel
-                items={trendingCarouselItems}
-                onDestinationClick={openCarouselDestination}
-                onPublicHubClick={openPublicHub}
-              />
-            ) : null}
+          <div className="mb-6 flex w-full flex-col items-center">
+            <HomePathSelector value="destinazioni" />
           </div>
         ) : null}
 
         {step !== 'dest' ? (
-          <div className="mb-8 space-y-4 text-center">
-            <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-700">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-              Step {idx + 1} di {flowSteps.length}
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              {flowSteps.map((s, i) => (
-                <div
-                  key={s}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all duration-500',
-                    i === idx ? 'w-10 bg-accent' : i < idx ? 'w-5 bg-accent/50' : 'w-5 bg-slate-200'
-                  )}
-                />
-              ))}
-            </div>
+          <div className="mb-8 space-y-3 text-center">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               {step === 'plan' && 'Questo è il piano.'}
-              {step === 'when' && (isPubblici ? 'Scegli la partenza' : 'Quando parti?')}
+              {step === 'when' && 'Quando parti?'}
             </h1>
             <p className="mx-auto max-w-xl text-base text-slate-600">
-              {step === 'plan' &&
-                (isPubblici
-                  ? 'Riferimento condiviso. Avanti per unirti agli altri viaggiatori.'
-                  : 'Riferimento, non pacchetto. Avanti per le date.')}
-              {step === 'when' &&
-                (isPubblici
-                  ? 'Date già fissate. Entri e vedi i voli.'
-                  : 'Quanti giorni hai? Scegli le date — il piano si adatta.')}
+              {step === 'plan' && 'Riferimento, non pacchetto. Poi scegli date e stile.'}
+              {step === 'when' && 'Scegli le date e la vibe — il piano si adatta.'}
             </p>
           </div>
         ) : null}
 
         <div className="flex-1">
           <AnimatePresence mode="wait">
-            {showPublicDestinations ? (
-              <motion.div key="pubblici-dest" {...phaseMotion}>
-                <DestinationExplorerPanel
-                  destinations={explorerDestinations}
-                  continent={filters.continent}
-                  onContinentChange={(continent) =>
-                    setFilters({ ...filters, continent })
-                  }
-                  onSelectDestination={(dest) => selectPublicDestination(dest.slug)}
-                  coverBySlug={destCoverBySlug}
-                  ctaLabel="Esplora partenze"
-                  resultsId="risultati-partenze"
-                />
-              </motion.div>
-            ) : null}
-
-            {showPublicEditions ? (
-              <motion.div key={`pubblici-editions-${publicDestSlug}`} {...phaseMotion}>
-                <OfficialEditionsGrid
-                  editions={editions}
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  showFiltersBar={false}
-                  destinationSlug={publicDestSlug}
-                  destinationName={publicDestinationName ?? undefined}
-                  onBack={clearPublicDestination}
-                />
-              </motion.div>
-            ) : null}
-
-            {step === 'dest' && !showGruppoAperto ? (
+            {step === 'dest' ? (
               <motion.div key="dest" {...phaseMotion}>
                 <DestinationExplorerPanel
-                  destinations={explorerDestinations}
+                  destinations={filteredDestinations}
                   continent={filters.continent}
                   onContinentChange={(continent) =>
                     setFilters({ ...filters, continent })
@@ -486,7 +242,6 @@ export function StartTripWizard({
                     if (full) openDestination(full);
                   }}
                   coverBySlug={destCoverBySlug}
-                  ctaLabel="Vedi piano"
                   resultsId="risultati-itinerari"
                 />
               </motion.div>
@@ -545,39 +300,43 @@ export function StartTripWizard({
               </motion.div>
             ) : null}
 
-            {step === 'when' ? (
-              <motion.div key="when" {...phaseMotion}>
-                {isPubblici ? (
-                  officialForTemplate.length === 0 ? (
-                    <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 shadow-sm">
-                      Nessuna partenza ufficiale su questa durata.
-                    </p>
-                  ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {officialForTemplate.map((ed, i) => (
-                        <PhotoChoiceCard
-                          key={ed.id}
-                          cover={uniqueCover(slug || 'thailandia', i)}
-                          active={editionId === ed.id}
-                          onClick={() => {
-                            setEditionId(ed.id);
-                            confirmWithEdition(ed.id);
-                          }}
-                          kicker={`${ed.confirmed_count}/${ed.min_confirmed} partecipanti`}
-                          title={template?.destination_name ?? 'Partenza'}
-                          body={`${formatItDate(ed.date_from)} – ${formatItDate(ed.date_to)}`}
-                        />
-                      ))}
-                    </div>
-                  )
-                ) : template ? (
-                  <TripWhenPicker
-                    destinationSlug={template.destination_slug}
-                    baseTemplate={template}
-                    value={whenSelection}
-                    onChange={setWhenSelection}
-                  />
-                ) : null}
+            {step === 'when' && template ? (
+              <motion.div key="when" {...phaseMotion} className="space-y-5">
+                <div
+                  className="mx-auto flex w-full max-w-md gap-1 rounded-full border border-slate-200 bg-white p-1"
+                  role="radiogroup"
+                  aria-label="Con chi parti"
+                >
+                  {(
+                    [
+                      ['solo', 'Da solo', User],
+                      ['friends', 'Con amici', Users],
+                    ] as const
+                  ).map(([id, label, Icon]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={mode === id}
+                      onClick={() => setMode(id)}
+                      className={cn(
+                        'inline-flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition',
+                        mode === id
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <TripWhenPicker
+                  destinationSlug={template.destination_slug}
+                  baseTemplate={template}
+                  value={whenSelection}
+                  onChange={setWhenSelection}
+                />
               </motion.div>
             ) : null}
           </AnimatePresence>
@@ -589,35 +348,31 @@ export function StartTripWizard({
               <Button
                 type="button"
                 variant="ghost"
-                className="rounded-full text-foreground hover:bg-muted"
+                className="rounded-full text-slate-500 hover:bg-muted hover:text-slate-800"
                 onClick={goBack}
               >
                 <ArrowLeft className="h-4 w-4" />
-                Indietro
+                Torna indietro
               </Button>
-              {step === 'when' && !isPubblici ? (
+              {step === 'when' ? (
                 <Button
                   type="button"
                   size="lg"
-                  className="rounded-full px-6 font-semibold shadow-lg shadow-accent/20 sm:px-8"
+                  className="rounded-full px-6 font-semibold sm:px-8"
                   disabled={pending}
                   onClick={confirm}
                 >
                   {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Salva bozza e vedi i voli
-                  <ArrowRight className="h-4 w-4" />
+                  Apri il viaggio
                 </Button>
-              ) : step === 'when' && isPubblici ? (
-                <span />
               ) : (
                 <Button
                   type="button"
                   size="lg"
-                  className="rounded-full px-8 font-semibold shadow-lg shadow-accent/20"
-                  onClick={goNext}
+                  className="rounded-full px-8 font-semibold"
+                  onClick={() => setStep('when')}
                 >
-                  Avanti
-                  <ArrowRight className="h-4 w-4" />
+                  Scegli le date
                 </Button>
               )}
             </div>

@@ -65,14 +65,14 @@ export function CatalogHeroSearchBar({
       : 'Prezzo';
 
   return (
-    <div className="flex h-11 w-full min-w-0 items-center gap-0.5 rounded-full border border-slate-200 bg-white pl-3 pr-1 shadow-md sm:h-12 sm:gap-1 sm:pl-3.5 sm:pr-1.5">
-      <Search className="pointer-events-none h-4 w-4 shrink-0 text-slate-400" />
+    <div className="flex h-[4.125rem] w-full min-w-0 items-center gap-0.5 rounded-full border border-slate-200 bg-white pl-4 pr-1.5 shadow-md sm:h-[4.5rem] sm:gap-1 sm:pl-5 sm:pr-2">
+      <Search className="pointer-events-none h-5 w-5 shrink-0 text-slate-400" />
       <input
         type="search"
         value={value.query}
         onChange={(e) => set('query', e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 border-0 bg-transparent py-2 pl-1.5 pr-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:pl-2"
+        className="min-w-0 flex-1 border-0 bg-transparent py-3 pl-2 pr-1 text-base text-slate-900 outline-none placeholder:text-slate-400 sm:pl-2.5"
         autoComplete="off"
         aria-controls={resultsId}
       />

@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   CatalogHeroSearchBar,
   ContinentFilterRow,
@@ -86,12 +85,14 @@ function EditionCard({
   const tripDuration = durationLabel(days);
 
   return (
-    <li
-      className={cn(
-        'flex w-full flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md',
-        highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
-      )}
-    >
+    <li>
+      <Link
+        href={`/partenze/${ed.id}`}
+        className={cn(
+          'flex w-full cursor-pointer flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+          highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
+        )}
+      >
       <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={cover}
@@ -108,6 +109,15 @@ function EditionCard({
         >
           {badgeLabel}
         </span>
+        {ed.edition_type === 'private' ? (
+          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 shadow-sm">
+            Privato
+          </span>
+        ) : (
+          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 shadow-sm">
+            Gruppo
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-[0.65rem] p-[clamp(0.9rem,1.2vw,1.15rem)]">
@@ -166,17 +176,8 @@ function EditionCard({
             {groupHint}
           </p>
         </section>
-
-        <div className="mt-1 pt-0.5">
-          <Button
-            asChild
-            size="sm"
-            className="rounded-full bg-accent px-5 text-[clamp(0.88rem,0.15vw+0.84rem,0.95rem)] text-white hover:bg-accent/90"
-          >
-            <Link href={`/partenze/${ed.id}`}>Partecipa</Link>
-          </Button>
-        </div>
       </div>
+      </Link>
     </li>
   );
 }

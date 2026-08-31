@@ -28,12 +28,14 @@ export function ItineraryWorldMap({
   highlightedDay,
   onDaySelect,
   staticMap = false,
+  compact = false,
 }: {
   template: ItineraryTemplate;
   className?: string;
   highlightedDay?: number | null;
   onDaySelect?: (dayNumber: number) => void;
   staticMap?: boolean;
+  compact?: boolean;
 }) {
   const pins = useMemo(() => buildPinsFromItineraryTemplate(template), [template]);
   const dest = findCatalogDestination(template.destination_slug);
@@ -61,14 +63,16 @@ export function ItineraryWorldMap({
         className
       )}
     >
-      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Mappa · {pins.length} tappe
-        </p>
-      </div>
+      {compact ? null : (
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Mappa · {pins.length} tappe
+          </p>
+        </div>
+      )}
       <div
         className={cn(
-          'h-[240px] w-full sm:h-[280px]',
+          compact ? 'h-full min-h-[10rem] w-full' : 'h-[240px] w-full sm:h-[280px]',
           staticMap && '[&_.leaflet-container]:cursor-default [&_.leaflet-grab]:cursor-default'
         )}
       >

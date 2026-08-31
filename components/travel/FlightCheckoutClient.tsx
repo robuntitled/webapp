@@ -590,7 +590,7 @@ export function FlightCheckoutClient({
     const pending = isFlightPendingConfirmation(confirmation.status);
     const statusInfo = formatFlightBookingStatus(confirmation.status);
     const practiceHref = confirmation.practiceId
-      ? `/pratica/${confirmation.practiceId}?step=hotel`
+      ? `/pratica/${confirmation.practiceId}?tab=hotel`
       : '/pratiche';
 
     return (

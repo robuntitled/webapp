@@ -44,11 +44,10 @@ function missing(error: { code?: string; message?: string } | null) {
   return error?.code === '42P01' || error?.code === '42703';
 }
 
-export async function listOfficialEditions(templateId?: string): Promise<EditionRow[]> {
+export async function listJoinableEditions(templateId?: string): Promise<EditionRow[]> {
   let query = supabaseAdmin
     .from('editions')
     .select('id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token')
-    .eq('edition_type', 'official')
     .in('status', ['open', 'formed']);
   if (templateId) query = query.eq('template_id', templateId);
   const { data, error } = await query.order('date_from', { ascending: true });
@@ -81,6 +80,12 @@ export async function listOfficialEditions(templateId?: string): Promise<Edition
     })
   );
   return withCounts;
+}
+
+export async function listOfficialEditions(templateId?: string): Promise<EditionRow[]> {
+  const all = await listJoinableEditions(templateId);
+  const official = all.filter((e) => e.edition_type === 'official');
+  return official.length ? official : fallbackOfficial(templateId);
 }
 
 function fallbackOfficial(templateId?: string): EditionRow[] {
