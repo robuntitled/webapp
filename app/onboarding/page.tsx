@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
       />
       <header className="relative z-10 px-4 py-5">
         <Link href="/" className="inline-block" aria-label="Bradigo — home">
-          <BrandLogo size={48} className="ring-white/40" />
+          <BrandLogo size={40} className="drop-shadow-[0_2px_16px_rgba(0,0,0,0.55)]" />
         </Link>
       </header>
       <OnboardingWizard />

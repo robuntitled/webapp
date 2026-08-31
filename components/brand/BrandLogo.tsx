@@ -1,42 +1,45 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-/** Logo Bradigo — rotondo, object-cover + leggero zoom per tagliare i bordi bianchi. */
+const LOGO_W = 952;
+const LOGO_H = 389;
+const RATIO = LOGO_W / LOGO_H;
+
+/** Logo flygetr — wordmark orizzontale su sfondo trasparente. */
 export function BrandLogo({
   size,
   responsive = false,
   className,
   priority = false,
 }: {
+  /** Altezza in px (la larghezza segue il rapporto del wordmark). */
   size?: number;
-  /** Navbar: 52px mobile → 60px tablet → 64px desktop */
+  /** Navbar: 32px mobile → 36px tablet → 40px desktop */
   responsive?: boolean;
   className?: string;
   priority?: boolean;
 }) {
-  const dimensionStyle =
-    size != null ? ({ width: size, height: size } as const) : undefined;
+  const height = size ?? 36;
 
   return (
-    <span
-      className={cn(
-        'relative inline-block shrink-0 overflow-hidden rounded-full ring-2 ring-white/80',
+    <Image
+      src="/assets/flygetr-logo.png"
+      alt="flygetr"
+      width={LOGO_W}
+      height={LOGO_H}
+      priority={priority}
+      sizes={
         responsive
-          ? 'h-[3.25rem] w-[3.25rem] md:h-[3.75rem] md:w-[3.75rem] lg:h-16 lg:w-16'
-          : 'h-12 w-12',
+          ? '(max-width: 768px) 80px, (max-width: 1024px) 90px, 100px'
+          : `${Math.round(height * RATIO)}px`
+      }
+      className={cn(
+        'w-auto object-contain',
+        responsive ? 'h-8 md:h-9 lg:h-10' : undefined,
         className
       )}
-      style={dimensionStyle}
-    >
-      <Image
-        src="/assets/logoBradigo.jpeg"
-        alt="Bradigo"
-        fill
-        priority={priority}
-        sizes={responsive ? '(max-width: 768px) 52px, (max-width: 1024px) 60px, 64px' : `${size ?? 48}px`}
-        className="scale-110 object-cover object-center"
-      />
-    </span>
+      style={responsive ? undefined : { height }}
+    />
   );
 }
 
