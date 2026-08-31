@@ -20,8 +20,7 @@ export function Footer({ company }: FooterProps) {
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <div className="mb-4 flex items-center gap-2.5">
-              <BrandLogo size={40} className="ring-border" />
-              <span className="font-display text-xl font-semibold">{company.tradeName}</span>
+              <BrandLogo size={34} />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Viaggi di gruppo nel mondo — raccontati da chi li vive e li fotografa.

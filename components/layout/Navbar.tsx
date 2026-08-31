@@ -32,7 +32,7 @@ export async function Navbar() {
         >
           <BrandLogo
             responsive
-            className="ring-white/80 drop-shadow-[0_2px_12px_rgba(0,0,0,0.18)] group-data-[hero=true]/nav:ring-white/40 group-data-[hero=true]/nav:drop-shadow-[0_2px_16px_rgba(0,0,0,0.45)]"
+            className="drop-shadow-[0_1px_8px_rgba(0,0,0,0.15)] group-data-[hero=true]/nav:drop-shadow-[0_2px_16px_rgba(0,0,0,0.55)]"
           />
         </Link>
 
