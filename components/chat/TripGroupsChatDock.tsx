@@ -19,6 +19,7 @@ import { TripChatPanel } from '@/components/chat/TripChatPanel';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
+import { isComposerPath } from '@/lib/ui/app-chrome';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -43,7 +44,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [hidingId, setHidingId] = useState<string | null>(null);
 
-  const hideOnComposer = pathname?.startsWith('/dashboard/crea');
+  const hideOnComposer = isComposerPath(pathname);
 
   const loadGroups = useCallback(async () => {
     try {
