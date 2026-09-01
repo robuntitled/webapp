@@ -15,7 +15,6 @@ import {
 import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/workspace/WorkspaceHero';
 import { WorkspaceStatusCard } from '@/components/itineraries/workspace/WorkspaceStatusCard';
 import { WorkspaceTabs, type WorkspaceTabItem } from '@/components/itineraries/workspace/WorkspaceTabs';
-import { WorldClocksWidget } from '@/components/itineraries/workspace/WorldClocksWidget';
 import { Button } from '@/components/ui/button';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
@@ -256,16 +255,13 @@ export function TripWorkspace({
 
         {tab === 'voli' ? (
           <div className="ws-widget rounded-2xl p-5 sm:p-6">
-            <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
-              <div>
-                <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
-                  Voli
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Cerca, confronta e scegli andata e ritorno sulle date del viaggio.
-                </p>
-              </div>
-              <WorldClocksWidget />
+            <div className="mb-5 border-b border-slate-100 pb-5">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
+                Voli
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Cerca, confronta e scegli andata e ritorno sulle date del viaggio.
+              </p>
             </div>
             {!canBook ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
