@@ -60,14 +60,14 @@ export function CatalogBrowseChrome({
   children: ReactNode;
 }) {
   return (
-    <div className="nl-page relative z-10 min-h-0 w-full pt-14 pb-16">
-      <div className="mb-8 flex w-full justify-center">
-        <div className="flex w-full max-w-xl flex-col gap-6">
+    <div className="nl-page relative z-10 min-h-0 w-full pt-11 pb-14">
+      <div className="mb-5 flex w-full justify-center">
+        <div className="flex w-full max-w-xl flex-col gap-4">
           <HomePathSelector value={path} />
           <ContinentFilterRow value={continent} onChange={onContinentChange} />
         </div>
       </div>
-      <div className="space-y-10">{children}</div>
+      <div className="space-y-8">{children}</div>
     </div>
   );
 }

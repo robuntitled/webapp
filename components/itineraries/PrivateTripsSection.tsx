@@ -128,7 +128,7 @@ export function PrivateTripsSection({
 
   useEffect(() => {
     if (reducedMotion || paused || items.length <= 1 || pageCount <= 1) return;
-    const id = window.setInterval(() => scrollByCard(1), 3000);
+    const id = window.setInterval(() => scrollByCard(1), 2000);
     return () => window.clearInterval(id);
   }, [items.length, pageCount, paused, reducedMotion, scrollByCard]);
 
@@ -145,7 +145,7 @@ export function PrivateTripsSection({
 
   return (
     <section
-      className="space-y-5 rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 py-6 sm:px-6"
+      className="space-y-4 rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 py-4 sm:px-6 sm:py-5"
       aria-labelledby="viaggi-privati-title"
     >
       <h2
@@ -179,7 +179,7 @@ export function PrivateTripsSection({
           <ul
             ref={scrollerRef}
             onScroll={measurePages}
-            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
           >
             {items.map(({ dest: _d, name: _n, continent: _c, ...item }) => (
               <li
@@ -211,7 +211,7 @@ export function PrivateTripsSection({
             </>
           ) : null}
           {pageCount > 1 ? (
-            <div className="mt-3 flex items-center justify-center gap-1.5" aria-label="Posizione carosello">
+            <div className="mt-2 flex items-center justify-center gap-2" aria-label="Posizione carosello">
               {Array.from({ length: pageCount }).map((_, i) => (
                 <button
                   key={i}
@@ -220,8 +220,8 @@ export function PrivateTripsSection({
                   aria-current={i === page ? 'true' : undefined}
                   onClick={() => scrollToPage(i)}
                   className={cn(
-                    'h-2 rounded-full transition-all',
-                    i === page ? 'w-5 bg-primary' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                    'h-2.5 rounded-full transition-all',
+                    i === page ? 'w-6 bg-primary shadow-sm' : 'w-2.5 bg-slate-400/90 hover:bg-slate-500'
                   )}
                 />
               ))}
@@ -230,7 +230,7 @@ export function PrivateTripsSection({
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-2 pt-1">
+      <div className="flex flex-col items-center gap-1.5">
         <p className="text-sm text-slate-600">Hai già il link di un viaggio?</p>
         <JoinTripLinkDialog triggerLabel="Inserisci link" />
       </div>
