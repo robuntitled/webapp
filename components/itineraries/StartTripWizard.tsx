@@ -10,7 +10,7 @@ import {
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
 import { DestinationExplorerPanel } from '@/components/itineraries/DestinationExplorerPanel';
-import { HomePathSelector } from '@/components/itineraries/HomePathSelector';
+import { CatalogBrowseChrome } from '@/components/itineraries/HomePathSelector';
 import { TripSetupPanel } from '@/components/itineraries/TripSetupPanel';
 import { findItineraryBySlug, minBudgetHintForDestination } from '@/lib/itineraries/catalog';
 import { cn } from '@/lib/utils';
@@ -127,27 +127,26 @@ export function StartTripWizard({
       <div
         className={cn(
           'relative z-10 w-full',
-          step === 'dest' ? 'nl-home-content min-h-0 pt-16 pb-16' : 'nl-home-content pt-6 pb-10'
+          step === 'dest' ? '' : 'nl-home-content pt-6 pb-10'
         )}
       >
         {step === 'dest' ? (
-          <div className="mb-6 flex w-full flex-col items-center">
-            <HomePathSelector value="destinazioni" />
-          </div>
-        ) : null}
-
-        {step === 'dest' ? (
-          <DestinationExplorerPanel
-            destinations={filteredDestinations}
+          <CatalogBrowseChrome
+            path="destinazioni"
             continent={filters.continent}
             onContinentChange={(continent) => setFilters({ ...filters, continent })}
-            onSelectDestination={(dest) => {
-              const full = destinations.find((d) => d.slug === dest.slug);
-              if (full) openDestination(full);
-            }}
-            coverBySlug={destCoverBySlug}
-            resultsId="risultati-itinerari"
-          />
+          >
+            <DestinationExplorerPanel
+              destinations={filteredDestinations}
+              continent={filters.continent}
+              onSelectDestination={(dest) => {
+                const full = destinations.find((d) => d.slug === dest.slug);
+                if (full) openDestination(full);
+              }}
+              coverBySlug={destCoverBySlug}
+              resultsId="risultati-itinerari"
+            />
+          </CatalogBrowseChrome>
         ) : null}
 
         {step === 'setup' && template ? (

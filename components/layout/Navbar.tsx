@@ -7,16 +7,8 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Button } from '@/components/ui/button';
-import { Heart } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
 import { cn } from '@/lib/utils';
-
-const iconBtnClass = cn(
-  'h-10 w-10 shrink-0 rounded-full text-slate-600 transition-colors',
-  'hover:bg-slate-900/[0.05] hover:text-primary',
-  'focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
-  'group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white'
-);
 
 export async function Navbar() {
   const session = await auth();
@@ -39,15 +31,6 @@ export async function Navbar() {
           <MobileNav isLoggedIn={!!session?.user} />
           {session?.user ? (
             <>
-              <Link
-                href="/pratiche"
-                className="hidden sm:block"
-                aria-label="I miei viaggi"
-              >
-                <Button variant="ghost" size="icon" className={iconBtnClass}>
-                  <Heart className="h-[1.15rem] w-[1.15rem] fill-accent text-accent group-data-[hero=true]/nav:drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]" />
-                </Button>
-              </Link>
               <NotificationBell />
               <UserNav user={session.user} showCostsDashboard={showCostsDashboard} />
             </>

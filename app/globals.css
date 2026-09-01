@@ -307,7 +307,7 @@
   .nl-app-header {
     --nav-progress: 1;
     --nl-nav-h: calc(var(--nl-nav-height) + (1 - var(--nav-progress)) * 0.4rem);
-    --nl-logo-h: calc(2.45rem + (1 - var(--nav-progress)) * 0.7rem);
+    --nl-logo-h: calc(2.94rem + (1 - var(--nav-progress)) * 0.84rem);
     color: rgb(30 41 59);
     background-color: rgb(255 255 255 / calc(var(--nav-progress) * 0.74));
     border-bottom: 1px solid rgb(226 232 240 / calc(var(--nav-progress) * 0.45));
@@ -330,8 +330,8 @@
   }
 
   .nl-brand-logo {
-    height: var(--nl-logo-h, 2.75rem);
-    width: calc(var(--nl-logo-h, 2.75rem) * 1.42);
+    height: var(--nl-logo-h, 2.94rem);
+    width: calc(var(--nl-logo-h, 2.94rem) * 2.08);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -378,36 +378,6 @@
     .nl-card-grid {
       gap: 1.5rem;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-
-  /**
-   * Frame lista partenze: leggermente più largo del content standard (.nl-page)
-   * senza modificare filtri/toggle sopra.
-   */
-  .nl-editions-frame {
-    box-sizing: border-box;
-    width: 100%;
-  }
-
-  @media (min-width: 768px) {
-    .nl-editions-frame {
-      width: calc(100% + 2.5rem);
-      margin-inline: -1.25rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .nl-editions-frame {
-      width: calc(100% + 6vw);
-      margin-inline: -3vw;
-    }
-  }
-
-  @media (min-width: 1440px) {
-    .nl-editions-frame {
-      width: calc(100% + 8vw);
-      margin-inline: -4vw;
     }
   }
 

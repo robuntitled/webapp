@@ -197,14 +197,14 @@ export function ContinentFilterRow({
   onChange: (continent: string) => void;
 }) {
   return (
-    <div className="flex w-full flex-wrap items-center justify-center gap-2">
+    <div className="-mx-1 flex w-[calc(100%+0.5rem)] gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:mx-0 sm:w-full sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
       {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
         <button
           key={r}
           type="button"
           onClick={() => onChange(value === r && r !== 'Tutte' ? 'Tutte' : r)}
           className={cn(
-            'rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition',
+            'shrink-0 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition',
             value === r
               ? 'bg-primary text-white'
               : 'border border-slate-300 bg-white text-slate-800 hover:border-primary hover:text-primary'

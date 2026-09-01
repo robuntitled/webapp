@@ -16,7 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
-export function JoinTripLinkDialog() {
+export function JoinTripLinkDialog({
+  triggerLabel = 'Hai un link?',
+}: {
+  triggerLabel?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
@@ -56,7 +60,7 @@ export function JoinTripLinkDialog() {
           className="rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-primary/40 hover:text-primary"
         >
           <Link2 className="h-4 w-4" aria-hidden />
-          Hai un link?
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent className="rounded-2xl sm:max-w-md">

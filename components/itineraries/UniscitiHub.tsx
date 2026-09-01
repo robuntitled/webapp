@@ -7,9 +7,9 @@ import {
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
-import { HomePathSelector } from '@/components/itineraries/HomePathSelector';
-import { JoinTripLinkDialog } from '@/components/itineraries/JoinTripLinkDialog';
+import { CatalogBrowseChrome } from '@/components/itineraries/HomePathSelector';
 import { OfficialEditionsGrid } from '@/components/itineraries/OfficialEditionsGrid';
+import { PrivateTripsSection } from '@/components/itineraries/PrivateTripsSection';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
 
 export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
@@ -22,6 +22,15 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
     });
     return [...new Set(days.filter((d): d is number => d != null))].sort((a, b) => a - b);
   }, [editions]);
+
+  const privateEditions = useMemo(
+    () => editions.filter((e) => e.edition_type === 'private'),
+    [editions]
+  );
+  const publicEditions = useMemo(
+    () => editions.filter((e) => e.edition_type !== 'private'),
+    [editions]
+  );
 
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-visible bg-white">
@@ -39,21 +48,19 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
         }
       />
 
-      <div className="nl-home-content relative z-10 min-h-0 w-full pt-16 pb-16">
-        <div className="mb-6 grid w-full items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
-          <div className="hidden sm:block" />
-          <HomePathSelector value="unisciti" />
-          <div className="flex justify-center sm:justify-end">
-            <JoinTripLinkDialog />
-          </div>
-        </div>
+      <CatalogBrowseChrome
+        path="unisciti"
+        continent={filters.continent}
+        onContinentChange={(continent) => setFilters({ ...filters, continent })}
+      >
+        <PrivateTripsSection editions={privateEditions} filters={filters} />
         <OfficialEditionsGrid
-          editions={editions}
+          editions={publicEditions}
           filters={filters}
           onFiltersChange={setFilters}
           showFiltersBar={false}
         />
-      </div>
+      </CatalogBrowseChrome>
     </div>
   );
 }

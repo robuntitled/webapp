@@ -1,0 +1,204 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { JoinTripLinkDialog } from '@/components/itineraries/JoinTripLinkDialog';
+import { EditionCard } from '@/components/itineraries/OfficialEditionsGrid';
+import { uniqueCover } from '@/lib/composer/destination-covers';
+import { findCatalogDestination } from '@/lib/catalog/destinations';
+import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { editionScarcity, editionThresholdProgress } from '@/lib/itineraries/edition-present';
+import { editionDestinationSlug } from '@/lib/itineraries/public-destinations';
+import type { OfficialEditionCard } from '@/lib/itineraries/types';
+import type { CatalogFilterState } from '@/components/itineraries/CatalogFiltersBar';
+import { formatItDate } from '@/lib/itineraries/dates';
+import { cn } from '@/lib/utils';
+
+function durationFromId(templateId: string, fallback?: number | null) {
+  if (fallback != null) return fallback;
+  const m = templateId.match(/-(\d+)d(?:-|$)/i);
+  return m ? Number(m[1]) : null;
+}
+
+export function PrivateTripsSection({
+  editions,
+  filters,
+}: {
+  editions: OfficialEditionCard[];
+  filters: CatalogFilterState;
+}) {
+  const scrollerRef = useRef<HTMLUListElement>(null);
+  const [page, setPage] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+
+  const items = useMemo(() => {
+    const q = filters.query.trim().toLowerCase();
+    return editions
+      .map((ed, i) => {
+        const tpl = findItineraryTemplate(ed.template_id);
+        const slug = editionDestinationSlug(ed);
+        const dest = findCatalogDestination(slug) ?? findCatalogDestination(ed.template_id);
+        const days = durationFromId(ed.template_id, tpl?.duration_days);
+        return {
+          ed,
+          tpl,
+          dest,
+          days,
+          scarcity: editionScarcity(ed),
+          progress: editionThresholdProgress(ed.confirmed_count ?? 0, ed.min_confirmed),
+          cover: uniqueCover(slug || ed.template_id, i + 80),
+          name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
+          continent: dest?.continent ?? 'Asia',
+        };
+      })
+      .filter(({ ed, tpl, dest, name, continent, days }) => {
+        if (filters.continent !== 'Tutte' && continent !== filters.continent) return false;
+        if (filters.duration != null && (days == null || days !== filters.duration)) return false;
+        if (filters.priceMax != null) {
+          const budget = tpl?.budget_orientative_eur.total_hint;
+          if (budget != null && budget > filters.priceMax) return false;
+        }
+        if (!q) return true;
+        return (
+          name.includes(q) ||
+          ed.template_id.toLowerCase().includes(q) ||
+          (tpl?.destination_name ?? '').toLowerCase().includes(q) ||
+          continent.toLowerCase().includes(q) ||
+          (dest?.vibe ?? '').toLowerCase().includes(q) ||
+          formatItDate(ed.date_from).toLowerCase().includes(q)
+        );
+      });
+  }, [editions, filters]);
+
+  const measurePages = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    const count = max < 8 ? 1 : Math.max(1, Math.ceil(el.scrollWidth / el.clientWidth));
+    setPageCount(count);
+    const nextPage = max < 8 ? 0 : Math.round((el.scrollLeft / max) * (count - 1));
+    setPage(nextPage);
+  }, []);
+
+  useEffect(() => {
+    measurePages();
+    const el = scrollerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measurePages);
+    ro.observe(el);
+    window.addEventListener('resize', measurePages);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measurePages);
+    };
+  }, [measurePages, items.length]);
+
+  const scrollByCard = useCallback((dir: -1 | 1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const card = el.querySelector('li');
+    const w = card ? card.getBoundingClientRect().width + 16 : el.clientWidth * 0.8;
+    el.scrollBy({ left: dir * w, behavior: 'smooth' });
+  }, []);
+
+  const scrollToPage = useCallback((index: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    const left = pageCount <= 1 ? 0 : (index / (pageCount - 1)) * max;
+    el.scrollTo({ left, behavior: 'smooth' });
+  }, [pageCount]);
+
+  const empty = items.length === 0;
+  const noPrivateAtAll = editions.length === 0;
+
+  return (
+    <section
+      className="space-y-5 rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 py-6 sm:px-6"
+      aria-labelledby="viaggi-privati-title"
+    >
+      <h2
+        id="viaggi-privati-title"
+        className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900"
+      >
+        Viaggi privati
+      </h2>
+
+      {empty ? (
+        <div className="px-1 py-6 text-center">
+          <p className="text-sm text-slate-600 sm:text-base">
+            {noPrivateAtAll
+              ? 'Non hai ancora viaggi privati disponibili.'
+              : 'Nessun viaggio privato con questi filtri.'}
+          </p>
+          {noPrivateAtAll ? (
+            <Button asChild className="mt-5 rounded-full px-6 font-semibold">
+              <Link href="/destinazioni">Crea istanza privata</Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="relative">
+          <ul
+            ref={scrollerRef}
+            onScroll={measurePages}
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+          >
+            {items.map(({ dest: _d, name: _n, continent: _c, ...item }) => (
+              <li
+                key={item.ed.id}
+                className="w-[85%] shrink-0 snap-start sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.7rem)]"
+              >
+                <EditionCard {...item} />
+              </li>
+            ))}
+          </ul>
+          {items.length > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => scrollByCard(-1)}
+                aria-label="Viaggi privati precedenti"
+                className="absolute left-1 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur-md hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:inline-flex"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollByCard(1)}
+                aria-label="Viaggi privati successivi"
+                className="absolute right-1 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur-md hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:inline-flex"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          ) : null}
+          {pageCount > 1 ? (
+            <div className="mt-3 flex items-center justify-center gap-1.5" aria-label="Posizione carosello">
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Pagina ${i + 1} di ${pageCount}`}
+                  aria-current={i === page ? 'true' : undefined}
+                  onClick={() => scrollToPage(i)}
+                  className={cn(
+                    'h-2 rounded-full transition-all',
+                    i === page ? 'w-5 bg-primary' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                  )}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      <div className="flex flex-col items-center gap-2 pt-1">
+        <p className="text-sm text-slate-600">Hai già il link di un viaggio?</p>
+        <JoinTripLinkDialog triggerLabel="Inserisci link" />
+      </div>
+    </section>
+  );
+}

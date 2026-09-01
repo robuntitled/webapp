@@ -1,7 +1,9 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-/** Wordmark Flygetr — senza cornice. Il bianco del JPEG sparisce con mix-blend-multiply. */
+const LOGO_RATIO = 2.08;
+
+/** Wordmark Flygetr — PNG con alpha, senza cornice. */
 export function BrandLogo({
   size,
   responsive = false,
@@ -16,29 +18,29 @@ export function BrandLogo({
 }) {
   const dimensionStyle =
     size != null
-      ? ({ height: size, width: Math.round(size * 1.42) } as const)
+      ? ({ height: size, width: Math.round(size * LOGO_RATIO) } as const)
       : undefined;
 
   return (
     <span
       className={cn(
         'nl-brand-logo relative inline-block shrink-0',
-        !responsive && size == null && 'h-11 w-[3.9rem]',
+        !responsive && size == null && 'h-11 w-[7.3rem]',
         className
       )}
       style={dimensionStyle}
     >
       <Image
-        src="/assets/logoFly.jpeg"
+        src="/assets/logoFly.png"
         alt="Flygetr"
         fill
         priority={priority}
         sizes={
           responsive
-            ? '(max-width: 768px) 88px, (max-width: 1024px) 104px, 120px'
-            : `${Math.round((size ?? 44) * 1.42)}px`
+            ? '(max-width: 768px) 140px, (max-width: 1024px) 170px, 200px'
+            : `${Math.round((size ?? 44) * LOGO_RATIO)}px`
         }
-        className="object-contain object-left mix-blend-multiply [filter:drop-shadow(0_1px_8px_rgba(0,0,0,0.28))]"
+        className="object-contain object-left drop-shadow-[0_1px_10px_rgba(0,0,0,0.28)]"
       />
     </span>
   );

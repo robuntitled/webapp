@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import { coverForDestination } from '@/lib/composer/destination-covers';
-import { cn } from '@/lib/utils';
 
 const INITIAL_VISIBLE = 6;
 
@@ -16,48 +15,6 @@ export type ExplorerDestination = {
   continent?: string;
   published?: boolean;
 };
-
-function ContinentTabBar({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (continent: string) => void;
-}) {
-  const tabs = ['Tutte', ...CATALOG_CONTINENTS];
-
-  return (
-    <div
-      className="overflow-x-auto border-b border-slate-200/60 bg-white/70 backdrop-blur-md supports-[backdrop-filter]:bg-white/62"
-      role="tablist"
-      aria-label="Filtra per continente"
-    >
-      <div className="flex min-w-max px-1 sm:px-2">
-        {tabs.map((tab) => {
-          const active = value === tab;
-          return (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => onChange(tab)}
-              className={cn(
-                'relative shrink-0 px-4 py-3.5 text-[clamp(0.82rem,0.25vw+0.78rem,0.95rem)] font-medium tracking-tight transition-colors duration-150',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2',
-                active
-                  ? 'text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              {tab}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function DestinationStateCard({
   dest,
@@ -160,14 +117,13 @@ function ContinentSection({
 export function DestinationExplorerPanel({
   destinations,
   continent,
-  onContinentChange,
   onSelectDestination,
   coverBySlug,
   resultsId = 'risultati-destinazioni',
 }: {
   destinations: ExplorerDestination[];
   continent: string;
-  onContinentChange: (continent: string) => void;
+  onContinentChange?: (continent: string) => void;
   onSelectDestination: (dest: ExplorerDestination) => void;
   coverBySlug: Record<string, string>;
   /** @deprecated CTA rimosse: l'intera card è cliccabile */
@@ -192,27 +148,23 @@ export function DestinationExplorerPanel({
   return (
     <div
       id={resultsId}
-      className="scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/90"
+      className="scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] space-y-8"
     >
-      <ContinentTabBar value={continent} onChange={onContinentChange} />
-
-      <div className="space-y-8 p-4 sm:p-5 md:p-6">
-        {visibleSections.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-600">
-            Nessuna destinazione con questo filtro.
-          </p>
-        ) : (
-          visibleSections.map((section) => (
-            <ContinentSection
-              key={section.continent}
-              continent={section.continent}
-              items={section.items}
-              coverBySlug={coverBySlug}
-              onSelect={onSelectDestination}
-            />
-          ))
-        )}
-      </div>
+      {visibleSections.length === 0 ? (
+        <p className="py-10 text-center text-sm text-slate-600">
+          Nessuna destinazione con questo filtro.
+        </p>
+      ) : (
+        visibleSections.map((section) => (
+          <ContinentSection
+            key={section.continent}
+            continent={section.continent}
+            items={section.items}
+            coverBySlug={coverBySlug}
+            onSelect={onSelectDestination}
+          />
+        ))
+      )}
     </div>
   );
 }

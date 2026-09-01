@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
   CatalogHeroSearchBar,
-  ContinentFilterRow,
   EMPTY_CATALOG_FILTERS,
   type CatalogFilterState,
 } from '@/components/itineraries/CatalogFiltersBar';
@@ -54,7 +53,7 @@ function durationLabel(days: number | null): string | null {
   return days === 1 ? '1 giorno' : `${days} giorni`;
 }
 
-function EditionCard({
+export function EditionCard({
   ed,
   tpl,
   cover,
@@ -85,11 +84,11 @@ function EditionCard({
   const tripDuration = durationLabel(days);
 
   return (
-    <li>
+    <div className="h-full">
       <Link
         href={`/partenze/${ed.id}`}
         className={cn(
-          'flex w-full cursor-pointer flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+          'flex h-full w-full cursor-pointer flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
           highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
         )}
       >
@@ -99,7 +98,7 @@ function EditionCard({
           alt={destination}
           fill
           className="object-cover"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
+          sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 33vw"
         />
         <span
           className={cn(
@@ -178,18 +177,11 @@ function EditionCard({
         </section>
       </div>
       </Link>
-    </li>
+    </div>
   );
 }
 
-function featuredScore(ed: OfficialEditionCard): number {
-  const scarcity = editionScarcity(ed);
-  if (scarcity.variant === 'closing') return 4;
-  if (scarcity.variant === 'formed') return 3;
-  if (scarcity.variant === 'warming') return 2;
-  if ((ed.interested_count ?? 0) > 0) return 1;
-  return 0;
-}
+export type EditionSortKey = 'conferme' | 'partenza';
 
 export function OfficialEditionsGrid({
   editions,
@@ -211,6 +203,7 @@ export function OfficialEditionsGrid({
 }) {
   const [internalFilters, setInternalFilters] =
     useState<CatalogFilterState>(EMPTY_CATALOG_FILTERS);
+  const [sort, setSort] = useState<EditionSortKey>('conferme');
   const filters = controlledFilters ?? internalFilters;
   const setFilters = onFiltersChange ?? setInternalFilters;
 
@@ -246,7 +239,6 @@ export function OfficialEditionsGrid({
           cover: uniqueCover(slug || ed.template_id, i),
           name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',
-          featured: featuredScore(ed),
         };
       }),
     [scopedEditions]
@@ -262,7 +254,7 @@ export function OfficialEditionsGrid({
 
   const visible = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
-    return enriched.filter(({ ed, tpl, dest, name, continent, days }) => {
+    const filtered = enriched.filter(({ ed, tpl, dest, name, continent, days }) => {
       if (filters.continent !== 'Tutte' && continent !== filters.continent) return false;
       if (filters.duration != null && (days == null || days !== filters.duration)) return false;
       if (filters.priceMax != null) {
@@ -280,25 +272,21 @@ export function OfficialEditionsGrid({
         formatItDate(ed.date_from).toLowerCase().includes(q)
       );
     });
-  }, [enriched, filters]);
 
-  const featured = useMemo(
-    () =>
-      [...visible]
-        .filter((e) => e.featured > 0)
-        .sort((a, b) => b.featured - a.featured)
-        .slice(0, 2),
-    [visible]
-  );
-
-  const featuredIds = useMemo(() => new Set(featured.map((e) => e.ed.id)), [featured]);
-  const regular = useMemo(
-    () => visible.filter((e) => !featuredIds.has(e.ed.id)),
-    [visible, featuredIds]
-  );
+    return [...filtered].sort((a, b) => {
+      if (sort === 'conferme') {
+        return (b.ed.confirmed_count ?? 0) - (a.ed.confirmed_count ?? 0);
+      }
+      const da = Date.parse(a.ed.date_from);
+      const db = Date.parse(b.ed.date_from);
+      const sa = Number.isFinite(da) ? da : Number.POSITIVE_INFINITY;
+      const sb = Number.isFinite(db) ? db : Number.POSITIVE_INFINITY;
+      return sa - sb;
+    });
+  }, [enriched, filters, sort]);
 
   return (
-    <div className="space-y-5">
+    <section className="space-y-5">
       {showFiltersBar ? (
         <CatalogHeroSearchBar
           value={filters}
@@ -324,47 +312,62 @@ export function OfficialEditionsGrid({
           ) : null}
         </div>
       ) : null}
-      <p className="text-center text-sm font-medium text-slate-600 sm:text-left">
-        {visible.length}{' '}
-        {visible.length === 1 ? 'partenza' : 'partenze'}
-        {resolvedDestinationName ? ` · ${resolvedDestinationName}` : ''}
-        {filters.duration != null ? ` · ${filters.duration} giorni` : ''}
-        {filters.priceMax != null
-          ? ` · ≤ ${filters.priceMax.toLocaleString('it-IT')} €`
-          : ''}
-        {!destinationSlug && filters.continent !== 'Tutte' ? ` · ${filters.continent}` : ''}
-      </p>
-      {!showFiltersBar && !destinationSlug ? (
-        <ContinentFilterRow
-          value={filters.continent}
-          onChange={(continent) => setFilters({ ...filters, continent })}
-        />
-      ) : null}
-      <div className="nl-editions-frame space-y-5">
-        {featured.length > 0 && filters.query.trim() === '' && filters.continent === 'Tutte' ? (
-          <section className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-              In evidenza
-            </p>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-              {featured.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
-                <EditionCard key={item.ed.id} {...item} highlight />
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        <ul id="risultati-partenze" className="grid scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-          {visible.length === 0 ? (
-            <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
-              Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.
+
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900">
+          Istanze disponibili
+        </h2>
+        <div
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white p-0.5 shadow-sm"
+          role="group"
+          aria-label="Ordina per"
+        >
+          <span className="hidden pl-2.5 text-xs font-medium text-slate-500 sm:inline">
+            Ordina per
+          </span>
+          {(
+            [
+              { id: 'conferme', label: 'Conferme' },
+              { id: 'partenza', label: 'Data di partenza' },
+            ] as const
+          ).map((opt) => {
+            const active = sort === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setSort(opt.id)}
+                aria-pressed={active}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-semibold transition sm:text-sm',
+                  active
+                    ? 'bg-primary text-white'
+                    : 'text-slate-600 hover:text-primary'
+                )}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </header>
+
+      <ul
+        id="risultati-partenze"
+        className="grid scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+      >
+        {visible.length === 0 ? (
+          <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
+            Nessuna partenza con questi filtri.
+          </li>
+        ) : (
+          visible.map(({ dest: _d, name: _n, continent: _c, ...item }) => (
+            <li key={item.ed.id} className="min-w-0">
+              <EditionCard {...item} />
             </li>
-          ) : (
-            regular.map(({ featured: _f, dest: _d, name: _n, continent: _c, ...item }) => (
-              <EditionCard key={item.ed.id} {...item} />
-            ))
-          )}
-        </ul>
-      </div>
-    </div>
+          ))
+        )}
+      </ul>
+    </section>
   );
 }
