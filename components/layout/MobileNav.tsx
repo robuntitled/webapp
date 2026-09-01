@@ -19,7 +19,7 @@ function mobileLinkClass(active: boolean) {
   return cn(
     'rounded-md px-3 py-3 text-[clamp(0.95rem,2vw,1.05rem)] font-medium transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-    active ? 'font-semibold text-primary' : 'text-slate-800 hover:text-primary'
+    active ? 'font-semibold text-primary bg-primary/8' : 'text-slate-800 hover:text-primary'
   );
 }
 

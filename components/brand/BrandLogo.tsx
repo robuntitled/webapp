@@ -41,7 +41,7 @@ export function BrandLogo({
             ? '(max-width: 768px) 160px, (max-width: 1024px) 200px, 240px'
             : `${Math.round((size ?? 44) * LOGO_RATIO)}px`
         }
-        className="object-contain object-center drop-shadow-[0_1px_10px_rgba(0,0,0,0.28)]"
+        className="object-contain object-left drop-shadow-[0_1px_8px_rgba(0,0,0,0.22)]"
       />
     </span>
   );

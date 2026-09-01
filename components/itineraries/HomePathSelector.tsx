@@ -60,7 +60,7 @@ export function CatalogBrowseChrome({
   children: ReactNode;
 }) {
   return (
-    <div className="nl-home-content relative z-10 min-h-0 w-full pt-16 pb-16">
+    <div className="nl-page relative z-10 min-h-0 w-full pt-14 pb-16">
       <div className="mb-6 flex w-full justify-center">
         <HomePathSelector value={path} />
       </div>

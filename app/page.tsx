@@ -8,7 +8,6 @@ import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
 import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { HeroBackground } from '@/components/brand/HeroBackground';
-import { LandingDestinations } from '@/components/brand/LandingDestinations';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Plane, Users } from 'lucide-react';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
-import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import Link from 'next/link';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
@@ -230,51 +228,33 @@ export default function LoginPage() {
     <main className="relative min-h-screen">
       <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
-      <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
-        <div className="flex flex-col justify-end px-6 pt-14 pb-6 lg:w-[56%] lg:p-12 lg:pb-20">
+      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:py-16">
+        <div className="mb-8 flex w-full max-w-lg flex-col items-center text-center">
           <ScrollReveal variant="decor">
-            <div className="mb-5">
-              <BrandLogo size={56} priority />
-            </div>
+            <BrandLogo size={48} priority />
           </ScrollReveal>
           <ScrollReveal variant="title">
-            <h1 className="max-w-lg font-display text-4xl font-semibold leading-[1.08] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)] sm:text-5xl xl:text-6xl">
-              Il viaggio di gruppo, senza tour operator.
+            <h1 className="mt-5 max-w-md font-display text-[clamp(1.85rem,1.4rem+1.6vw,2.75rem)] font-semibold leading-[1.12] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
+              Il viaggio senza tour operator.
             </h1>
           </ScrollReveal>
-          <ScrollReveal variant="title" stagger={1}>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-white drop-shadow sm:text-lg">
-              {COMPLIANCE_COPY.guide}
-            </p>
-          </ScrollReveal>
-          <ul className="mt-6 max-w-md space-y-2 text-sm text-white/95">
+          <ul className="mt-6 flex w-full max-w-md flex-col gap-2.5 text-left text-sm text-white/95 sm:mt-7">
             {[
               { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
               { Icon: Users, text: 'Parti da solo, con amici o su una partenza di gruppo' },
               { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
             ].map(({ Icon, text }, i) => (
-              <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
-                <div className="flex items-start gap-3">
+              <ScrollReveal key={text} variant="card" stagger={i + 1} as="li">
+                <div className="flex items-start gap-3 rounded-xl bg-white/8 px-3.5 py-2.5 ring-1 ring-white/12 backdrop-blur-[2px]">
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-                  <span>{text}</span>
+                  <span className="leading-snug">{text}</span>
                 </div>
               </ScrollReveal>
             ))}
           </ul>
-          <LandingDestinations />
-          <p className="mt-4 text-sm text-white/90">
-            <Link href="/destinazioni" className="underline underline-offset-4">
-              Destinazioni
-            </Link>
-            {' · '}
-            <Link href="/partenze" className="underline underline-offset-4">
-              Unisciti
-            </Link>
-          </p>
         </div>
 
-        <div className="flex flex-1 items-start justify-center px-4 pb-16 lg:items-center lg:py-12">
-          <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
+        <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
             <div>
               <h2 className="font-display text-2xl font-semibold text-foreground">
                 {isRegisterMode ? 'Crea il tuo account' : 'Entra in Flygetr'}
@@ -445,7 +425,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </ScrollReveal>
-        </div>
       </div>
     </main>
   );

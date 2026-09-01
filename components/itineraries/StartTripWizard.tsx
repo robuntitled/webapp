@@ -127,7 +127,7 @@ export function StartTripWizard({
       <div
         className={cn(
           'relative z-10 w-full',
-          step === 'dest' ? '' : 'nl-home-content pt-6 pb-10'
+          step === 'dest' ? '' : 'nl-page pt-6 pb-10'
         )}
       >
         {step === 'dest' ? (
