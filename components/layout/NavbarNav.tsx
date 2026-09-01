@@ -33,7 +33,7 @@ const LINKS = [
 
 function navLinkClass(active: boolean) {
   return cn(
-    'whitespace-nowrap rounded-full px-3.5 py-1.5 text-[0.95rem] font-medium tracking-tight transition-colors',
+    'whitespace-nowrap rounded-full px-3 py-1 text-[0.875rem] font-medium tracking-tight transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
     active
       ? 'bg-slate-900/[0.07] font-semibold text-slate-900 group-data-[hero=true]/nav:bg-white/22 group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]'
@@ -46,7 +46,7 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <nav
-      className="hidden min-w-0 items-center justify-center gap-1 md:flex lg:gap-1.5"
+      className="hidden min-w-0 items-center justify-center gap-0.5 md:flex lg:gap-1"
       aria-label="Navigazione principale"
     >
       {LINKS.filter((link) => !('auth' in link && link.auth) || isLoggedIn).map((link) => {

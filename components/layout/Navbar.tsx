@@ -16,7 +16,7 @@ export async function Navbar() {
 
   return (
     <AppHeader>
-      <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-6">
+      <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 md:gap-4">
         <Link
           href="/destinazioni"
           className="justify-self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
@@ -43,7 +43,7 @@ export async function Navbar() {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-9 rounded-full px-4 font-medium text-slate-700 hover:bg-slate-900/[0.05] hover:text-primary',
+                  'h-8 rounded-full px-3.5 text-[0.8125rem] font-medium text-slate-700 hover:bg-slate-900/[0.05] hover:text-primary',
                   'group-data-[hero=true]/nav:text-white/95 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white group-data-[hero=true]/nav:[text-shadow:0_1px_8px_rgba(0,0,0,0.35)]'
                 )}
               >
@@ -52,7 +52,7 @@ export async function Navbar() {
               <Button
                 asChild
                 size="sm"
-                className="h-9 rounded-full bg-accent px-4 font-semibold text-white shadow-none hover:bg-accent/90"
+                className="h-8 rounded-full bg-accent px-3.5 text-[0.8125rem] font-semibold text-white shadow-none hover:bg-accent/90"
               >
                 <Link href="/">Registrati</Link>
               </Button>

@@ -61,7 +61,7 @@
   --color-warning: #D97706;
 
   --radius: 0.625rem;
-  --nl-nav-height: 4.75rem;
+  --nl-nav-height: 4rem;
   --background: #FFFFFF;
   --foreground: #1C1917;
   --card: #FFFFFF;
@@ -294,23 +294,22 @@
 
   @media (min-width: 768px) {
     :root {
-      --nl-nav-height: 5rem;
+      --nl-nav-height: 4.25rem;
     }
   }
 
   @media (min-width: 1024px) {
     :root {
-      --nl-nav-height: 5.25rem;
+      --nl-nav-height: 4.5rem;
     }
   }
 
   .nl-app-header {
     --nl-nav-h: var(--nl-nav-height);
-    --nl-logo-h: 2.02rem;
+    --nl-logo-h: 1.75rem;
     color: rgb(30 41 59);
     background-color: #fff;
-    border-bottom: 1px solid rgb(226 232 240);
-    box-shadow: 0 1px 0 rgb(15 23 42 / 0.04);
+    border-bottom: 1px solid rgb(226 232 240 / 0.85);
   }
 
   .nl-nav-inner {
@@ -319,8 +318,8 @@
   }
 
   .nl-brand-logo {
-    height: var(--nl-logo-h, 2.02rem);
-    width: calc(var(--nl-logo-h, 2.02rem) * 2.67);
+    height: var(--nl-logo-h, 1.75rem);
+    width: calc(var(--nl-logo-h, 1.75rem) * 2.67);
   }
 
   @media (prefers-reduced-motion: reduce) {

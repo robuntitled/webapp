@@ -35,7 +35,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
   };
 
   const menuBtnClass = cn(
-    'h-10 w-10 rounded-full text-slate-600 transition-colors',
+    'h-9 w-9 rounded-full text-slate-600 transition-colors',
     'hover:bg-slate-900/[0.05] hover:text-primary',
     'focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
     'group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white'
