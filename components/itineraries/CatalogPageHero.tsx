@@ -26,7 +26,7 @@ export function CatalogPageHero({
         />
       </div>
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 text-center">
+      <div className="absolute inset-x-0 top-0 bottom-[2.175rem] z-10 flex items-center justify-center px-4 text-center sm:bottom-[2.375rem]">
         <div>
           <h1 className="max-w-3xl font-display text-[clamp(1.35rem,1.05rem+1.1vw,2.15rem)] font-semibold leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
             {title}
