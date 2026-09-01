@@ -307,7 +307,7 @@
   .nl-app-header {
     --nav-progress: 1;
     --nl-nav-h: calc(var(--nl-nav-height) + (1 - var(--nav-progress)) * 0.4rem);
-    --nl-logo-h: calc(2.94rem + (1 - var(--nav-progress)) * 0.84rem);
+    --nl-logo-h: calc(2.7rem + (1 - var(--nav-progress)) * 0.7rem);
     color: rgb(30 41 59);
     background-color: rgb(255 255 255 / calc(var(--nav-progress) * 0.74));
     border-bottom: 1px solid rgb(226 232 240 / calc(var(--nav-progress) * 0.45));
@@ -330,8 +330,8 @@
   }
 
   .nl-brand-logo {
-    height: var(--nl-logo-h, 2.94rem);
-    width: calc(var(--nl-logo-h, 2.94rem) * 2.08);
+    height: var(--nl-logo-h, 2.7rem);
+    width: calc(var(--nl-logo-h, 2.7rem) * 2.61);
   }
 
   @media (prefers-reduced-motion: reduce) {
