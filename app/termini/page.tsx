@@ -5,7 +5,7 @@ import { getCompanyProfile } from '@/lib/privacy/company';
 import { TERMS_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
 
 export const metadata = {
-  title: 'Termini di Servizio — Bradigo',
+  title: 'Termini di Servizio — Flygetr',
 };
 
 export default function TermsPage() {

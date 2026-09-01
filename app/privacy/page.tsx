@@ -5,7 +5,7 @@ import { getCompanyProfile } from '@/lib/privacy/company';
 import { PRIVACY_POLICY_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
 
 export const metadata = {
-  title: 'Informativa Privacy — Bradigo',
+  title: 'Informativa Privacy — Flygetr',
 };
 
 export default function PrivacyPage() {

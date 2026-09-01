@@ -10,7 +10,7 @@ describe('company placeholders', () => {
   });
 
   it('ha valori di default per campi non obbligatori', () => {
-    expect(LEGAL_PLACEHOLDERS.tradeName).toBe('Bradigo');
+    expect(LEGAL_PLACEHOLDERS.tradeName).toBe('Flygetr');
     expect(LEGAL_PLACEHOLDERS.country).toBe('Italia');
     expect(LEGAL_PLACEHOLDERS.privacyEmail).toContain('@');
   });

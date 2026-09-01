@@ -119,7 +119,7 @@ export function parseNominatimResult(result: NominatimResult): PlaceResult {
 }
 
 const NOMINATIM_HEADERS = {
-  'User-Agent': 'Bradigo/1.0 (travel composer; contact@nomadlink.app)',
+  'User-Agent': 'Flygetr/1.0 (travel composer; contact@nomadlink.app)',
   Accept: 'application/json',
   'Accept-Language': 'it,en;q=0.9',
 } as const;

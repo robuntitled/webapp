@@ -69,7 +69,7 @@ export function withAffiliateBookingPrefs(
       url.searchParams.set('travelDate', from);
     }
 
-    // Prefs pax accettate dal tipo per la UI Bradigo, ma non serializzate:
+    // Prefs pax accettate dal tipo per la UI Flygetr, ma non serializzate:
     // Viator le ignora sul productUrl affiliate.
     void prefs.endDate;
     void prefs.adults;

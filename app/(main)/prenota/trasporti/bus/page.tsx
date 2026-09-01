@@ -18,7 +18,7 @@ export default async function PrenotaTrasportiBusPage() {
   return (
     <PrenotaPageShell
       title="Bus"
-      subtitle="Autobus e pullman in Europa. Ricerca su Bradigo · prenotazione Omio."
+      subtitle="Autobus e pullman in Europa. Ricerca su Flygetr · prenotazione Omio."
       badge="Omio"
     >
       <PrenotaTransportSubnav />

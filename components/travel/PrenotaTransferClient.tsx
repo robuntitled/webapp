@@ -434,7 +434,7 @@ export function PrenotaTransferClient() {
               ) : null}
             </p>
             <p className="ml-auto text-[11px] text-muted-foreground">
-              Ricerca su Bradigo · pagamento GetTransfer
+              Ricerca su Flygetr · pagamento GetTransfer
             </p>
           </div>
         </div>
@@ -536,7 +536,7 @@ export function PrenotaTransferClient() {
 
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
         <p>
-          Confronti prezzi e classi veicolo su Bradigo. La prenotazione e il pagamento si
+          Confronti prezzi e classi veicolo su Flygetr. La prenotazione e il pagamento si
           completano su{' '}
           <span className="font-medium text-foreground">GetTransfer</span> in una nuova
           scheda

@@ -7,7 +7,7 @@ import { BRAND_IMAGES } from '@/lib/brand/images';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 
 export const metadata = {
-  title: 'Inizio — Bradigo',
+  title: 'Inizio — Flygetr',
 };
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
         overlay="gradient"
       />
       <header className="relative z-10 px-4 py-5">
-        <Link href="/" className="inline-block" aria-label="Bradigo — home">
+        <Link href="/" className="inline-block" aria-label="Flygetr — home">
           <BrandLogo size={48} className="ring-white/40" />
         </Link>
       </header>

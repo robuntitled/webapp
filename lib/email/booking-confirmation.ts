@@ -78,14 +78,14 @@ export async function sendBookingConfirmationEmail(input: {
     '',
     `Recap nel tuo viaggio: ${praticaUrl}`,
     '',
-    'Ogni servizio è prenotato col rispettivo fornitore. Bradigo non è un tour operator.',
+    'Ogni servizio è prenotato col rispettivo fornitore. Flygetr non è un tour operator.',
   ]
     .filter(Boolean)
     .join('\n');
 
   const html = `
     <div style="font-family:Inter,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#0b1220">
-      <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#7c3aed;font-weight:700">Bradigo</p>
+      <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#7c3aed;font-weight:700">Flygetr</p>
       <h1 style="font-size:22px;margin:8px 0 16px">Prenotazione confermata</h1>
       <p><strong>${kindLabel(input.kind)}</strong> · ${input.destinationName}</p>
       <p style="font-size:28px;font-weight:700;letter-spacing:.04em;margin:16px 0">${ref}</p>
@@ -94,7 +94,7 @@ export async function sendBookingConfirmationEmail(input: {
       <p style="margin-top:24px">
         <a href="${praticaUrl}" style="display:inline-block;padding:12px 20px;background:#7c3aed;color:#fff;border-radius:999px;text-decoration:none;font-weight:600">Vedi il recap</a>
       </p>
-      <p style="color:#666;font-size:13px;margin-top:24px">Ogni servizio è prenotato col rispettivo fornitore. Bradigo non organizza pacchetti turistici.</p>
+      <p style="color:#666;font-size:13px;margin-top:24px">Ogni servizio è prenotato col rispettivo fornitore. Flygetr non organizza pacchetti turistici.</p>
     </div>
   `;
 

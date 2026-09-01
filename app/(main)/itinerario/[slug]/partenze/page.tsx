@@ -40,7 +40,7 @@ export default async function PartenzePage({ params, searchParams }: PageProps) 
           Partenze ufficiali · {template.destination_name} {template.duration_days} giorni
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Date inserite da Bradigo. Non puoi aprire un gruppo pubblico con date tue.{' '}
+          Date inserite da Flygetr. Non puoi aprire un gruppo pubblico con date tue.{' '}
           {COMPLIANCE_COPY.separateBooking}
         </p>
       </header>

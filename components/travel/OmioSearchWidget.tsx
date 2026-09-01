@@ -112,7 +112,7 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-display text-sm font-semibold tracking-tight text-foreground">
-                Bradigo · {copy.label}
+                Flygetr · {copy.label}
               </p>
               <p className="truncate text-[11px] text-muted-foreground">
                 {copy.searchHint}
@@ -159,7 +159,7 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
           {configured ? (
             <div className="border-t border-border/30 px-4 py-2 sm:px-5">
               <p className="text-[10px] leading-relaxed text-muted-foreground/75">
-                Ricerca su Bradigo · checkout su{' '}
+                Ricerca su Flygetr · checkout su{' '}
                 <span className="text-muted-foreground">Omio</span>
                 <ExternalLink className="ml-0.5 inline h-2.5 w-2.5 align-text-bottom opacity-60" />
                 {' · '}

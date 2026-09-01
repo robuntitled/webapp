@@ -16,7 +16,7 @@ const inter = Inter({
   display: 'swap',
 });
 
-const appName = process.env.LEGAL_TRADE_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'Bradigo';
+const appName = process.env.LEGAL_TRADE_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'Flygetr';
 
 export const metadata: Metadata = {
   title: appName,

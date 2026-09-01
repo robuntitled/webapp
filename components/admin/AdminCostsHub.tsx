@@ -248,7 +248,7 @@ export function AdminCostsHub({ initial }: { initial: HubPayload }) {
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Non si può “infilare” la console Google dentro Bradigo senza Billing API /
+        Non si può “infilare” la console Google dentro Flygetr senza Billing API /
         BigQuery export (service account). Qui monitori in tempo reale ciò che
         l’app misura, e apri con un click le console ufficiali per i costi reali.
       </p>

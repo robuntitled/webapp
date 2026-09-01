@@ -54,7 +54,7 @@ export function SettingsSecuritySection({
       <SettingsSection
         icon={Mail}
         title="Email di accesso"
-        description="L'indirizzo associato al tuo account Bradigo."
+        description="L'indirizzo associato al tuo account Flygetr."
       >
         <div className="rounded-2xl border border-border/70 bg-muted/20 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
@@ -74,8 +74,8 @@ export function SettingsSecuritySection({
         title="Password"
         description={
           canChangePassword
-            ? 'Aggiorna la password del tuo account Bradigo.'
-            : 'Accesso tramite provider esterno — la password non è gestita da Bradigo.'
+            ? 'Aggiorna la password del tuo account Flygetr.'
+            : 'Accesso tramite provider esterno — la password non è gestita da Flygetr.'
         }
       >
         {canChangePassword ? (

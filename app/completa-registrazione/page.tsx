@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { CompletaRegistrazioneForm } from '@/app/completa-registrazione/CompletaRegistrazioneForm';
 
 export const metadata = {
-  title: 'Completa registrazione — Bradigo',
+  title: 'Completa registrazione — Flygetr',
 };
 
 export default async function CompletaRegistrazionePage() {

@@ -78,7 +78,7 @@ export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
-      { error: 'Accedi a Bradigo per cercare hotel.', code: 'auth_required' },
+      { error: 'Accedi a Flygetr per cercare hotel.', code: 'auth_required' },
       { status: 401 }
     );
   }

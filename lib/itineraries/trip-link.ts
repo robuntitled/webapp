@@ -18,7 +18,7 @@ function pathFromInput(raw: string): string {
   try {
     const url = trimmed.includes('://')
       ? new URL(trimmed)
-      : new URL(trimmed, 'https://bradigo.local');
+      : new URL(trimmed, 'https://flygetr.local');
     return `${url.pathname}${url.search}`;
   } catch {
     return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
@@ -61,7 +61,7 @@ export function parseTripShareLink(input: string): ParsedTripLink {
 
 export const TRIP_LINK_ERRORS = {
   empty: 'Incolla il link del viaggio per continuare.',
-  unrecognized: 'Questo non sembra un link di viaggio Bradigo.',
+  unrecognized: 'Questo non sembra un link di viaggio Flygetr.',
   missing: 'Non abbiamo trovato questo viaggio. Controlla il link e riprova.',
   unavailable: 'Questo viaggio non è più disponibile.',
 } as const;

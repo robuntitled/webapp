@@ -33,7 +33,7 @@ export const updateProfileSchema = z
       if (!isMinimumAge(birth, MIN_AGE_YEARS)) {
         ctx.addIssue({
           code: 'custom',
-          message: `Devi avere almeno ${MIN_AGE_YEARS} anni per usare Bradigo.`,
+          message: `Devi avere almeno ${MIN_AGE_YEARS} anni per usare Flygetr.`,
           path: ['birth_date'],
         });
       }

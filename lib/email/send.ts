@@ -20,7 +20,7 @@ export async function sendTransactionalEmail(options: {
   const from =
     process.env.EMAIL_FROM?.trim() ||
     process.env.RESEND_FROM?.trim() ||
-    'Bradigo <onboarding@resend.dev>';
+    'Flygetr <onboarding@resend.dev>';
 
   if (apiKey) {
     try {

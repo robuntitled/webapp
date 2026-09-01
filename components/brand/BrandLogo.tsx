@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-/** Logo Bradigo — rotondo, object-cover + leggero zoom per tagliare i bordi bianchi. */
+/** Logo Flygetr — rotondo, object-cover + leggero zoom per tagliare i bordi bianchi. */
 export function BrandLogo({
   size,
   responsive = false,
@@ -29,8 +29,8 @@ export function BrandLogo({
       style={dimensionStyle}
     >
       <Image
-        src="/assets/logoBradigo.jpeg"
-        alt="Bradigo"
+        src="/assets/logoFly.jpeg"
+        alt="Flygetr"
         fill
         priority={priority}
         sizes={responsive ? '(max-width: 768px) 52px, (max-width: 1024px) 60px, 64px' : `${size ?? 48}px`}
@@ -40,4 +40,4 @@ export function BrandLogo({
   );
 }
 
-export const BRAND_NAME = 'Bradigo';
+export const BRAND_NAME = 'Flygetr';

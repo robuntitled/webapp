@@ -236,7 +236,7 @@ export default function LoginPage() {
             <div className="mb-5 flex items-center gap-3">
               <BrandLogo size={52} className="ring-white/40" priority />
               <span className="font-display text-2xl font-semibold text-white drop-shadow lg:text-3xl">
-                Bradigo
+                Flygetr
               </span>
             </div>
           </ScrollReveal>
@@ -280,7 +280,7 @@ export default function LoginPage() {
           <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
             <div>
               <h2 className="font-display text-2xl font-semibold text-foreground">
-                {isRegisterMode ? 'Crea il tuo account' : 'Entra in Bradigo'}
+                {isRegisterMode ? 'Crea il tuo account' : 'Entra in Flygetr'}
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 {isRegisterMode

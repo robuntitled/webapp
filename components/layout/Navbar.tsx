@@ -28,7 +28,7 @@ export async function Navbar() {
         <Link
           href="/destinazioni"
           className="group shrink-0 transition-transform duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-full"
-          aria-label="Bradigo — home"
+          aria-label="Flygetr — home"
         >
           <BrandLogo
             responsive
