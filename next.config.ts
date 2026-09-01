@@ -32,6 +32,22 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      { source: '/punti', destination: '/destinazioni', permanent: true },
+      { source: '/dashboard/punti', destination: '/pratiche', permanent: true },
+      { source: '/dashboard/cashback', destination: '/pratiche', permanent: true },
+      { source: '/dashboard', destination: '/destinazioni', permanent: true },
+      { source: '/dashboard/cerca', destination: '/destinazioni', permanent: true },
+      { source: '/dashboard/crea', destination: '/destinazioni', permanent: true },
+      { source: '/dashboard/miei-viaggi', destination: '/pratiche', permanent: true },
+      { source: '/prenota/voli/ricerca', destination: '/prenota/voli', permanent: true },
+      { source: '/viaggi/:id', destination: '/pratiche', permanent: true },
+      { source: '/viaggi/:id/prenota', destination: '/pratiche', permanent: true },
+      { source: '/edizione/:id', destination: '/partenze/:id', permanent: true },
+      { source: '/itinerario/:slug/partenze', destination: '/partenze', permanent: true },
+    ];
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,
