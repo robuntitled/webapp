@@ -145,32 +145,32 @@ export function PrivateTripsSection({
 
   return (
     <section
-      className="space-y-3 rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 py-3.5 sm:px-5 sm:py-4"
+      className="flex flex-col rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 pt-3 pb-4 sm:px-5 sm:pt-3.5 sm:pb-5"
       aria-labelledby="viaggi-privati-title"
     >
       <h2
         id="viaggi-privati-title"
-        className="font-display text-[clamp(1.02rem,0.9vw+0.92rem,1.2rem)] font-semibold text-slate-900"
+        className="shrink-0 font-display text-[clamp(1.02rem,0.9vw+0.92rem,1.2rem)] font-semibold text-slate-900"
       >
         Viaggi privati
       </h2>
 
       {empty ? (
-        <div className="px-1 py-6 text-center">
+        <div className="px-1 py-5 text-center">
           <p className="text-sm text-slate-600 sm:text-base">
             {noPrivateAtAll
               ? 'Non hai ancora viaggi privati disponibili.'
               : 'Nessun viaggio privato con questi filtri.'}
           </p>
           {noPrivateAtAll ? (
-            <Button asChild className="mt-5 rounded-full px-6 font-semibold">
+            <Button asChild className="mt-4 rounded-full px-6 font-semibold">
               <Link href="/destinazioni">Crea istanza privata</Link>
             </Button>
           ) : null}
         </div>
       ) : (
         <div
-          className="relative"
+          className="relative mt-2 min-h-0"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocusCapture={() => setPaused(true)}
@@ -179,14 +179,14 @@ export function PrivateTripsSection({
           <ul
             ref={scrollerRef}
             onScroll={measurePages}
-            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
           >
             {items.map(({ dest: _d, name: _n, continent: _c, ...item }) => (
               <li
                 key={item.ed.id}
-                className="w-[85%] shrink-0 snap-start sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.7rem)]"
+                className="w-[85%] shrink-0 snap-start sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]"
               >
-                <EditionCard {...item} compact />
+                <EditionCard {...item} compact carousel />
               </li>
             ))}
           </ul>
@@ -196,7 +196,7 @@ export function PrivateTripsSection({
                 type="button"
                 onClick={() => scrollByCard(-1)}
                 aria-label="Viaggi privati precedenti"
-                className="absolute left-1 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur-md hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:inline-flex"
+                className="absolute left-0 top-[42%] hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur-md hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:inline-flex"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -204,36 +204,38 @@ export function PrivateTripsSection({
                 type="button"
                 onClick={() => scrollByCard(1)}
                 aria-label="Viaggi privati successivi"
-                className="absolute right-1 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur-md hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:inline-flex"
+                className="absolute right-0 top-[42%] hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur-md hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:inline-flex"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </>
           ) : null}
-          {pageCount > 1 ? (
-            <div className="mt-1.5 flex items-center justify-center gap-2 sm:mt-1" aria-label="Posizione carosello">
-              {Array.from({ length: pageCount }).map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={`Pagina ${i + 1} di ${pageCount}`}
-                  aria-current={i === page ? 'true' : undefined}
-                  onClick={() => scrollToPage(i)}
-                  className={cn(
-                    'h-2.5 rounded-full transition-all',
-                    i === page ? 'w-6 bg-primary shadow-sm' : 'w-2.5 bg-slate-400/90 hover:bg-slate-500'
-                  )}
-                />
-              ))}
-            </div>
-          ) : null}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 border-t border-slate-200/60 pt-2.5">
-        <p className="text-sm text-slate-600">Hai già il link di un viaggio?</p>
-        <JoinTripLinkDialog triggerLabel="Inserisci link" inline />
-      </div>
+      <footer className="mt-2.5 shrink-0 border-t border-slate-200/70 pt-3">
+        {!empty && pageCount > 1 ? (
+          <div className="mb-2.5 flex items-center justify-center gap-2" aria-label="Posizione carosello">
+            {Array.from({ length: pageCount }).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Pagina ${i + 1} di ${pageCount}`}
+                aria-current={i === page ? 'true' : undefined}
+                onClick={() => scrollToPage(i)}
+                className={cn(
+                  'h-2.5 rounded-full transition-all',
+                  i === page ? 'w-6 bg-primary shadow-sm' : 'w-2.5 bg-slate-400/90 hover:bg-slate-500'
+                )}
+              />
+            ))}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1">
+          <p className="text-sm text-slate-600">Hai già il link di un viaggio?</p>
+          <JoinTripLinkDialog triggerLabel="Inserisci link" inline />
+        </div>
+      </footer>
     </section>
   );
 }
