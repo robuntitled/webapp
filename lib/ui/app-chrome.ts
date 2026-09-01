@@ -7,7 +7,6 @@ export function isComposerPath(pathname: string | null | undefined): boolean {
     pathname.startsWith('/partenze') ||
     pathname.startsWith('/pratiche') ||
     pathname.startsWith('/pratica') ||
-    pathname.startsWith('/edizione') ||
     pathname.startsWith('/onboarding')
   );
 }
