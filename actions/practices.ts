@@ -30,9 +30,6 @@ export async function startPracticeAction(input: {
   dateTo?: string;
 }): Promise<{ error: string } | never> {
   const userId = await requireUser();
-  if (input.mode === 'group') {
-    return { error: 'In gruppo si entra solo su una partenza ufficiale.' };
-  }
   if (!findItineraryTemplate(input.templateId)) {
     return { error: 'Template non trovato.' };
   }
@@ -40,15 +37,17 @@ export async function startPracticeAction(input: {
     return { error: 'Scegli una data di partenza.' };
   }
 
-  if (input.mode === 'friends') {
+  if (input.mode === 'friends' || input.mode === 'group') {
     const result = await createPrivateEdition({
       userId,
       templateId: input.templateId,
       dateFrom: input.dateFrom,
       dateTo: input.dateTo,
+      mode: input.mode,
     });
     if ('error' in result) return result;
     revalidatePath('/pratiche');
+    revalidatePath('/partenze');
     redirect(`/pratica/${result.practice.id}`);
   }
 

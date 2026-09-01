@@ -23,7 +23,7 @@ import {
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
 import { cn } from '@/lib/utils';
 
-const VIBES: {
+export const TRIP_VIBES: {
   id: TripVibe;
   label: string;
   hint: string;
@@ -65,12 +65,25 @@ type Props = {
   baseTemplate: ItineraryTemplate;
   value: TripWhenSelection | null;
   onChange: (next: TripWhenSelection | null) => void;
+  /** Se false, la vibe è gestita dal parent. */
+  showVibe?: boolean;
+  vibe?: TripVibe | null;
+  defaultExpanded?: boolean;
 };
 
-export function TripWhenPicker({ destinationSlug, baseTemplate, value, onChange }: Props) {
-  const [expanded, setExpanded] = useState(false);
+export function TripWhenPicker({
+  destinationSlug,
+  baseTemplate,
+  value,
+  onChange,
+  showVibe = true,
+  vibe: vibeProp,
+  defaultExpanded = false,
+}: Props) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [flexible, setFlexible] = useState(true);
-  const [vibe, setVibe] = useState<TripVibe>(value?.vibe ?? 'relax');
+  const [internalVibe, setInternalVibe] = useState<TripVibe>(value?.vibe ?? 'relax');
+  const vibe = showVibe ? internalVibe : (vibeProp ?? value?.vibe ?? null);
   const [monthCount, setMonthCount] = useState(1);
   const [range, setRange] = useState<DateRange | undefined>(() =>
     value
@@ -96,25 +109,26 @@ export function TripWhenPicker({ destinationSlug, baseTemplate, value, onChange 
     from: Date,
     to: Date,
     isFlexible: boolean,
-    vibeOverride?: TripVibe
+    vibeOverride?: TripVibe | null
   ) => {
     const activeVibe = vibeOverride ?? vibe;
     const tripDays = differenceInCalendarDays(to, from) + 1;
     if (tripDays < 3) return;
-    const picked = pickTemplateForTrip(destinationSlug, tripDays, activeVibe) ?? baseTemplate;
+    const picked =
+      pickTemplateForTrip(destinationSlug, tripDays, activeVibe ?? undefined) ?? baseTemplate;
     const fitted = templateWithFittedDays(picked, tripDays);
     onChange({
       dateFrom: from,
       dateTo: to,
       tripDays,
-      vibe: activeVibe,
+      vibe: activeVibe ?? 'relax',
       template: fitted,
       flexible: isFlexible,
     });
   };
 
   const onVibePick = (next: TripVibe) => {
-    setVibe(next);
+    setInternalVibe(next);
     const from = range?.from ?? single;
     const to =
       range?.to ??
@@ -159,10 +173,11 @@ export function TripWhenPicker({ destinationSlug, baseTemplate, value, onChange 
 
   return (
     <div className="space-y-5">
+      {showVibe ? (
       <div>
         <p className="mb-2 text-sm font-semibold text-slate-900">Che vibe cerchi?</p>
         <div className="grid gap-2 sm:grid-cols-3">
-          {VIBES.map((v) => {
+          {TRIP_VIBES.map((v) => {
             const Icon = v.icon;
             const active = vibe === v.id;
             return (
@@ -185,6 +200,7 @@ export function TripWhenPicker({ destinationSlug, baseTemplate, value, onChange 
           })}
         </div>
       </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button

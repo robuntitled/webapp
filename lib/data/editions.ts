@@ -181,7 +181,10 @@ export async function createPrivateEdition(input: {
   templateId: string;
   dateFrom: string;
   dateTo?: string;
+  /** friends = invito; group = partenza a cui altri possono unirsi. */
+  mode?: 'friends' | 'group';
 }) {
+  const travelMode = input.mode === 'group' ? 'group' : 'friends';
   const template = findItineraryTemplate(input.templateId);
   if (!template) return { error: 'Template non trovato.' };
   const dates = input.dateTo
@@ -191,7 +194,7 @@ export async function createPrivateEdition(input: {
   const existingDraft = await findDraftPractice({
     userId: input.userId,
     templateId: input.templateId,
-    mode: 'friends',
+    mode: travelMode,
   });
   if (existingDraft?.edition_id) {
     const edition = await getEdition(existingDraft.edition_id);
@@ -199,8 +202,9 @@ export async function createPrivateEdition(input: {
       const reused = await createOrReuseDraftPractice({
         userId: input.userId,
         templateId: input.templateId,
-        mode: 'friends',
+        mode: travelMode,
         dateFrom: dates.date_from,
+        dateTo: dates.date_to,
         editionId: edition.id,
       });
       if ('error' in reused) return reused;
@@ -241,8 +245,9 @@ export async function createPrivateEdition(input: {
   const practice = await createOrReuseDraftPractice({
     userId: input.userId,
     templateId: input.templateId,
-    mode: 'friends',
+    mode: travelMode,
     dateFrom: dates.date_from,
+    dateTo: dates.date_to,
     editionId: edition.id as string,
   });
   if ('error' in practice) return practice;
