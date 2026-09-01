@@ -17,7 +17,9 @@ export async function Navbar() {
   return (
     <AppHeader>
       <div className="nl-page nl-nav-inner grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-6">
-        <NavbarNav isLoggedIn={!!session?.user} />
+        <div className="flex min-w-0 items-center justify-start">
+          <NavbarNav isLoggedIn={!!session?.user} />
+        </div>
 
         <Link
           href="/destinazioni"
