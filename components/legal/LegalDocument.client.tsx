@@ -83,7 +83,8 @@ export function LegalDocumentShell({
 
   return (
     <LegalKindContext.Provider value={kind}>
-      <article className="nl-page max-w-3xl py-10 pb-16 md:py-14 md:pb-20">
+      <div className="nl-page w-full min-w-0">
+        <article className="mx-auto w-full max-w-3xl py-10 pb-16 md:py-14 md:pb-20">
         <header
           className={cn(
             'relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-gradient-to-br p-7 shadow-[0_2px_8px_rgba(15,23,42,0.04),0_20px_48px_-12px_rgba(15,23,42,0.08)] ring-1 md:p-10',
@@ -134,7 +135,8 @@ export function LegalDocumentShell({
         <div className="mt-9 space-y-5 md:mt-11 md:space-y-6">{children}</div>
 
         <LegalRelatedDocs current={kind} />
-      </article>
+        </article>
+      </div>
     </LegalKindContext.Provider>
   );
 }

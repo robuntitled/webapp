@@ -4,7 +4,7 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export function LegalPageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-[#f6f8fa]">
+    <div className="min-h-dvh w-full min-w-0 shrink-0 bg-[#f6f8fa]">
       <div
         className="pointer-events-none fixed inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_90%_70%_at_50%_-10%,rgba(15,118,110,0.09),transparent_65%)]"
         aria-hidden
@@ -27,7 +27,7 @@ export function LegalPageShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </header>
-      <main className="relative">{children}</main>
+      <main className="relative w-full min-w-0">{children}</main>
     </div>
   );
 }
