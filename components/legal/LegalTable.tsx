@@ -10,7 +10,7 @@ export function LegalTable({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-900/[0.02]',
+        'mt-1 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/40 shadow-inner',
         className
       )}
     >
@@ -24,7 +24,7 @@ export function LegalTable({
 export function LegalTableHead({ children }: { children: React.ReactNode }) {
   return (
     <thead>
-      <tr className="border-b border-slate-200 bg-slate-50/90 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <tr className="border-b border-slate-200/90 bg-white text-left text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
         {children}
       </tr>
     </thead>
@@ -32,7 +32,7 @@ export function LegalTableHead({ children }: { children: React.ReactNode }) {
 }
 
 export function LegalTableBody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y divide-slate-100">{children}</tbody>;
+  return <tbody className="divide-y divide-slate-200/60 bg-white">{children}</tbody>;
 }
 
 export function LegalTableCell({
@@ -47,8 +47,8 @@ export function LegalTableCell({
   return (
     <td
       className={cn(
-        'px-4 py-3.5 align-top text-slate-700',
-        mono && 'font-mono text-xs text-slate-800',
+        'px-4 py-4 align-top text-slate-600',
+        mono && 'font-mono text-xs font-medium text-slate-800',
         className
       )}
     >
@@ -64,5 +64,5 @@ export function LegalTableHeaderCell({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <th className={cn('px-4 py-3 font-medium', className)}>{children}</th>;
+  return <th className={cn('px-4 py-3.5 font-bold', className)}>{children}</th>;
 }

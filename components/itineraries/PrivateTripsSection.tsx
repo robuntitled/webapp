@@ -128,7 +128,7 @@ export function PrivateTripsSection({
 
   useEffect(() => {
     if (reducedMotion || paused || items.length <= 1 || pageCount <= 1) return;
-    const id = window.setInterval(() => scrollByCard(1), 2000);
+    const id = window.setInterval(() => scrollByCard(1), 2500);
     return () => window.clearInterval(id);
   }, [items.length, pageCount, paused, reducedMotion, scrollByCard]);
 
