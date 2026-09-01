@@ -234,11 +234,11 @@ export default function LoginPage() {
     <main className="relative min-h-screen">
       <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:py-16">
-        <ScrollReveal variant="card" className="w-full max-w-[26.5rem] rounded-2xl border border-white/70 bg-white p-7 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.55)] sm:p-8 space-y-5 text-foreground">
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-6 sm:py-16">
+        <ScrollReveal variant="card" className="w-full max-w-[26.5rem] rounded-2xl border border-white/70 bg-white p-5 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.55)] sm:p-8 space-y-4 sm:space-y-5 text-foreground">
             <div className="flex flex-col items-center text-center">
               <BrandLogo size={42} priority />
-              <h1 className="mt-4 font-display text-[1.35rem] font-semibold leading-snug tracking-tight text-slate-900 sm:text-[1.45rem]">
+              <h1 className="mt-3 font-display text-[1.35rem] font-semibold leading-snug tracking-tight text-slate-900 sm:mt-4 sm:text-[1.45rem]">
                 Il tuo viaggio senza tour operator.
               </h1>
               {isRegisterMode ? (
@@ -252,7 +252,7 @@ export default function LoginPage() {
               {loginHighlights.map(({ Icon, text }, i) => (
                 <li
                   key={text}
-                  className={`flex items-start gap-3 px-3.5 py-2.5 text-left ${
+                  className={`flex items-start gap-3 px-3.5 py-2 text-left sm:py-2.5 ${
                     i > 0 ? 'border-t border-slate-200/80' : ''
                   }`}
                 >
