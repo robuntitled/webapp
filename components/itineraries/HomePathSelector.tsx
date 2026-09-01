@@ -32,10 +32,14 @@ export function HomePathSelector({ value }: { value: HomeEntryPath }) {
             href={homeEntryPathToHref(id)}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold tracking-wide uppercase transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-              active
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-slate-700 hover:text-primary'
+              'inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold tracking-wide uppercase transition focus-visible:outline-none focus-visible:ring-2',
+              active && id === 'unisciti'
+                ? 'bg-accent text-white shadow-sm focus-visible:ring-accent/40'
+                : active
+                  ? 'bg-primary text-white shadow-sm focus-visible:ring-primary/40'
+                  : id === 'unisciti'
+                    ? 'text-slate-700 hover:text-accent'
+                    : 'text-slate-700 hover:text-primary'
             )}
           >
             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />

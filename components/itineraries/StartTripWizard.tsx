@@ -110,6 +110,7 @@ export function StartTripWizard({
     >
       {step === 'dest' ? (
         <CatalogPageHero
+          compact
           title="La tua vacanza, in tre click"
           subtitle="Scegli la destinazione, definisci date e stile, configura il viaggio."
           search={
@@ -132,6 +133,7 @@ export function StartTripWizard({
       >
         {step === 'dest' ? (
           <CatalogBrowseChrome
+            compact
             path="destinazioni"
             continent={filters.continent}
             onContinentChange={(continent) => setFilters({ ...filters, continent })}
