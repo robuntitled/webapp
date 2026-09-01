@@ -47,7 +47,7 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <nav
-      className="hidden min-w-0 flex-1 items-center justify-center gap-7 md:flex lg:gap-10 xl:gap-12"
+      className="hidden min-w-0 items-center justify-start justify-self-start gap-5 md:flex lg:gap-8 xl:gap-10"
       aria-label="Navigazione principale"
     >
       {LINKS.filter((link) => !('auth' in link && link.auth) || isLoggedIn).map((link) => {

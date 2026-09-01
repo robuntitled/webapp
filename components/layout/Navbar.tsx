@@ -16,18 +16,20 @@ export async function Navbar() {
 
   return (
     <AppHeader>
-      <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 md:gap-8 lg:gap-12">
+      <div className="nl-page nl-nav-inner grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-6">
+        <div className="flex min-w-0 items-center justify-start">
+          <NavbarNav isLoggedIn={!!session?.user} />
+        </div>
+
         <Link
           href="/destinazioni"
-          className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+          className="justify-self-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
           aria-label="Flygetr — home"
         >
           <BrandLogo responsive priority />
         </Link>
 
-        <NavbarNav isLoggedIn={!!session?.user} />
-
-        <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-1 md:gap-1.5">
+        <div className="flex shrink-0 items-center justify-end justify-self-end gap-0.5 sm:gap-1 md:gap-1.5">
           <MobileNav isLoggedIn={!!session?.user} />
           {session?.user ? (
             <>
