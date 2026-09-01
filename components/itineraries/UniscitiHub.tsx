@@ -36,8 +36,8 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-visible bg-white">
       <CatalogPageHero
         compact
-        title="Unisciti a un viaggio"
-        subtitle="Partenze già create — pubbliche e private — a cui puoi partecipare."
+        title="Un posto nel gruppo, già pronto."
+        subtitle="Partenze aperte con date e piano già fatti — entra, aspetta il gruppo, poi prenoti il tuo volo."
         search={
           <CatalogHeroSearchBar
             value={filters}

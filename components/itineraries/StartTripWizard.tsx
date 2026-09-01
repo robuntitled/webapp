@@ -111,8 +111,8 @@ export function StartTripWizard({
       {step === 'dest' ? (
         <CatalogPageHero
           compact
-          title="La tua vacanza, in tre click"
-          subtitle="Scegli la destinazione, definisci date e stile, configura il viaggio."
+          title="Organizza il viaggio. Il gruppo fa il resto."
+          subtitle="Scegli destinazione e date, invita chi vuoi — prenoti tutti separatamente, senza tour operator."
           search={
             <CatalogHeroSearchBar
               value={filters}

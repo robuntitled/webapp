@@ -375,9 +375,15 @@ export function OfficialEditionsGrid({
       ) : null}
 
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <h2 className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900">
-          Istanze disponibili
-        </h2>
+        <div className="min-w-0 space-y-1">
+          <h2 className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900">
+            Partenze aperte
+          </h2>
+          <p className="max-w-xl text-sm text-slate-600">
+            Viaggi pubblici con date e itinerario già fissati — unisciti e aspetta che il gruppo
+            raggiunga la soglia, poi prenoti il tuo.
+          </p>
+        </div>
         <div
           className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white p-0.5 shadow-sm"
           role="group"
