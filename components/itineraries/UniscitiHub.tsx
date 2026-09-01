@@ -37,7 +37,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
       <CatalogPageHero
         compact
         title="Un posto nel gruppo, già pronto."
-        subtitle="Partenze aperte con date e piano già fatti — entra, aspetta il gruppo, poi prenoti il tuo volo."
+        subtitle="Entra nel gruppo, aspetta la soglia, prenota il volo."
         search={
           <CatalogHeroSearchBar
             value={filters}

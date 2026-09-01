@@ -112,7 +112,7 @@ export function StartTripWizard({
         <CatalogPageHero
           compact
           title="Organizza il viaggio. Il gruppo fa il resto."
-          subtitle="Scegli destinazione e date, invita chi vuoi — prenoti tutti separatamente, senza tour operator."
+          subtitle="Date e inviti — prenoti separati, zero tour operator."
           search={
             <CatalogHeroSearchBar
               value={filters}
