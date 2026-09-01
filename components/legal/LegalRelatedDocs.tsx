@@ -52,11 +52,11 @@ export function LegalRelatedDocs({ current }: { current: LegalDocumentKind }) {
   const pathname = usePathname();
 
   return (
-    <aside aria-label="Altri documenti legali" className="mt-12 border-t border-slate-200/80 pt-10 md:mt-14">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <aside aria-label="Altri documenti legali" className="mt-8 border-t border-slate-200/70 pt-6">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
         Documentazione correlata
       </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
         {DOCS.map(({ href, kind, label, description, Icon }) => {
           const active = pathname === href || current === kind;
           return (
@@ -65,20 +65,20 @@ export function LegalRelatedDocs({ current }: { current: LegalDocumentKind }) {
               href={href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'group relative flex flex-col rounded-2xl border bg-white p-4 shadow-sm ring-1 ring-slate-900/[0.03] transition duration-200',
+                'group relative flex flex-col rounded-xl border bg-white p-3.5 transition duration-200',
                 active
-                  ? 'border-primary/25 ring-primary/15'
-                  : cn('border-slate-200/80 hover:-translate-y-0.5 hover:shadow-md', KIND_RING[kind])
+                  ? 'border-primary/25 shadow-[0_0_0_1px_rgba(15,118,110,0.08)]'
+                  : cn('border-slate-200/70 hover:border-slate-300/80 hover:shadow-sm', KIND_RING[kind])
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <span
                   className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
                     KIND_ICON[kind]
                   )}
                 >
-                  <Icon className="h-[1.125rem] w-[1.125rem]" aria-hidden />
+                  <Icon className="h-4 w-4" aria-hidden />
                 </span>
                 {!active ? (
                   <ArrowUpRight
@@ -91,8 +91,8 @@ export function LegalRelatedDocs({ current }: { current: LegalDocumentKind }) {
                   </span>
                 )}
               </div>
-              <span className="mt-3 font-display text-sm font-semibold text-slate-900">{label}</span>
-              <span className="mt-1 text-xs leading-relaxed text-slate-500">{description}</span>
+              <span className="mt-2.5 font-display text-[0.8125rem] font-semibold text-slate-900">{label}</span>
+              <span className="mt-0.5 text-[11px] leading-snug text-slate-500">{description}</span>
             </Link>
           );
         })}

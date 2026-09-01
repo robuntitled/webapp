@@ -13,25 +13,25 @@ function IdentityRow({
   icon?: typeof Building2;
 }) {
   return (
-    <div className="grid gap-1 border-b border-slate-100 py-3 last:border-0 sm:grid-cols-[10rem_1fr] sm:gap-6 sm:py-3.5">
-      <dt className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-        {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
+    <div className="grid gap-0.5 border-b border-slate-100/90 py-2.5 last:border-0 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
+      <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        {Icon ? <Icon className="h-3 w-3 shrink-0" aria-hidden /> : null}
         {label}
       </dt>
-      <dd className="text-sm font-medium leading-relaxed text-slate-800">{children}</dd>
+      <dd className="text-[0.8125rem] font-medium leading-snug text-slate-800">{children}</dd>
     </div>
   );
 }
 
 export function CompanyIdentity({ company }: { company: CompanyProfile }) {
   return (
-    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-b from-slate-50/90 to-white">
-      <div className="border-b border-slate-100 bg-white/60 px-4 py-3 md:px-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+    <div className="mt-1.5 overflow-hidden rounded-lg border border-slate-200/70 bg-slate-50/50">
+      <div className="border-b border-slate-100/90 bg-white/70 px-3.5 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
           Titolare del trattamento
         </p>
       </div>
-      <dl className="divide-y divide-slate-100 px-4 md:px-5">
+      <dl className="px-3.5 sm:px-4">
         <IdentityRow label="Ragione sociale" icon={Building2}>
           {company.companyName}
         </IdentityRow>

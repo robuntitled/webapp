@@ -12,7 +12,7 @@ export function LegalConfigNotice({ company }: { company: CompanyProfile }) {
   return (
     <div
       role="status"
-      className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-5 py-4 text-sm text-amber-950 shadow-sm ring-1 ring-amber-900/[0.04]"
+      className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950"
     >
       <p className="font-semibold">Profilo legale in configurazione</p>
       <p className="mt-1.5 leading-relaxed text-amber-900/90">
