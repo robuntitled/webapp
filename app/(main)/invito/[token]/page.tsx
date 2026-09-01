@@ -23,7 +23,7 @@ export default async function InvitoPage({ params }: PageProps) {
   }
   const template = findItineraryTemplate(edition.template_id);
   const host = await getEditionHost(edition.id);
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://nomadlink.it'}/invito/${token}`;
+  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it'}/invito/${token}`;
 
   return (
     <div className="nl-page w-full space-y-4 py-12">

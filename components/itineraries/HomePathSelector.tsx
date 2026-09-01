@@ -20,7 +20,7 @@ const PATHS: {
 export function HomePathSelector({ value }: { value: HomeEntryPath }) {
   return (
     <div
-      className="inline-flex w-full max-w-xl gap-1 rounded-full border border-slate-200/90 bg-white/90 p-1 shadow-sm backdrop-blur-md"
+      className="flex w-full gap-1 rounded-full border border-slate-200/90 bg-white p-1 shadow-sm"
       role="navigation"
       aria-label="Esplora o Unisciti"
     >
@@ -32,13 +32,13 @@ export function HomePathSelector({ value }: { value: HomeEntryPath }) {
             href={homeEntryPathToHref(id)}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold tracking-wide uppercase transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold tracking-wide uppercase transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               active
                 ? 'bg-primary text-white shadow-sm'
                 : 'text-slate-700 hover:text-primary'
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {label}
           </Link>
         );
@@ -61,7 +61,7 @@ export function CatalogBrowseChrome({
 }) {
   return (
     <div className="nl-page relative z-10 min-h-0 w-full pt-14 pb-16">
-      <div className="mb-6 flex w-full justify-center">
+      <div className="mb-6 w-full">
         <HomePathSelector value={path} />
       </div>
       <div className="mb-8">

@@ -224,47 +224,45 @@ export default function LoginPage() {
     }
   };
 
+  const loginHighlights = [
+    { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
+    { Icon: Users, text: 'Parti da solo, con amici o su una partenza di gruppo' },
+    { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
+  ] as const;
+
   return (
     <main className="relative min-h-screen">
       <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-8 sm:py-16">
-        <div className="mb-5 flex w-full max-w-lg flex-col items-center text-center sm:mb-8">
-          <ScrollReveal variant="decor">
-            <BrandLogo size={44} priority />
-          </ScrollReveal>
-          <ScrollReveal variant="title">
-            <h1 className="mt-3 max-w-md font-display text-[clamp(1.7rem,1.3rem+1.5vw,2.75rem)] font-semibold leading-[1.12] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)] sm:mt-5">
-              Il viaggio senza tour operator.
-            </h1>
-          </ScrollReveal>
-          <ul className="mt-4 flex w-full max-w-md flex-col gap-2 text-left text-sm text-white/95 sm:mt-7 sm:gap-2.5">
-            {[
-              { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
-              { Icon: Users, text: 'Parti da solo, con amici o su una partenza di gruppo' },
-              { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
-            ].map(({ Icon, text }, i) => (
-              <ScrollReveal key={text} variant="card" stagger={i + 1} as="li">
-                <div className="flex items-start gap-3 rounded-xl bg-white/8 px-3.5 py-2.5 ring-1 ring-white/12 backdrop-blur-[2px]">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-                  <span className="leading-snug">{text}</span>
-                </div>
-              </ScrollReveal>
-            ))}
-          </ul>
-        </div>
-
-        <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
-            <div>
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                {isRegisterMode ? 'Crea il tuo account' : 'Entra in Flygetr'}
-              </h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                {isRegisterMode
-                  ? 'Due minuti. Poi scegli un itinerario o una partenza di gruppo.'
-                  : 'Accedi e scegli un itinerario ufficiale.'}
-              </p>
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:py-16">
+        <ScrollReveal variant="card" className="w-full max-w-[26.5rem] rounded-2xl border border-white/70 bg-white p-7 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.55)] sm:p-8 space-y-5 text-foreground">
+            <div className="flex flex-col items-center text-center">
+              <BrandLogo size={42} priority />
+              <h1 className="mt-4 font-display text-[1.35rem] font-semibold leading-snug tracking-tight text-slate-900 sm:text-[1.45rem]">
+                Il tuo viaggio senza tour operator.
+              </h1>
+              {isRegisterMode ? (
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Crea il tuo account. Due minuti, poi scegli un itinerario.
+                </p>
+              ) : null}
             </div>
+
+            <ul className="overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50/90">
+              {loginHighlights.map(({ Icon, text }, i) => (
+                <li
+                  key={text}
+                  className={`flex items-start gap-3 px-3.5 py-2.5 text-left ${
+                    i > 0 ? 'border-t border-slate-200/80' : ''
+                  }`}
+                >
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                  </span>
+                  <span className="text-[13px] leading-snug text-slate-700">{text}</span>
+                </li>
+              ))}
+            </ul>
 
             <div className="space-y-2">
               <Button
@@ -291,7 +289,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                <span className="bg-transparent px-3 text-muted-foreground">oppure email</span>
+                <span className="bg-white px-3 text-muted-foreground">oppure email</span>
               </div>
             </div>
 

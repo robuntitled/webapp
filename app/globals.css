@@ -305,23 +305,12 @@
   }
 
   .nl-app-header {
-    --nav-progress: 1;
-    --nl-nav-h: calc(var(--nl-nav-height) + (1 - var(--nav-progress)) * 0.4rem);
-    --nl-logo-h: calc(2.02rem + (1 - var(--nav-progress)) * 0.52rem);
+    --nl-nav-h: var(--nl-nav-height);
+    --nl-logo-h: 2.02rem;
     color: rgb(30 41 59);
-    background-color: rgb(255 255 255 / calc(0.12 + var(--nav-progress) * 0.86));
-    border-bottom: 1px solid rgb(226 232 240 / calc(var(--nav-progress) * 0.7));
-    box-shadow: 0 12px 32px -20px rgb(15 23 42 / calc(var(--nav-progress) * 0.55));
-    -webkit-backdrop-filter: blur(calc(var(--nav-progress) * 12px));
-    backdrop-filter: blur(calc(var(--nav-progress) * 12px));
-  }
-
-  .nl-app-header:not([data-hero='true']) {
-    isolation: isolate;
-  }
-
-  .nl-app-header[data-hero='true'] {
-    color: #fff;
+    background-color: #fff;
+    border-bottom: 1px solid rgb(226 232 240);
+    box-shadow: 0 1px 0 rgb(15 23 42 / 0.04);
   }
 
   .nl-nav-inner {

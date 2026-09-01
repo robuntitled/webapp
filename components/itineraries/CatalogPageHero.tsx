@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 
@@ -13,17 +13,9 @@ export function CatalogPageHero({
   subtitle: string;
   search: ReactNode;
 }) {
-  useEffect(() => {
-    window.dispatchEvent(new Event('nl-hero-change'));
-    return () => {
-      window.dispatchEvent(new Event('nl-hero-change'));
-    };
-  }, []);
-
   return (
     <section
-      data-nl-hero
-      className="relative isolate flex min-h-[14.5rem] flex-col overflow-visible -mt-[var(--nl-nav-height)] h-[min(19vh,15.5rem)] pt-[var(--nl-nav-height)] sm:min-h-[15.25rem] sm:h-[min(21vh,16.5rem)] md:h-[min(22vh,17rem)]"
+      className="relative isolate flex min-h-[16.7rem] h-[min(22vh,17.8rem)] flex-col overflow-visible sm:min-h-[17.55rem] sm:h-[min(24vh,19rem)] md:h-[min(25vh,19.55rem)]"
     >
       <div className="absolute inset-0 overflow-hidden">
         <HeroBackground

@@ -7,6 +7,7 @@ import type { CompanyProfile } from '@/lib/privacy/company';
 
 function hideSiteFooter(pathname: string | null): boolean {
   if (!pathname) return false;
+  if (pathname === '/') return true;
   if (pathname.startsWith('/itinerario')) return true;
   if (pathname.startsWith('/pratica')) return true;
   if (pathname.startsWith('/onboarding')) return true;
@@ -31,7 +32,7 @@ export function Footer({ company }: FooterProps) {
               <BrandLogo size={40} />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Viaggi di gruppo nel mondo — raccontati da chi li vive e li fotografa.
+              Viaggi nel mondo in solo, con amici o in gruppo.
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Privacy:{' '}

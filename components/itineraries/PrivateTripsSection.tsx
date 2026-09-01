@@ -99,8 +99,11 @@ export function PrivateTripsSection({
     const el = scrollerRef.current;
     if (!el) return;
     const card = el.querySelector('li');
-    const w = card ? card.getBoundingClientRect().width + 16 : el.clientWidth * 0.8;
-    el.scrollBy({ left: dir * w, behavior: 'smooth' });
+    const gap = Number.parseFloat(getComputedStyle(el).columnGap || getComputedStyle(el).gap) || 16;
+    const cardW = card ? card.getBoundingClientRect().width : el.clientWidth * 0.8;
+    const step = cardW + gap;
+    const visible = Math.max(1, Math.round(el.clientWidth / step));
+    el.scrollBy({ left: dir * visible * step, behavior: 'smooth' });
   }, []);
 
   const scrollToPage = useCallback((index: number) => {

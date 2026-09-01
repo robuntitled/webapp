@@ -11,7 +11,3 @@ export function isComposerPath(pathname: string | null | undefined): boolean {
   );
 }
 
-/** Home catalogo con hero fotografica sotto la navbar. */
-export function isHeroCatalogPath(pathname: string | null | undefined): boolean {
-  return pathname === '/destinazioni' || pathname === '/partenze';
-}

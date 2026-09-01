@@ -1,5 +1,6 @@
 import { LegalDocument, LegalSection } from '@/components/legal/LegalDocument';
 import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
+import { COOKIE_CONSENT_KEY } from '@/lib/privacy/constants';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
 export const metadata = {
@@ -52,7 +53,7 @@ export default function CookiePage() {
                 <td className="py-2">Sessione</td>
               </tr>
               <tr className="border-b">
-                <td className="py-2 pr-4 font-mono text-xs">nomadlink-cookie-consent</td>
+                <td className="py-2 pr-4 font-mono text-xs">{COOKIE_CONSENT_KEY}</td>
                 <td className="py-2 pr-4">Tecnico</td>
                 <td className="py-2 pr-4">Memorizza la scelta sul banner cookie</td>
                 <td className="py-2">12 mesi</td>
