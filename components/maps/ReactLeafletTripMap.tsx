@@ -15,6 +15,7 @@ import { resolveDestinationCoords } from '@/lib/maps/coordinates';
 import type { DestinationMeta } from '@/types/composer';
 import { googleMapsPlaceUrl } from '@/lib/maps/google-maps-links';
 import 'leaflet/dist/leaflet.css';
+import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
 
 type ReactLeafletTripMapProps = {
   destination: string;
@@ -33,8 +34,7 @@ const PIN_FILL = '#0F766E';
 const PIN_ACTIVE = '#F97316';
 const ROUTE_COLOR = '#0F766E';
 
-/** Tiles chiari stilizzati (Positron). */
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const MAP_TILES = getLeafletTileLayer();
 
 function isStopPin(pin: MapPin): boolean {
   return pin.id !== 'destination' && Boolean(pin.blockId);
@@ -140,7 +140,7 @@ export function ReactLeafletTripMap({
         zoomControl={false}
         attributionControl={false}
       >
-        <TileLayer url={TILE_URL} attribution="" maxZoom={19} />
+        <TileLayer url={MAP_TILES.url} attribution={MAP_TILES.attribution} maxZoom={19} />
         <FitBounds pins={fitPins} animate={interactive} />
         {interactive ? <MapClickHandler onMapClick={onMapClick} /> : null}
 

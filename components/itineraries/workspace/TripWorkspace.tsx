@@ -80,9 +80,9 @@ export function TripWorkspace({
     return stayProgress.nextStayIdx ?? 0;
   });
   const stay = stays[stayIdx] ?? stays[0];
-  const groupLocked = practice?.mode === 'group' && !practice.flight_confirmed_at;
   const hotelCount = hotels.length;
-  const canBook = Boolean(practice?.id) && isMember;
+  const canBookFlights = Boolean(practice?.id) && isMember;
+  const canBookHotels = canBookFlights && flightBooked;
 
   const selectTab = useCallback(
     (next: WorkspaceTab) => {
@@ -230,7 +230,13 @@ export function TripWorkspace({
                     : 'Un alloggio per ogni tappa del piano'
                 }
                 complete={hotelCount > 0}
-                actionLabel={hotelCount > 0 ? 'Vedi dettaglio' : 'Scegli hotel'}
+                actionLabel={
+                  hotelCount > 0
+                    ? 'Vedi dettaglio'
+                    : flightBooked
+                      ? 'Scegli hotel'
+                      : 'Vai agli hotel'
+                }
                 onAction={() => selectTab('hotel')}
               >
                 {hotelCount > 0 && practice ? (
@@ -245,7 +251,11 @@ export function TripWorkspace({
                 ) : (
                   <WorkspaceEmptyState
                     title="Nessun hotel selezionato"
-                    body="Scegli dove soggiornare in ogni città."
+                    body={
+                      canBookFlights && !flightBooked
+                        ? 'Conferma il volo per sbloccare la scelta hotel.'
+                        : 'Scegli dove soggiornare in ogni città.'
+                    }
                   />
                 )}
               </WorkspaceStatusCard>
@@ -263,11 +273,11 @@ export function TripWorkspace({
                 Cerca, confronta e scegli andata e ritorno sulle date del viaggio.
               </p>
             </div>
-            {!canBook ? (
+            {!canBookFlights ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
-                <p className="font-medium text-slate-800">Unisciti al viaggio per prenotare</p>
+                <p className="font-medium text-slate-800">Partecipa per prenotare i voli</p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Partecipa al gruppo per sbloccare la ricerca voli.
+                  Unisciti al gruppo per sbloccare la ricerca voli.
                 </p>
                 {canJoin && !isMember ? (
                   <Button
@@ -309,19 +319,27 @@ export function TripWorkspace({
                 Un hotel per ogni tappa del piano. Scegli e conferma quando sei pronto.
               </p>
             </div>
-            {!canBook ? (
+            {!canBookFlights ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
-                <p className="font-medium text-slate-800">Unisciti al viaggio per prenotare</p>
+                <p className="font-medium text-slate-800">Partecipa per prenotare gli hotel</p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Partecipa al gruppo per sbloccare la ricerca hotel.
+                  Unisciti al gruppo per iniziare il percorso di prenotazione.
                 </p>
               </div>
-            ) : groupLocked ? (
+            ) : !canBookHotels ? (
               <div className="rounded-2xl border border-amber-200/80 bg-amber-50/60 px-5 py-6 text-center">
                 <p className="font-medium text-slate-800">Hotel in attesa del volo</p>
                 <p className="mt-1 text-sm text-slate-600">
-                  In modalità gruppo gli hotel si sbloccano dopo il volo confermato.
+                  Conferma il volo per sbloccare la ricerca hotel.
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-4 rounded-full"
+                  onClick={() => selectTab('voli')}
+                >
+                  Vai ai voli
+                </Button>
               </div>
             ) : practice ? (
               <div className="space-y-5">
