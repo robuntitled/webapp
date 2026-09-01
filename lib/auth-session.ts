@@ -8,11 +8,9 @@ export const PROTECTED_PATHS = [
   '/onboarding',
   '/pratiche',
   '/pratica',
-  '/dashboard/miei-viaggi',
   '/dashboard/profilo',
   '/dashboard/impostazioni',
   '/dashboard/preferiti',
-  '/dashboard/viaggi',
 ];
 
 export const GDPR_PUBLIC_PATHS = [
