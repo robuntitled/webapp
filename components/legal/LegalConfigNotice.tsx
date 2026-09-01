@@ -12,13 +12,13 @@ export function LegalConfigNotice({ company }: { company: CompanyProfile }) {
   return (
     <div
       role="status"
-      className="mb-8 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-5 py-4 text-sm text-amber-950 shadow-sm ring-1 ring-amber-900/[0.04]"
     >
       <p className="font-semibold">Profilo legale in configurazione</p>
-      <p className="mt-1">
-        Compila le variabili <code className="text-xs bg-amber-100 px-1 rounded">LEGAL_*</code> in{' '}
-        <code className="text-xs bg-amber-100 px-1 rounded">.env.local</code> prima del lancio.
-        Vedi <code className="text-xs bg-amber-100 px-1 rounded">.env.example</code>.
+      <p className="mt-1.5 leading-relaxed text-amber-900/90">
+        Compila le variabili <code className="rounded bg-amber-100/80 px-1.5 py-0.5 text-xs">LEGAL_*</code> in{' '}
+        <code className="rounded bg-amber-100/80 px-1.5 py-0.5 text-xs">.env.local</code> prima del lancio.
+        Vedi <code className="rounded bg-amber-100/80 px-1.5 py-0.5 text-xs">.env.example</code>.
       </p>
     </div>
   );
