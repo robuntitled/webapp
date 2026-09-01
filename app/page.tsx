@@ -228,17 +228,17 @@ export default function LoginPage() {
     <main className="relative min-h-screen">
       <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:py-16">
-        <div className="mb-8 flex w-full max-w-lg flex-col items-center text-center">
+      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-8 sm:py-16">
+        <div className="mb-5 flex w-full max-w-lg flex-col items-center text-center sm:mb-8">
           <ScrollReveal variant="decor">
-            <BrandLogo size={48} priority />
+            <BrandLogo size={44} priority />
           </ScrollReveal>
           <ScrollReveal variant="title">
-            <h1 className="mt-5 max-w-md font-display text-[clamp(1.85rem,1.4rem+1.6vw,2.75rem)] font-semibold leading-[1.12] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
+            <h1 className="mt-3 max-w-md font-display text-[clamp(1.7rem,1.3rem+1.5vw,2.75rem)] font-semibold leading-[1.12] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)] sm:mt-5">
               Il viaggio senza tour operator.
             </h1>
           </ScrollReveal>
-          <ul className="mt-6 flex w-full max-w-md flex-col gap-2.5 text-left text-sm text-white/95 sm:mt-7">
+          <ul className="mt-4 flex w-full max-w-md flex-col gap-2 text-left text-sm text-white/95 sm:mt-7 sm:gap-2.5">
             {[
               { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
               { Icon: Users, text: 'Parti da solo, con amici o su una partenza di gruppo' },

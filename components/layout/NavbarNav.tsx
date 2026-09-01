@@ -55,7 +55,7 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Link
             key={link.href}
             href={link.href}
-            className={navLinkClass(active)}
+            className={cn(navLinkClass(active), 'no-underline')}
             aria-current={active ? 'page' : undefined}
           >
             {link.label}
