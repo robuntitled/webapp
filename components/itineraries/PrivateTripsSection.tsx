@@ -14,6 +14,7 @@ import { editionDestinationSlug } from '@/lib/itineraries/public-destinations';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
 import type { CatalogFilterState } from '@/components/itineraries/CatalogFiltersBar';
 import { formatItDate } from '@/lib/itineraries/dates';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { cn } from '@/lib/utils';
 
 function durationFromId(templateId: string, fallback?: number | null) {
@@ -32,6 +33,36 @@ export function PrivateTripsSection({
   const scrollerRef = useRef<HTMLUListElement>(null);
   const [page, setPage] = useState(0);
   const [pageCount, setPageCount] = useState(1);
+  const [paused, setPaused] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
+
+  const pageStep = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return 0;
+    const card = el.querySelector('li');
+    const gap = Number.parseFloat(getComputedStyle(el).columnGap || getComputedStyle(el).gap) || 16;
+    const cardW = card ? card.getBoundingClientRect().width : el.clientWidth * 0.8;
+    const step = cardW + gap;
+    const visible = Math.max(1, Math.round(el.clientWidth / step));
+    return visible * step;
+  }, []);
+
+  const scrollByCard = useCallback((dir: -1 | 1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const step = pageStep();
+    if (!step) return;
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    if (dir === 1 && el.scrollLeft >= max - 8) {
+      el.scrollTo({ left: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+      return;
+    }
+    if (dir === -1 && el.scrollLeft <= 8) {
+      el.scrollTo({ left: max, behavior: reducedMotion ? 'auto' : 'smooth' });
+      return;
+    }
+    el.scrollBy({ left: dir * step, behavior: reducedMotion ? 'auto' : 'smooth' });
+  }, [pageStep, reducedMotion]);
 
   const items = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
@@ -95,16 +126,11 @@ export function PrivateTripsSection({
     };
   }, [measurePages, items.length]);
 
-  const scrollByCard = useCallback((dir: -1 | 1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const card = el.querySelector('li');
-    const gap = Number.parseFloat(getComputedStyle(el).columnGap || getComputedStyle(el).gap) || 16;
-    const cardW = card ? card.getBoundingClientRect().width : el.clientWidth * 0.8;
-    const step = cardW + gap;
-    const visible = Math.max(1, Math.round(el.clientWidth / step));
-    el.scrollBy({ left: dir * visible * step, behavior: 'smooth' });
-  }, []);
+  useEffect(() => {
+    if (reducedMotion || paused || items.length <= 1 || pageCount <= 1) return;
+    const id = window.setInterval(() => scrollByCard(1), 3000);
+    return () => window.clearInterval(id);
+  }, [items.length, pageCount, paused, reducedMotion, scrollByCard]);
 
   const scrollToPage = useCallback((index: number) => {
     const el = scrollerRef.current;
@@ -143,7 +169,13 @@ export function PrivateTripsSection({
           ) : null}
         </div>
       ) : (
-        <div className="relative">
+        <div
+          className="relative"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocusCapture={() => setPaused(true)}
+          onBlurCapture={() => setPaused(false)}
+        >
           <ul
             ref={scrollerRef}
             onScroll={measurePages}
