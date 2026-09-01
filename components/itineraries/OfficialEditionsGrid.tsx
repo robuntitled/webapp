@@ -353,7 +353,7 @@ export function OfficialEditionsGrid({
             </ul>
           </section>
         ) : null}
-        <ul id="risultati-partenze" className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+        <ul id="risultati-partenze" className="grid scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
           {visible.length === 0 ? (
             <li className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600 shadow-sm">
               Nessuna partenza con questi filtri. Azzera continente o apri Giorni → Tutti.

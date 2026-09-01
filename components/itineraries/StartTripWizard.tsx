@@ -3,8 +3,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { uniqueCoversForSlugs } from '@/lib/composer/destination-covers';
-import { HeroBackground } from '@/components/brand/HeroBackground';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { CatalogPageHero } from '@/components/itineraries/CatalogPageHero';
 import {
   CatalogHeroSearchBar,
   EMPTY_CATALOG_FILTERS,
@@ -110,35 +109,19 @@ export function StartTripWizard({
       )}
     >
       {step === 'dest' ? (
-        <section className="relative isolate -mt-[var(--nl-nav-height)] flex h-[min(38vh,22rem)] min-h-[16rem] flex-col overflow-visible pt-[var(--nl-nav-height)] sm:h-[min(46vh,28rem)] sm:min-h-[20rem]">
-          <div className="absolute inset-0 overflow-hidden">
-            <HeroBackground
-              images={BRAND_IMAGES.heroes.slideshow}
-              overlay="dark"
-              className="!z-0"
-              intervalMs={6500}
+        <CatalogPageHero
+          title="La tua vacanza, in tre click"
+          subtitle="Scegli la destinazione, definisci date e stile, configura il viaggio."
+          search={
+            <CatalogHeroSearchBar
+              value={filters}
+              onChange={setFilters}
+              placeholder="Cerca nazione, continente o vibe"
+              resultsId="risultati-itinerari"
+              durationOptions={durationOptions}
             />
-          </div>
-          <div className="relative z-10 nl-page flex w-full flex-1 flex-col items-center justify-center gap-2 pb-7 pt-3 text-center sm:gap-3 sm:pb-8 sm:pt-4">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-white drop-shadow sm:text-3xl md:text-5xl">
-              La tua vacanza, in tre click
-            </h1>
-            <p className="mx-auto max-w-2xl text-base leading-snug text-white/90 drop-shadow sm:text-[19px] md:text-[22px]">
-              Scegli la destinazione, definisci date e stile, configura il viaggio.
-            </p>
-          </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 translate-y-1/2">
-            <div className="nl-page pointer-events-auto w-full">
-              <CatalogHeroSearchBar
-                value={filters}
-                onChange={setFilters}
-                placeholder="Cerca nazione, continente o vibe"
-                resultsId="risultati-itinerari"
-                durationOptions={durationOptions}
-              />
-            </div>
-          </div>
-        </section>
+          }
+        />
       ) : null}
 
       <div

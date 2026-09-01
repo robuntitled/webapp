@@ -233,11 +233,8 @@ export default function LoginPage() {
       <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
         <div className="flex flex-col justify-end px-6 pt-14 pb-6 lg:w-[56%] lg:p-12 lg:pb-20">
           <ScrollReveal variant="decor">
-            <div className="mb-5 flex items-center gap-3">
-              <BrandLogo size={52} className="ring-white/40" priority />
-              <span className="font-display text-2xl font-semibold text-white drop-shadow lg:text-3xl">
-                Flygetr
-              </span>
+            <div className="mb-5">
+              <BrandLogo size={56} priority />
             </div>
           </ScrollReveal>
           <ScrollReveal variant="title">

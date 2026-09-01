@@ -192,7 +192,7 @@ export function DestinationExplorerPanel({
   return (
     <div
       id={resultsId}
-      className="overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/90"
+      className="scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/90"
     >
       <ContinentTabBar value={continent} onChange={onContinentChange} />
 

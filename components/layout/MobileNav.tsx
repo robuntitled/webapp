@@ -57,12 +57,12 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
       {open && (
         <>
           <div
-            className="fixed inset-0 top-[var(--nl-nav-height)] z-40 bg-slate-950/25 backdrop-blur-[2px]"
+            className="fixed inset-0 top-[var(--nl-nav-h,var(--nl-nav-height))] z-40 bg-slate-950/25 backdrop-blur-[2px]"
             onClick={() => setOpen(false)}
             aria-hidden
           />
           <nav
-            className="fixed inset-x-0 top-[var(--nl-nav-height)] z-50 border-b border-slate-200/50 bg-white/88 py-3 backdrop-blur-md"
+            className="fixed inset-x-0 top-[var(--nl-nav-h,var(--nl-nav-height))] z-50 border-b border-slate-200/50 bg-white/88 py-3 backdrop-blur-md"
             aria-label="Navigazione mobile"
           >
             <div className="nl-page flex w-full flex-col gap-0.5">

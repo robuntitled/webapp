@@ -27,13 +27,10 @@ export async function Navbar() {
       <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 md:gap-8 lg:gap-12">
         <Link
           href="/destinazioni"
-          className="group shrink-0 transition-transform duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-full"
+          className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
           aria-label="Flygetr — home"
         >
-          <BrandLogo
-            responsive
-            className="ring-white/80 drop-shadow-[0_2px_12px_rgba(0,0,0,0.18)] group-data-[hero=true]/nav:ring-white/40 group-data-[hero=true]/nav:drop-shadow-[0_2px_16px_rgba(0,0,0,0.45)]"
-          />
+          <BrandLogo responsive priority />
         </Link>
 
         <NavbarNav isLoggedIn={!!session?.user} />

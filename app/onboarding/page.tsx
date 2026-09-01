@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
       />
       <header className="relative z-10 px-4 py-5">
         <Link href="/" className="inline-block" aria-label="Flygetr — home">
-          <BrandLogo size={48} className="ring-white/40" />
+          <BrandLogo size={52} />
         </Link>
       </header>
       <OnboardingWizard />

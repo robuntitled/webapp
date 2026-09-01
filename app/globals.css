@@ -304,9 +304,40 @@
     }
   }
 
+  .nl-app-header {
+    --nav-progress: 1;
+    --nl-nav-h: calc(var(--nl-nav-height) + (1 - var(--nav-progress)) * 0.4rem);
+    --nl-logo-h: calc(2.45rem + (1 - var(--nav-progress)) * 0.7rem);
+    color: rgb(30 41 59);
+    background-color: rgb(255 255 255 / calc(var(--nav-progress) * 0.74));
+    border-bottom: 1px solid rgb(226 232 240 / calc(var(--nav-progress) * 0.45));
+    box-shadow: 0 10px 28px -22px rgb(15 23 42 / calc(var(--nav-progress) * 0.55));
+    -webkit-backdrop-filter: blur(calc(var(--nav-progress) * 12px));
+    backdrop-filter: blur(calc(var(--nav-progress) * 12px));
+  }
+
+  .nl-app-header:not([data-hero='true']) {
+    isolation: isolate;
+  }
+
+  .nl-app-header[data-hero='true'] {
+    color: #fff;
+  }
+
   .nl-nav-inner {
-    height: var(--nl-nav-height);
-    min-height: var(--nl-nav-height);
+    height: var(--nl-nav-h, var(--nl-nav-height));
+    min-height: var(--nl-nav-h, var(--nl-nav-height));
+  }
+
+  .nl-brand-logo {
+    height: var(--nl-logo-h, 2.75rem);
+    width: calc(var(--nl-logo-h, 2.75rem) * 1.42);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nl-app-header {
+      transition: none;
+    }
   }
 
   @media (min-width: 640px) {

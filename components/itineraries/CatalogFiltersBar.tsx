@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import { catalogBudgetBounds } from '@/lib/itineraries/catalog';
 import { cn } from '@/lib/utils';
@@ -28,7 +29,7 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilterState = {
 };
 
 const inlineFilterBtn =
-  'inline-flex h-8 shrink-0 items-center gap-0.5 rounded-full px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-primary sm:h-9 sm:gap-1 sm:px-3 sm:text-sm';
+  'inline-flex h-8 shrink-0 items-center gap-0.5 rounded-full px-2 text-[0.8125rem] font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-primary sm:h-9 sm:gap-1 sm:px-3 sm:text-[0.9375rem]';
 
 export function CatalogHeroSearchBar({
   value,
@@ -45,8 +46,20 @@ export function CatalogHeroSearchBar({
   durationOptions?: number[];
   priceBounds?: { min: number; max: number };
 }) {
+  const reducedMotion = usePrefersReducedMotion();
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const set = <K extends keyof CatalogFilterState>(key: K, v: CatalogFilterState[K]) =>
     onChange({ ...value, [key]: v });
+
+  const runSearch = () => {
+    inputRef.current?.focus();
+    if (!resultsId) return;
+    document.getElementById(resultsId)?.scrollIntoView({
+      behavior: reducedMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
 
   const days = useMemo(() => {
     const base = durationOptions?.length
@@ -65,16 +78,31 @@ export function CatalogHeroSearchBar({
       : 'Prezzo';
 
   return (
-    <div className="flex h-[4.125rem] w-full min-w-0 items-center gap-0.5 rounded-full border border-slate-200 bg-white pl-4 pr-1.5 shadow-md sm:h-[4.5rem] sm:gap-1 sm:pl-5 sm:pr-2">
-      <Search className="pointer-events-none h-5 w-5 shrink-0 text-slate-400" />
+    <form
+      role="search"
+      className="flex min-h-[4.35rem] w-full min-w-0 items-center gap-1 rounded-full border border-slate-200/90 bg-white py-1.5 pl-1.5 pr-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.35)] sm:min-h-[4.75rem] sm:gap-1.5 sm:pl-2 sm:pr-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        runSearch();
+      }}
+    >
+      <button
+        type="submit"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-12"
+        aria-label="Cerca"
+      >
+        <Search className="h-5 w-5" strokeWidth={2.25} />
+      </button>
       <input
+        ref={inputRef}
         type="search"
         value={value.query}
         onChange={(e) => set('query', e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 border-0 bg-transparent py-3 pl-2 pr-1 text-base text-slate-900 outline-none placeholder:text-slate-400 sm:pl-2.5"
+        className="min-w-0 flex-1 border-0 bg-transparent py-3 pr-1 text-[clamp(0.95rem,0.4vw+0.88rem,1.05rem)] text-slate-900 outline-none placeholder:text-slate-400"
         autoComplete="off"
         aria-controls={resultsId}
+        aria-label={placeholder}
       />
       <div className="flex shrink-0 items-center">
         <Popover>
@@ -148,8 +176,15 @@ export function CatalogHeroSearchBar({
             </p>
           </PopoverContent>
         </Popover>
+        <button
+          type="submit"
+          className="ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 sm:h-12 sm:w-12"
+          aria-label="Avvia ricerca"
+        >
+          <Search className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
-    </div>
+    </form>
   );
 }
 
