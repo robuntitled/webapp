@@ -235,39 +235,45 @@ export default function LoginPage() {
       <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-6 sm:py-16">
-        <ScrollReveal variant="card" className="w-full max-w-[26.5rem] rounded-2xl border border-white/70 bg-white p-5 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.55)] sm:p-8 space-y-4 sm:space-y-5 text-foreground">
+        <ScrollReveal
+          variant="card"
+          className="relative w-full max-w-[27rem] overflow-hidden rounded-[1.35rem] border border-white/80 bg-white/95 p-5 shadow-[0_32px_64px_-24px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-8 space-y-4 sm:space-y-5 text-foreground"
+        >
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-teal-500 to-accent"
+              aria-hidden
+            />
+
             <div className="flex flex-col items-center text-center">
-              <BrandLogo size={42} priority />
-              <h1 className="mt-3 font-display text-[1.35rem] font-semibold leading-snug tracking-tight text-slate-900 sm:mt-4 sm:text-[1.45rem]">
+              <BrandLogo size={44} priority />
+              <h1 className="mt-4 font-display text-[1.375rem] font-semibold leading-[1.2] tracking-[-0.02em] text-slate-900 sm:text-[1.5rem]">
                 Il tuo viaggio senza tour operator.
               </h1>
               {isRegisterMode ? (
-                <p className="mt-1.5 text-sm text-muted-foreground">
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">
                   Crea il tuo account. Due minuti, poi scegli un itinerario.
                 </p>
               ) : null}
             </div>
 
-            <ul className="overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50/90">
-              {loginHighlights.map(({ Icon, text }, i) => (
+            <ul className="space-y-2">
+              {loginHighlights.map(({ Icon, text }) => (
                 <li
                   key={text}
-                  className={`flex items-start gap-3 px-3.5 py-2 text-left sm:py-2.5 ${
-                    i > 0 ? 'border-t border-slate-200/80' : ''
-                  }`}
+                  className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-gradient-to-r from-slate-50/90 to-white px-3.5 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] sm:py-3"
                 >
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
                     <Icon className="h-3.5 w-3.5" aria-hidden />
                   </span>
-                  <span className="text-[13px] leading-snug text-slate-700">{text}</span>
+                  <span className="text-[13px] font-medium leading-snug text-slate-700">{text}</span>
                 </li>
               ))}
             </ul>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <Button
                 variant="outline"
-                className="w-full"
+                className="h-11 w-full rounded-xl border-slate-200 bg-white font-medium shadow-sm hover:bg-slate-50"
                 disabled={oauthLoading !== null}
                 onClick={() => void handleOAuthSignIn('google')}
               >
@@ -275,7 +281,7 @@ export default function LoginPage() {
                 {oauthLoading === 'google' ? 'Reindirizzamento…' : 'Continua con Google'}
               </Button>
               <Button
-                className="w-full h-11 rounded-xl bg-[#1877F2] hover:bg-[#166eab] text-white"
+                className="h-11 w-full rounded-xl bg-[#1877F2] font-medium text-white shadow-sm hover:bg-[#166eab]"
                 disabled={oauthLoading !== null}
                 onClick={() => void handleOAuthSignIn('facebook')}
               >
@@ -284,16 +290,16 @@ export default function LoginPage() {
               </Button>
             </div>
 
-            <div className="relative">
+            <div className="relative py-0.5">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
+                <div className="w-full border-t border-slate-200" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                <span className="bg-white px-3 text-muted-foreground">oppure email</span>
+              <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-[0.14em]">
+                <span className="bg-white px-3 text-slate-400">oppure email</span>
               </div>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-3.5" onSubmit={handleSubmit}>
               {isRegisterMode && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -303,7 +309,7 @@ export default function LoginPage() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required
-                      className="h-11 rounded-xl"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50/60"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -313,7 +319,7 @@ export default function LoginPage() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required
-                      className="h-11 rounded-xl"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50/60"
                     />
                   </div>
                 </div>
@@ -327,7 +333,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl border-slate-200 bg-slate-50/60"
                 />
               </div>
               <div className="space-y-1.5">
@@ -339,7 +345,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={isRegisterMode ? 8 : undefined}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl border-slate-200 bg-slate-50/60"
                 />
               </div>
 
@@ -391,7 +397,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 rounded-xl text-base font-medium"
+                className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_10px_24px_-12px_rgba(249,115,22,0.65)]"
               >
                 {isLoading ? 'Un attimo…' : isRegisterMode ? 'Registrati' : 'Accedi'}
               </Button>

@@ -61,11 +61,15 @@ export function CatalogBrowseChrome({
 }) {
   return (
     <div className="nl-page relative z-10 min-h-0 w-full pt-14 pb-16">
-      <div className="mb-6 w-full">
-        <HomePathSelector value={path} />
+      <div className="mb-6 flex w-full justify-center">
+        <div className="w-full max-w-xl">
+          <HomePathSelector value={path} />
+        </div>
       </div>
-      <div className="mb-8">
-        <ContinentFilterRow value={continent} onChange={onContinentChange} />
+      <div className="mb-8 flex w-full justify-center">
+        <div className="w-full max-w-xl">
+          <ContinentFilterRow value={continent} onChange={onContinentChange} />
+        </div>
       </div>
       <div className="space-y-10">{children}</div>
     </div>

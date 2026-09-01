@@ -320,7 +320,7 @@
 
   .nl-brand-logo {
     height: var(--nl-logo-h, 2.02rem);
-    width: calc(var(--nl-logo-h, 2.02rem) * 2.61);
+    width: calc(var(--nl-logo-h, 2.02rem) * 2.67);
   }
 
   @media (prefers-reduced-motion: reduce) {

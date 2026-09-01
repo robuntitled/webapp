@@ -116,7 +116,7 @@ export function StartTripWizard({
             <CatalogHeroSearchBar
               value={filters}
               onChange={setFilters}
-              placeholder="Cerca nazione, continente o vibe"
+              placeholder="Cerca la tua destinazione"
               resultsId="risultati-itinerari"
               durationOptions={durationOptions}
             />
