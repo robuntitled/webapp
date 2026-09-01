@@ -145,12 +145,12 @@ export function PrivateTripsSection({
 
   return (
     <section
-      className="space-y-4 rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 py-4 sm:px-6 sm:py-5"
+      className="space-y-3 rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 py-3.5 sm:px-5 sm:py-4"
       aria-labelledby="viaggi-privati-title"
     >
       <h2
         id="viaggi-privati-title"
-        className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900"
+        className="font-display text-[clamp(1.02rem,0.9vw+0.92rem,1.2rem)] font-semibold text-slate-900"
       >
         Viaggi privati
       </h2>
@@ -186,7 +186,7 @@ export function PrivateTripsSection({
                 key={item.ed.id}
                 className="w-[85%] shrink-0 snap-start sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.7rem)]"
               >
-                <EditionCard {...item} />
+                <EditionCard {...item} compact />
               </li>
             ))}
           </ul>
@@ -211,7 +211,7 @@ export function PrivateTripsSection({
             </>
           ) : null}
           {pageCount > 1 ? (
-            <div className="mt-2 flex items-center justify-center gap-2" aria-label="Posizione carosello">
+            <div className="mt-1.5 flex items-center justify-center gap-2 sm:mt-1" aria-label="Posizione carosello">
               {Array.from({ length: pageCount }).map((_, i) => (
                 <button
                   key={i}
@@ -230,9 +230,9 @@ export function PrivateTripsSection({
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 border-t border-slate-200/60 pt-2.5">
         <p className="text-sm text-slate-600">Hai già il link di un viaggio?</p>
-        <JoinTripLinkDialog triggerLabel="Inserisci link" />
+        <JoinTripLinkDialog triggerLabel="Inserisci link" inline />
       </div>
     </section>
   );

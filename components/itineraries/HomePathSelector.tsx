@@ -53,21 +53,28 @@ export function CatalogBrowseChrome({
   continent,
   onContinentChange,
   children,
+  compact = false,
 }: {
   path: HomeEntryPath;
   continent: string;
   onContinentChange: (continent: string) => void;
   children: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <div className="nl-page relative z-10 min-h-0 w-full pt-11 pb-14">
-      <div className="mb-5 flex w-full justify-center">
-        <div className="flex w-full max-w-xl flex-col gap-4">
+    <div
+      className={cn(
+        'nl-page relative z-10 min-h-0 w-full',
+        compact ? 'pt-8 pb-12' : 'pt-11 pb-14'
+      )}
+    >
+      <div className={cn('flex w-full justify-center', compact ? 'mb-4' : 'mb-5')}>
+        <div className={cn('flex w-full max-w-xl flex-col', compact ? 'gap-3' : 'gap-4')}>
           <HomePathSelector value={path} />
           <ContinentFilterRow value={continent} onChange={onContinentChange} />
         </div>
       </div>
-      <div className="space-y-8">{children}</div>
+      <div className={compact ? 'space-y-6' : 'space-y-8'}>{children}</div>
     </div>
   );
 }

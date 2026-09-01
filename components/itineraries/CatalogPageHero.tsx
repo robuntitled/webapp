@@ -1,21 +1,28 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
+import { cn } from '@/lib/utils';
 
 export function CatalogPageHero({
   title,
   subtitle,
   search,
+  compact = false,
 }: {
   title: string;
   subtitle: string;
   search: ReactNode;
+  /** Meno altezza — utile su Unisciti per mostrare subito il contenuto sotto. */
+  compact?: boolean;
 }) {
   return (
     <section
-      className="relative isolate flex min-h-[16.7rem] h-[min(22vh,17.8rem)] flex-col overflow-visible sm:min-h-[17.55rem] sm:h-[min(24vh,19rem)] md:h-[min(25vh,19.55rem)]"
+      className={cn(
+        'relative isolate flex flex-col overflow-visible',
+        compact
+          ? 'min-h-[13.75rem] h-[min(18vh,14.75rem)] sm:min-h-[14.25rem] sm:h-[min(20vh,15.25rem)]'
+          : 'min-h-[16.7rem] h-[min(22vh,17.8rem)] sm:min-h-[17.55rem] sm:h-[min(24vh,19rem)] md:h-[min(25vh,19.55rem)]'
+      )}
     >
       <div className="absolute inset-0 overflow-hidden">
         <HeroBackground

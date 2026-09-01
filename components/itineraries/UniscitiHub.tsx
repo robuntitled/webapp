@@ -35,6 +35,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
   return (
     <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-visible bg-white">
       <CatalogPageHero
+        compact
         title="Unisciti a un viaggio"
         subtitle="Partenze già create — pubbliche e private — a cui puoi partecipare."
         search={
@@ -49,6 +50,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
       />
 
       <CatalogBrowseChrome
+        compact
         path="unisciti"
         continent={filters.continent}
         onContinentChange={(continent) => setFilters({ ...filters, continent })}

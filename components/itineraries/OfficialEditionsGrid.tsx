@@ -61,6 +61,7 @@ export function EditionCard({
   scarcity,
   progress,
   highlight = false,
+  compact = false,
 }: {
   ed: OfficialEditionCard;
   tpl: ReturnType<typeof findItineraryTemplate>;
@@ -69,6 +70,7 @@ export function EditionCard({
   scarcity: ReturnType<typeof editionScarcity>;
   progress: number;
   highlight?: boolean;
+  compact?: boolean;
 }) {
   const destination = tpl?.destination_name ?? ed.template_id;
   const confirmed = ed.confirmed_count ?? 0;
@@ -92,7 +94,12 @@ export function EditionCard({
           highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
         )}
       >
-      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden rounded-t-2xl">
+      <div
+        className={cn(
+          'relative w-full shrink-0 overflow-hidden rounded-t-2xl',
+          compact ? 'aspect-[7/2]' : 'aspect-[3/1]'
+        )}
+      >
         <Image
           src={cover}
           alt={destination}
@@ -119,8 +126,20 @@ export function EditionCard({
         )}
       </div>
 
-      <div className="flex flex-col gap-[0.65rem] p-[clamp(0.9rem,1.2vw,1.15rem)]">
-        <h3 className="font-display text-[clamp(1.15rem,0.35vw+1.05rem,1.35rem)] font-bold leading-snug text-slate-900">
+      <div
+        className={cn(
+          'flex flex-col',
+          compact ? 'gap-2 p-3' : 'gap-[0.65rem] p-[clamp(0.9rem,1.2vw,1.15rem)]'
+        )}
+      >
+        <h3
+          className={cn(
+            'font-display font-bold leading-snug text-slate-900',
+            compact
+              ? 'text-[clamp(1rem,0.2vw+0.95rem,1.15rem)]'
+              : 'text-[clamp(1.15rem,0.35vw+1.05rem,1.35rem)]'
+          )}
+        >
           {destination}
         </h3>
 
@@ -142,7 +161,10 @@ export function EditionCard({
         ) : null}
 
         <section
-          className="mt-1 w-full space-y-2 border-t border-slate-100 pt-3"
+          className={cn(
+            'mt-0.5 w-full space-y-1.5 border-t border-slate-100',
+            compact ? 'pt-2' : 'mt-1 space-y-2 pt-3'
+          )}
           aria-labelledby={`group-status-${ed.id}`}
         >
           <p
