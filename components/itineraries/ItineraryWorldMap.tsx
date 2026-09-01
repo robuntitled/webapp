@@ -72,7 +72,9 @@ export function ItineraryWorldMap({
       )}
       <div
         className={cn(
-          compact ? 'h-full min-h-[10rem] w-full' : 'h-[240px] w-full sm:h-[280px]',
+          compact
+            ? 'aspect-[4/3] h-auto min-h-[12rem] w-full'
+            : 'h-[240px] w-full sm:h-[280px]',
           staticMap && '[&_.leaflet-container]:cursor-default [&_.leaflet-grab]:cursor-default'
         )}
       >

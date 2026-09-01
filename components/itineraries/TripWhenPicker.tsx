@@ -35,14 +35,15 @@ export const TRIP_VIBES: {
 ];
 
 const calendarClassNames = {
-  months: 'flex w-full flex-col gap-6 md:flex-row md:gap-8',
-  month: 'w-full space-y-3',
+  root: 'w-full min-w-0',
+  months: 'relative flex w-full min-w-0 flex-col gap-6 2xl:flex-row 2xl:gap-8',
+  month: 'w-full min-w-0 space-y-3',
   month_caption: 'relative mb-2 flex h-10 items-center justify-center',
-  caption_label: 'text-base font-semibold capitalize text-slate-900',
+  caption_label: 'text-sm font-semibold capitalize text-slate-900 sm:text-base',
   nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
   weekday: 'flex-1 text-center text-[0.65rem] font-bold uppercase tracking-wider text-slate-400',
   week: 'mt-1 flex w-full',
-  day: 'aspect-square flex-1 p-0',
+  day: 'aspect-square min-w-0 flex-1 p-0',
   range_start: 'rounded-l-full bg-primary/15',
   range_middle: 'rounded-none bg-primary/10',
   range_end: 'rounded-r-full bg-primary/15',
@@ -98,7 +99,7 @@ export function TripWhenPicker({
   }, []);
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
+    const mq = window.matchMedia('(min-width: 1536px)');
     const apply = () => setMonthCount(mq.matches ? 2 : 1);
     apply();
     mq.addEventListener('change', apply);
@@ -229,7 +230,7 @@ export function TripWhenPicker({
         </button>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-visible rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900">
@@ -313,7 +314,7 @@ export function TripWhenPicker({
             ) : null}
           </div>
         ) : (
-          <div className="p-4 md:p-5">
+          <div className="min-w-0 p-4 sm:p-5">
             {flexible ? (
               <Calendar
                 mode="range"
@@ -323,7 +324,7 @@ export function TripWhenPicker({
                 onSelect={onRangeSelect}
                 disabled={(d) => d < startOfDay(new Date())}
                 defaultMonth={range?.from ?? fridayHints[0]}
-                className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-2 text-slate-900 [--cell-size:2.5rem] sm:[--cell-size:2.85rem]"
+                className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.15rem] sm:[--cell-size:2.4rem] [&_button[data-day]]:min-w-0"
                 classNames={calendarClassNames}
               />
             ) : (
@@ -335,7 +336,7 @@ export function TripWhenPicker({
                 onSelect={onSingleSelect}
                 disabled={(d) => d < startOfDay(new Date())}
                 defaultMonth={single ?? fridayHints[0]}
-                className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-2 text-slate-900 [--cell-size:2.5rem] sm:[--cell-size:2.85rem]"
+                className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.15rem] sm:[--cell-size:2.4rem] [&_button[data-day]]:min-w-0"
                 classNames={calendarClassNames}
               />
             )}

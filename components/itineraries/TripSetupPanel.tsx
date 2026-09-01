@@ -146,212 +146,199 @@ export function TripSetupPanel({
   }
 
   return (
-    <div className="pb-28 lg:pb-10">
+    <div className="space-y-8 pb-10">
       <button
         type="button"
         onClick={onBack}
-        className="mb-5 inline-flex items-center text-sm text-slate-500 transition hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 rounded-md"
+        className="inline-flex items-center rounded-md text-sm text-slate-500 transition hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
       >
         ← Destinazioni
       </button>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-        <div className="space-y-5">
-          <section className="ws-widget overflow-hidden rounded-2xl">
-            <div className="relative aspect-[21/9] min-h-[9rem] w-full sm:aspect-[2.4/1]">
-              <Image
-                src={cover}
-                alt={overviewTemplate.destination_name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 60vw"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute bottom-3 left-4 right-4 sm:bottom-4 sm:left-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
-                  Configura il tuo viaggio
-                </p>
-                <h1 className="font-display text-2xl font-semibold text-white drop-shadow sm:text-4xl">
-                  {overviewTemplate.destination_name}
-                </h1>
-              </div>
-              <div className="absolute right-3 top-3">
-                <PlanSaveButton
-                  templateId={template.template_id}
-                  initialSaved={favoriteTemplateIds.includes(template.template_id)}
-                  isLoggedIn={Boolean(session?.user)}
-                />
-              </div>
-            </div>
-            <div className="space-y-3 px-4 py-4 sm:px-5">
-              <p className="text-sm leading-relaxed text-slate-700 sm:text-base">
-                {overviewTemplate.summary}
-              </p>
-              {stops.length > 0 ? (
-                <p className="text-sm font-medium text-slate-800">
-                  {stops.join(' → ')}
-                </p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
-                  <Wallet className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      {COMPLIANCE_COPY.budgetLabel}
-                    </p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      ~{overviewTemplate.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € a
-                      persona
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {durations.map((t) => (
-                    <button
-                      key={t.template_id}
-                      type="button"
-                      onClick={() => onDurationChange(t.duration_days)}
-                      className={cn(
-                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                        t.duration_days === duration
-                          ? 'bg-primary text-white'
-                          : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40'
-                      )}
-                    >
-                      {t.duration_days} giorni
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="ws-widget space-y-3 rounded-2xl p-4 sm:p-5">
-            <header className="flex items-start justify-between gap-3">
+      <section className="ws-widget rounded-2xl">
+        <div className="relative aspect-[2.4/1] min-h-[8.5rem] w-full overflow-hidden rounded-t-2xl sm:min-h-[10rem]">
+          <Image
+            src={cover}
+            alt={overviewTemplate.destination_name}
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-16 sm:bottom-5 sm:left-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
+              Configura il tuo viaggio
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold text-white drop-shadow sm:text-4xl">
+              {overviewTemplate.destination_name}
+            </h1>
+          </div>
+          <div className="absolute right-3 top-3">
+            <PlanSaveButton
+              templateId={template.template_id}
+              initialSaved={favoriteTemplateIds.includes(template.template_id)}
+              isLoggedIn={Boolean(session?.user)}
+            />
+          </div>
+        </div>
+        <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
+          <p className="text-sm leading-relaxed text-slate-700 sm:text-base">
+            {overviewTemplate.summary}
+          </p>
+          {stops.length > 0 ? (
+            <p className="text-sm font-medium leading-relaxed text-slate-800">
+              {stops.join(' → ')}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
+              <Wallet className="h-4 w-4 shrink-0 text-accent" />
               <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  {COMPLIANCE_COPY.budgetLabel}
+                </p>
+                <p className="text-sm font-semibold text-slate-900">
+                  ~{overviewTemplate.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € a
+                  persona
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {durations.map((t) => (
+                <button
+                  key={t.template_id}
+                  type="button"
+                  onClick={() => onDurationChange(t.duration_days)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                    t.duration_days === duration
+                      ? 'bg-primary text-white'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40'
+                  )}
+                >
+                  {t.duration_days} giorni
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:gap-8">
+        <section className="ws-widget min-w-0 space-y-4 rounded-2xl p-4 sm:p-6">
+          <header className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {datesReady ? (
+                  <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                ) : (
+                  <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+                )}
+                Quando
+              </p>
+              {datesReady && whenSelection && !editingWhen ? (
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {formatPeriod(whenSelection.dateFrom, whenSelection.dateTo)} ·{' '}
+                  {whenSelection.tripDays} giorni
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-slate-600">Quando parti?</p>
+              )}
+            </div>
+            {datesReady && !editingWhen ? (
+              <button
+                type="button"
+                onClick={() => setEditingWhen(true)}
+                className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Modifica
+              </button>
+            ) : null}
+          </header>
+          {editingWhen || !datesReady ? (
+            <TripWhenPicker
+              key={`${template.template_id}-${duration}`}
+              destinationSlug={template.destination_slug}
+              baseTemplate={template}
+              value={whenSelection}
+              onChange={onDatesChange}
+              showVibe={false}
+              vibe={vibe}
+              defaultExpanded
+            />
+          ) : null}
+        </section>
+
+        <aside className="min-w-0 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start">
+          <div className="ws-widget rounded-2xl">
+            <p className="border-b border-slate-100 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:px-5">
+              Dove andrai
+            </p>
+            <div className="p-3 sm:p-4">
+              <ItineraryWorldMap
+                template={overviewTemplate}
+                staticMap
+                compact
+                className="rounded-xl border-0 shadow-none"
+              />
+            </div>
+            <div className="space-y-2 px-4 pb-5 sm:px-5">
+              {stops.length > 0 ? (
+                <p className="text-sm leading-relaxed text-slate-700">{stops.join(' → ')}</p>
+              ) : (
+                <p className="text-sm leading-relaxed text-slate-700">
+                  {overviewTemplate.destination_name}
+                </p>
+              )}
+              <p className="text-xs leading-relaxed text-slate-500">
+                {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.budgetLabel}: stima, non prezzo del
+                viaggio.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        {datesReady ? (
+          <section className="ws-widget min-w-0 space-y-4 rounded-2xl p-4 sm:p-6">
+            <header className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  {datesReady ? (
+                  {vibeReady ? (
                     <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
                   ) : (
                     <span className="inline-block h-2 w-2 rounded-full bg-primary" />
                   )}
-                  Quando
+                  Vibe
                 </p>
-                {datesReady && whenSelection && !editingWhen ? (
-                  <p className="mt-1 text-sm font-medium text-slate-800">
-                    {formatPeriod(whenSelection.dateFrom, whenSelection.dateTo)} ·{' '}
-                    {whenSelection.tripDays} giorni
-                  </p>
+                {vibeReady && vibeMeta && !editingVibe ? (
+                  <p className="mt-1 text-sm font-medium text-slate-800">{vibeMeta.label}</p>
                 ) : (
-                  <p className="mt-1 text-sm text-slate-600">Quando parti?</p>
+                  <p className="mt-1 text-sm text-slate-600">Che vibe cerchi?</p>
                 )}
               </div>
-              {datesReady && !editingWhen ? (
+              {vibeReady && !editingVibe ? (
                 <button
                   type="button"
-                  onClick={() => setEditingWhen(true)}
-                  className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
+                  onClick={() => setEditingVibe(true)}
+                  className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                   Modifica
                 </button>
               ) : null}
             </header>
-            {editingWhen || !datesReady ? (
-              <TripWhenPicker
-                key={`${template.template_id}-${duration}`}
-                destinationSlug={template.destination_slug}
-                baseTemplate={template}
-                value={whenSelection}
-                onChange={onDatesChange}
-                showVibe={false}
-                vibe={vibe}
-                defaultExpanded
-              />
-            ) : null}
-          </section>
-
-          {datesReady ? (
-            <section className="ws-widget space-y-3 rounded-2xl p-4 sm:p-5">
-              <header className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    {vibeReady ? (
-                      <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-                    ) : (
-                      <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                    )}
-                    Vibe
-                  </p>
-                  {vibeReady && vibeMeta && !editingVibe ? (
-                    <p className="mt-1 text-sm font-medium text-slate-800">{vibeMeta.label}</p>
-                  ) : (
-                    <p className="mt-1 text-sm text-slate-600">Che vibe cerchi?</p>
-                  )}
-                </div>
-                {vibeReady && !editingVibe ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingVibe(true)}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Modifica
-                  </button>
-                ) : null}
-              </header>
-              {editingVibe || !vibeReady ? (
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {TRIP_VIBES.map((v) => {
-                    const Icon = v.icon;
-                    const active = vibe === v.id;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => pickVibe(v.id)}
-                        className={cn(
-                          'rounded-2xl border px-3 py-3 text-left transition',
-                          active
-                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                            : 'border-slate-200 bg-white hover:border-primary/40'
-                        )}
-                      >
-                        <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')} />
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{v.label}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{v.hint}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </section>
-          ) : null}
-
-          {vibeReady ? (
-            <section className="ws-widget space-y-3 rounded-2xl p-4 sm:p-5">
-              <header>
-                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  {modeReady ? (
-                    <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  ) : (
-                    <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                  )}
-                  Come vuoi viaggiare
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {modeMeta ? modeMeta.label : 'Scegli come vuoi vivere questo viaggio'}
-                </p>
-              </header>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {MODES.map(({ id, label, hint, Icon }) => {
-                  const active = mode === id;
+            {editingVibe || !vibeReady ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {TRIP_VIBES.map((v) => {
+                  const Icon = v.icon;
+                  const active = vibe === v.id;
                   return (
                     <button
-                      key={id}
+                      key={v.id}
                       type="button"
-                      onClick={() => setMode(id)}
+                      onClick={() => pickVibe(v.id)}
                       className={cn(
                         'rounded-2xl border px-3 py-3 text-left transition',
                         active
@@ -360,67 +347,72 @@ export function TripSetupPanel({
                       )}
                     >
                       <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')} />
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{label}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{v.label}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{v.hint}</p>
                     </button>
                   );
                 })}
               </div>
-            </section>
-          ) : null}
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
-          <div className="ws-widget overflow-hidden rounded-2xl">
-            <p className="border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-              Dove andrai
-            </p>
-            <div className="h-[16rem] sm:h-[18rem] lg:h-[22rem]">
-              <ItineraryWorldMap
-                template={overviewTemplate}
-                staticMap
-                compact
-                className="h-full rounded-none border-0 shadow-none"
-              />
-            </div>
-          </div>
-          <p className="hidden text-xs text-slate-500 lg:block">
-            {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.budgetLabel}: stima, non prezzo del
-            viaggio.
-          </p>
-          <div className="hidden lg:block">
-            <Button
-              type="button"
-              size="lg"
-              className="w-full rounded-full font-semibold"
-              disabled={!canCreate || pending}
-              onClick={createTrip}
-            >
-              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Crea viaggio
-            </Button>
-            {missingHint ? (
-              <p className="mt-2 text-center text-xs text-slate-500">{missingHint}</p>
             ) : null}
-          </div>
-        </aside>
+          </section>
+        ) : null}
+
+        {vibeReady ? (
+          <section className="ws-widget min-w-0 space-y-4 rounded-2xl p-4 sm:p-6">
+            <header>
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {modeReady ? (
+                  <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                ) : (
+                  <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+                )}
+                Come vuoi viaggiare
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {modeMeta ? modeMeta.label : 'Scegli come vuoi vivere questo viaggio'}
+              </p>
+            </header>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {MODES.map(({ id, label, hint, Icon }) => {
+                const active = mode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setMode(id)}
+                    className={cn(
+                      'rounded-2xl border px-3 py-3 text-left transition',
+                      active
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 bg-white hover:border-primary/40'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')} />
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-md lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <section className="border-t border-slate-200/90 pt-8 text-center">
+        <p className="text-sm font-medium text-slate-700">
+          {canCreate ? 'Configurazione completata' : missingHint}
+        </p>
         <Button
           type="button"
           size="lg"
-          className="w-full rounded-full font-semibold"
+          className="mt-4 min-w-[12rem] rounded-full px-8 font-semibold"
           disabled={!canCreate || pending}
           onClick={createTrip}
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Crea viaggio
         </Button>
-        {missingHint ? (
-          <p className="mt-1.5 text-center text-xs text-slate-500">{missingHint}</p>
-        ) : null}
-      </div>
+      </section>
     </div>
   );
 }

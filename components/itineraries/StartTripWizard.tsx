@@ -106,7 +106,7 @@ export function StartTripWizard({
     <div
       className={cn(
         'composer-shell relative min-h-[calc(100vh-4rem)] bg-white',
-        step === 'dest' ? 'overflow-visible' : 'overflow-x-hidden'
+        'overflow-visible'
       )}
     >
       {step === 'dest' ? (
@@ -144,7 +144,7 @@ export function StartTripWizard({
       <div
         className={cn(
           'relative z-10 w-full',
-          step === 'dest' ? 'nl-home-content min-h-0 pt-16 pb-16' : 'nl-page pt-6 pb-8'
+          step === 'dest' ? 'nl-home-content min-h-0 pt-16 pb-16' : 'nl-home-content pt-6 pb-10'
         )}
       >
         {step === 'dest' ? (
