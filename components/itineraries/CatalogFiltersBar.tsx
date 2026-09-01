@@ -29,7 +29,7 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilterState = {
 };
 
 const inlineFilterBtn =
-  'inline-flex h-8 shrink-0 items-center gap-0.5 rounded-full px-2 text-[0.8125rem] font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-primary sm:h-9 sm:gap-1 sm:px-3 sm:text-[0.9375rem]';
+  'inline-flex h-7 shrink-0 items-center gap-0.5 rounded-full px-2 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-primary sm:h-8 sm:gap-1 sm:px-2.5 sm:text-[0.8125rem]';
 
 export function CatalogHeroSearchBar({
   value,
@@ -80,26 +80,20 @@ export function CatalogHeroSearchBar({
   return (
     <form
       role="search"
-      className="flex min-h-[4.35rem] w-full min-w-0 items-center gap-1 rounded-full border border-slate-200/90 bg-white py-1.5 pl-1.5 pr-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.35)] sm:min-h-[4.75rem] sm:gap-1.5 sm:pl-2 sm:pr-2"
+      className="flex min-h-[3.5rem] w-full min-w-0 items-center gap-2 rounded-full border border-slate-200/80 bg-white/95 py-1 pl-3.5 pr-1 shadow-[0_6px_22px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:min-h-[3.75rem] sm:gap-2.5 sm:pl-4 sm:pr-1.5"
       onSubmit={(e) => {
         e.preventDefault();
         runSearch();
       }}
     >
-      <button
-        type="submit"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-12"
-        aria-label="Cerca"
-      >
-        <Search className="h-5 w-5" strokeWidth={2.25} />
-      </button>
+      <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.25} aria-hidden />
       <input
         ref={inputRef}
         type="search"
         value={value.query}
         onChange={(e) => set('query', e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 border-0 bg-transparent py-3 pr-1 text-[clamp(0.95rem,0.4vw+0.88rem,1.05rem)] text-slate-900 outline-none placeholder:text-slate-400"
+        className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-0.5 text-[0.9375rem] text-slate-900 outline-none placeholder:text-slate-400 sm:text-[1rem]"
         autoComplete="off"
         aria-controls={resultsId}
         aria-label={placeholder}
@@ -134,7 +128,7 @@ export function CatalogHeroSearchBar({
             </div>
           </PopoverContent>
         </Popover>
-        <span className="mx-0.5 h-6 w-px bg-slate-200" aria-hidden />
+        <span className="mx-0.5 hidden h-5 w-px bg-slate-200 sm:block" aria-hidden />
         <Popover>
           <PopoverTrigger
             type="button"
@@ -178,10 +172,10 @@ export function CatalogHeroSearchBar({
         </Popover>
         <button
           type="submit"
-          className="ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 sm:h-12 sm:w-12"
+          className="ml-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 sm:ml-1 sm:h-10 sm:w-10"
           aria-label="Avvia ricerca"
         >
-          <Search className="h-5 w-5" strokeWidth={2.25} />
+          <Search className="h-4 w-4" strokeWidth={2.5} />
         </button>
       </div>
     </form>
