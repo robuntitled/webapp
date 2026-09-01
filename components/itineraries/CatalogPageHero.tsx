@@ -15,7 +15,9 @@ export function CatalogPageHero({
 }) {
   useEffect(() => {
     window.dispatchEvent(new Event('nl-hero-change'));
-    return () => window.dispatchEvent(new Event('nl-hero-change'));
+    return () => {
+      window.dispatchEvent(new Event('nl-hero-change'));
+    };
   }, []);
 
   return (
