@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import Image from 'next/image';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Check, Globe, Loader2, Pencil, User, Users, Wallet } from 'lucide-react';
@@ -16,8 +15,8 @@ import {
   TRIP_VIBES,
   type TripWhenSelection,
 } from '@/components/itineraries/TripWhenPicker';
+import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/workspace/WorkspaceHero';
 import { Button } from '@/components/ui/button';
-import { coverForDestination } from '@/lib/composer/destination-covers';
 import { templatesForDestination } from '@/lib/itineraries/catalog';
 import { pickTemplateForTrip, templateWithFittedDays, type TripVibe } from '@/lib/itineraries/fit';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -35,6 +34,12 @@ const MODES: {
   { id: 'group', label: 'Gruppo aperto', hint: 'Altri viaggiatori possono unirsi.', Icon: Globe },
 ];
 
+const STEPS = [
+  { id: 'when', label: 'Quando' },
+  { id: 'vibe', label: 'Vibe' },
+  { id: 'mode', label: 'Modalità' },
+] as const;
+
 function routeStops(template: ItineraryTemplate): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -51,6 +56,112 @@ function routeStops(template: ItineraryTemplate): string[] {
 
 function formatPeriod(from: Date, to: Date) {
   return `${format(from, 'd MMM', { locale: it })} → ${format(to, 'd MMM yyyy', { locale: it })}`;
+}
+
+function SetupProgress({
+  datesReady,
+  vibeReady,
+  modeReady,
+}: {
+  datesReady: boolean;
+  vibeReady: boolean;
+  modeReady: boolean;
+}) {
+  const done = [datesReady, vibeReady, modeReady];
+  const activeIdx = done.findIndex((d) => !d);
+  const current = activeIdx === -1 ? STEPS.length - 1 : activeIdx;
+
+  return (
+    <ol className="flex gap-2 sm:gap-3" aria-label="Progresso configurazione">
+      {STEPS.map((step, i) => {
+        const complete = done[i];
+        const active = i === current && !complete;
+        return (
+          <li key={step.id} className="flex min-w-0 flex-1 items-center gap-2">
+            <div
+              className={cn(
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition',
+                complete
+                  ? 'bg-primary text-white'
+                  : active
+                    ? 'bg-primary/15 text-primary ring-2 ring-primary/25'
+                    : 'bg-slate-100 text-slate-400'
+              )}
+            >
+              {complete ? <Check className="h-3.5 w-3.5" /> : i + 1}
+            </div>
+            <span
+              className={cn(
+                'hidden truncate text-xs font-semibold sm:block',
+                complete || active ? 'text-slate-800' : 'text-slate-400'
+              )}
+            >
+              {step.label}
+            </span>
+            {i < STEPS.length - 1 ? (
+              <div
+                className={cn(
+                  'ml-auto hidden h-px flex-1 sm:block',
+                  complete ? 'bg-primary/40' : 'bg-slate-200'
+                )}
+                aria-hidden
+              />
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function SetupSection({
+  step,
+  title,
+  summary,
+  complete,
+  onEdit,
+  children,
+}: {
+  step: number;
+  title: string;
+  summary?: string;
+  complete: boolean;
+  onEdit?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="ws-widget overflow-hidden rounded-2xl">
+      <header className="flex items-start justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-slate-50/70 to-white px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+              complete ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+            )}
+          >
+            {complete ? <Check className="h-4 w-4" /> : step}
+          </span>
+          <div className="min-w-0">
+            <h2 className="font-display text-base font-semibold text-slate-900">{title}</h2>
+            {summary ? (
+              <p className="mt-0.5 text-sm text-slate-600">{summary}</p>
+            ) : null}
+          </div>
+        </div>
+        {complete && onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold text-primary transition hover:bg-primary/5"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Modifica
+          </button>
+        ) : null}
+      </header>
+      <div className="p-4 sm:p-5">{children}</div>
+    </section>
+  );
 }
 
 export function TripSetupPanel({
@@ -76,7 +187,6 @@ export function TripSetupPanel({
   const [pending, startTransition] = useTransition();
 
   const overviewTemplate = whenSelection?.template ?? template;
-  const cover = coverForDestination(overviewTemplate.destination_slug);
   const stops = useMemo(() => routeStops(overviewTemplate), [overviewTemplate]);
   const durations = templatesForDestination(template.destination_slug);
 
@@ -86,7 +196,7 @@ export function TripSetupPanel({
   const canCreate = datesReady && vibeReady && modeReady;
 
   const missingHint = !datesReady
-    ? 'Seleziona prima il periodo del viaggio.'
+    ? 'Seleziona il periodo del viaggio.'
     : !vibeReady
       ? 'Scegli la vibe del viaggio.'
       : !modeReady
@@ -146,134 +256,162 @@ export function TripSetupPanel({
   }
 
   return (
-    <div className="space-y-8 pb-10">
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex items-center rounded-md text-sm text-slate-500 transition hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-      >
-        ← Destinazioni
-      </button>
-
-      <section className="ws-widget rounded-2xl">
-        <div className="relative aspect-[2.4/1] min-h-[8.5rem] w-full overflow-hidden rounded-t-2xl sm:min-h-[10rem]">
-          <Image
-            src={cover}
-            alt={overviewTemplate.destination_name}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
+    <div className="ws-surface space-y-5 pb-28 sm:space-y-6 sm:pb-10">
+      <WorkspaceHero
+        destinationSlug={overviewTemplate.destination_slug}
+        destinationName={overviewTemplate.destination_name}
+        eyebrow="Configura il tuo viaggio"
+        backLabel="Destinazioni"
+        onBack={onBack}
+        action={
+          <PlanSaveButton
+            templateId={template.template_id}
+            initialSaved={favoriteTemplateIds.includes(template.template_id)}
+            isLoggedIn={Boolean(session?.user)}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-4 left-4 right-16 sm:bottom-5 sm:left-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
-              Configura il tuo viaggio
-            </p>
-            <h1 className="mt-1 font-display text-2xl font-semibold text-white drop-shadow sm:text-4xl">
-              {overviewTemplate.destination_name}
-            </h1>
-          </div>
-          <div className="absolute right-3 top-3">
-            <PlanSaveButton
-              templateId={template.template_id}
-              initialSaved={favoriteTemplateIds.includes(template.template_id)}
-              isLoggedIn={Boolean(session?.user)}
-            />
-          </div>
-        </div>
-        <div className="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
-          <p className="text-sm leading-relaxed text-slate-700 sm:text-base">
-            {overviewTemplate.summary}
-          </p>
-          {stops.length > 0 ? (
-            <p className="text-sm font-medium leading-relaxed text-slate-800">
-              {stops.join(' → ')}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
-              <Wallet className="h-4 w-4 shrink-0 text-accent" />
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  {COMPLIANCE_COPY.budgetLabel}
-                </p>
-                <p className="text-sm font-semibold text-slate-900">
-                  ~{overviewTemplate.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € a
-                  persona
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {durations.map((t) => (
-                <button
-                  key={t.template_id}
-                  type="button"
-                  onClick={() => onDurationChange(t.duration_days)}
-                  className={cn(
-                    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                    t.duration_days === duration
-                      ? 'bg-primary text-white'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40'
-                  )}
-                >
-                  {t.duration_days} giorni
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+        }
+        chips={
+          <>
+            <WorkspaceMetaChip icon={Wallet}>
+              ~{overviewTemplate.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € ·{' '}
+              {COMPLIANCE_COPY.budgetLabel.toLowerCase()}
+            </WorkspaceMetaChip>
+            <WorkspaceMetaChip>{overviewTemplate.duration_days} giorni</WorkspaceMetaChip>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:gap-8">
-        <section className="ws-widget min-w-0 space-y-4 rounded-2xl p-4 sm:p-6">
-          <header className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                {datesReady ? (
-                  <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-                ) : (
-                  <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                )}
-                Quando
-              </p>
-              {datesReady && whenSelection && !editingWhen ? (
-                <p className="mt-1 text-sm font-medium text-slate-800">
-                  {formatPeriod(whenSelection.dateFrom, whenSelection.dateTo)} ·{' '}
-                  {whenSelection.tripDays} giorni
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-slate-600">Quando parti?</p>
+      <div className="ws-widget rounded-2xl p-4 sm:p-5">
+        <p className="text-sm leading-relaxed text-slate-700 sm:text-base">
+          {overviewTemplate.summary}
+        </p>
+        {stops.length > 0 ? (
+          <p className="mt-2 text-sm font-medium text-slate-800">{stops.join(' → ')}</p>
+        ) : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {durations.map((t) => (
+            <button
+              key={t.template_id}
+              type="button"
+              onClick={() => onDurationChange(t.duration_days)}
+              className={cn(
+                'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
+                t.duration_days === duration
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40'
               )}
-            </div>
-            {datesReady && !editingWhen ? (
-              <button
-                type="button"
-                onClick={() => setEditingWhen(true)}
-                className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Modifica
-              </button>
-            ) : null}
-          </header>
-          {editingWhen || !datesReady ? (
-            <TripWhenPicker
-              key={`${template.template_id}-${duration}`}
-              destinationSlug={template.destination_slug}
-              baseTemplate={template}
-              value={whenSelection}
-              onChange={onDatesChange}
-              showVibe={false}
-              vibe={vibe}
-              defaultExpanded
-            />
-          ) : null}
-        </section>
+            >
+              {t.duration_days} giorni
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <aside className="min-w-0 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start">
-          <div className="ws-widget rounded-2xl">
-            <p className="border-b border-slate-100 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:px-5">
+      <SetupProgress datesReady={datesReady} vibeReady={vibeReady} modeReady={modeReady} />
+
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:gap-6">
+        <div className="space-y-5">
+          <SetupSection
+            step={1}
+            title="Quando parti?"
+            summary={
+              datesReady && whenSelection && !editingWhen
+                ? `${formatPeriod(whenSelection.dateFrom, whenSelection.dateTo)} · ${whenSelection.tripDays} giorni`
+                : undefined
+            }
+            complete={datesReady && !editingWhen}
+            onEdit={datesReady ? () => setEditingWhen(true) : undefined}
+          >
+            {editingWhen || !datesReady ? (
+              <TripWhenPicker
+                key={`${template.template_id}-${duration}`}
+                destinationSlug={template.destination_slug}
+                baseTemplate={template}
+                value={whenSelection}
+                onChange={onDatesChange}
+                showVibe={false}
+                vibe={vibe}
+                defaultExpanded
+              />
+            ) : null}
+          </SetupSection>
+
+          {datesReady ? (
+            <SetupSection
+              step={2}
+              title="Che vibe cerchi?"
+              summary={vibeReady && vibeMeta && !editingVibe ? vibeMeta.label : undefined}
+              complete={vibeReady && !editingVibe}
+              onEdit={vibeReady ? () => setEditingVibe(true) : undefined}
+            >
+              {editingVibe || !vibeReady ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {TRIP_VIBES.map((v) => {
+                    const Icon = v.icon;
+                    const active = vibe === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => pickVibe(v.id)}
+                        className={cn(
+                          'rounded-2xl border px-3 py-3.5 text-left transition',
+                          active
+                            ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary/15'
+                            : 'border-slate-200/90 bg-white hover:border-primary/30 hover:shadow-sm'
+                        )}
+                      >
+                        <Icon
+                          className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')}
+                        />
+                        <p className="mt-2 text-sm font-semibold text-slate-900">{v.label}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-500">{v.hint}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </SetupSection>
+          ) : null}
+
+          {vibeReady ? (
+            <SetupSection
+              step={3}
+              title="Come vuoi viaggiare?"
+              summary={modeMeta ? modeMeta.label : undefined}
+              complete={modeReady}
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                {MODES.map(({ id, label, hint, Icon }) => {
+                  const active = mode === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setMode(id)}
+                      className={cn(
+                        'rounded-2xl border px-3 py-3.5 text-left transition',
+                        active
+                          ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary/15'
+                          : 'border-slate-200/90 bg-white hover:border-primary/30 hover:shadow-sm'
+                      )}
+                    >
+                      <Icon
+                        className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')}
+                      />
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{label}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </SetupSection>
+          ) : null}
+        </div>
+
+        <aside className="lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)] lg:self-start">
+          <div className="ws-widget overflow-hidden rounded-2xl">
+            <p className="border-b border-slate-100/90 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
               Dove andrai
             </p>
             <div className="p-3 sm:p-4">
@@ -284,7 +422,7 @@ export function TripSetupPanel({
                 className="rounded-xl border-0 shadow-none"
               />
             </div>
-            <div className="space-y-2 px-4 pb-5 sm:px-5">
+            <div className="space-y-2 border-t border-slate-100/90 px-4 py-4 sm:px-5">
               {stops.length > 0 ? (
                 <p className="text-sm leading-relaxed text-slate-700">{stops.join(' → ')}</p>
               ) : (
@@ -293,126 +431,31 @@ export function TripSetupPanel({
                 </p>
               )}
               <p className="text-xs leading-relaxed text-slate-500">
-                {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.budgetLabel}: stima, non prezzo del
-                viaggio.
+                {COMPLIANCE_COPY.separateBooking} {COMPLIANCE_COPY.budgetLabel}: stima, non prezzo
+                del viaggio.
               </p>
             </div>
           </div>
         </aside>
-
-        {datesReady ? (
-          <section className="ws-widget min-w-0 space-y-4 rounded-2xl p-4 sm:p-6">
-            <header className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  {vibeReady ? (
-                    <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-                  ) : (
-                    <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                  )}
-                  Vibe
-                </p>
-                {vibeReady && vibeMeta && !editingVibe ? (
-                  <p className="mt-1 text-sm font-medium text-slate-800">{vibeMeta.label}</p>
-                ) : (
-                  <p className="mt-1 text-sm text-slate-600">Che vibe cerchi?</p>
-                )}
-              </div>
-              {vibeReady && !editingVibe ? (
-                <button
-                  type="button"
-                  onClick={() => setEditingVibe(true)}
-                  className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Modifica
-                </button>
-              ) : null}
-            </header>
-            {editingVibe || !vibeReady ? (
-              <div className="grid gap-3 sm:grid-cols-3">
-                {TRIP_VIBES.map((v) => {
-                  const Icon = v.icon;
-                  const active = vibe === v.id;
-                  return (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => pickVibe(v.id)}
-                      className={cn(
-                        'rounded-2xl border px-3 py-3 text-left transition',
-                        active
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                          : 'border-slate-200 bg-white hover:border-primary/40'
-                      )}
-                    >
-                      <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')} />
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{v.label}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{v.hint}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {vibeReady ? (
-          <section className="ws-widget min-w-0 space-y-4 rounded-2xl p-4 sm:p-6">
-            <header>
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                {modeReady ? (
-                  <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-                ) : (
-                  <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                )}
-                Come vuoi viaggiare
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                {modeMeta ? modeMeta.label : 'Scegli come vuoi vivere questo viaggio'}
-              </p>
-            </header>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {MODES.map(({ id, label, hint, Icon }) => {
-                const active = mode === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setMode(id)}
-                    className={cn(
-                      'rounded-2xl border px-3 py-3 text-left transition',
-                      active
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-slate-200 bg-white hover:border-primary/40'
-                    )}
-                  >
-                    <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-slate-400')} />
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{label}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
       </div>
 
-      <section className="border-t border-slate-200/90 pt-8 text-center">
-        <p className="text-sm font-medium text-slate-700">
-          {canCreate ? 'Configurazione completata' : missingHint}
-        </p>
-        <Button
-          type="button"
-          size="lg"
-          className="mt-4 min-w-[12rem] rounded-full px-8 font-semibold"
-          disabled={!canCreate || pending}
-          onClick={createTrip}
-        >
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Crea viaggio
-        </Button>
-      </section>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/90 bg-white/90 px-4 py-4 backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <div className="mx-auto flex max-w-lg flex-col items-center gap-3 sm:max-w-none">
+          <p className="text-center text-sm font-medium text-slate-700">
+            {canCreate ? 'Tutto pronto — crea il viaggio' : missingHint}
+          </p>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full min-w-[12rem] rounded-full px-8 font-semibold shadow-lg shadow-primary/15 sm:w-auto"
+            disabled={!canCreate || pending}
+            onClick={createTrip}
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Crea viaggio
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
