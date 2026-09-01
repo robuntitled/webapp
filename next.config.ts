@@ -32,13 +32,6 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
-  async redirects() {
-    return [
-      { source: '/punti', destination: '/destinazioni', permanent: true },
-      { source: '/dashboard/punti', destination: '/pratiche', permanent: true },
-      { source: '/dashboard/cashback', destination: '/pratiche', permanent: true },
-    ];
-  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,

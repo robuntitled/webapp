@@ -183,5 +183,4 @@ Niente false scarsità.
 - Pubblicazione **In formazione** + garanzia di partenza; prenotazioni sbloccate al minimo posti
 - Esplora: In evidenza (seed live + template), In chiusura, FOMO reale (posti, ultimo join, scadenza)
 - Prenota hub: banner + link ai viaggi formati; pannello viaggio: voli, hotel, auto, attività
-- Cashback visibile (2%+ creator / 1,2–1,5% partecipanti) + ledger su prenotazione confermata (`/dashboard/cashback`)
 - Onboarding leggero (intent + interessi + casa, niente nome/età all’inizio)
