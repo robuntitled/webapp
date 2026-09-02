@@ -33,12 +33,11 @@ const LINKS = [
 
 function navLinkClass(active: boolean) {
   return cn(
-    'relative whitespace-nowrap px-0.5 py-2 text-[clamp(0.9rem,0.35vw+0.82rem,1rem)] font-medium tracking-tight transition-colors',
-    'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-center after:scale-x-75 after:bg-current after:opacity-0 after:transition after:duration-200',
-    'hover:after:scale-x-100 hover:after:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-sm',
-    active && 'font-semibold after:scale-x-100 after:opacity-75',
-    'text-slate-700 hover:text-primary group-data-[hero=true]/nav:text-white/95 group-data-[hero=true]/nav:hover:text-white group-data-[hero=true]/nav:[text-shadow:0_1px_10px_rgba(0,0,0,0.4)]',
-    active && 'text-primary group-data-[hero=true]/nav:text-white'
+    'whitespace-nowrap rounded-full px-3 py-1 text-[0.875rem] font-medium tracking-tight transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+    active
+      ? 'bg-slate-900/[0.07] font-semibold text-slate-900 group-data-[hero=true]/nav:bg-white/22 group-data-[hero=true]/nav:text-white group-data-[hero=true]/nav:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]'
+      : 'text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900 group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/12 group-data-[hero=true]/nav:hover:text-white'
   );
 }
 
@@ -47,7 +46,7 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <nav
-      className="hidden min-w-0 items-center justify-start justify-self-start gap-5 md:flex lg:gap-8 xl:gap-10"
+      className="hidden min-w-0 items-center justify-center gap-0.5 md:flex lg:gap-1"
       aria-label="Navigazione principale"
     >
       {LINKS.filter((link) => !('auth' in link && link.auth) || isLoggedIn).map((link) => {
@@ -56,7 +55,7 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Link
             key={link.href}
             href={link.href}
-            className={navLinkClass(active)}
+            className={cn(navLinkClass(active), 'no-underline')}
             aria-current={active ? 'page' : undefined}
           >
             {link.label}

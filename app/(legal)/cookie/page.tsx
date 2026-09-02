@@ -1,5 +1,14 @@
 import { LegalDocument, LegalSection } from '@/components/legal/LegalDocument';
 import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
+import { LegalLink } from '@/components/legal/LegalLink';
+import {
+  LegalTable,
+  LegalTableBody,
+  LegalTableCell,
+  LegalTableHead,
+  LegalTableHeaderCell,
+} from '@/components/legal/LegalTable';
+import { COOKIE_CONSENT_KEY } from '@/lib/privacy/constants';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
 export const metadata = {
@@ -11,6 +20,7 @@ export default function CookiePage() {
 
   return (
     <LegalDocument
+      kind="cookie"
       title="Cookie Policy"
       lastUpdated="9 luglio 2026"
       notice={<LegalConfigNotice company={company} />}
@@ -19,10 +29,7 @@ export default function CookiePage() {
         <p>
           Il titolare del trattamento tramite cookie è {company.companyName} ({company.tradeName}).
           Contatto:{' '}
-          <a href={`mailto:${company.privacyEmail}`} className="text-blue-600 hover:underline">
-            {company.privacyEmail}
-          </a>
-          .
+          <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>.
         </p>
       </LegalSection>
 
@@ -34,32 +41,28 @@ export default function CookiePage() {
       </LegalSection>
 
       <LegalSection title="3. Cookie utilizzati da Flygetr">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse mt-2">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2 pr-4">Nome</th>
-                <th className="py-2 pr-4">Tipo</th>
-                <th className="py-2 pr-4">Finalità</th>
-                <th className="py-2">Durata</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b">
-                <td className="py-2 pr-4 font-mono text-xs">authjs.*</td>
-                <td className="py-2 pr-4">Tecnico</td>
-                <td className="py-2 pr-4">Sessione di autenticazione (login)</td>
-                <td className="py-2">Sessione</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-2 pr-4 font-mono text-xs">nomadlink-cookie-consent</td>
-                <td className="py-2 pr-4">Tecnico</td>
-                <td className="py-2 pr-4">Memorizza la scelta sul banner cookie</td>
-                <td className="py-2">12 mesi</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <LegalTable>
+          <LegalTableHead>
+            <LegalTableHeaderCell>Nome</LegalTableHeaderCell>
+            <LegalTableHeaderCell>Tipo</LegalTableHeaderCell>
+            <LegalTableHeaderCell>Finalità</LegalTableHeaderCell>
+            <LegalTableHeaderCell>Durata</LegalTableHeaderCell>
+          </LegalTableHead>
+          <LegalTableBody>
+            <tr>
+              <LegalTableCell mono>authjs.*</LegalTableCell>
+              <LegalTableCell>Tecnico</LegalTableCell>
+              <LegalTableCell>Sessione di autenticazione (login)</LegalTableCell>
+              <LegalTableCell>Sessione</LegalTableCell>
+            </tr>
+            <tr>
+              <LegalTableCell mono>{COOKIE_CONSENT_KEY}</LegalTableCell>
+              <LegalTableCell>Tecnico</LegalTableCell>
+              <LegalTableCell>Memorizza la scelta sul banner cookie</LegalTableCell>
+              <LegalTableCell>12 mesi</LegalTableCell>
+            </tr>
+          </LegalTableBody>
+        </LegalTable>
       </LegalSection>
 
       <LegalSection title="4. Cookie di terze parti">

@@ -77,7 +77,7 @@ function ContinentSection({
   const hiddenCount = Math.max(0, items.length - INITIAL_VISIBLE);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <h2 className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900">
           {continent}
@@ -88,7 +88,7 @@ function ContinentSection({
         </span>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
         {visible.map((dest) => (
           <DestinationStateCard
             key={dest.slug}
@@ -148,7 +148,7 @@ export function DestinationExplorerPanel({
   return (
     <div
       id={resultsId}
-      className="scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] space-y-8"
+      className="scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] space-y-6"
     >
       {visibleSections.length === 0 ? (
         <p className="py-10 text-center text-sm text-slate-600">

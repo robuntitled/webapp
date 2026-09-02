@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -19,7 +18,6 @@ import { TripChatPanel } from '@/components/chat/TripChatPanel';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
-import { isComposerPath } from '@/lib/ui/app-chrome';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -30,7 +28,6 @@ type TripGroupsChatDockProps = {
 type Tab = 'chats' | 'friends';
 
 export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('chats');
   const [loading, setLoading] = useState(true);
@@ -43,8 +40,6 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
   const [searchHits, setSearchHits] = useState<ChatSearchHit[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [hidingId, setHidingId] = useState<string | null>(null);
-
-  const hideOnComposer = isComposerPath(pathname);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -92,11 +87,10 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
   }, []);
 
   useEffect(() => {
-    if (hideOnComposer) return;
     void loadGroups();
     const interval = setInterval(() => void loadGroups(), 30_000);
     return () => clearInterval(interval);
-  }, [hideOnComposer, loadGroups]);
+  }, [loadGroups]);
 
   useEffect(() => {
     if (!open || tab !== 'friends') return;
@@ -190,8 +184,6 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
       setHidingId(null);
     }
   };
-
-  if (hideOnComposer) return null;
 
   // Mostra il dock anche senza gruppi (tab Amici / empty state)
   if (!loading && groups.length === 0 && !open) {

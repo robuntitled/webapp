@@ -4,7 +4,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { CompanyProfile } from '@/lib/privacy/company';
-import { isComposerPath } from '@/lib/ui/app-chrome';
+
+function hideSiteFooter(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname === '/') return true;
+  if (pathname.startsWith('/itinerario')) return true;
+  if (pathname.startsWith('/pratica')) return true;
+  if (pathname.startsWith('/onboarding')) return true;
+  if (/^\/partenze\/[^/]+/.test(pathname)) return true;
+  return false;
+}
 
 type FooterProps = {
   company: CompanyProfile;
@@ -12,19 +21,18 @@ type FooterProps = {
 
 export function Footer({ company }: FooterProps) {
   const pathname = usePathname();
-  if (pathname === '/' || isComposerPath(pathname)) return null;
+  if (hideSiteFooter(pathname)) return null;
 
   return (
     <footer className="mt-auto border-t border-border bg-card text-foreground">
       <div className="nl-page py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <div className="mb-4 flex items-center gap-2.5">
+            <div className="mb-4">
               <BrandLogo size={40} />
-              <span className="font-display text-xl font-semibold">{company.tradeName}</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Viaggi di gruppo nel mondo — raccontati da chi li vive e li fotografa.
+              Viaggi nel mondo in solo, con amici o in gruppo.
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Privacy:{' '}

@@ -8,7 +8,6 @@ import { GoogleIcon, FacebookIcon } from './_components/SocialIcons';
 import { ConsentCheckboxes } from '@/components/legal/ConsentCheckboxes';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { HeroBackground } from '@/components/brand/HeroBackground';
-import { LandingDestinations } from '@/components/brand/LandingDestinations';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { Button } from '@/components/ui/button';
@@ -16,8 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Plane, Users } from 'lucide-react';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
-import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
 
@@ -226,70 +225,56 @@ export default function LoginPage() {
     }
   };
 
+  const loginHighlights = [
+    { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
+    { Icon: Users, text: 'Parti da solo, con amici o in gruppo' },
+    { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
+  ] as const;
+
   return (
     <main className="relative min-h-screen">
       <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
 
-      <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
-        <div className="flex flex-col justify-end px-6 pt-14 pb-6 lg:w-[56%] lg:p-12 lg:pb-20">
-          <ScrollReveal variant="decor">
-            <div className="mb-5">
-              <BrandLogo size={56} priority />
-            </div>
-          </ScrollReveal>
-          <ScrollReveal variant="title">
-            <h1 className="max-w-lg font-display text-4xl font-semibold leading-[1.08] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)] sm:text-5xl xl:text-6xl">
-              Il viaggio di gruppo, senza tour operator.
-            </h1>
-          </ScrollReveal>
-          <ScrollReveal variant="title" stagger={1}>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-white drop-shadow sm:text-lg">
-              {COMPLIANCE_COPY.guide}
-            </p>
-          </ScrollReveal>
-          <ul className="mt-6 max-w-md space-y-2 text-sm text-white/95">
-            {[
-              { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
-              { Icon: Users, text: 'Parti da solo, con amici o su una partenza di gruppo' },
-              { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
-            ].map(({ Icon, text }, i) => (
-              <ScrollReveal key={text} variant="card" stagger={i + 2} as="li">
-                <div className="flex items-start gap-3">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-                  <span>{text}</span>
-                </div>
-              </ScrollReveal>
-            ))}
-          </ul>
-          <LandingDestinations />
-          <p className="mt-4 text-sm text-white/90">
-            <Link href="/destinazioni" className="underline underline-offset-4">
-              Destinazioni
-            </Link>
-            {' · '}
-            <Link href="/partenze" className="underline underline-offset-4">
-              Unisciti
-            </Link>
-          </p>
-        </div>
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-4 sm:py-10">
+        <ScrollReveal
+          variant="card"
+          className="relative flex max-h-[min(100dvh-1.5rem,52rem)] w-full max-w-[29.7rem] flex-col overflow-y-auto rounded-[1.35rem] border border-white/80 bg-white/95 p-5 shadow-[0_32px_64px_-24px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-7 space-y-3.5 sm:space-y-4 text-foreground [scrollbar-width:thin]"
+        >
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-teal-500 to-accent"
+              aria-hidden
+            />
 
-        <div className="flex flex-1 items-start justify-center px-4 pb-16 lg:items-center lg:py-12">
-          <ScrollReveal variant="card" className="w-full max-w-md rounded-[10px] border border-border bg-card p-7 space-y-5 text-foreground">
-            <div>
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                {isRegisterMode ? 'Crea il tuo account' : 'Entra in Flygetr'}
-              </h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                {isRegisterMode
-                  ? 'Due minuti. Poi scegli un itinerario o una partenza di gruppo.'
-                  : 'Accedi e scegli un itinerario ufficiale.'}
-              </p>
+            <div className="flex flex-col items-center text-center">
+              <BrandLogo size={42} priority />
+              <h1 className="mt-3 font-display text-[1.375rem] font-semibold leading-[1.2] tracking-[-0.02em] text-slate-900 sm:text-[1.45rem]">
+                Il tuo viaggio senza tour operator.
+              </h1>
+              {isRegisterMode ? (
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                  Crea il tuo account in due minuti.
+                </p>
+              ) : null}
             </div>
+
+            <ul className="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/70 divide-y divide-slate-200/70">
+              {loginHighlights.map(({ Icon, text }) => (
+                <li
+                  key={text}
+                  className="flex items-center gap-2.5 px-3 py-2 text-left sm:px-3.5"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
+                    <Icon className="h-3.5 w-3.5" aria-hidden />
+                  </span>
+                  <span className="text-[12.5px] font-medium leading-tight text-slate-700">{text}</span>
+                </li>
+              ))}
+            </ul>
 
             <div className="space-y-2">
               <Button
                 variant="outline"
-                className="w-full"
+                className="h-11 w-full rounded-xl border-slate-200 bg-white font-medium shadow-sm hover:bg-slate-50"
                 disabled={oauthLoading !== null}
                 onClick={() => void handleOAuthSignIn('google')}
               >
@@ -297,7 +282,7 @@ export default function LoginPage() {
                 {oauthLoading === 'google' ? 'Reindirizzamento…' : 'Continua con Google'}
               </Button>
               <Button
-                className="w-full h-11 rounded-xl bg-[#1877F2] hover:bg-[#166eab] text-white"
+                className="h-11 w-full rounded-xl bg-[#1877F2] font-medium text-white shadow-sm hover:bg-[#166eab]"
                 disabled={oauthLoading !== null}
                 onClick={() => void handleOAuthSignIn('facebook')}
               >
@@ -306,42 +291,42 @@ export default function LoginPage() {
               </Button>
             </div>
 
-            <div className="relative">
+            <div className="relative py-0.5">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
+                <div className="w-full border-t border-slate-200" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                <span className="bg-transparent px-3 text-muted-foreground">oppure email</span>
+              <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-[0.14em]">
+                <span className="bg-white px-3 text-slate-400">oppure email</span>
               </div>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className={cn('space-y-3', isRegisterMode && 'space-y-2.5')} onSubmit={handleSubmit}>
               {isRegisterMode && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="firstName">Nome</Label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <Label htmlFor="firstName" className="text-xs">Nome</Label>
                     <Input
                       id="firstName"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required
-                      className="h-11 rounded-xl"
+                      className="h-10 rounded-xl border-slate-200 bg-slate-50/60"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="lastName">Cognome</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="lastName" className="text-xs">Cognome</Label>
                     <Input
                       id="lastName"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required
-                      className="h-11 rounded-xl"
+                      className="h-10 rounded-xl border-slate-200 bg-slate-50/60"
                     />
                   </div>
                 </div>
               )}
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1">
+                <Label htmlFor="email" className={isRegisterMode ? 'text-xs' : undefined}>Email</Label>
                 <Input
                   type="email"
                   id="email"
@@ -349,11 +334,14 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11 rounded-xl"
+                  className={cn(
+                    'rounded-xl border-slate-200 bg-slate-50/60',
+                    isRegisterMode ? 'h-10' : 'h-11'
+                  )}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1">
+                <Label htmlFor="password" className={isRegisterMode ? 'text-xs' : undefined}>Password</Label>
                 <Input
                   type="password"
                   id="password"
@@ -361,7 +349,10 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={isRegisterMode ? 8 : undefined}
-                  className="h-11 rounded-xl"
+                  className={cn(
+                    'rounded-xl border-slate-200 bg-slate-50/60',
+                    isRegisterMode ? 'h-10' : 'h-11'
+                  )}
                 />
               </div>
 
@@ -373,6 +364,7 @@ export default function LoginPage() {
                   onPrivacyChange={setPrivacyAccepted}
                   onTermsChange={setTermsAccepted}
                   onMarketingChange={setMarketingAccepted}
+                  compact
                 />
               )}
 
@@ -413,7 +405,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 rounded-xl text-base font-medium"
+                className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_10px_24px_-12px_rgba(249,115,22,0.65)]"
               >
                 {isLoading ? 'Un attimo…' : isRegisterMode ? 'Registrati' : 'Accedi'}
               </Button>
@@ -445,7 +437,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </ScrollReveal>
-        </div>
       </div>
     </main>
   );

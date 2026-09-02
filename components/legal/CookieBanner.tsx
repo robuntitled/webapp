@@ -9,7 +9,12 @@ export function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+    const legacyKey = 'nomadlink-cookie-consent';
+    const consent =
+      localStorage.getItem(COOKIE_CONSENT_KEY) || localStorage.getItem(legacyKey);
+    if (consent && !localStorage.getItem(COOKIE_CONSENT_KEY)) {
+      localStorage.setItem(COOKIE_CONSENT_KEY, consent);
+    }
     if (!consent) setVisible(true);
   }, []);
 

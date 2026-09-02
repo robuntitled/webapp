@@ -1,6 +1,7 @@
 import { LegalDocument, LegalSection } from '@/components/legal/LegalDocument';
 import { CompanyIdentity } from '@/components/legal/CompanyIdentity';
 import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
+import { LegalLink } from '@/components/legal/LegalLink';
 import { getCompanyProfile } from '@/lib/privacy/company';
 import { PRIVACY_POLICY_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
 
@@ -13,12 +14,13 @@ export default function PrivacyPage() {
 
   return (
     <LegalDocument
+      kind="privacy"
       title="Informativa Privacy"
       lastUpdated={`9 luglio 2026 (v${PRIVACY_POLICY_VERSION})`}
       notice={<LegalConfigNotice company={company} />}
     >
       <LegalSection title="1. Titolare del trattamento">
-        <p className="mb-4">
+        <p>
           Il titolare del trattamento dei dati personali è il soggetto indicato di seguito. Per
           esercitare i tuoi diritti o per qualsiasi richiesta relativa alla privacy puoi contattarci
           ai recapiti indicati.
@@ -27,7 +29,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="2. Tipologie di dati raccolti">
-        <ul className="list-disc pl-6 space-y-1">
+        <ul>
           <li>Dati identificativi: nome, cognome, email, immagine profilo</li>
           <li>Dati di autenticazione: password (conservata in forma crittografata)</li>
           <li>Dati di profilo facoltativi: data di nascita, telefono, indirizzo</li>
@@ -37,7 +39,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="3. Finalità e base giuridica">
-        <ul className="list-disc pl-6 space-y-1">
+        <ul>
           <li>
             <strong>Erogazione del servizio</strong> (art. 6.1.b GDPR): registrazione, login,
             creazione e partecipazione a viaggi
@@ -58,13 +60,13 @@ export default function PrivacyPage() {
 
       <LegalSection title="4. Destinatari e responsabili del trattamento">
         <p>I dati possono essere trattati da fornitori che agiscono come responsabili:</p>
-        <ul className="list-disc pl-6 space-y-1 mt-2">
+        <ul>
           <li>Supabase (hosting database e file)</li>
           <li>Google (autenticazione OAuth, se utilizzata)</li>
           <li>Meta/Facebook (autenticazione OAuth, se utilizzata)</li>
           <li>Pexels (ricerca immagini per i viaggi)</li>
         </ul>
-        <p className="mt-2">
+        <p>
           I trasferimenti verso Paesi extra-UE avvengono nel rispetto delle Clausole Contrattuali
           Standard (SCC) previste dai fornitori.
         </p>
@@ -83,15 +85,12 @@ export default function PrivacyPage() {
           Hai diritto di accesso, rettifica, cancellazione, limitazione, portabilità e opposizione ai
           sensi degli artt. 15–22 GDPR. Puoi:
         </p>
-        <ul className="list-disc pl-6 space-y-1 mt-2">
+        <ul>
           <li>Esportare i tuoi dati da Impostazioni → I tuoi diritti GDPR</li>
           <li>Eliminare il tuo account da Impostazioni → Elimina account</li>
           <li>Revocare il consenso marketing in qualsiasi momento</li>
           <li>
-            Scrivere a{' '}
-            <a href={`mailto:${company.privacyEmail}`} className="text-blue-600 hover:underline">
-              {company.privacyEmail}
-            </a>{' '}
+            Scrivere a <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>{' '}
             per altre richieste
           </li>
           <li>

@@ -1,10 +1,25 @@
 /**
- * Percorsi immagini canonici — sostituisci i file mantenendo lo stesso nome.
+ * Percorsi media canonici — sostituisci i file mantenendo lo stesso nome.
  *
- * heroes/     → sfondi login, dashboard, carousel
- * trips/      → placeholder card viaggio
- * trips/{slug}/ → (futuro) foto per destinazione, es. trips/thailandia/cover.jpg
+ * ## Immagini di sfondo (hero)
+ * 1. Carica JPG/WebP in `public/images/heroes/` (consigliato 1920×1080+, landscape).
+ * 2. Aggiorna l’array `slideshow` qui sotto (o sostituisci i file esistenti a parità di nome).
+ * 3. Le pagine login, Destinazioni, Unisciti e onboarding usano questi path via `HeroBackground`.
+ *
+ * ## Video
+ * Puoi aggiungere slide video MP4/WebM nell’array `slideshow`:
+ * `{ type: 'video', src: '/images/heroes/nome.mp4', poster: '/images/heroes/nome-poster.jpg' }`
+ * Il poster è l’immagine mostrata finché il video non è pronto (e con reduced-motion).
  */
+
+export type HeroSlide =
+  | string
+  | {
+      type: 'video';
+      src: string;
+      /** Anteprima statica (consigliata). */
+      poster?: string;
+    };
 
 export const BRAND_IMAGES = {
   heroes: {
@@ -17,7 +32,7 @@ export const BRAND_IMAGES = {
       '/images/heroes/hero-04.jpg',
       '/images/heroes/hero-05.jpg',
       '/images/heroes/hero-06.jpg',
-    ],
+    ] satisfies HeroSlide[],
   },
   trips: {
     placeholder: '/images/trips/placeholder.jpg',

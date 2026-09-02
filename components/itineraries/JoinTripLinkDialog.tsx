@@ -18,8 +18,11 @@ import { Input } from '@/components/ui/input';
 
 export function JoinTripLinkDialog({
   triggerLabel = 'Hai un link?',
+  inline = false,
 }: {
   triggerLabel?: string;
+  /** Pulsante compatto per affiancarlo al testo introduttivo. */
+  inline?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -55,11 +58,15 @@ export function JoinTripLinkDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant={inline ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-primary/40 hover:text-primary"
+          className={
+            inline
+              ? 'h-8 shrink-0 rounded-full px-3.5 text-xs font-semibold shadow-sm'
+              : 'rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-primary/40 hover:text-primary'
+          }
         >
-          <Link2 className="h-4 w-4" aria-hidden />
+          {!inline ? <Link2 className="h-4 w-4" aria-hidden /> : null}
           {triggerLabel}
         </Button>
       </DialogTrigger>

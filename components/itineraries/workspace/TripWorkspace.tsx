@@ -1,22 +1,23 @@
 'use client';
 
 import { useCallback, useMemo, useState, useTransition } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { BedDouble, Loader2, Plane, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction } from '@/actions/practices';
-import { ItineraryWorldMap } from '@/components/itineraries/ItineraryWorldMap';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
+import { ItineraryExplorerWidget } from '@/components/itineraries/workspace/ItineraryExplorerWidget';
 import {
-  ItineraryScrollWidget,
   WorkspaceEmptyState,
 } from '@/components/itineraries/workspace/ItineraryScrollWidget';
-import { WorldClocksWidget } from '@/components/itineraries/workspace/WorldClocksWidget';
+import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/workspace/WorkspaceHero';
+import { WorkspaceStatusCard } from '@/components/itineraries/workspace/WorkspaceStatusCard';
+import { WorkspaceTabs, type WorkspaceTabItem } from '@/components/itineraries/workspace/WorkspaceTabs';
 import { Button } from '@/components/ui/button';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { staysFromTemplate, formatItDate } from '@/lib/itineraries/dates';
 import { getStayBookingProgress, isStayBooked } from '@/lib/itineraries/stay-progress';
 import {
@@ -78,9 +79,9 @@ export function TripWorkspace({
     return stayProgress.nextStayIdx ?? 0;
   });
   const stay = stays[stayIdx] ?? stays[0];
-  const groupLocked = practice?.mode === 'group' && !practice.flight_confirmed_at;
   const hotelCount = hotels.length;
-  const canBook = Boolean(practice?.id) && isMember;
+  const canBookFlights = Boolean(practice?.id) && isMember;
+  const canBookHotels = canBookFlights && flightBooked;
 
   const selectTab = useCallback(
     (next: WorkspaceTab) => {
@@ -104,189 +105,176 @@ export function TripWorkspace({
     });
   }
 
-  const tabItems: {
-    id: WorkspaceTab;
-    label: string;
-    status: string | null;
-  }[] = [
+  const editionLabel =
+    editionType === 'private'
+      ? 'Viaggio privato'
+      : editionType === 'official'
+        ? 'Partenza di gruppo'
+        : 'Il mio viaggio';
+
+  const tabItems: WorkspaceTabItem[] = [
     { id: 'itinerario', label: 'Itinerario', status: null },
     {
       id: 'voli',
       label: 'Voli',
-      status: flightBooked ? '✓' : '•',
+      status: flightBooked ? 'done' : 'pending',
     },
     {
       id: 'hotel',
       label: 'Hotel',
-      status: hotelCount > 0 ? String(hotelCount) : '•',
+      status: hotelCount > 0 ? 'count' : 'pending',
+      count: hotelCount > 0 ? hotelCount : undefined,
     },
   ];
 
+  const joinButton =
+    canJoin && !isMember ? (
+      <Button
+        type="button"
+        size="sm"
+        className="rounded-full bg-accent px-5 font-semibold text-white shadow-lg shadow-accent/25 hover:bg-accent/90"
+        disabled={pendingJoin}
+        onClick={joinTrip}
+      >
+        {pendingJoin ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        Partecipa
+      </Button>
+    ) : null;
+
   return (
-    <div className="min-h-[calc(100vh-var(--nl-nav-height))] bg-white">
-      <div className="nl-page w-full space-y-4 py-5 sm:py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={backHref}
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 rounded-md"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {backLabel}
-          </Link>
-          {canJoin && !isMember ? (
-            <Button type="button" className="rounded-full" disabled={pendingJoin} onClick={joinTrip}>
-              {pendingJoin ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Partecipa
-            </Button>
-          ) : null}
-        </div>
+    <div className="ws-surface min-h-[calc(100vh-var(--nl-nav-height))]">
+      <div className="nl-page w-full space-y-5 py-5 sm:space-y-6 sm:py-6">
+        <WorkspaceHero
+          destinationSlug={template.destination_slug}
+          destinationName={template.destination_name}
+          eyebrow={editionLabel}
+          meta={`${formatItDate(dateFrom)} – ${formatItDate(dateTo)} · ${template.duration_days} giorni`}
+          backHref={backHref}
+          backLabel={backLabel}
+          action={joinButton}
+          chips={
+            <>
+              {members.length > 0 ? (
+                <WorkspaceMetaChip icon={Users}>
+                  {members.length} nel gruppo
+                </WorkspaceMetaChip>
+              ) : null}
+              <WorkspaceMetaChip icon={Wallet}>
+                ~{template.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € ·{' '}
+                {COMPLIANCE_COPY.budgetLabel.toLowerCase()}
+              </WorkspaceMetaChip>
+            </>
+          }
+        />
 
-        <header className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            {editionType === 'private' ? 'Viaggio privato' : editionType === 'official' ? 'Partenza di gruppo' : 'Il mio viaggio'}
-            {members.length > 0 ? ` · ${members.length} nel gruppo` : ''}
-          </p>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {template.destination_name}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {formatItDate(dateFrom)} – {formatItDate(dateTo)} · {template.duration_days} giorni
-          </p>
-        </header>
-
-        <div
-          className="flex gap-1 overflow-x-auto rounded-full border border-slate-200/80 bg-white/80 p-1 shadow-sm backdrop-blur-md"
-          role="tablist"
-          aria-label="Configurazione viaggio"
-        >
-          {tabItems.map((item) => {
-            const selected = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                onClick={() => selectTab(item.id)}
-                className={cn(
-                  'inline-flex min-h-10 shrink-0 flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  selected
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-600 hover:text-primary'
-                )}
-              >
-                {item.label}
-                {item.status === '✓' ? (
-                  <Check className="h-3.5 w-3.5" aria-label="completato" />
-                ) : item.status && item.status !== '•' ? (
-                  <span className="text-xs opacity-80">{item.status}</span>
-                ) : item.status === '•' && !selected ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="da completare" />
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
+        <WorkspaceTabs items={tabItems} value={tab} onChange={selectTab} />
 
         {tab === 'itinerario' ? (
-          <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)] lg:items-stretch">
-            <div className="h-[min(68vh,40rem)] min-h-[22rem] lg:h-[min(72vh,44rem)]">
-              <ItineraryScrollWidget template={template} />
+          <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-start lg:gap-6">
+            <div className="h-[min(78vh,44rem)] min-h-[28rem] lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
+              <ItineraryExplorerWidget template={template} />
             </div>
-            <div className="flex min-h-0 flex-col gap-3 lg:h-[min(72vh,44rem)]">
-              <div className="ws-widget overflow-hidden rounded-2xl">
-                <div className="h-[11.5rem] sm:h-[13rem]">
-                  <ItineraryWorldMap
-                    template={template}
-                    staticMap
-                    compact
-                    className="h-full rounded-none border-0 shadow-none"
-                  />
-                </div>
-              </div>
-              <div className="ws-widget flex-1 rounded-2xl p-4">
+            <aside className="flex flex-col gap-4 lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
+              <WorkspaceStatusCard
+                icon={Plane}
+                title="Voli"
+                subtitle={
+                  flightBooked ? 'Prenotazione confermata' : 'Andata e ritorno sulle date del viaggio'
+                }
+                complete={flightBooked}
+                actionLabel={flightBooked ? 'Vedi dettaglio' : 'Scegli voli'}
+                onAction={() => selectTab('voli')}
+              >
                 {flightBooked && practice?.flight_booking ? (
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Voli
-                    </p>
-                    <p className="text-sm font-medium text-slate-800">
-                      ✓ {practice.flight_booking.outbound.origin} →{' '}
+                  <div className="space-y-1.5 text-sm text-slate-700">
+                    <p>
+                      {practice.flight_booking.outbound.origin} →{' '}
                       {practice.flight_booking.outbound.destination}
                     </p>
                     {practice.flight_booking.returnLeg ? (
-                      <p className="text-sm font-medium text-slate-800">
-                        ✓ {practice.flight_booking.returnLeg.origin} →{' '}
+                      <p>
+                        {practice.flight_booking.returnLeg.origin} →{' '}
                         {practice.flight_booking.returnLeg.destination}
                       </p>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={() => selectTab('voli')}
-                      className="text-sm font-semibold text-primary hover:text-primary/80"
-                    >
-                      Vedi dettaglio →
-                    </button>
                   </div>
                 ) : (
                   <WorkspaceEmptyState
-                    title="Voli non ancora selezionati"
-                    body="Seleziona i voli per completare il viaggio."
-                    actionLabel="Scegli voli →"
-                    onAction={() => selectTab('voli')}
+                    title="Nessun volo selezionato"
+                    body="Cerca e confronta le opzioni quando sei pronto."
                   />
                 )}
-              </div>
-              <div className="ws-widget flex-1 rounded-2xl p-4">
+              </WorkspaceStatusCard>
+
+              <WorkspaceStatusCard
+                icon={BedDouble}
+                title="Hotel"
+                subtitle={
+                  hotelCount > 0
+                    ? `${hotelCount} tapp${hotelCount === 1 ? 'a' : 'e'} confermat${hotelCount === 1 ? 'a' : 'e'}`
+                    : 'Un alloggio per ogni tappa del piano'
+                }
+                complete={hotelCount > 0}
+                actionLabel={
+                  hotelCount > 0
+                    ? 'Vedi dettaglio'
+                    : flightBooked
+                      ? 'Scegli hotel'
+                      : 'Vai agli hotel'
+                }
+                onAction={() => selectTab('hotel')}
+              >
                 {hotelCount > 0 && practice ? (
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Hotel
-                    </p>
-                    <ul className="space-y-1">
-                      {hotels.slice(0, 3).map((h) => (
-                        <li key={`${h.hotelName}-${h.checkin}`} className="text-sm text-slate-800">
-                          ✓ {h.hotelName}
-                          {h.city ? ` · ${h.city}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={() => selectTab('hotel')}
-                      className="text-sm font-semibold text-primary hover:text-primary/80"
-                    >
-                      Vedi dettaglio →
-                    </button>
-                  </div>
+                  <ul className="space-y-1 text-sm text-slate-700">
+                    {hotels.slice(0, 3).map((h) => (
+                      <li key={`${h.hotelName}-${h.checkin}`}>
+                        {h.hotelName}
+                        {h.city ? ` · ${h.city}` : ''}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   <WorkspaceEmptyState
-                    title="Hotel non ancora selezionati"
-                    body="Scegli dove soggiornare nelle varie tappe."
-                    actionLabel="Scegli hotel →"
-                    onAction={() => selectTab('hotel')}
+                    title="Nessun hotel selezionato"
+                    body={
+                      canBookFlights && !flightBooked
+                        ? 'Conferma il volo per sbloccare la scelta hotel.'
+                        : 'Scegli dove soggiornare in ogni città.'
+                    }
                   />
                 )}
-              </div>
-            </div>
+              </WorkspaceStatusCard>
+            </aside>
           </div>
         ) : null}
 
         {tab === 'voli' ? (
-          <div className="ws-widget relative rounded-2xl p-4 sm:p-5">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-slate-900">Voli</h2>
-                <p className="text-sm text-slate-500">
-                  Cerca, confronta e scegli andata e ritorno sulle date del viaggio.
-                </p>
-              </div>
-              <WorldClocksWidget />
-            </div>
-            {!canBook ? (
-              <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                Partecipa al viaggio per selezionare i voli.
+          <div className="ws-widget rounded-2xl p-5 sm:p-6">
+            <div className="mb-5 border-b border-slate-100 pb-5">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
+                Voli
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Cerca, confronta e scegli andata e ritorno sulle date del viaggio.
               </p>
+            </div>
+            {!canBookFlights ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
+                <p className="font-medium text-slate-800">Partecipa per prenotare i voli</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Unisciti al gruppo per sbloccare la ricerca voli.
+                </p>
+                {canJoin && !isMember ? (
+                  <Button
+                    type="button"
+                    className="mt-4 rounded-full"
+                    disabled={pendingJoin}
+                    onClick={joinTrip}
+                  >
+                    Partecipa
+                  </Button>
+                ) : null}
+              </div>
             ) : flightBooked && practice ? (
               <BookingRecap practice={practice} section="flight" />
             ) : practice ? (
@@ -307,21 +295,39 @@ export function TripWorkspace({
         ) : null}
 
         {tab === 'hotel' ? (
-          <div className="ws-widget rounded-2xl p-4 sm:p-5">
-            <h2 className="font-display text-lg font-semibold text-slate-900">Hotel</h2>
-            <p className="mb-4 text-sm text-slate-500">
-              Un hotel per ogni tappa del piano. Scegli e conferma quando sei pronto.
-            </p>
-            {!canBook ? (
-              <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                Partecipa al viaggio per scegliere gli hotel.
+          <div className="ws-widget rounded-2xl p-5 sm:p-6">
+            <div className="mb-5 border-b border-slate-100 pb-5">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
+                Hotel
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Un hotel per ogni tappa del piano. Scegli e conferma quando sei pronto.
               </p>
-            ) : groupLocked ? (
-              <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                In gruppo l’hotel si sblocca dopo il volo confermato.
-              </p>
+            </div>
+            {!canBookFlights ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
+                <p className="font-medium text-slate-800">Partecipa per prenotare gli hotel</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Unisciti al gruppo per iniziare il percorso di prenotazione.
+                </p>
+              </div>
+            ) : !canBookHotels ? (
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/60 px-5 py-6 text-center">
+                <p className="font-medium text-slate-800">Hotel in attesa del volo</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Conferma il volo per sbloccare la ricerca hotel.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-4 rounded-full"
+                  onClick={() => selectTab('voli')}
+                >
+                  Vai ai voli
+                </Button>
+              </div>
             ) : practice ? (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {hotels.length > 0 ? <BookingRecap practice={practice} section="hotel" /> : null}
                 {stays.length > 1 ? (
                   <div className="flex flex-wrap gap-2">
@@ -335,9 +341,9 @@ export function TripWorkspace({
                           className={cn(
                             'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
                             i === stayIdx
-                              ? 'bg-primary text-white'
+                              ? 'bg-primary text-white shadow-sm'
                               : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40',
-                            booked && 'opacity-70'
+                            booked && i !== stayIdx && 'opacity-70'
                           )}
                         >
                           {booked ? '✓ ' : ''}

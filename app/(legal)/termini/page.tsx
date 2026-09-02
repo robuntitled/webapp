@@ -1,6 +1,7 @@
 import { LegalDocument, LegalSection } from '@/components/legal/LegalDocument';
 import { CompanyIdentity } from '@/components/legal/CompanyIdentity';
 import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
+import { LegalLink } from '@/components/legal/LegalLink';
 import { getCompanyProfile } from '@/lib/privacy/company';
 import { TERMS_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
 
@@ -13,12 +14,13 @@ export default function TermsPage() {
 
   return (
     <LegalDocument
+      kind="terms"
       title="Termini di Servizio"
       lastUpdated={`20 agosto 2026 (v${TERMS_VERSION})`}
       notice={<LegalConfigNotice company={company} />}
     >
       <LegalSection title="1. Premessa e operatore del servizio">
-        <p className="mb-4">
+        <p>
           I presenti Termini disciplinano l&apos;uso della piattaforma {company.tradeName},
           gestita da {company.companyName}. Utilizzando il servizio accetti integralmente quanto
           segue.
@@ -31,15 +33,12 @@ export default function TermsPage() {
           {company.tradeName} è una piattaforma che consente agli utenti di scoprire, creare e
           partecipare a viaggi di gruppo. L&apos;uso del servizio implica l&apos;accettazione dei
           presenti Termini e dell&apos;
-          <a href="/privacy" className="text-blue-600 hover:underline">
-            Informativa Privacy
-          </a>
-          .
+          <LegalLink href="/privacy">Informativa Privacy</LegalLink>.
         </p>
       </LegalSection>
 
       <LegalSection title="3. Registrazione e account">
-        <ul className="list-disc pl-6 space-y-1">
+        <ul>
           <li>Devi avere almeno {MIN_AGE_YEARS} anni per registrarti</li>
           <li>Sei responsabile della riservatezza delle tue credenziali</li>
           <li>Devi fornire informazioni veritiere e aggiornate</li>
@@ -47,12 +46,12 @@ export default function TermsPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection title="4. Natura del servizio: nessun pacchetto turistico">
-        <p className="mb-4 font-medium">
+      <LegalSection title="4. Natura del servizio: nessun pacchetto turistico" highlight>
+        <p className="font-medium text-slate-900">
           {company.tradeName} è uno strumento di pianificazione e community. Non è un&apos;agenzia di
           viaggi, un tour operator o un organizzatore di pacchetti turistici, e non vende viaggi.
         </p>
-        <ul className="list-disc pl-6 space-y-2">
+        <ul>
           <li>
             <strong>Il &quot;Trip&quot; non è un pacchetto turistico.</strong> È un contenitore di
             itinerario, gruppo e suggerimenti. Non costituisce un pacchetto né un servizio turistico
@@ -89,10 +88,8 @@ export default function TermsPage() {
       <LegalSection title="6. Dati personali">
         <p>
           Il trattamento dei dati personali è disciplinato dall&apos;
-          <a href="/privacy" className="text-blue-600 hover:underline">
-            Informativa Privacy
-          </a>
-          . Registrandoti dichiari di averla letta e compresa.
+          <LegalLink href="/privacy">Informativa Privacy</LegalLink>. Registrandoti dichiari di averla
+          letta e compresa.
         </p>
       </LegalSection>
 
@@ -125,14 +122,9 @@ export default function TermsPage() {
       <LegalSection title="10. Contatti">
         <p>
           Per assistenza:{' '}
-          <a href={`mailto:${company.supportEmail}`} className="text-blue-600 hover:underline">
-            {company.supportEmail}
-          </a>
-          . Per questioni privacy:{' '}
-          <a href={`mailto:${company.privacyEmail}`} className="text-blue-600 hover:underline">
-            {company.privacyEmail}
-          </a>
-          .
+          <LegalLink href={`mailto:${company.supportEmail}`}>{company.supportEmail}</LegalLink>. Per
+          questioni privacy:{' '}
+          <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>.
         </p>
       </LegalSection>
     </LegalDocument>

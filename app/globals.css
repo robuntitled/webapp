@@ -61,7 +61,7 @@
   --color-warning: #D97706;
 
   --radius: 0.625rem;
-  --nl-nav-height: 4.75rem;
+  --nl-nav-height: 4rem;
   --background: #FFFFFF;
   --foreground: #1C1917;
   --card: #FFFFFF;
@@ -226,10 +226,17 @@
     background: #ffffff;
   }
 
+  .ws-surface {
+    background: linear-gradient(180deg, #f8faf9 0%, #ffffff 12rem, #ffffff 100%);
+  }
+
   .ws-widget {
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(231, 229, 228, 0.9);
-    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    box-shadow:
+      0 1px 2px rgba(28, 25, 23, 0.04),
+      0 8px 24px -12px rgba(15, 118, 110, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
   }
 
@@ -254,7 +261,7 @@
   }
 
   /**
-   * Content Home sotto la ricerca: ~20% più largo del frame standard (.nl-page).
+   * Catalogo: stesso frame della navbar e della search.
    */
   .nl-home-content {
     width: 100%;
@@ -271,13 +278,13 @@
 
   @media (min-width: 1024px) {
     .nl-home-content {
-      padding-inline: max(1.5rem, 14%);
+      padding-inline: max(1.5rem, 18%);
     }
   }
 
   @media (min-width: 1440px) {
     .nl-home-content {
-      padding-inline: max(1.5rem, 19%);
+      padding-inline: max(1.5rem, 24%);
     }
   }
 
@@ -294,34 +301,22 @@
 
   @media (min-width: 768px) {
     :root {
-      --nl-nav-height: 5rem;
+      --nl-nav-height: 4.25rem;
     }
   }
 
   @media (min-width: 1024px) {
     :root {
-      --nl-nav-height: 5.25rem;
+      --nl-nav-height: 4.5rem;
     }
   }
 
   .nl-app-header {
-    --nav-progress: 1;
-    --nl-nav-h: calc(var(--nl-nav-height) + (1 - var(--nav-progress)) * 0.4rem);
-    --nl-logo-h: calc(2.7rem + (1 - var(--nav-progress)) * 0.7rem);
+    --nl-nav-h: var(--nl-nav-height);
+    --nl-logo-h: 1.75rem;
     color: rgb(30 41 59);
-    background-color: rgb(255 255 255 / calc(var(--nav-progress) * 0.74));
-    border-bottom: 1px solid rgb(226 232 240 / calc(var(--nav-progress) * 0.45));
-    box-shadow: 0 10px 28px -22px rgb(15 23 42 / calc(var(--nav-progress) * 0.55));
-    -webkit-backdrop-filter: blur(calc(var(--nav-progress) * 12px));
-    backdrop-filter: blur(calc(var(--nav-progress) * 12px));
-  }
-
-  .nl-app-header:not([data-hero='true']) {
-    isolation: isolate;
-  }
-
-  .nl-app-header[data-hero='true'] {
-    color: #fff;
+    background-color: #fff;
+    border-bottom: 1px solid rgb(226 232 240 / 0.85);
   }
 
   .nl-nav-inner {
@@ -330,8 +325,8 @@
   }
 
   .nl-brand-logo {
-    height: var(--nl-logo-h, 2.7rem);
-    width: calc(var(--nl-logo-h, 2.7rem) * 2.61);
+    height: var(--nl-logo-h, 1.75rem);
+    width: calc(var(--nl-logo-h, 1.75rem) * 2.67);
   }
 
   @media (prefers-reduced-motion: reduce) {

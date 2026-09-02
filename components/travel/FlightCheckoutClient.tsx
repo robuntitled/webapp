@@ -5,15 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, subYears } from 'date-fns';
 import { it } from 'date-fns/locale';
-import {
-  ArrowLeft,
-  CalendarDays,
-  CheckCircle2,
-  Loader2,
-  Plane,
-} from 'lucide-react';
+import { CalendarDays, CheckCircle2, Loader2, Plane } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
+import {
+  CheckoutBackLink,
+  CheckoutStepShell,
+  getCheckoutReturnHref,
+} from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -652,90 +651,170 @@ export function FlightCheckoutClient({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-5">
-        <Link
-          href="/pratiche"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Torna al viaggio
-        </Link>
+        <CheckoutBackLink
+          href={getCheckoutReturnHref(draft?.practiceId, 'voli')}
+          label={draft?.practiceId ? 'Torna alla selezione voli' : 'Torna alla ricerca voli'}
+        />
 
         {step === 'details' ? (
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-5 py-4 text-white sm:px-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                Passo 1 di 2
-              </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold">
-                Passeggeri e contatto
-              </h2>
-              <p className="mt-1 text-sm text-white/75">
-                Dati come sul documento di viaggio, poi pagamento sicuro.
-              </p>
-            </div>
+          <CheckoutStepShell
+            step={1}
+            totalSteps={2}
+            title="Passeggeri e contatto"
+            description="Dati come sul documento di viaggio, poi pagamento sicuro."
+          >
+            {verifying ? (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                Verifica disponibilità e prezzo…
+              </div>
+            ) : null}
 
-            <div className="space-y-6 p-5 sm:p-6">
-              {verifying ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  Verifica disponibilità e prezzo…
+            {verify?.priceChanged ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-semibold">Il prezzo è cambiato</p>
+                <p className="mt-1">
+                  {verify.previousPrice != null ? (
+                    <>
+                      <span className="line-through opacity-70">
+                        {formatMoney(verify.previousPrice, displayCurrency)}
+                      </span>
+                      {' → '}
+                    </>
+                  ) : null}
+                  <span className="font-semibold">
+                    {formatMoney(displayPrice, displayCurrency)}
+                  </span>
+                </p>
+                <label className="mt-3 flex items-center gap-2 text-xs font-medium">
+                  <input
+                    type="checkbox"
+                    checked={acceptedPriceChange}
+                    onChange={(e) => setAcceptedPriceChange(e.target.checked)}
+                  />
+                  Accetto il nuovo prezzo e continuo
+                </label>
+              </div>
+            ) : null}
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-slate-900">Contatto</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Email
+                  </span>
+                  <Input
+                    type="email"
+                    value={contact.email}
+                    onChange={(e) =>
+                      setContact((c) => ({ ...c, email: e.target.value }))
+                    }
+                    className="h-12 rounded-xl"
+                    placeholder="nome@email.com"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Nome
+                  </span>
+                  <Input
+                    value={contact.firstName}
+                    onChange={(e) =>
+                      setContact((c) => ({ ...c, firstName: e.target.value }))
+                    }
+                    className="h-12 rounded-xl"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Cognome
+                  </span>
+                  <Input
+                    value={contact.lastName}
+                    onChange={(e) =>
+                      setContact((c) => ({ ...c, lastName: e.target.value }))
+                    }
+                    className="h-12 rounded-xl"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Prefisso
+                  </span>
+                  <Input
+                    value={contact.phoneCountryCode}
+                    onChange={(e) =>
+                      setContact((c) => ({
+                        ...c,
+                        phoneCountryCode: e.target.value,
+                      }))
+                    }
+                    className="h-12 rounded-xl"
+                    placeholder="39"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Telefono
+                  </span>
+                  <Input
+                    value={contact.phoneNumber}
+                    onChange={(e) =>
+                      setContact((c) => ({ ...c, phoneNumber: e.target.value }))
+                    }
+                    className="h-12 rounded-xl"
+                    placeholder="3331234567"
+                  />
+                </label>
+              </div>
+            </section>
+
+            {passengers.map((p, idx) => (
+              <section
+                key={idx}
+                className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Passeggero {idx + 1}
+                  </h3>
+                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
+                    Adulto
+                  </span>
                 </div>
-              ) : null}
 
-              {verify?.priceChanged ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                  <p className="font-semibold">Il prezzo è cambiato</p>
-                  <p className="mt-1">
-                    {verify.previousPrice != null ? (
-                      <>
-                        <span className="line-through opacity-70">
-                          {formatMoney(verify.previousPrice, displayCurrency)}
-                        </span>
-                        {' → '}
-                      </>
-                    ) : null}
-                    <span className="font-semibold">
-                      {formatMoney(displayPrice, displayCurrency)}
-                    </span>
-                  </p>
-                  <label className="mt-3 flex items-center gap-2 text-xs font-medium">
-                    <input
-                      type="checkbox"
-                      checked={acceptedPriceChange}
-                      onChange={(e) => setAcceptedPriceChange(e.target.checked)}
-                    />
-                    Accetto il nuovo prezzo e continuo
-                  </label>
-                </div>
-              ) : null}
-
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-slate-900">Contatto</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-1.5 sm:col-span-2">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="space-y-1.5">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      Email
+                      Titolo
                     </span>
-                    <Input
-                      type="email"
-                      value={contact.email}
+                    <select
+                      value={p.title}
                       onChange={(e) =>
-                        setContact((c) => ({ ...c, email: e.target.value }))
+                        updatePassenger(idx, {
+                          title: e.target.value as Title,
+                        })
                       }
-                      className="h-12 rounded-xl"
-                      placeholder="nome@email.com"
-                    />
+                      className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
+                    >
+                      {TITLES.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                   <label className="space-y-1.5">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                       Nome
                     </span>
                     <Input
-                      value={contact.firstName}
+                      value={p.firstName}
                       onChange={(e) =>
-                        setContact((c) => ({ ...c, firstName: e.target.value }))
+                        updatePassenger(idx, { firstName: e.target.value })
                       }
-                      className="h-12 rounded-xl"
+                      className="h-12 rounded-xl bg-white"
                     />
                   </label>
                   <label className="space-y-1.5">
@@ -743,223 +822,121 @@ export function FlightCheckoutClient({
                       Cognome
                     </span>
                     <Input
-                      value={contact.lastName}
+                      value={p.lastName}
                       onChange={(e) =>
-                        setContact((c) => ({ ...c, lastName: e.target.value }))
+                        updatePassenger(idx, { lastName: e.target.value })
                       }
-                      className="h-12 rounded-xl"
-                    />
-                  </label>
-                  <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      Prefisso
-                    </span>
-                    <Input
-                      value={contact.phoneCountryCode}
-                      onChange={(e) =>
-                        setContact((c) => ({
-                          ...c,
-                          phoneCountryCode: e.target.value,
-                        }))
-                      }
-                      className="h-12 rounded-xl"
-                      placeholder="39"
-                    />
-                  </label>
-                  <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      Telefono
-                    </span>
-                    <Input
-                      value={contact.phoneNumber}
-                      onChange={(e) =>
-                        setContact((c) => ({ ...c, phoneNumber: e.target.value }))
-                      }
-                      className="h-12 rounded-xl"
-                      placeholder="3331234567"
+                      className="h-12 rounded-xl bg-white"
                     />
                   </label>
                 </div>
-              </section>
 
-              {passengers.map((p, idx) => (
-                <section
-                  key={idx}
-                  className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Passeggero {idx + 1}
-                    </h3>
-                    <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
-                      Adulto
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DatePickerField
+                    label="Data di nascita"
+                    value={p.birthday}
+                    onChange={(iso) => updatePassenger(idx, { birthday: iso })}
+                    fromYear={1920}
+                    toYear={new Date().getFullYear() - 12}
+                    disabledAfter={subYears(new Date(), 12)}
+                  />
+                  <CountrySelect
+                    label="Nazionalità"
+                    value={p.nationality}
+                    onChange={(code) =>
+                      updatePassenger(idx, { nationality: code })
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Documento
                     </span>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <label className="space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Titolo
-                      </span>
-                      <select
-                        value={p.title}
-                        onChange={(e) =>
-                          updatePassenger(idx, {
-                            title: e.target.value as Title,
-                          })
-                        }
-                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
-                      >
-                        {TITLES.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Nome
-                      </span>
-                      <Input
-                        value={p.firstName}
-                        onChange={(e) =>
-                          updatePassenger(idx, { firstName: e.target.value })
-                        }
-                        className="h-12 rounded-xl bg-white"
-                      />
-                    </label>
-                    <label className="space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Cognome
-                      </span>
-                      <Input
-                        value={p.lastName}
-                        onChange={(e) =>
-                          updatePassenger(idx, { lastName: e.target.value })
-                        }
-                        className="h-12 rounded-xl bg-white"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <DatePickerField
-                      label="Data di nascita"
-                      value={p.birthday}
-                      onChange={(iso) => updatePassenger(idx, { birthday: iso })}
-                      fromYear={1920}
-                      toYear={new Date().getFullYear() - 12}
-                      disabledAfter={subYears(new Date(), 12)}
-                    />
-                    <CountrySelect
-                      label="Nazionalità"
-                      value={p.nationality}
-                      onChange={(code) =>
-                        updatePassenger(idx, { nationality: code })
+                    <select
+                      value={p.documentType}
+                      onChange={(e) =>
+                        updatePassenger(idx, { documentType: e.target.value })
                       }
-                    />
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Documento
-                      </span>
-                      <select
-                        value={p.documentType}
-                        onChange={(e) =>
-                          updatePassenger(idx, { documentType: e.target.value })
-                        }
-                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
-                      >
-                        <option value="passport">Passaporto</option>
-                        <option value="id_card">Carta d’identità</option>
-                      </select>
-                    </label>
-                    <label className="space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Numero documento
-                      </span>
-                      <Input
-                        value={p.documentNumber}
-                        onChange={(e) =>
-                          updatePassenger(idx, {
-                            documentNumber: e.target.value,
-                          })
-                        }
-                        className="h-12 rounded-xl bg-white"
-                      />
-                    </label>
-                    <CountrySelect
-                      label="Paese di emissione"
-                      value={p.documentIssueCountry}
-                      onChange={(code) =>
-                        updatePassenger(idx, { documentIssueCountry: code })
+                      className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
+                    >
+                      <option value="passport">Passaporto</option>
+                      <option value="id_card">Carta d’identità</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Numero documento
+                    </span>
+                    <Input
+                      value={p.documentNumber}
+                      onChange={(e) =>
+                        updatePassenger(idx, {
+                          documentNumber: e.target.value,
+                        })
                       }
+                      className="h-12 rounded-xl bg-white"
                     />
-                    <DatePickerField
-                      label="Scadenza documento"
-                      value={p.documentExpiry}
-                      onChange={(iso) =>
-                        updatePassenger(idx, { documentExpiry: iso })
-                      }
-                      fromYear={new Date().getFullYear()}
-                      toYear={new Date().getFullYear() + 20}
-                      disabledBefore={today}
-                    />
-                  </div>
-                </section>
-              ))}
+                  </label>
+                  <CountrySelect
+                    label="Paese di emissione"
+                    value={p.documentIssueCountry}
+                    onChange={(code) =>
+                      updatePassenger(idx, { documentIssueCountry: code })
+                    }
+                  />
+                  <DatePickerField
+                    label="Scadenza documento"
+                    value={p.documentExpiry}
+                    onChange={(iso) =>
+                      updatePassenger(idx, { documentExpiry: iso })
+                    }
+                    fromYear={new Date().getFullYear()}
+                    toYear={new Date().getFullYear() + 20}
+                    disabledBefore={today}
+                  />
+                </div>
+              </section>
+            ))}
 
-              <Button
-                type="button"
-                disabled={verifying || submitting}
-                onClick={() => void startPrebook()}
-                className="h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
-              >
-                {submitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Continua al pagamento
-              </Button>
-            </div>
-          </div>
+            <Button
+              type="button"
+              disabled={verifying || submitting}
+              onClick={() => void startPrebook()}
+              className="h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
+            >
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Continua al pagamento
+            </Button>
+          </CheckoutStepShell>
         ) : null}
 
         {step === 'payment' && payment ? (
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-5 py-4 text-white sm:px-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                Passo 2 di 2
+          <CheckoutStepShell
+            step={2}
+            totalSteps={2}
+            title="Pagamento"
+            description={`Totale ${formatMoney(displayPrice, displayCurrency)}`}
+            footer={
+              <CheckoutBackLink label="Modifica passeggeri" onClick={() => setStep('details')} />
+            }
+          >
+            {paymentReturnUrl ? (
+              <LiteApiPaymentWidget
+                key={payment.secretKey}
+                secretKey={payment.secretKey}
+                paymentEnv={payment.paymentEnv}
+                returnUrl={paymentReturnUrl}
+              />
+            ) : null}
+            {submitting ? (
+              <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Conferma prenotazione in corso…
               </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold text-white">
-                Pagamento
-              </h2>
-              <p className="mt-1 text-sm text-white/75">
-                Totale{' '}
-                <span className="font-semibold text-white">
-                  {formatMoney(displayPrice, displayCurrency)}
-                </span>
-              </p>
-            </div>
-            <div className="space-y-4 p-5 sm:p-6">
-              {paymentReturnUrl ? (
-                <LiteApiPaymentWidget
-                  key={payment.secretKey}
-                  secretKey={payment.secretKey}
-                  paymentEnv={payment.paymentEnv}
-                  returnUrl={paymentReturnUrl}
-                />
-              ) : null}
-              {submitting ? (
-                <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Conferma prenotazione in corso…
-                </p>
-              ) : null}
-            </div>
-          </div>
+            ) : null}
+          </CheckoutStepShell>
         ) : null}
       </div>
 

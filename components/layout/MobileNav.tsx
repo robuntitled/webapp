@@ -19,7 +19,7 @@ function mobileLinkClass(active: boolean) {
   return cn(
     'rounded-md px-3 py-3 text-[clamp(0.95rem,2vw,1.05rem)] font-medium transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-    active ? 'font-semibold text-primary' : 'text-slate-800 hover:text-primary'
+    active ? 'font-semibold text-primary bg-primary/8' : 'text-slate-800 hover:text-primary'
   );
 }
 
@@ -35,7 +35,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
   };
 
   const menuBtnClass = cn(
-    'h-10 w-10 rounded-full text-slate-600 transition-colors',
+    'h-9 w-9 rounded-full text-slate-600 transition-colors',
     'hover:bg-slate-900/[0.05] hover:text-primary',
     'focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
     'group-data-[hero=true]/nav:text-white/90 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white'
