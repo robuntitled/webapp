@@ -6,10 +6,9 @@ import { useSession } from 'next-auth/react';
 import { BedDouble, Loader2, Plane, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction } from '@/actions/practices';
-import { ItineraryWorldMap } from '@/components/itineraries/ItineraryWorldMap';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
+import { ItineraryExplorerWidget } from '@/components/itineraries/workspace/ItineraryExplorerWidget';
 import {
-  ItineraryScrollWidget,
   WorkspaceEmptyState,
 } from '@/components/itineraries/workspace/ItineraryScrollWidget';
 import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/workspace/WorkspaceHero';
@@ -172,24 +171,10 @@ export function TripWorkspace({
 
         {tab === 'itinerario' ? (
           <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-start lg:gap-6">
-            <div className="h-[min(70vh,42rem)] min-h-[24rem] lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)] lg:h-[min(78vh,44rem)]">
-              <ItineraryScrollWidget template={template} />
+            <div className="h-[min(78vh,44rem)] min-h-[28rem] lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
+              <ItineraryExplorerWidget template={template} />
             </div>
             <aside className="flex flex-col gap-4 lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
-              <div className="ws-widget overflow-hidden rounded-2xl">
-                <p className="border-b border-slate-100/90 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Percorso
-                </p>
-                <div className="h-[12rem] sm:h-[13rem]">
-                  <ItineraryWorldMap
-                    template={template}
-                    staticMap
-                    compact
-                    className="h-full rounded-none border-0 shadow-none"
-                  />
-                </div>
-              </div>
-
               <WorkspaceStatusCard
                 icon={Plane}
                 title="Voli"

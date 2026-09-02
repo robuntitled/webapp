@@ -2,41 +2,16 @@
 
 import { Moon, Sun, Sunset } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { slotsForDay, type DaySlot } from '@/lib/itineraries/day-slots';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
 
-const SLOT_META: Record<
-  'morning' | 'afternoon' | 'evening',
-  { label: string; Icon: LucideIcon }
-> = {
+const SLOT_META: Record<DaySlot, { label: string; Icon: LucideIcon }> = {
   morning: { label: 'Mattina', Icon: Sun },
   afternoon: { label: 'Pomeriggio', Icon: Sunset },
   evening: { label: 'Sera', Icon: Moon },
 };
 
-type Slot = keyof typeof SLOT_META;
-
-function slotsForDay(template: ItineraryTemplate, dayNumber: number) {
-  const day = template.days.find((d) => d.day_number === dayNumber);
-  const acts = template.paid_activities.filter((a) => a.day_number === dayNumber);
-  const bySlot: Record<Slot, string[]> = {
-    morning: acts.filter((a) => a.slot === 'morning').map((a) => a.title),
-    afternoon: acts.filter((a) => a.slot === 'afternoon').map((a) => a.title),
-    evening: acts.filter((a) => a.slot === 'evening').map((a) => a.title),
-  };
-
-  if (acts.length === 0 && day) {
-    const pois = day.pois.map((p) => p.name);
-    bySlot.morning = pois.slice(0, 2);
-    bySlot.afternoon = pois.slice(2, 4);
-    bySlot.evening = pois.slice(4);
-    if (!pois.length) {
-      bySlot.morning = [day.description];
-    }
-  }
-
-  return { day, bySlot };
-}
-
+/** @deprecated Usare ItineraryExplorerWidget */
 export function ItineraryScrollWidget({
   template,
 }: {
@@ -60,7 +35,7 @@ export function ItineraryScrollWidget({
           {template.days.map((day, index) => {
             const { bySlot } = slotsForDay(template, day.day_number);
             const isLast = index === template.days.length - 1;
-            const slotEntries = (Object.keys(SLOT_META) as Slot[]).filter(
+            const slotEntries = (Object.keys(SLOT_META) as DaySlot[]).filter(
               (slot) => bySlot[slot].length > 0
             );
 

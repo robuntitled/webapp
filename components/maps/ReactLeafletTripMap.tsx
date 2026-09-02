@@ -59,13 +59,16 @@ function makeIcon(highlighted: boolean) {
 function FitBounds({
   pins,
   animate,
+  highlightedPinId,
 }: {
   pins: MapPin[];
   animate: boolean;
+  highlightedPinId?: string | null;
 }) {
   const map = useMap();
 
   useEffect(() => {
+    if (highlightedPinId) return;
     if (pins.length === 0) return;
     const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng] as [number, number]));
     if (pins.length === 1) {
@@ -78,7 +81,29 @@ function FitBounds({
     } else {
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
     }
-  }, [map, pins, animate]);
+  }, [map, pins, animate, highlightedPinId]);
+
+  return null;
+}
+
+function HighlightFlyTo({
+  pins,
+  highlightedPinId,
+}: {
+  pins: MapPin[];
+  highlightedPinId?: string | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!highlightedPinId) return;
+    const pin = pins.find(
+      (p) => p.id === highlightedPinId || p.blockId === highlightedPinId
+    );
+    if (!pin) return;
+    const zoom = Math.max(map.getZoom(), 10);
+    map.flyTo([pin.lat, pin.lng], Math.min(zoom, 12), { duration: 0.55 });
+  }, [map, pins, highlightedPinId]);
 
   return null;
 }
@@ -141,7 +166,8 @@ export function ReactLeafletTripMap({
         attributionControl={false}
       >
         <TileLayer url={MAP_TILES.url} attribution={MAP_TILES.attribution} maxZoom={19} />
-        <FitBounds pins={fitPins} animate={interactive} />
+        <FitBounds pins={fitPins} animate={interactive} highlightedPinId={highlightedPinId} />
+        <HighlightFlyTo pins={pins} highlightedPinId={highlightedPinId} />
         {interactive ? <MapClickHandler onMapClick={onMapClick} /> : null}
 
         {showRoute && routePositions.length >= 2 && (
