@@ -74,13 +74,12 @@ export function editionBadgeDisplay(
 
 export function editionParticipantsLabel(input: {
   interested_count?: number;
+  /** @deprecated usare solo interested_count (iscritti al gruppo) */
   confirmed_count?: number;
 }): string | null {
-  const interested = input.interested_count ?? 0;
-  const confirmed = input.confirmed_count ?? 0;
-  const count = Math.max(interested, confirmed);
-  if (count <= 0) return null;
-  return count === 1 ? '👥 1 persona partecipa' : `👥 ${count} persone partecipano`;
+  const enrolled = input.interested_count ?? 0;
+  if (enrolled <= 0) return null;
+  return enrolled === 1 ? '👥 1 iscritto al gruppo' : `👥 ${enrolled} iscritti al gruppo`;
 }
 
 export function editionFlightsStatusLabel(confirmed: number, minConfirmed: number): string {
@@ -90,12 +89,14 @@ export function editionFlightsStatusLabel(confirmed: number, minConfirmed: numbe
 }
 
 export function editionGroupHint(confirmed: number, minConfirmed: number): string {
-  if (minConfirmed <= 0) return confirmed > 0 ? 'Soglia gruppo raggiunta' : 'In attesa delle prime conferme';
-  if (confirmed >= minConfirmed) return 'Soglia gruppo raggiunta';
+  if (minConfirmed <= 0) {
+    return confirmed > 0 ? 'Soglia voli raggiunta' : 'In attesa del primo volo';
+  }
+  if (confirmed >= minConfirmed) return 'Soglia voli raggiunta — il gruppo può partire';
   const remaining = minConfirmed - confirmed;
   return remaining === 1
-    ? 'Ancora 1 conferma necessaria'
-    : `Ancora ${remaining} conferme necessarie`;
+    ? 'Ancora 1 volo per la soglia'
+    : `Ancora ${remaining} voli per la soglia`;
 }
 
 export function editionJoinReason(input: {

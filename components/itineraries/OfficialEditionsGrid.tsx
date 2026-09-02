@@ -82,7 +82,6 @@ export function EditionCard({
   const badgeLabel = editionBadgeDisplay(scarcity, spotsLeft);
   const participants = editionParticipantsLabel({
     interested_count: ed.interested_count,
-    confirmed_count: confirmed,
   });
   const flightsStatus = editionFlightsStatusLabel(confirmed, minConfirmed);
   const groupHint = editionGroupHint(confirmed, minConfirmed);
@@ -198,11 +197,11 @@ export function EditionCard({
               id={`group-status-${ed.id}`}
               className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-400"
             >
-              Stato del gruppo
+              Soglia voli
             </p>
           ) : (
             <p id={`group-status-${ed.id}`} className="sr-only">
-              Stato del gruppo
+              Soglia voli
             </p>
           )}
           <p
@@ -380,8 +379,8 @@ export function OfficialEditionsGrid({
             Partenze aperte
           </h2>
           <p className="max-w-xl text-sm text-slate-600">
-            Viaggi pubblici con date e itinerario già fissati — unisciti e aspetta che il gruppo
-            raggiunga la soglia, poi prenoti il tuo.
+            Pubbliche e aperte a tutti — unisciti, prenota il volo. Il viaggio parte alla soglia
+            del gruppo.
           </p>
         </div>
         <div
@@ -394,7 +393,7 @@ export function OfficialEditionsGrid({
           </span>
           {(
             [
-              { id: 'conferme', label: 'Conferme' },
+              { id: 'conferme', label: 'Soglia voli' },
               { id: 'partenza', label: 'Data di partenza' },
             ] as const
           ).map((opt) => {

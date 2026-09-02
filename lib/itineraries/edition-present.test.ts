@@ -45,9 +45,9 @@ describe('edition present', () => {
   it('formats participants and group hints', () => {
     expect(
       editionParticipantsLabel({ interested_count: 2, confirmed_count: 1 })
-    ).toBe('👥 2 persone partecipano');
-    expect(editionGroupHint(1, 6)).toBe('Ancora 5 conferme necessarie');
-    expect(editionGroupHint(6, 6)).toBe('Soglia gruppo raggiunta');
+    ).toBe('👥 2 iscritti al gruppo');
+    expect(editionGroupHint(1, 6)).toBe('Ancora 5 voli per la soglia');
+    expect(editionGroupHint(6, 6)).toBe('Soglia voli raggiunta — il gruppo può partire');
   });
 
   it('formats edition date range', () => {

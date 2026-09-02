@@ -148,12 +148,17 @@ export function PrivateTripsSection({
       className="flex flex-col rounded-3xl border border-slate-200/80 bg-slate-50/70 px-4 pt-3 pb-4 sm:px-5 sm:pt-3.5 sm:pb-5"
       aria-labelledby="viaggi-privati-title"
     >
-      <h2
-        id="viaggi-privati-title"
-        className="shrink-0 font-display text-[clamp(1.02rem,0.9vw+0.92rem,1.2rem)] font-semibold text-slate-900"
-      >
-        Viaggi privati
-      </h2>
+      <div className="shrink-0 space-y-1">
+        <h2
+          id="viaggi-privati-title"
+          className="font-display text-[clamp(1.02rem,0.9vw+0.92rem,1.2rem)] font-semibold text-slate-900"
+        >
+          Viaggi privati
+        </h2>
+        <p className="text-sm text-slate-600">
+          Solo su invito o link — non compaiono nel catalogo pubblico sotto.
+        </p>
+      </div>
 
       {empty ? (
         <div className="px-1 py-5 text-center">
