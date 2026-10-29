@@ -9,6 +9,6 @@ export const TRAVEL_HERO_IMAGES = [
   coverForDestination('grecia'),
   coverForDestination('bali'),
   coverForDestination('vietnam'),
-  coverForDestination('portogallo'),
-  coverForDestination('spagna'),
+  coverForDestination('maldive'),
+  coverForDestination('sicilia'),
 ] as const;
