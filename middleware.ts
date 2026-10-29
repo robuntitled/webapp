@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import { NextResponse } from 'next/server';
-import type { NextFetchEvent, NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { authConfig } from '@/auth.config';
 import { GDPR_PUBLIC_PATHS, ONBOARDING_PATH } from '@/lib/auth-session';
 import { postLoginPath } from '@/lib/onboarding/steps';
@@ -86,8 +86,11 @@ const authMiddleware = auth((req) => {
   return NextResponse.next();
 });
 
-export default async function middleware(req: NextRequest, event: NextFetchEvent) {
-  const res = await authMiddleware(req, event);
+export default async function middleware(req: NextRequest) {
+  // auth() tipizza il 2° arg come AppRouteHandlerFnContext; in middleware basta la request.
+  const res = await (authMiddleware as (req: NextRequest) => Promise<Response | undefined>)(
+    req
+  );
   if (res instanceof Response) {
     return rewriteAuthResponseToRequestHost(req, res);
   }
