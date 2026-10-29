@@ -28,7 +28,7 @@ export async function resolveTripLinkAction(raw: string): Promise<ResolveTripLin
   }
 
   if (parsed.kind === 'pratica') {
-    if (!userId) return { href: `/?callbackUrl=${encodeURIComponent(`/pratica/${parsed.id}`)}` };
+    if (!userId) return { href: `/accedi?callbackUrl=${encodeURIComponent(`/pratica/${parsed.id}`)}` };
     const practice = await getPractice(parsed.id, userId);
     if (!practice) return { error: TRIP_LINK_ERRORS.missing };
     return { href: `/pratica/${practice.id}` };

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function PrenotaAttrazioniPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/prenota/attrazioni');
+    redirect('/accedi?callbackUrl=/prenota/attrazioni');
   }
 
   return (

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function PrenotaTrasportiTreniPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/prenota/trasporti/treni');
+    redirect('/accedi?callbackUrl=/prenota/trasporti/treni');
   }
 
   return (

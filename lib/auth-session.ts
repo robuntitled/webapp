@@ -15,6 +15,7 @@ export const PROTECTED_PATHS = [
 
 export const GDPR_PUBLIC_PATHS = [
   '/',
+  '/accedi',
   '/privacy',
   '/termini',
   '/cookie',
@@ -122,12 +123,19 @@ export async function handleOAuthSignIn(
   }
 }
 
+/** Ricarica claims dal DB al massimo ogni N ms (salvo force / update). */
+export const JWT_USER_REFRESH_MS = 10 * 60 * 1000;
+
 /**
  * Sincronizza JWT con la riga `users`.
  * Se l’utente non esiste più (delete account) → token invalidato.
  * Errori DB transienti: non invalidare (evita logout a raffica).
+ * Di default riusa i claim JWT se `lastUserCheck` è recente (evita query a ogni auth()).
  */
-export async function populateJwtToken(token: JWT): Promise<JWT> {
+export async function populateJwtToken(
+  token: JWT,
+  opts?: { force?: boolean }
+): Promise<JWT> {
   // Già invalidato: non rianimare senza email/id
   if (token.invalid && !token.email && !token.id) {
     return token;
@@ -138,6 +146,17 @@ export async function populateJwtToken(token: JWT): Promise<JWT> {
   const userId = typeof token.id === 'string' ? token.id : undefined;
 
   if (!email && !userId) {
+    return token;
+  }
+
+  const lastCheck =
+    typeof token.lastUserCheck === 'number' ? token.lastUserCheck : 0;
+  if (
+    !opts?.force &&
+    userId &&
+    lastCheck > 0 &&
+    Date.now() - lastCheck < JWT_USER_REFRESH_MS
+  ) {
     return token;
   }
 

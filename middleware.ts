@@ -13,6 +13,8 @@ function isOnboardingExempt(pathname: string): boolean {
   if (pathname === ONBOARDING_PATH || pathname.startsWith(`${ONBOARDING_PATH}/`)) {
     return true;
   }
+  // Inviti: anteprima e ritorno post-login senza perdere il viaggio
+  if (pathname.startsWith('/invito/')) return true;
   if (pathname.startsWith('/api')) return true;
   return false;
 }
@@ -23,6 +25,22 @@ export default auth((req) => {
   const userId = session?.user?.id;
   const privacyOk = Boolean(session?.user?.privacyConsentAccepted);
   const onboardingDone = Boolean(session?.user?.onboardingCompleted);
+
+  // Legacy: auth era su `/` — preserva callback/verify/error/ref verso `/accedi`
+  if (pathname === '/' && !userId) {
+    const q = req.nextUrl.searchParams;
+    if (
+      q.has('callbackUrl') ||
+      q.has('error') ||
+      q.has('verify') ||
+      q.has('code') ||
+      q.get('mode') === 'register'
+    ) {
+      const target = new URL('/accedi', req.nextUrl);
+      q.forEach((value, key) => target.searchParams.set(key, value));
+      return NextResponse.redirect(target);
+    }
+  }
 
   if (userId && !privacyOk) {
     const isExempt = GDPR_PUBLIC.has(pathname) || pathname.startsWith('/api');
@@ -45,7 +63,8 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/destinazioni', req.nextUrl));
   }
 
-  if (pathname === '/' && userId && privacyOk) {
+  // Utenti loggati: home e login → area app (la landing resta per i visitatori)
+  if ((pathname === '/' || pathname === '/accedi') && userId && privacyOk) {
     return NextResponse.redirect(
       new URL(postLoginPath({ onboardingCompleted: onboardingDone }), req.nextUrl)
     );

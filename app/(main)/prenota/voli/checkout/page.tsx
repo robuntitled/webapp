@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 export default async function FlightCheckoutPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/prenota/voli/checkout');
+    redirect('/accedi?callbackUrl=/prenota/voli/checkout');
   }
 
   return (

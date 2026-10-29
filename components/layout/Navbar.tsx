@@ -47,14 +47,14 @@ export async function Navbar() {
                   'group-data-[hero=true]/nav:text-white/95 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white group-data-[hero=true]/nav:[text-shadow:0_1px_8px_rgba(0,0,0,0.35)]'
                 )}
               >
-                <Link href="/">Accedi</Link>
+                <Link href="/accedi">Accedi</Link>
               </Button>
               <Button
                 asChild
                 size="sm"
                 className="h-8 rounded-full bg-accent px-3.5 text-[0.8125rem] font-semibold text-white shadow-none hover:bg-accent/90"
               >
-                <Link href="/">Registrati</Link>
+                <Link href="/accedi?mode=register">Registrati</Link>
               </Button>
             </div>
           )}

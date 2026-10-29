@@ -23,7 +23,7 @@ export function PlanSaveButton({
   const onToggle = () => {
     if (!isLoggedIn) {
       toast.error('Accedi per salvare l’itinerario.');
-      router.push(`/?callbackUrl=/destinazioni`);
+      router.push(`/accedi?callbackUrl=/destinazioni`);
       return;
     }
     startTransition(async () => {

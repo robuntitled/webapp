@@ -238,7 +238,7 @@ export function TripSetupPanel({
     if (!session?.user) {
       toast.error('Accedi per creare il viaggio.');
       router.push(
-        `/?callbackUrl=${encodeURIComponent(
+        `/accedi?callbackUrl=${encodeURIComponent(
           `/itinerario/${template.destination_slug}?d=${template.duration_days}`
         )}`
       );

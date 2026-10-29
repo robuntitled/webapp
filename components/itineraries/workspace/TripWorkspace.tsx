@@ -96,7 +96,7 @@ export function TripWorkspace({
   function joinTrip() {
     if (!editionId) return;
     if (!session?.user) {
-      router.push(`/?callbackUrl=${encodeURIComponent(`/partenze/${editionId}`)}`);
+      router.push(`/accedi?callbackUrl=${encodeURIComponent(`/partenze/${editionId}`)}`);
       return;
     }
     startJoin(async () => {

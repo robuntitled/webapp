@@ -15,8 +15,8 @@ export const authConfig = {
     maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
-    signIn: '/',
-    error: '/',
+    signIn: '/accedi',
+    error: '/accedi',
   },
   providers: [],
   callbacks: {
@@ -44,9 +44,10 @@ export const authConfig = {
         if (session.travelIntent !== undefined) {
           token.travelIntent = session.travelIntent;
         }
-        return populateJwtToken(token);
+        return populateJwtToken(token, { force: true });
       }
-      return populateJwtToken(token);
+      // Login / nuovo token: sync immediato. Poi refresh al massimo ogni JWT_USER_REFRESH_MS.
+      return populateJwtToken(token, { force: trigger === 'signIn' });
     },
     async session({ session, token }) {
       return populateSession(session, token);
