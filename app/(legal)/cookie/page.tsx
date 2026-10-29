@@ -12,7 +12,7 @@ import { COOKIE_CONSENT_KEY } from '@/lib/privacy/constants';
 import { getCompanyProfile } from '@/lib/privacy/company';
 
 export const metadata = {
-  title: 'Cookie Policy — Flygetr',
+  title: 'Cookie Policy',
 };
 
 export default function CookiePage() {

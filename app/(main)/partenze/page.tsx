@@ -1,7 +1,19 @@
+import type { Metadata } from 'next';
 import { UniscitiHub } from '@/components/itineraries/UniscitiHub';
 import { listJoinableEditions } from '@/lib/data/editions';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Partenze aperte',
+  description:
+    'Unisciti a una partenza in formazione. Stesso itinerario ufficiale, ognuno prenota i servizi per conto proprio.',
+  openGraph: {
+    title: 'Partenze aperte — Flygetr',
+    description:
+      'Gruppi in formazione con itinerario ufficiale. Entra prima che si chiuda la soglia del gruppo.',
+  },
+};
 
 export default async function PartenzeIndexPage() {
   const editions = await listJoinableEditions();

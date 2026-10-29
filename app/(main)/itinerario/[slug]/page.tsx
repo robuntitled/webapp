@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { StartTripWizard } from '@/components/itineraries/StartTripWizard';
@@ -5,11 +6,28 @@ import { listOfficialEditions } from '@/lib/data/editions';
 import { loadFavoriteItineraryIds } from '@/lib/data/favorites';
 import { findItineraryBySlug, wizardDestinationCards } from '@/lib/itineraries/catalog';
 import { parseDurationParam } from '@/lib/itineraries/params';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ d?: string }>;
 };
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const { d } = await searchParams;
+  const duration = parseDurationParam(d);
+  const template = findItineraryBySlug(slug, duration);
+  if (!template) return { title: 'Itinerario' };
+  const days = duration ?? template.duration_days;
+  const title = `${template.destination_name} in ${days} giorni`;
+  const description = `${template.summary?.slice(0, 140) || template.destination_name}. ${COMPLIANCE_COPY.budgetLabel}: stime, non un pacchetto.`;
+  return {
+    title,
+    description,
+    openGraph: { title: `${title} — Flygetr`, description },
+  };
+}
 
 export default async function ItinerarioPage({ params, searchParams }: PageProps) {
   const { slug } = await params;

@@ -6,7 +6,7 @@ import { getCompanyProfile } from '@/lib/privacy/company';
 import { TERMS_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
 
 export const metadata = {
-  title: 'Termini di Servizio — Flygetr',
+  title: 'Termini di Servizio',
 };
 
 export default function TermsPage() {

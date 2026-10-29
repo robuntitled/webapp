@@ -17,10 +17,32 @@ const inter = Inter({
 });
 
 const appName = process.env.LEGAL_TRADE_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'Flygetr';
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it';
 
 export const metadata: Metadata = {
-  title: appName,
-  description: 'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: appName,
+    template: `%s — ${appName}`,
+  },
+  description:
+    'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+  openGraph: {
+    type: 'website',
+    locale: 'it_IT',
+    siteName: appName,
+    title: appName,
+    description:
+      'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+    images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: appName }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: appName,
+    description:
+      'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+    images: ['/images/heroes/hero-login.jpg'],
+  },
   // Omio / Impact affiliate site verification
   other: {
     'impact-site-verification': '177e37a3-3cd3-490f-9407-6af80805e74b',
