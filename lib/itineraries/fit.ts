@@ -24,7 +24,7 @@ export function fitItineraryToDays(source: ItineraryTemplate, targetDays: number
     return source.days.slice(0, 2).map((d, i) => ({ ...d, day_number: i + 1 }));
   }
 
-  let days = [...source.days];
+  const days = [...source.days];
   while (days.length > targetDays) {
     const idx = findRemovableDayIndex(days);
     if (idx === -1) break;
