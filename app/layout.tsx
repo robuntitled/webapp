@@ -59,7 +59,9 @@ export default async function RootLayout({
 
   return (
     <html lang="it">
-      <body className={`${inter.variable} font-sans`}>
+      <body
+        className={`${inter.variable} font-sans pb-[var(--cookie-banner-pad,0px)]`}
+      >
         <Providers session={session}>
           <div className="flex min-h-dvh flex-col">
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>

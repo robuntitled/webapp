@@ -115,7 +115,7 @@ export function ItineraryExplorerWidget({ template }: { template: ItineraryTempl
           onClick={goPrev}
           disabled={safeIndex <= 0}
           aria-label="Giorno precedente"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:opacity-35"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:opacity-35"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -134,7 +134,7 @@ export function ItineraryExplorerWidget({ template }: { template: ItineraryTempl
                 aria-label={`Giorno ${d.day_number}: ${d.title}`}
                 aria-current={selected ? 'true' : undefined}
                 className={cn(
-                  'flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition',
+                  'flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-xs font-bold transition',
                   selected
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-primary/40'
@@ -150,7 +150,7 @@ export function ItineraryExplorerWidget({ template }: { template: ItineraryTempl
           onClick={goNext}
           disabled={safeIndex >= days.length - 1}
           aria-label="Giorno successivo"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:opacity-35"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:opacity-35"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

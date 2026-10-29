@@ -42,7 +42,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
           <CatalogHeroSearchBar
             value={filters}
             onChange={setFilters}
-            placeholder="Cerca destinazione, date o durata"
+            placeholder="Cerca destinazione"
             resultsId="risultati-partenze"
             durationOptions={durationOptions}
           />
@@ -55,13 +55,13 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
         continent={filters.continent}
         onContinentChange={(continent) => setFilters({ ...filters, continent })}
       >
-        <PrivateTripsSection editions={privateEditions} filters={filters} />
         <OfficialEditionsGrid
           editions={publicEditions}
           filters={filters}
           onFiltersChange={setFilters}
           showFiltersBar={false}
         />
+        <PrivateTripsSection editions={privateEditions} filters={filters} />
       </CatalogBrowseChrome>
     </div>
   );

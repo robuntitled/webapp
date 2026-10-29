@@ -47,17 +47,29 @@ export function Footer({ company }: FooterProps) {
             </p>
           </div>
 
-          <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <Link href="/destinazioni" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link
+              href="/destinazioni"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Cerca viaggi
             </Link>
-            <Link href="/privacy" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link
+              href="/privacy"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Privacy
             </Link>
-            <Link href="/termini" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link
+              href="/termini"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Termini
             </Link>
-            <Link href="/cookie" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link
+              href="/cookie"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Cookie
             </Link>
           </nav>

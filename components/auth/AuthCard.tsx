@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Map, Plane, Users } from 'lucide-react';
 import { mapAuthError } from '@/lib/auth/oauth-errors';
@@ -45,7 +44,6 @@ export function AuthCard() {
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileKey, setTurnstileKey] = useState(0);
   const [postAuthPath, setPostAuthPath] = useState('/onboarding');
-  const router = useRouter();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -98,17 +96,16 @@ export function AuthCard() {
     }
   }, []);
 
-  const absoluteCallback = () => {
-    const path = postAuthPath.startsWith('/') ? postAuthPath : '/onboarding';
-    return `${window.location.origin}${path}`;
-  };
+  /** Solo path relativi: evita redirect cross-host quando AUTH_URL è di produzione. */
+  const relativeCallback = () =>
+    postAuthPath.startsWith('/') ? postAuthPath : '/onboarding';
 
   const handleOAuthSignIn = async (provider: 'google' | 'facebook') => {
     setError('');
     setOauthLoading(provider);
     try {
       await signIn(provider, {
-        callbackUrl: absoluteCallback(),
+        callbackUrl: relativeCallback(),
       });
     } catch {
       setError('Accesso non riuscito. Riprova tra poco.');
@@ -117,7 +114,9 @@ export function AuthCard() {
   };
 
   const goAfterAuth = () => {
-    router.push(postAuthPath.startsWith('/') ? postAuthPath : '/onboarding');
+    const path = relativeCallback();
+    // Hard navigation relativa: non seguire mai result.url assoluti di Auth.js
+    window.location.assign(path);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,6 +125,26 @@ export function AuthCard() {
     setError('');
 
     if (isRegisterMode) {
+      if (!firstName.trim()) {
+        setError('Inserisci il nome.');
+        setIsLoading(false);
+        return;
+      }
+      if (!lastName.trim()) {
+        setError('Inserisci il cognome.');
+        setIsLoading(false);
+        return;
+      }
+      if (!email.trim()) {
+        setError('Inserisci l’email.');
+        setIsLoading(false);
+        return;
+      }
+      if (password.length < 8) {
+        setError('La password deve avere almeno 8 caratteri.');
+        setIsLoading(false);
+        return;
+      }
       if (!privacyAccepted || !termsAccepted) {
         setError("Devi accettare l'informativa privacy e i termini di servizio.");
         setIsLoading(false);
@@ -133,7 +152,9 @@ export function AuthCard() {
       }
 
       if (TURNSTILE_SITE_KEY && !turnstileToken) {
-        setError('Completa la verifica anti-bot prima di registrarti.');
+        setError(
+          'Verifica anti-bot non disponibile o non completata. Riprova tra poco o aggiorna la pagina.'
+        );
         setIsLoading(false);
         return;
       }
@@ -182,7 +203,12 @@ export function AuthCard() {
           return;
         }
 
-        const result = await signIn('credentials', { email, password, redirect: false });
+        const result = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+          callbackUrl: relativeCallback(),
+        });
         if (result?.ok) {
           goAfterAuth();
         } else {
@@ -195,10 +221,22 @@ export function AuthCard() {
       }
     } else {
       try {
+        if (!email.trim()) {
+          setError('Inserisci l’email.');
+          setIsLoading(false);
+          return;
+        }
+        if (!password) {
+          setError('Inserisci la password.');
+          setIsLoading(false);
+          return;
+        }
+
         const result = await signIn('credentials', {
           redirect: false,
           email,
           password,
+          callbackUrl: relativeCallback(),
         });
 
         const code =
@@ -253,7 +291,7 @@ export function AuthCard() {
   };
 
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-dvh">
       <HeroBackground
         images={TRAVEL_HERO_IMAGES}
         overlay="photo"
@@ -261,10 +299,10 @@ export function AuthCard() {
         forceCover
       />
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-4 sm:py-10">
+      <div className="relative z-10 flex min-h-dvh items-start justify-center px-4 py-6 sm:items-center sm:py-10">
         <ScrollReveal
           variant="card"
-          className="relative flex max-h-[min(100dvh-1.5rem,52rem)] w-full max-w-[29.7rem] flex-col overflow-y-auto rounded-[1.35rem] border border-white/80 bg-white/95 p-5 shadow-[0_32px_64px_-24px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-7 space-y-3.5 sm:space-y-4 text-foreground [scrollbar-width:thin]"
+          className="relative mb-[max(1.5rem,var(--cookie-banner-pad,0px))] flex w-full max-w-[29.7rem] flex-col rounded-[1.35rem] border border-white/80 bg-white/95 p-5 shadow-[0_32px_64px_-24px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-7 space-y-3.5 sm:space-y-4 text-foreground"
         >
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-teal-500 to-accent"
@@ -333,6 +371,7 @@ export function AuthCard() {
           <form
             className={cn('space-y-3', isRegisterMode && 'space-y-2.5')}
             onSubmit={handleSubmit}
+            noValidate
           >
             {isRegisterMode && (
               <div className="grid grid-cols-2 gap-2.5">
@@ -410,13 +449,34 @@ export function AuthCard() {
             )}
 
             {isRegisterMode && TURNSTILE_SITE_KEY && (
-              <TurnstileWidget
-                key={turnstileKey}
-                siteKey={TURNSTILE_SITE_KEY}
-                onToken={setTurnstileToken}
-                onExpire={() => setTurnstileToken('')}
-                onError={() => setTurnstileToken('')}
-              />
+              <div className="space-y-2">
+                <TurnstileWidget
+                  key={turnstileKey}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onToken={(token) => {
+                    setTurnstileToken(token);
+                    setError('');
+                  }}
+                  onExpire={() => setTurnstileToken('')}
+                  onError={() => {
+                    setTurnstileToken('');
+                    setError(
+                      'Verifica anti-bot non riuscita (dominio non autorizzato o rete). Tocca Riprova oppure chiedi di aggiungere questo host in Cloudflare Turnstile.'
+                    );
+                  }}
+                />
+                <button
+                  type="button"
+                  className="mx-auto flex min-h-11 items-center justify-center text-sm font-medium text-slate-700 underline underline-offset-2"
+                  onClick={() => {
+                    setTurnstileToken('');
+                    setTurnstileKey((k) => k + 1);
+                    setError('');
+                  }}
+                >
+                  Riprova verifica anti-bot
+                </button>
+              </div>
             )}
 
             {info && (
@@ -452,7 +512,7 @@ export function AuthCard() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-slate-600">
+          <p className="pb-1 text-center text-sm text-slate-600">
             {isRegisterMode ? 'Hai già un account?' : 'Non hai un account?'}{' '}
             <button
               type="button"
@@ -463,17 +523,22 @@ export function AuthCard() {
                 setTurnstileToken('');
                 setTurnstileKey((k) => k + 1);
               }}
-              className="font-medium text-slate-900 underline underline-offset-2"
+              className="inline-flex min-h-11 items-center font-medium text-slate-900 underline underline-offset-2"
             >
               {isRegisterMode ? 'Accedi' : 'Registrati'}
             </button>
           </p>
-          <p className="text-center text-[11px] text-slate-500">
-            <Link href="/privacy" className="underline underline-offset-2">
+          <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pb-2 text-center text-sm text-slate-500">
+            <Link
+              href="/privacy"
+              className="inline-flex min-h-11 items-center underline underline-offset-2"
+            >
               Privacy
             </Link>
-            {' · '}
-            <Link href="/termini" className="underline underline-offset-2">
+            <Link
+              href="/termini"
+              className="inline-flex min-h-11 items-center underline underline-offset-2"
+            >
               Termini
             </Link>
           </p>

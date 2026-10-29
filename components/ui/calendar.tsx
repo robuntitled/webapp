@@ -54,24 +54,24 @@ function Calendar({
           classNames?.month_grid
         ),
         nav: cn(
-          "flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
+          "z-20 flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
           defaultClassNames.nav,
           classNames?.nav
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
+          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none",
           defaultClassNames.button_previous,
           classNames?.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
+          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none",
           defaultClassNames.button_next,
           classNames?.button_next
         ),
         month_caption: cn(
-          "flex items-center justify-center h-(--cell-size) w-full px-(--cell-size)",
+          "pointer-events-none relative z-0 flex items-center justify-center h-11 w-full px-12",
           defaultClassNames.month_caption,
           classNames?.month_caption
         ),
@@ -126,7 +126,7 @@ function Calendar({
         range_middle: cn("rounded-none", defaultClassNames.range_middle, classNames?.range_middle),
         range_end: cn("rounded-r-md bg-accent", defaultClassNames.range_end, classNames?.range_end),
         today: cn(
-          "bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none",
+          "rounded-md bg-transparent text-primary ring-1 ring-primary/45 data-[selected=true]:bg-transparent data-[selected=true]:ring-0",
           defaultClassNames.today,
           classNames?.today
         ),

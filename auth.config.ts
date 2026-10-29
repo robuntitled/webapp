@@ -29,6 +29,27 @@ export const authConfig = {
       if (isProtected) return isLoggedIn;
       return true;
     },
+    /**
+     * Sempre path relativi sicuri. Evita che AUTH_URL (prod) mandi i redirect
+     * delle preview su un altro host: Location relativi restano sull'origine corrente.
+     */
+    async redirect({ url, baseUrl }) {
+      const fallback = '/destinazioni';
+      const toSafePath = (raw: string): string | null => {
+        try {
+          const parsed = raw.startsWith('/')
+            ? new URL(raw, baseUrl)
+            : new URL(raw);
+          const path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+          if (!path.startsWith('/') || path.startsWith('//')) return null;
+          if (path.startsWith('/api') || path.startsWith('/_next')) return null;
+          return path;
+        } catch {
+          return null;
+        }
+      };
+      return toSafePath(url) ?? fallback;
+    },
     async signIn({ user, account }) {
       return handleOAuthSignIn(user, account);
     },

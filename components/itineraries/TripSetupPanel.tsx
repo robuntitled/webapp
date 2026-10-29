@@ -130,12 +130,12 @@ function SetupSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="ws-widget overflow-hidden rounded-2xl">
-      <header className="flex items-start justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-slate-50/70 to-white px-4 py-4 sm:px-5">
+    <section className="ws-widget overflow-hidden rounded-2xl transition-[min-height] duration-300 ease-out">
+      <header className="flex min-h-[4.25rem] items-start justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-slate-50/70 to-white px-4 py-4 sm:px-5">
         <div className="flex min-w-0 items-start gap-3">
           <span
             className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold',
               complete ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
             )}
           >
@@ -152,14 +152,23 @@ function SetupSection({
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold text-primary transition hover:bg-primary/5"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold text-primary transition hover:bg-primary/5"
           >
             <Pencil className="h-3.5 w-3.5" />
             Modifica
           </button>
         ) : null}
       </header>
-      <div className="p-4 sm:p-5">{children}</div>
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-300 ease-out',
+          complete ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="p-4 sm:p-5">{children}</div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -295,7 +304,7 @@ export function TripSetupPanel({
               type="button"
               onClick={() => onDurationChange(t.duration_days)}
               className={cn(
-                'rounded-full px-3.5 py-1.5 text-xs font-semibold transition',
+                'inline-flex min-h-11 items-center rounded-full px-3.5 text-xs font-semibold transition',
                 t.duration_days === duration
                   ? 'bg-primary text-white shadow-sm'
                   : 'border border-slate-200 bg-white text-slate-700 hover:border-primary/40'

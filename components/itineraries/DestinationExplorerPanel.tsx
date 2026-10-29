@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { CATALOG_CONTINENTS } from '@/lib/catalog/destinations';
 import { coverForDestination } from '@/lib/composer/destination-covers';
+import { cn } from '@/lib/utils';
 
 const INITIAL_VISIBLE = 6;
 
@@ -25,43 +26,86 @@ function DestinationStateCard({
   cover: string;
   onSelect: () => void;
 }) {
+  const published = dest.published !== false;
   return (
-    <article className="group overflow-hidden rounded-xl border border-slate-200/90 bg-white transition duration-150 hover:border-primary/35 hover:shadow-sm">
-      <button
-        type="button"
-        onClick={onSelect}
-        className="block w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-      >
-        <div className="relative aspect-[4/3] w-full">
-          <Image
-            src={cover}
-            alt={dest.name}
-            fill
-            className="object-cover transition duration-200 group-hover:scale-[1.03]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-          {dest.published ? (
-            <span className="absolute right-2.5 top-2.5 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
-              Disponibile ora
-            </span>
-          ) : (
-            <span className="absolute right-2.5 top-2.5 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
-              Presto
-            </span>
-          )}
-          <div className="absolute bottom-3 left-3 right-3">
-            <h3 className="font-display text-lg font-semibold leading-tight text-white drop-shadow sm:text-xl">
-              {dest.emoji ? `${dest.emoji} ` : ''}
-              {dest.name}
-            </h3>
-            <p className="mt-0.5 line-clamp-1 text-xs text-white/90 drop-shadow sm:text-sm">
-              {dest.vibe}
+    <article
+      className={cn(
+        'group overflow-hidden rounded-xl border border-slate-200/90 bg-white transition duration-150',
+        published ? 'hover:border-primary/35 hover:shadow-sm' : 'opacity-95'
+      )}
+    >
+      {published ? (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="block w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+        >
+          <DestinationCardMedia dest={dest} cover={cover} published />
+        </button>
+      ) : (
+        <div className="text-left" aria-disabled="true">
+          <DestinationCardMedia dest={dest} cover={cover} published={false} />
+          <div className="space-y-2 border-t border-slate-100 px-3 py-3">
+            <p className="text-xs leading-relaxed text-slate-600">
+              Itinerario in arrivo. Non è ancora prenotabile: per partire ora scegli
+              Thailandia.
             </p>
+            <button
+              type="button"
+              disabled
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-500"
+            >
+              Avvisami (presto)
+            </button>
           </div>
         </div>
-      </button>
+      )}
     </article>
+  );
+}
+
+function DestinationCardMedia({
+  dest,
+  cover,
+  published,
+}: {
+  dest: ExplorerDestination;
+  cover: string;
+  published: boolean;
+}) {
+  return (
+    <div className="relative aspect-[4/3] w-full">
+      <Image
+        src={cover}
+        alt={dest.name}
+        fill
+        className={cn(
+          'object-cover transition duration-200',
+          published && 'group-hover:scale-[1.03]',
+          !published && 'grayscale-[0.25]'
+        )}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+      {published ? (
+        <span className="absolute right-2.5 top-2.5 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
+          Disponibile ora
+        </span>
+      ) : (
+        <span className="absolute right-2.5 top-2.5 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
+          Presto
+        </span>
+      )}
+      <div className="absolute bottom-3 left-3 right-3">
+        <h3 className="font-display text-lg font-semibold leading-tight text-white drop-shadow sm:text-xl">
+          {dest.emoji ? `${dest.emoji} ` : ''}
+          {dest.name}
+        </h3>
+        <p className="mt-0.5 line-clamp-1 text-xs text-white/90 drop-shadow sm:text-sm">
+          {dest.vibe}
+        </p>
+      </div>
+    </div>
   );
 }
 

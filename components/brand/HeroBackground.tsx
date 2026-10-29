@@ -83,9 +83,9 @@ export function HeroBackground({
               src={src}
               alt=""
               fill
-              priority={i < 3}
-              quality={50}
-              sizes="100vw"
+              priority={i === 0}
+              quality={40}
+              sizes="(max-width: 768px) 100vw, 1200px"
               className="scale-110 object-cover blur-2xl brightness-[0.55] saturate-125"
             />
             {/* Foto completa su schermi alti; cover solo se il viewport è abbastanza largo. */}
@@ -93,9 +93,9 @@ export function HeroBackground({
               src={src}
               alt={active ? alt : ''}
               fill
-              priority={i < 3}
-              quality={85}
-              sizes="100vw"
+              priority={i === 0}
+              quality={80}
+              sizes="(max-width: 768px) 100vw, 1920px"
               className={cn(
                 'object-center will-change-transform',
                 forceCover ? 'object-cover' : 'nl-hero-slide',

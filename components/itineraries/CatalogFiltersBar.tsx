@@ -29,7 +29,7 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilterState = {
 };
 
 const inlineFilterBtn =
-  'inline-flex h-7 shrink-0 items-center gap-0.5 rounded-full px-2 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-primary sm:h-8 sm:gap-1 sm:px-2.5 sm:text-[0.8125rem]';
+  'inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full px-2.5 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-primary sm:min-h-11 sm:gap-1 sm:px-3 sm:text-[0.8125rem]';
 
 export function CatalogHeroSearchBar({
   value,
@@ -172,7 +172,7 @@ export function CatalogHeroSearchBar({
         </Popover>
         <button
           type="submit"
-          className="ml-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 sm:ml-1 sm:h-10 sm:w-10"
+          className="ml-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 sm:ml-1"
           aria-label="Avvia ricerca"
         >
           <Search className="h-4 w-4" strokeWidth={2.5} />
@@ -191,22 +191,28 @@ export function ContinentFilterRow({
   onChange: (continent: string) => void;
 }) {
   return (
-    <div className="flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-      {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
-        <button
-          key={r}
-          type="button"
-          onClick={() => onChange(value === r && r !== 'Tutte' ? 'Tutte' : r)}
-          className={cn(
-            'shrink-0 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:min-w-0 sm:flex-1 sm:px-2',
-            value === r
-              ? 'bg-primary text-white'
-              : 'border border-slate-300 bg-white text-slate-800 hover:border-primary hover:text-primary'
-          )}
-        >
-          {r}
-        </button>
-      ))}
+    <div className="relative -mx-1">
+      <div className="flex w-full gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin] sm:overflow-visible">
+        {['Tutte', ...CATALOG_CONTINENTS].map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => onChange(value === r && r !== 'Tutte' ? 'Tutte' : r)}
+            className={cn(
+              'min-h-11 shrink-0 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:min-w-0 sm:flex-1 sm:px-2',
+              value === r
+                ? 'bg-primary text-white'
+                : 'border border-slate-300 bg-white text-slate-800 hover:border-primary hover:text-primary'
+            )}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent sm:hidden"
+        aria-hidden
+      />
     </div>
   );
 }

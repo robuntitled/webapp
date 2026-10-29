@@ -97,14 +97,14 @@ export function PublicLanding({
               asChild
               variant="ghost"
               size="sm"
-              className="h-9 rounded-full px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
+              className="h-11 min-h-11 rounded-full px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
             >
               <Link href={accediHref()}>Accedi</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="h-9 rounded-full bg-accent px-3 font-semibold text-white hover:bg-accent/90 sm:px-3.5"
+              className="h-11 min-h-11 rounded-full bg-accent px-3 font-semibold text-white hover:bg-accent/90 sm:px-3.5"
             >
               <Link href={accediHref(undefined, 'register')}>Registrati</Link>
             </Button>
@@ -315,9 +315,9 @@ export function PublicLanding({
               </Link>
             ))}
             {comingSoon.slice(0, Math.max(2, 3 - featured.length)).map((dest) => (
-              <Link
+              <div
                 key={dest.slug}
-                href="/destinazioni"
+                id={`presto-${dest.slug}`}
                 className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/5 text-left"
               >
                 <div className="relative h-36">
@@ -325,7 +325,7 @@ export function PublicLanding({
                     src={coverForDestination(dest.slug)}
                     alt={dest.name}
                     fill
-                    className="object-cover opacity-90"
+                    className="object-cover opacity-90 grayscale-[0.2]"
                     sizes="(max-width: 640px) 100vw, 33vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -337,9 +337,18 @@ export function PublicLanding({
                   <p className="truncate text-sm font-semibold text-white">
                     {dest.emoji} {dest.name}
                   </p>
-                  <p className="mt-0.5 truncate text-[11px] text-white/75">{dest.vibe}</p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-white/75">
+                    In arrivo — non prenotabile. Per partire ora apri Thailandia.
+                  </p>
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white/70"
+                  >
+                    Avvisami (presto)
+                  </button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
 

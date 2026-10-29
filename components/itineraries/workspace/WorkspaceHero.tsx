@@ -34,7 +34,7 @@ export function WorkspaceHero({
   const cover = coverForDestination(destinationSlug);
 
   const backClassName =
-    'inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/25 px-3 py-1.5 text-sm font-medium text-white/95 backdrop-blur-md transition hover:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50';
+    'inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/20 bg-black/25 px-3.5 py-2 text-sm font-medium text-white/95 backdrop-blur-md transition hover:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50';
 
   return (
     <section className={cn('relative overflow-hidden rounded-2xl sm:rounded-3xl', className)}>

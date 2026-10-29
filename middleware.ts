@@ -1,8 +1,10 @@
 import NextAuth from 'next-auth';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { authConfig } from '@/auth.config';
 import { GDPR_PUBLIC_PATHS, ONBOARDING_PATH } from '@/lib/auth-session';
 import { postLoginPath } from '@/lib/onboarding/steps';
+import { absoluteUrlOnRequest } from '@/lib/auth/request-origin';
 
 const { auth } = NextAuth(authConfig);
 
@@ -13,10 +15,14 @@ function isOnboardingExempt(pathname: string): boolean {
   if (pathname === ONBOARDING_PATH || pathname.startsWith(`${ONBOARDING_PATH}/`)) {
     return true;
   }
-  // Inviti: anteprima e ritorno post-login senza perdere il viaggio
   if (pathname.startsWith('/invito/')) return true;
   if (pathname.startsWith('/api')) return true;
   return false;
+}
+
+/** Redirect sullo stesso host della richiesta (non AUTH_URL / nextUrl riscritto). */
+function redirectOnRequest(req: NextRequest, path: string) {
+  return NextResponse.redirect(absoluteUrlOnRequest(path, req.headers, req.nextUrl.origin));
 }
 
 export default auth((req) => {
@@ -36,7 +42,7 @@ export default auth((req) => {
       q.has('code') ||
       q.get('mode') === 'register'
     ) {
-      const target = new URL('/accedi', req.nextUrl);
+      const target = absoluteUrlOnRequest('/accedi', req.headers, req.nextUrl.origin);
       q.forEach((value, key) => target.searchParams.set(key, value));
       return NextResponse.redirect(target);
     }
@@ -45,28 +51,30 @@ export default auth((req) => {
   if (userId && !privacyOk) {
     const isExempt = GDPR_PUBLIC.has(pathname) || pathname.startsWith('/api');
     if (!isExempt) {
-      return NextResponse.redirect(new URL('/completa-registrazione', req.nextUrl));
+      return redirectOnRequest(req, '/completa-registrazione');
     }
   }
 
   if (pathname === '/completa-registrazione' && userId && privacyOk) {
-    return NextResponse.redirect(
-      new URL(postLoginPath({ onboardingCompleted: onboardingDone }), req.nextUrl)
+    return redirectOnRequest(
+      req,
+      postLoginPath({ onboardingCompleted: onboardingDone })
     );
   }
 
   if (userId && privacyOk && !onboardingDone && !isOnboardingExempt(pathname)) {
-    return NextResponse.redirect(new URL(ONBOARDING_PATH, req.nextUrl));
+    return redirectOnRequest(req, ONBOARDING_PATH);
   }
 
   if (pathname === ONBOARDING_PATH && userId && privacyOk && onboardingDone) {
-    return NextResponse.redirect(new URL('/destinazioni', req.nextUrl));
+    return redirectOnRequest(req, '/destinazioni');
   }
 
   // Utenti loggati: home e login → area app (la landing resta per i visitatori)
   if ((pathname === '/' || pathname === '/accedi') && userId && privacyOk) {
-    return NextResponse.redirect(
-      new URL(postLoginPath({ onboardingCompleted: onboardingDone }), req.nextUrl)
+    return redirectOnRequest(
+      req,
+      postLoginPath({ onboardingCompleted: onboardingDone })
     );
   }
 
