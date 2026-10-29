@@ -11,7 +11,7 @@ import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
 import { itineraryPath } from '@/lib/itineraries/params';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { TRAVEL_HERO_IMAGES } from '@/lib/brand/travel-heroes';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
@@ -52,16 +52,6 @@ export type LandingEdition = {
   durationDays: number | null;
 };
 
-/** Hero: Thailandia + slide di viaggio esistenti (niente skyline notturno in testa). */
-const LANDING_HERO_IMAGES = [
-  coverForDestination('thailandia'),
-  coverForDestination('grecia'),
-  coverForDestination('giappone'),
-  BRAND_IMAGES.heroes.slideshow[1]!,
-  BRAND_IMAGES.heroes.slideshow[2]!,
-  BRAND_IMAGES.heroes.slideshow[3]!,
-] as const;
-
 type Props = {
   featured: LandingDestination[];
   comingSoon: LandingDestination[];
@@ -86,59 +76,60 @@ export function PublicLanding({
 
   return (
     <div className="overflow-x-hidden bg-stone-50 text-stone-900">
-      <section className="relative isolate min-h-[min(100dvh,52rem)] overflow-hidden sm:min-h-[100dvh]">
+      <section className="relative isolate flex min-h-[min(100dvh,40rem)] flex-col overflow-hidden sm:min-h-[100dvh]">
         <HeroBackground
-          images={[...LANDING_HERO_IMAGES]}
+          images={[...TRAVEL_HERO_IMAGES]}
           overlay="photo"
           parallax
           intervalMs={7000}
+          forceCover
         />
-        {/* Gradiente verticale leggero per AA sul testo, senza schiacciare la foto */}
+        {/* Gradiente verticale leggero per AA sul testo, senza letterbox scuro */}
         <div
-          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-stone-950/30 via-transparent to-stone-950/50"
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-stone-950/45 via-stone-950/15 to-stone-950/55"
           aria-hidden
         />
 
-        <header className="relative z-20 flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4">
+        <header className="relative z-20 flex items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-8 sm:py-4">
           <BrandLogo size={36} priority className="drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
           <nav
-            className="hidden items-center gap-1 md:flex"
+            className="flex min-w-0 flex-1 items-center justify-center gap-0.5 sm:gap-1"
             aria-label="Navigazione principale"
           >
             <Link
               href="/destinazioni"
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
+              className="rounded-full px-2.5 py-1.5 text-xs font-medium text-white/95 hover:bg-white/10 sm:px-3 sm:text-sm"
             >
               Destinazioni
             </Link>
             <Link
               href="/partenze"
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
+              className="rounded-full px-2.5 py-1.5 text-xs font-medium text-white/95 hover:bg-white/10 sm:px-3 sm:text-sm"
             >
-              Unisciti
+              Partenze
             </Link>
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="h-9 rounded-full px-3 text-white/95 hover:bg-white/10 hover:text-white"
+              className="h-9 rounded-full px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
             >
               <Link href={accediHref()}>Accedi</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="h-9 rounded-full bg-accent px-3.5 font-semibold text-white hover:bg-accent/90"
+              className="h-9 rounded-full bg-accent px-3 font-semibold text-white hover:bg-accent/90 sm:px-3.5"
             >
               <Link href={accediHref(undefined, 'register')}>Registrati</Link>
             </Button>
           </div>
         </header>
 
-        <div className="relative z-10 flex flex-col items-center justify-center px-4 pb-14 pt-8 text-center sm:min-h-[calc(100dvh-4.5rem)] sm:pb-20 sm:pt-6">
-          <div className="max-w-3xl animate-[nl-landing-in_700ms_ease_both]">
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-16 pt-4 text-center sm:pb-20 sm:pt-6">
+          <div className="max-w-3xl motion-safe:animate-[nl-landing-in_700ms_ease_forwards]">
             <p className="font-display text-[clamp(2.1rem,7vw,4rem)] font-semibold leading-[0.95] tracking-[-0.03em] text-white [text-shadow:0_2px_28px_rgba(0,0,0,0.55)]">
               Flygetr
             </p>
@@ -150,7 +141,7 @@ export function PublicLanding({
               proprio.
             </p>
             {thailandia ? (
-              <p className="mx-auto mt-4 inline-flex max-w-lg flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm text-white backdrop-blur-sm">
+              <p className="mx-auto mt-4 inline-flex max-w-lg flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-white/35 bg-black/35 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-sm">
                 <span className="font-semibold">Thailandia</span>
                 <span className="text-white/70">·</span>
                 <span>
@@ -176,14 +167,6 @@ export function PublicLanding({
                 <Link href="/partenze">Unisciti a una partenza</Link>
               </Button>
             </div>
-            <div className="mt-4 flex justify-center gap-4 text-sm text-white/90 md:hidden">
-              <Link href="/destinazioni" className="underline-offset-2 hover:underline">
-                Destinazioni
-              </Link>
-              <Link href="/partenze" className="underline-offset-2 hover:underline">
-                Unisciti
-              </Link>
-            </div>
           </div>
         </div>
       </section>
@@ -203,8 +186,10 @@ export function PublicLanding({
           {STEPS.map(({ Icon, title, body }, i) => (
             <li
               key={title}
-              className="space-y-3"
-              style={{ animation: `nl-landing-in 600ms ease ${i * 80}ms both` }}
+              className="space-y-3 motion-reduce:!animate-none"
+              style={{
+                animation: `nl-landing-in 600ms ease ${i * 80}ms forwards`,
+              }}
             >
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <Icon className="h-5 w-5" aria-hidden />
@@ -273,14 +258,14 @@ export function PublicLanding({
           }}
           aria-hidden
         />
-        <div className="nl-page relative z-10 w-full text-white">
+        <div className="nl-page relative z-10 w-full !text-white">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             Destinazioni
           </p>
-          <h2 className="mt-2 max-w-xl font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h2 className="mt-2 max-w-xl font-display text-3xl font-semibold tracking-tight !text-white sm:text-4xl">
             Parti da un itinerario ufficiale.
           </h2>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/85">
+          <p className="mt-3 max-w-xl text-sm leading-relaxed !text-white/90">
             {COMPLIANCE_COPY.budgetLabel}: stime, non un prezzo del pacchetto. Ogni servizio ha
             contratto e fornitore propri.
           </p>
@@ -370,14 +355,14 @@ export function PublicLanding({
         </div>
       </section>
 
-      <section className="nl-page w-full py-14 text-center sm:py-20">
-        <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+      <section className="nl-page w-full py-14 pb-[max(3.5rem,calc(var(--cookie-banner-pad,0px)+2rem))] text-center sm:py-20 sm:pb-[max(5rem,calc(var(--cookie-banner-pad,0px)+2.5rem))]">
+        <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 opacity-100 sm:text-4xl">
           Pronto a organizzare il viaggio?
         </h2>
-        <p className="mx-auto mt-3 max-w-lg text-base text-stone-600">
+        <p className="mx-auto mt-3 max-w-lg text-base text-stone-600 opacity-100">
           Esplora gli itinerari o crea un account per salvare la pratica e invitare gli amici.
         </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 opacity-100 sm:flex-row">
           <Button asChild size="lg" className="h-12 rounded-full px-7 font-semibold">
             <Link href="/destinazioni">Esplora</Link>
           </Button>

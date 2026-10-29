@@ -41,6 +41,21 @@ export function CookieBanner() {
     if (!readConsent()) setVisible(true);
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    if (visible) {
+      root.style.setProperty('--cookie-banner-pad', '5.5rem');
+      root.dataset.cookieBanner = '1';
+    } else {
+      root.style.removeProperty('--cookie-banner-pad');
+      delete root.dataset.cookieBanner;
+    }
+    return () => {
+      root.style.removeProperty('--cookie-banner-pad');
+      delete root.dataset.cookieBanner;
+    };
+  }, [visible]);
+
   const accept = () => {
     persistConsent();
     setVisible(false);

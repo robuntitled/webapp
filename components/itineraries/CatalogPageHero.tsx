@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { HeroBackground } from '@/components/brand/HeroBackground';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { TRAVEL_HERO_IMAGES } from '@/lib/brand/travel-heroes';
 import { cn } from '@/lib/utils';
 
 export function CatalogPageHero({
@@ -26,10 +26,11 @@ export function CatalogPageHero({
     >
       <div className="absolute inset-0 overflow-hidden">
         <HeroBackground
-          images={BRAND_IMAGES.heroes.slideshow}
+          images={TRAVEL_HERO_IMAGES}
           overlay="dark"
           className="!z-0"
           intervalMs={6500}
+          forceCover
         />
       </div>
 

@@ -38,14 +38,18 @@ const calendarClassNames = {
   root: 'w-full min-w-0',
   months: 'relative flex w-full min-w-0 flex-col gap-6 2xl:flex-row 2xl:gap-8',
   month: 'w-full min-w-0 space-y-3',
+  // MonthGrid è un <table>: table-fixed tiene 7 colonne a larghezza uguale.
+  // Non usare display:grid su <tr> — collassa i giorni a sinistra (es. "282930").
+  month_grid: 'w-full min-w-0 table-fixed border-collapse',
   month_caption: 'relative mb-2 flex h-10 items-center justify-center',
   caption_label: 'text-sm font-semibold capitalize text-slate-900 sm:text-base',
   nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
-  weekdays: 'mb-1 grid w-full grid-cols-7 gap-0',
+  weekdays: 'mb-1 w-full',
   weekday:
-    'text-center text-[0.72rem] font-semibold uppercase tracking-normal text-slate-700 sm:text-[0.8rem]',
-  week: 'mt-1 grid w-full grid-cols-7',
-  day: 'aspect-square min-w-0 p-0',
+    'w-[14.2857%] p-0 text-center text-[0.72rem] font-semibold uppercase tracking-normal text-slate-700 sm:text-[0.8rem]',
+  week: 'mt-1 w-full',
+  day: 'h-auto w-[14.2857%] p-0 align-middle',
+  day_button: 'h-full w-full min-w-0',
   range_start: 'rounded-l-full bg-primary/15',
   range_middle: 'rounded-none bg-primary/10',
   range_end: 'rounded-r-full bg-primary/15',

@@ -14,6 +14,8 @@ type HeroBackgroundProps = {
   intervalMs?: number;
   /** Scroll-linked parallax on the hero imagery. */
   parallax?: boolean;
+  /** Sempre object-cover (niente letterbox scuro su mobile). */
+  forceCover?: boolean;
 };
 
 export function HeroBackground({
@@ -23,6 +25,7 @@ export function HeroBackground({
   className,
   intervalMs = 8000,
   parallax = false,
+  forceCover = false,
 }: HeroBackgroundProps) {
   const [index, setIndex] = useState(0);
   const [cssParallax, setCssParallax] = useState(false);
@@ -94,7 +97,8 @@ export function HeroBackground({
               quality={85}
               sizes="100vw"
               className={cn(
-                'nl-hero-slide object-center will-change-transform',
+                'object-center will-change-transform',
+                forceCover ? 'object-cover' : 'nl-hero-slide',
                 active && 'nl-hero-slide-active'
               )}
               style={active && jsParallaxTransform ? { transform: jsParallaxTransform } : undefined}

@@ -13,7 +13,7 @@ const LINKS = [
   },
   {
     href: '/partenze',
-    label: 'Unisciti',
+    label: 'Partenze',
     match: (pathname: string) => pathname.startsWith('/partenze'),
   },
   {

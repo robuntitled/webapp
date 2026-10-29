@@ -13,7 +13,7 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { ScrollReveal } from '@/components/animations/ScrollReveal';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { TRAVEL_HERO_IMAGES } from '@/lib/brand/travel-heroes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -254,7 +254,12 @@ export function AuthCard() {
 
   return (
     <main className="relative min-h-screen">
-      <HeroBackground images={BRAND_IMAGES.heroes.slideshow} overlay="photo" parallax />
+      <HeroBackground
+        images={TRAVEL_HERO_IMAGES}
+        overlay="photo"
+        parallax
+        forceCover
+      />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-4 sm:py-10">
         <ScrollReveal

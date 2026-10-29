@@ -67,8 +67,13 @@ export default async function RootLayout({
           </div>
           <CookieBanner />
           <Toaster richColors position="top-right" />
-          <Analytics />
-          <SpeedInsights />
+          {/* Evita 404 console su preview senza Analytics/Insights abilitati */}
+          {process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' ? (
+            <>
+              <Analytics />
+              <SpeedInsights />
+            </>
+          ) : null}
         </Providers>
       </body>
     </html>

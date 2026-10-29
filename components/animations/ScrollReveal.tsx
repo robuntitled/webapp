@@ -16,8 +16,8 @@ type ScrollRevealProps = {
 };
 
 /**
- * One-shot fade-in when the element enters the viewport.
- * Avoids view-timeline animations that can leave content stuck at low opacity.
+ * Fade-in progressivo: contenuto VISIBILE di default (SSR, screenshot, no-JS).
+ * L'animazione parte solo dopo mount + IntersectionObserver, con prefers-reduced-motion.
  */
 export function ScrollReveal({
   children,
@@ -28,22 +28,34 @@ export function ScrollReveal({
 }: ScrollRevealProps) {
   const ref = useRef<HTMLElement>(null);
   const reduced = usePrefersReducedMotion();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
     if (reduced) {
       setVisible(true);
+      setAnimate(false);
       return;
     }
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+
     const el = ref.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
+        if (!entry) return;
+        if (entry.isIntersecting) {
           setVisible(true);
           observer.disconnect();
+          return;
         }
+        // Solo se fuori viewport: prepara l'ingresso (mai opacity-0 prima del mount).
+        setAnimate(true);
+        setVisible(false);
       },
       { rootMargin: '0px 0px -8% 0px', threshold: 0.12 }
     );
@@ -51,23 +63,22 @@ export function ScrollReveal({
     return () => observer.disconnect();
   }, [reduced]);
 
-  if (reduced) {
-    return <Tag className={className}>{children}</Tag>;
-  }
-
   const delayMs = Math.min(stagger, 6) * 70;
   const y = variant === 'title' ? 20 : variant === 'card' ? 14 : 8;
 
-  const style: CSSProperties = {
-    opacity: visible ? 1 : 0,
-    transform: visible ? 'translate3d(0,0,0)' : `translate3d(0, ${y}px, 0)`,
-    transition: `opacity 520ms ease ${delayMs}ms, transform 520ms ease ${delayMs}ms`,
-  };
+  const style: CSSProperties | undefined =
+    animate && !reduced
+      ? {
+          opacity: visible ? 1 : 0.01,
+          transform: visible ? 'translate3d(0,0,0)' : `translate3d(0, ${y}px, 0)`,
+          transition: `opacity 520ms ease ${delayMs}ms, transform 520ms ease ${delayMs}ms`,
+        }
+      : undefined;
 
   return (
     <Tag
       ref={ref as Ref<HTMLDivElement & HTMLLIElement & HTMLElement>}
-      className={cn(className)}
+      className={cn('opacity-100', className)}
       style={style}
     >
       {children}

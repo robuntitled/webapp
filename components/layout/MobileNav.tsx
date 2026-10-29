@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 const LINKS = [
   { href: '/destinazioni', label: 'Destinazioni' },
-  { href: '/partenze', label: 'Unisciti' },
+  { href: '/partenze', label: 'Partenze' },
   { href: '/pratiche', label: 'I miei viaggi', auth: true },
   { href: '/dashboard/bacheca', label: 'Bacheca', auth: true },
   { href: '/dashboard/preferiti', label: 'Preferiti', auth: true },
