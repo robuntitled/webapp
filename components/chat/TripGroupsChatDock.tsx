@@ -435,6 +435,8 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
       <Button
         type="button"
         size="lg"
+        aria-label={open ? 'Chiudi chat di gruppo' : 'Apri chat di gruppo'}
+        title={open ? 'Chiudi chat' : 'Chat di gruppo'}
         className={cn(
           'relative h-12 min-w-[9.5rem] gap-2 rounded-full border border-white/10 bg-[#0b1220]/92 px-6 font-semibold text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md',
           'hover:bg-[#161d2b] hover:text-white',
@@ -442,7 +444,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
         )}
         onClick={() => setOpen((v) => !v)}
       >
-        <MessageCircle className="h-5 w-5 text-accent" />
+        <MessageCircle className="h-5 w-5 text-accent" aria-hidden />
         <span>{open ? 'Chiudi' : 'Chat'}</span>
         {!open && badge && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#0b1220]">

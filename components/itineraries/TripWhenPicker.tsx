@@ -41,9 +41,11 @@ const calendarClassNames = {
   month_caption: 'relative mb-2 flex h-10 items-center justify-center',
   caption_label: 'text-sm font-semibold capitalize text-slate-900 sm:text-base',
   nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
-  weekday: 'flex-1 text-center text-[0.65rem] font-bold uppercase tracking-wider text-slate-400',
-  week: 'mt-1 flex w-full',
-  day: 'aspect-square min-w-0 flex-1 p-0',
+  weekdays: 'mb-1 grid w-full grid-cols-7 gap-0',
+  weekday:
+    'text-center text-[0.72rem] font-semibold uppercase tracking-normal text-slate-700 sm:text-[0.8rem]',
+  week: 'mt-1 grid w-full grid-cols-7',
+  day: 'aspect-square min-w-0 p-0',
   range_start: 'rounded-l-full bg-primary/15',
   range_middle: 'rounded-none bg-primary/10',
   range_end: 'rounded-r-full bg-primary/15',
@@ -51,6 +53,9 @@ const calendarClassNames = {
   outside: 'text-slate-300 opacity-50',
   disabled: 'text-slate-200 opacity-40',
 } as const;
+
+/** Una lettera: evita LUNMARMER… schiacciati nelle celle strette. */
+const WEEKDAY_SHORT = ['L', 'M', 'M', 'G', 'V', 'S', 'D'] as const;
 
 export type TripWhenSelection = {
   dateFrom: Date;
@@ -324,6 +329,9 @@ export function TripWhenPicker({
                 onSelect={onRangeSelect}
                 disabled={(d) => d < startOfDay(new Date())}
                 defaultMonth={range?.from ?? fridayHints[0]}
+                formatters={{
+                  formatWeekdayName: (date) => WEEKDAY_SHORT[(date.getDay() + 6) % 7]!,
+                }}
                 className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.15rem] sm:[--cell-size:2.4rem] [&_button[data-day]]:min-w-0"
                 classNames={calendarClassNames}
               />
@@ -336,6 +344,9 @@ export function TripWhenPicker({
                 onSelect={onSingleSelect}
                 disabled={(d) => d < startOfDay(new Date())}
                 defaultMonth={single ?? fridayHints[0]}
+                formatters={{
+                  formatWeekdayName: (date) => WEEKDAY_SHORT[(date.getDay() + 6) % 7]!,
+                }}
                 className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.15rem] sm:[--cell-size:2.4rem] [&_button[data-day]]:min-w-0"
                 classNames={calendarClassNames}
               />

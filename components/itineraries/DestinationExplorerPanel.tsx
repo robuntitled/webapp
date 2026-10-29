@@ -41,11 +41,15 @@ function DestinationStateCard({
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-          {dest.published === false ? (
-            <span className="absolute right-2.5 top-2.5 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+          {dest.published ? (
+            <span className="absolute right-2.5 top-2.5 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
+              Disponibile ora
+            </span>
+          ) : (
+            <span className="absolute right-2.5 top-2.5 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
               Presto
             </span>
-          ) : null}
+          )}
           <div className="absolute bottom-3 left-3 right-3">
             <h3 className="font-display text-lg font-semibold leading-tight text-white drop-shadow sm:text-xl">
               {dest.emoji ? `${dest.emoji} ` : ''}

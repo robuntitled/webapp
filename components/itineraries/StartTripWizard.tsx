@@ -104,8 +104,7 @@ export function StartTripWizard({
   return (
     <div
       className={cn(
-        'composer-shell relative min-h-[calc(100vh-4rem)] bg-white',
-        'overflow-visible'
+        'composer-shell relative min-h-[calc(100vh-4rem)] overflow-x-hidden bg-white'
       )}
     >
       {step === 'dest' ? (

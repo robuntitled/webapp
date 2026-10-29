@@ -33,7 +33,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
   );
 
   return (
-    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-visible bg-white">
+    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-x-hidden bg-white">
       <CatalogPageHero
         compact
         title="Un posto nel gruppo, già pronto."

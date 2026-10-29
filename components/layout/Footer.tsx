@@ -7,10 +7,12 @@ import type { CompanyProfile } from '@/lib/privacy/company';
 
 function hideSiteFooter(pathname: string | null): boolean {
   if (!pathname) return false;
-  if (pathname === '/') return true;
-  if (pathname.startsWith('/itinerario')) return true;
+  // Auth / onboarding / workspace immersivi: niente footer.
+  // Home e itinerario pubblici lo mostrano (navigazione e fiducia).
+  if (pathname === '/accedi') return true;
   if (pathname.startsWith('/pratica')) return true;
   if (pathname.startsWith('/onboarding')) return true;
+  if (pathname.startsWith('/completa-registrazione')) return true;
   if (/^\/partenze\/[^/]+/.test(pathname)) return true;
   return false;
 }

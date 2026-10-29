@@ -92,8 +92,8 @@ function SetupProgress({
             </div>
             <span
               className={cn(
-                'hidden truncate text-xs font-semibold sm:block',
-                complete || active ? 'text-slate-800' : 'text-slate-400'
+                'truncate text-sm font-semibold',
+                complete || active ? 'text-slate-900' : 'text-slate-700'
               )}
             >
               {step.label}

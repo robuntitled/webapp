@@ -44,6 +44,15 @@ function missing(error: { code?: string; message?: string } | null) {
   return error?.code === '42P01' || error?.code === '42703';
 }
 
+/** Solo partenze con inizio oggi o futuro (ISO yyyy-mm-dd). */
+function isUpcomingEdition(dateFrom: string): boolean {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  return dateFrom.slice(0, 10) >= `${y}-${m}-${d}`;
+}
+
 export async function listJoinableEditions(templateId?: string): Promise<EditionRow[]> {
   let query = supabaseAdmin
     .from('editions')
@@ -57,7 +66,9 @@ export async function listJoinableEditions(templateId?: string): Promise<Edition
     return fallbackOfficial(templateId);
   }
 
-  const rows = data as EditionRow[];
+  const rows = (data as EditionRow[]).filter((row) => isUpcomingEdition(String(row.date_from)));
+  if (!rows.length) return fallbackOfficial(templateId);
+
   const withCounts = await Promise.all(
     rows.map(async (row) => {
       const [{ count: confirmed }, { count: interested }] = await Promise.all([
@@ -89,19 +100,20 @@ export async function listOfficialEditions(templateId?: string): Promise<Edition
 }
 
 function fallbackOfficial(templateId?: string): EditionRow[] {
-  return OFFICIAL_EDITION_SEEDS.filter((s) => !templateId || s.template_id === templateId).map(
-    (s, i) => ({
-      id: `seed-${s.template_id}-${i}`,
-      template_id: s.template_id,
-      date_from: s.date_from,
-      date_to: s.date_to,
-      edition_type: 'official' as const,
-      min_confirmed: s.min_confirmed,
-      status: 'open' as const,
-      invite_token: null,
-      confirmed_count: 0,
-    })
-  );
+  return OFFICIAL_EDITION_SEEDS.filter(
+    (s) =>
+      (!templateId || s.template_id === templateId) && isUpcomingEdition(s.date_from)
+  ).map((s, i) => ({
+    id: `seed-${s.template_id}-${i}`,
+    template_id: s.template_id,
+    date_from: s.date_from,
+    date_to: s.date_to,
+    edition_type: 'official' as const,
+    min_confirmed: s.min_confirmed,
+    status: 'open' as const,
+    invite_token: null,
+    confirmed_count: 0,
+  }));
 }
 
 export async function getEdition(id: string): Promise<EditionRow | null> {

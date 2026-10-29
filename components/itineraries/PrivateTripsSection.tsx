@@ -13,6 +13,7 @@ import { editionScarcity, editionThresholdProgress } from '@/lib/itineraries/edi
 import { editionDestinationSlug } from '@/lib/itineraries/public-destinations';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
 import type { CatalogFilterState } from '@/components/itineraries/CatalogFiltersBar';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatItDate } from '@/lib/itineraries/dates';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,19 @@ function durationFromId(templateId: string, fallback?: number | null) {
   if (fallback != null) return fallback;
   const m = templateId.match(/-(\d+)d(?:-|$)/i);
   return m ? Number(m[1]) : null;
+}
+
+function durationFromDates(dateFrom: string, dateTo: string): number | null {
+  try {
+    const days =
+      differenceInCalendarDays(
+        parseISO(dateTo.slice(0, 10)),
+        parseISO(dateFrom.slice(0, 10))
+      ) + 1;
+    return days > 0 ? days : null;
+  } catch {
+    return null;
+  }
 }
 
 export function PrivateTripsSection({
@@ -71,7 +85,9 @@ export function PrivateTripsSection({
         const tpl = findItineraryTemplate(ed.template_id);
         const slug = editionDestinationSlug(ed);
         const dest = findCatalogDestination(slug) ?? findCatalogDestination(ed.template_id);
-        const days = durationFromId(ed.template_id, tpl?.duration_days);
+        const days =
+          durationFromDates(String(ed.date_from), String(ed.date_to)) ??
+          durationFromId(ed.template_id, tpl?.duration_days);
         return {
           ed,
           tpl,
@@ -184,7 +200,7 @@ export function PrivateTripsSection({
           <ul
             ref={scrollerRef}
             onScroll={measurePages}
-            className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+            className="flex max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
           >
             {items.map(({ dest: _d, name: _n, continent: _c, ...item }) => (
               <li

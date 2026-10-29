@@ -11,6 +11,7 @@ import {
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatEditionDateRange, formatItDate } from '@/lib/itineraries/dates';
 import {
   editionBadgeDisplay,
@@ -32,6 +33,20 @@ function durationFromId(templateId: string, fallback?: number | null) {
   if (fallback != null) return fallback;
   const m = templateId.match(/-(\d+)d(?:-|$)/i);
   return m ? Number(m[1]) : null;
+}
+
+/** Giorni inclusivi dal range date (fonte di verità per la label). */
+function durationFromDates(dateFrom: string, dateTo: string): number | null {
+  try {
+    const days =
+      differenceInCalendarDays(
+        parseISO(dateTo.slice(0, 10)),
+        parseISO(dateFrom.slice(0, 10))
+      ) + 1;
+    return days > 0 ? days : null;
+  } catch {
+    return null;
+  }
 }
 
 const SCARCITY_STYLES = {
@@ -161,7 +176,7 @@ export function EditionCard({
         <div className={dense ? 'space-y-0' : 'space-y-0.5'}>
           <p
             className={cn(
-              'font-medium leading-snug text-slate-700',
+              'font-medium leading-snug text-slate-800',
               dense
                 ? 'text-[0.8rem]'
                 : 'text-[clamp(0.92rem,0.2vw+0.86rem,1rem)]'
@@ -169,18 +184,18 @@ export function EditionCard({
           >
             {formatEditionDateRange(ed.date_from, ed.date_to)}
             {dense && tripDuration ? (
-              <span className="text-slate-500"> · {tripDuration}</span>
+              <span className="text-slate-600"> · {tripDuration}</span>
             ) : null}
           </p>
           {!dense && tripDuration ? (
-            <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-500">
+            <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-600">
               {tripDuration}
             </p>
           ) : null}
         </div>
 
         {participants && !dense ? (
-          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-600">
+          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-700">
             {participants}
           </p>
         ) : null}
@@ -195,7 +210,7 @@ export function EditionCard({
           {!dense ? (
             <p
               id={`group-status-${ed.id}`}
-              className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-400"
+              className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-600"
             >
               Soglia voli
             </p>
@@ -230,7 +245,7 @@ export function EditionCard({
             />
           </div>
           {!dense ? (
-            <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-500">
+            <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-600">
               {groupHint}
             </p>
           ) : null}
@@ -286,7 +301,9 @@ export function OfficialEditionsGrid({
         const tpl = findItineraryTemplate(ed.template_id);
         const slug = editionDestinationSlug(ed);
         const dest = findCatalogDestination(slug) ?? findCatalogDestination(ed.template_id);
-        const days = durationFromId(ed.template_id, tpl?.duration_days);
+        const days =
+          durationFromDates(String(ed.date_from), String(ed.date_to)) ??
+          durationFromId(ed.template_id, tpl?.duration_days);
         const scarcity = editionScarcity(ed);
         const progress = editionThresholdProgress(ed.confirmed_count ?? 0, ed.min_confirmed);
         return {
