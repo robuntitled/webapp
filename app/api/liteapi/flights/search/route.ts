@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { guardPaidApi } from '@/lib/api/request-guard';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { searchFlightRates } from '@/lib/liteapi/flights';
@@ -22,12 +22,19 @@ const schema = z.object({
 });
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: 'Accedi per cercare voli.', code: 'auth_required' },
-      { status: 401 }
-    );
+  const gate = await guardPaidApi(request, 'liteapi-flights-search', {
+    perUser: 20,
+    perIp: 40,
+    windowMs: 60_000,
+  });
+  if ('error' in gate) {
+    if (gate.error.status === 401) {
+      return NextResponse.json(
+        { error: 'Accedi per cercare voli.', code: 'auth_required' },
+        { status: 401 }
+      );
+    }
+    return gate.error;
   }
 
   if (!isLiteApiConfigured()) {

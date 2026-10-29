@@ -17,6 +17,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/actions/notifications';
+import { useIntervalWhenVisible } from '@/hooks/useIntervalWhenVisible';
 
 type NotificationItem = {
   id: string;
@@ -61,11 +62,9 @@ export function NotificationBell() {
     }
   }, []);
 
-  useEffect(() => {
+  useIntervalWhenVisible(() => {
     void load();
-    const t = setInterval(() => void load(), 30_000);
-    return () => clearInterval(t);
-  }, [load]);
+  }, 60_000);
 
   useEffect(() => {
     if (open) void load();

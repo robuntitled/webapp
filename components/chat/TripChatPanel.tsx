@@ -8,6 +8,7 @@ import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import { MessageCircle, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TripMessageRow } from '@/lib/data/trip-chat';
+import { useIntervalWhenVisible } from '@/hooks/useIntervalWhenVisible';
 
 type TripChatPanelProps = {
   tripId: string;
@@ -88,13 +89,16 @@ export function TripChatPanel({
 
     void loadMessages(false).finally(() => setLoading(false));
     void fetch(`/api/chat/groups/${tripId}/read`, { method: 'POST' });
-
-    const interval = setInterval(() => {
-      void loadMessages(true);
-    }, 3000);
-
-    return () => clearInterval(interval);
   }, [canAccess, loadMessages, tripId]);
+
+  // 10s invece di 3s; pausa con scheda nascosta (Realtime = follow-up)
+  useIntervalWhenVisible(
+    () => {
+      void loadMessages(true);
+    },
+    canAccess ? 10_000 : null,
+    { runOnMount: false }
+  );
 
   const sendMessage = async () => {
     const body = text.trim();

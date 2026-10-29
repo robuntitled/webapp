@@ -20,6 +20,7 @@ import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useIntervalWhenVisible } from '@/hooks/useIntervalWhenVisible';
 
 type TripGroupsChatDockProps = {
   currentUserId: string;
@@ -86,11 +87,9 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     }
   }, []);
 
-  useEffect(() => {
+  useIntervalWhenVisible(() => {
     void loadGroups();
-    const interval = setInterval(() => void loadGroups(), 30_000);
-    return () => clearInterval(interval);
-  }, [loadGroups]);
+  }, 60_000);
 
   useEffect(() => {
     if (!open || tab !== 'friends') return;
