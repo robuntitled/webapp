@@ -90,26 +90,9 @@ export function PublicLanding({
           aria-hidden
         />
 
-        <header className="relative z-20 flex items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-8 sm:py-4">
+        <header className="relative z-20 flex flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-3 sm:px-8 sm:py-4">
           <BrandLogo size={36} priority className="drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
-          <nav
-            className="flex min-w-0 flex-1 items-center justify-center gap-0.5 sm:gap-1"
-            aria-label="Navigazione principale"
-          >
-            <Link
-              href="/destinazioni"
-              className="rounded-full px-2.5 py-1.5 text-xs font-medium text-white/95 hover:bg-white/10 sm:px-3 sm:text-sm"
-            >
-              Destinazioni
-            </Link>
-            <Link
-              href="/partenze"
-              className="rounded-full px-2.5 py-1.5 text-xs font-medium text-white/95 hover:bg-white/10 sm:px-3 sm:text-sm"
-            >
-              Partenze
-            </Link>
-          </nav>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:order-last sm:ml-0 sm:gap-2">
             <Button
               asChild
               variant="ghost"
@@ -126,6 +109,23 @@ export function PublicLanding({
               <Link href={accediHref(undefined, 'register')}>Registrati</Link>
             </Button>
           </div>
+          <nav
+            className="flex w-full items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-center"
+            aria-label="Navigazione principale"
+          >
+            <Link
+              href="/destinazioni"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
+            >
+              Destinazioni
+            </Link>
+            <Link
+              href="/partenze"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
+            >
+              Partenze
+            </Link>
+          </nav>
         </header>
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-16 pt-4 text-center sm:pb-20 sm:pt-6">
