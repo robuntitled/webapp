@@ -1,10 +1,13 @@
 import NextAuth from 'next-auth';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextFetchEvent, NextRequest } from 'next/server';
 import { authConfig } from '@/auth.config';
 import { GDPR_PUBLIC_PATHS, ONBOARDING_PATH } from '@/lib/auth-session';
 import { postLoginPath } from '@/lib/onboarding/steps';
-import { absoluteUrlOnRequest } from '@/lib/auth/request-origin';
+import {
+  absoluteUrlOnRequest,
+  rewriteAuthResponseToRequestHost,
+} from '@/lib/auth/request-origin';
 
 const { auth } = NextAuth(authConfig);
 
@@ -25,14 +28,17 @@ function redirectOnRequest(req: NextRequest, path: string) {
   return NextResponse.redirect(absoluteUrlOnRequest(path, req.headers, req.nextUrl.origin));
 }
 
-export default auth((req) => {
+/**
+ * Auth.js con AUTH_URL di prod riscrive nextUrl e setta callback-url sul dominio
+ * sbagliato anche dal middleware. Riscriviamo Location/Set-Cookie sull'host reale.
+ */
+const authMiddleware = auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
   const userId = session?.user?.id;
   const privacyOk = Boolean(session?.user?.privacyConsentAccepted);
   const onboardingDone = Boolean(session?.user?.onboardingCompleted);
 
-  // Legacy: auth era su `/` — preserva callback/verify/error/ref verso `/accedi`
   if (pathname === '/' && !userId) {
     const q = req.nextUrl.searchParams;
     if (
@@ -70,7 +76,6 @@ export default auth((req) => {
     return redirectOnRequest(req, '/destinazioni');
   }
 
-  // Utenti loggati: home e login → area app (la landing resta per i visitatori)
   if ((pathname === '/' || pathname === '/accedi') && userId && privacyOk) {
     return redirectOnRequest(
       req,
@@ -80,6 +85,14 @@ export default auth((req) => {
 
   return NextResponse.next();
 });
+
+export default async function middleware(req: NextRequest, event: NextFetchEvent) {
+  const res = await authMiddleware(req, event);
+  if (res instanceof Response) {
+    return rewriteAuthResponseToRequestHost(req, res);
+  }
+  return res;
+}
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],

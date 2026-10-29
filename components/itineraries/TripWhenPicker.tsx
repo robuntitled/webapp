@@ -16,6 +16,8 @@ import type { DateRange } from 'react-day-picker';
 import {
   CalendarDays,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Palmtree,
   PartyPopper,
@@ -352,11 +354,56 @@ export function TripWhenPicker({
               {format(bookingEnd, 'MMMM yyyy', { locale: it })}. I giorni passati
               non sono cliccabili.
             </p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                aria-label="Vai al mese precedente"
+                disabled={
+                  startOfMonth(displayMonth).getTime() <= bookingStart.getTime()
+                }
+                onClick={() =>
+                  setDisplayMonth((m) => {
+                    const prev = addMonths(startOfMonth(m), -1);
+                    return prev < bookingStart ? bookingStart : prev;
+                  })
+                }
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden />
+              </button>
+              <p className="min-w-0 flex-1 truncate text-center text-sm font-semibold capitalize text-slate-900 sm:text-base">
+                {format(displayMonth, 'MMMM yyyy', { locale: it })}
+                {monthCount > 1
+                  ? ` – ${format(addMonths(displayMonth, 1), 'MMMM yyyy', { locale: it })}`
+                  : ''}
+              </p>
+              <button
+                type="button"
+                aria-label="Vai al mese successivo"
+                disabled={
+                  startOfMonth(addMonths(displayMonth, monthCount)).getTime() >
+                  startOfMonth(bookingEnd).getTime()
+                }
+                onClick={() =>
+                  setDisplayMonth((m) => {
+                    const next = addMonths(startOfMonth(m), 1);
+                    const lastAllowed = startOfMonth(
+                      addMonths(bookingEnd, 1 - monthCount)
+                    );
+                    return next > lastAllowed ? lastAllowed : next;
+                  })
+                }
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
             {flexible ? (
               <Calendar
                 mode="range"
                 locale={itDayPicker}
                 labels={CALENDAR_LABELS}
+                hideNavigation
                 numberOfMonths={monthCount}
                 month={displayMonth}
                 onMonthChange={setDisplayMonth}
@@ -376,6 +423,7 @@ export function TripWhenPicker({
                 mode="single"
                 locale={itDayPicker}
                 labels={CALENDAR_LABELS}
+                hideNavigation
                 numberOfMonths={monthCount}
                 month={displayMonth}
                 onMonthChange={setDisplayMonth}
