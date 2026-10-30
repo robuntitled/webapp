@@ -113,25 +113,24 @@ export async function GET() {
       ),
     ];
 
-    const editionsFull = editionIds.length
-      ? await supabaseAdmin
-          .from('editions')
-          .select('id, template_id, date_from, date_to, status, edition_type, created_by, title')
-          .in('id', editionIds)
-      : { data: null, error: { message: 'no ids' } };
-
-    let editionsData = editionsFull.data;
-    let editionsErr =
-      'error' in editionsFull && editionsFull.error
-        ? (editionsFull.error as { message?: string }).message
-        : null;
-    if (editionsErr && /title|42703/i.test(editionsErr)) {
-      const fb = await supabaseAdmin
+    let editionsData: Record<string, unknown>[] | null = null;
+    let editionsErr: string | null = null;
+    if (editionIds.length) {
+      const withTitle = await supabaseAdmin
         .from('editions')
-        .select('id, template_id, date_from, date_to, status, edition_type, created_by')
+        .select('id, template_id, date_from, date_to, status, edition_type, created_by, title')
         .in('id', editionIds);
-      editionsData = fb.data;
-      editionsErr = fb.error?.message ?? 'title missing fallback';
+      if (withTitle.error && /title|42703/i.test(withTitle.error.message)) {
+        const fb = await supabaseAdmin
+          .from('editions')
+          .select('id, template_id, date_from, date_to, status, edition_type, created_by')
+          .in('id', editionIds);
+        editionsData = (fb.data as Record<string, unknown>[] | null) ?? [];
+        editionsErr = fb.error?.message ?? 'title missing fallback';
+      } else {
+        editionsData = (withTitle.data as Record<string, unknown>[] | null) ?? [];
+        editionsErr = withTitle.error?.message ?? null;
+      }
     }
 
     const groups = await listChatGroupsForUser(ownerId);
@@ -157,8 +156,8 @@ export async function GET() {
         date_from_it: formatItDate(String(e.date_from).slice(0, 10)),
         status: e.status,
         edition_type: e.edition_type,
-        created_by: (e as { created_by?: string }).created_by ?? null,
-        title: (e as { title?: string | null }).title ?? null,
+        created_by: e.created_by ?? null,
+        title: e.title ?? null,
       })),
       editionsQueryError: editionsErr,
       chatGroupsReturned: groups.map((g) => ({
