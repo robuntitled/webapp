@@ -42,7 +42,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
           <CatalogHeroSearchBar
             value={filters}
             onChange={setFilters}
-            placeholder="Cerca destinazione"
+            placeholder="Cerca meta"
             resultsId="risultati-partenze"
             durationOptions={durationOptions}
           />

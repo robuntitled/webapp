@@ -55,6 +55,7 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Link
             key={link.href}
             href={link.href}
+            prefetch={link.href === '/destinazioni' || link.href === '/partenze' ? false : undefined}
             className={cn(navLinkClass(active), 'no-underline')}
             aria-current={active ? 'page' : undefined}
           >

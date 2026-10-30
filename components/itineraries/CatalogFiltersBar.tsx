@@ -34,7 +34,7 @@ const inlineFilterBtn =
 export function CatalogHeroSearchBar({
   value,
   onChange,
-  placeholder = 'Cerca destinazione',
+  placeholder = 'Cerca meta',
   resultsId,
   durationOptions,
   priceBounds = catalogBudgetBounds(),
@@ -80,20 +80,20 @@ export function CatalogHeroSearchBar({
   return (
     <form
       role="search"
-      className="flex min-h-[3.5rem] w-full min-w-0 items-center gap-2 rounded-full border border-slate-200/80 bg-white/95 py-1 pl-3.5 pr-1 shadow-[0_6px_22px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:min-h-[3.75rem] sm:gap-2.5 sm:pl-4 sm:pr-1.5"
+      className="flex min-h-[3.5rem] w-full min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/95 py-1 pl-2.5 pr-1 shadow-[0_6px_22px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:min-h-[3.75rem] sm:gap-2.5 sm:pl-4 sm:pr-1.5"
       onSubmit={(e) => {
         e.preventDefault();
         runSearch();
       }}
     >
-      <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.25} aria-hidden />
+      <Search className="h-3.5 w-3.5 shrink-0 text-slate-400 sm:h-4 sm:w-4" strokeWidth={2.25} aria-hidden />
       <input
         ref={inputRef}
         type="search"
         value={value.query}
         onChange={(e) => set('query', e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-0.5 text-[0.9375rem] text-slate-900 outline-none placeholder:text-slate-400 sm:text-[1rem]"
+        className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-0.5 text-[0.875rem] text-slate-900 outline-none placeholder:text-slate-400 sm:text-[1rem]"
         autoComplete="off"
         aria-controls={resultsId}
         aria-label={placeholder}

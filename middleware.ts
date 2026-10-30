@@ -91,10 +91,16 @@ export default async function middleware(req: NextRequest) {
   const res = await (authMiddleware as (req: NextRequest) => Promise<Response | undefined>)(
     req
   );
-  if (res instanceof Response) {
-    return rewriteAuthResponseToRequestHost(req, res);
-  }
-  return res;
+  if (!(res instanceof Response)) return res;
+
+  // Non ricostruire NextResponse.next() / rewrite: un `new Response(body)` perde i
+  // marker interni e fa tornare 400 sulle prefetch RSC (es. /destinazioni da /partenze).
+  const isPassthrough =
+    res.headers.get('x-middleware-next') === '1' ||
+    res.headers.has('x-middleware-rewrite');
+  if (isPassthrough) return res;
+
+  return rewriteAuthResponseToRequestHost(req, res);
 }
 
 export const config = {

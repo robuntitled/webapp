@@ -185,7 +185,9 @@ export function PrivateTripsSection({
           </p>
           {noPrivateAtAll ? (
             <Button asChild className="mt-4 rounded-full px-6 font-semibold">
-              <Link href="/destinazioni">Crea un viaggio privato</Link>
+              <Link href="/destinazioni" prefetch={false}>
+                Crea un viaggio privato
+              </Link>
             </Button>
           ) : null}
         </div>

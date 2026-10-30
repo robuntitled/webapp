@@ -76,6 +76,20 @@ export function TripWorkspace({
   const [nameDraft, setNameDraft] = useState(tripTitle ?? '');
   const displayName = tripTitle?.trim() || template.destination_name;
 
+  // Difesa UI: dedup per userId (allineato a listEditionMembers in lettura)
+  const uniqueMembers = useMemo(() => {
+    const byId = new Map<string, (typeof members)[number]>();
+    for (const m of members) {
+      const key = String(m.userId ?? '')
+        .trim()
+        .toLowerCase();
+      if (!key || byId.has(key)) continue;
+      byId.set(key, m);
+    }
+    return [...byId.values()];
+  }, [members]);
+  const groupSize = uniqueMembers.length;
+
   const flightBooked = Boolean(practice?.flight_booking || practice?.flight_confirmed_at);
   const hotels = practice?.hotel_bookings ?? [];
   const stays = useMemo(() => staysFromTemplate(template, dateFrom), [template, dateFrom]);
@@ -164,11 +178,9 @@ export function TripWorkspace({
           action={joinButton}
           chips={
             <>
-              {members.length > 0 ? (
+              {groupSize > 0 ? (
                 <WorkspaceMetaChip icon={Users}>
-                  {members.length === 1
-                    ? 'Solo tu'
-                    : `${members.length} nel gruppo`}
+                  {groupSize === 1 ? 'Solo tu' : `${groupSize} nel gruppo`}
                 </WorkspaceMetaChip>
               ) : null}
               <WorkspaceMetaChip icon={Wallet}>

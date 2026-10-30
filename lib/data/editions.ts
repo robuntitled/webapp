@@ -392,6 +392,10 @@ export async function updateEditionTitle(input: {
   return { ok: true, title: next };
 }
 
+function normalizeMemberUserId(id: string): string {
+  return String(id).trim().toLowerCase();
+}
+
 export async function listEditionMembers(
   editionId: string,
   options?: { withRatings?: boolean }
@@ -401,35 +405,64 @@ export async function listEditionMembers(
     .from('edition_members')
     .select('user_id, status')
     .eq('edition_id', editionId)
-    .neq('status', 'left')
+    .in('status', ['interested', 'confirmed'])
     .order('joined_at', { ascending: true });
   if (error || !data?.length) return [];
-  // Dedup per user_id (conteggio «nel gruppo» senza doppio creatore)
-  const uniqueRows = [
-    ...new Map(data.map((r) => [r.user_id as string, r])).values(),
-  ];
+
+  // Dedup aggressivo per user_id normalizzato (case/spazi); preferisci confirmed.
+  const byUser = new Map<string, (typeof data)[number]>();
+  for (const row of data) {
+    const key = normalizeMemberUserId(row.user_id as string);
+    if (!key) continue;
+    const prev = byUser.get(key);
+    if (!prev || (row.status === 'confirmed' && prev.status !== 'confirmed')) {
+      byUser.set(key, row);
+    }
+  }
+  const uniqueRows = [...byUser.values()];
   const ids = uniqueRows.map((r) => r.user_id as string);
-  const { data: users } = await supabaseAdmin
-    .from('users')
-    .select('id, first_name, last_name, username, image')
-    .in('id', ids);
-  const map = new Map((users ?? []).map((u) => [u.id as string, u]));
+  const [{ data: users }, { data: practiceRows }] = await Promise.all([
+    supabaseAdmin
+      .from('users')
+      .select('id, first_name, last_name, username, image')
+      .in('id', ids),
+    supabaseAdmin
+      .from('practices')
+      .select('user_id')
+      .eq('edition_id', editionId)
+      .neq('status', 'cancelled'),
+  ]);
+  // Mappa per id normalizzato: evita doppi conteggi se casing differisce
+  const map = new Map(
+    (users ?? []).map((u) => [normalizeMemberUserId(u.id as string), u])
+  );
+  const practiceUserIds = new Set(
+    (practiceRows ?? [])
+      .map((p) => normalizeMemberUserId(p.user_id as string))
+      .filter(Boolean)
+  );
   const ratings = options?.withRatings ? await getUserRatingSummaries(ids) : null;
 
-  return uniqueRows.map((row) => {
-    const u = map.get(row.user_id as string);
-    const rating = ratings?.get(row.user_id as string);
-    return {
-      userId: row.user_id as string,
-      firstName: (u?.first_name as string | null) ?? null,
-      lastName: (u?.last_name as string | null) ?? null,
-      username: (u?.username as string | null) ?? null,
-      image: (u?.image as string | null) ?? null,
+  // Solo membri con riga users reale; se esistono practices, escludi ghost senza pratica.
+  const out: EditionMemberCard[] = [];
+  for (const row of uniqueRows) {
+    const key = normalizeMemberUserId(row.user_id as string);
+    const u = map.get(key);
+    if (!u) continue;
+    if (practiceUserIds.size > 0 && !practiceUserIds.has(key)) continue;
+    const rating = ratings?.get(row.user_id as string) ?? ratings?.get(u.id as string);
+    out.push({
+      userId: u.id as string,
+      firstName: (u.first_name as string | null) ?? null,
+      lastName: (u.last_name as string | null) ?? null,
+      username: (u.username as string | null) ?? null,
+      image: (u.image as string | null) ?? null,
       status: row.status as EditionMemberCard['status'],
       ratingAvg: rating?.avg ?? null,
       ratingCount: rating?.count ?? 0,
-    };
-  });
+    });
+  }
+  return out;
 }
 
 export async function joinEdition(input: { userId: string; editionId: string }) {

@@ -369,7 +369,7 @@ export function OfficialEditionsGrid({
         <CatalogHeroSearchBar
           value={filters}
           onChange={setFilters}
-          placeholder="Cerca destinazione o date"
+          placeholder="Cerca meta"
           resultsId="risultati-partenze"
           durationOptions={durationOptions}
         />

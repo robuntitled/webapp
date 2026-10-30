@@ -228,37 +228,72 @@ type MembershipEdition = {
   memberIds: string[];
 };
 
-async function loadMembershipEditions(userId: string): Promise<MembershipEdition[]> {
-  const { data: mine, error } = await supabaseAdmin
-    .from('edition_members')
-    .select('edition_id')
-    .eq('user_id', userId)
-    .neq('status', 'left');
-  if (error || !mine?.length) return [];
+function normalizeUserId(id: string): string {
+  return String(id).trim().toLowerCase();
+}
 
-  const ids = mine.map((r) => r.edition_id as string);
-  let editions: Record<string, unknown>[] | null = null;
+/** Tutte le edizioni di cui l'utente è membro (interested/confirmed) o ha una pratica. */
+async function loadMembershipEditions(userId: string): Promise<MembershipEdition[]> {
+  const [{ data: mine }, { data: practiceRows }] = await Promise.all([
+    supabaseAdmin
+      .from('edition_members')
+      .select('edition_id')
+      .eq('user_id', userId)
+      .in('status', ['interested', 'confirmed']),
+    supabaseAdmin
+      .from('practices')
+      .select('edition_id')
+      .eq('user_id', userId)
+      .neq('status', 'cancelled')
+      .not('edition_id', 'is', null),
+  ]);
+
+  const idSet = new Set<string>();
+  for (const r of mine ?? []) {
+    if (r.edition_id) idSet.add(r.edition_id as string);
+  }
+  for (const r of practiceRows ?? []) {
+    if (r.edition_id) idSet.add(r.edition_id as string);
+  }
+  const ids = [...idSet];
+  if (!ids.length) return [];
+
+  // Nessun filtro status in query: se sei membro, la chat deve elencarla.
+  // title può mancare (migration 041 non applicata).
+  let editions: Record<string, unknown>[] = [];
   {
     const withTitle = await supabaseAdmin
       .from('editions')
       .select('id, template_id, date_from, date_to, status, title')
-      .in('id', ids)
-      .in('status', ['open', 'formed', 'locked']);
-    if (withTitle.error && /title|42703/i.test(withTitle.error.message)) {
+      .in('id', ids);
+    if (withTitle.error) {
       const fallback = await supabaseAdmin
         .from('editions')
         .select('id, template_id, date_from, date_to, status')
-        .in('id', ids)
-        .in('status', ['open', 'formed', 'locked']);
+        .in('id', ids);
       editions = (fallback.data as Record<string, unknown>[] | null) ?? [];
     } else {
       editions = (withTitle.data as Record<string, unknown>[] | null) ?? [];
     }
   }
-  if (!editions?.length) return [];
+  if (!editions.length) return [];
 
-  const today = new Date().toISOString().slice(0, 10);
-  const live = editions.filter((e) => String(e.date_to).slice(0, 10) >= today);
+  // Solo escludi viaggi finiti da oltre 2 giorni (tieni in corso / futuri).
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - 2);
+  const cutoffIso = cutoff.toISOString().slice(0, 10);
+  const live = editions.filter((e) => {
+    const status = String(e.status ?? '');
+    if (status === 'closed') {
+      const dateTo = String(e.date_to ?? '').slice(0, 10);
+      return dateTo >= cutoffIso;
+    }
+    const dateTo = String(e.date_to ?? '').slice(0, 10);
+    const dateFrom = String(e.date_from ?? '').slice(0, 10);
+    if (dateTo && dateTo >= cutoffIso) return true;
+    if (dateFrom && dateFrom >= cutoffIso) return true;
+    return !dateTo && !dateFrom;
+  });
 
   const withMembers = await Promise.all(
     live.map(async (e) => {
@@ -266,20 +301,26 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
         .from('edition_members')
         .select('user_id')
         .eq('edition_id', e.id)
-        .neq('status', 'left');
+        .in('status', ['interested', 'confirmed']);
+      const memberIds = [
+        ...new Map(
+          (members ?? []).map((m) => {
+            const id = m.user_id as string;
+            return [normalizeUserId(id), id] as const;
+          })
+        ).values(),
+      ];
       return {
         id: e.id as string,
         template_id: e.template_id as string,
         date_from: String(e.date_from).slice(0, 10),
         date_to: String(e.date_to).slice(0, 10),
         title: (e.title as string | null | undefined) ?? null,
-        memberIds: [
-          ...new Set((members ?? []).map((m) => m.user_id as string)),
-        ],
+        memberIds,
       };
     })
   );
-  return withMembers;
+  return withMembers.sort((a, b) => a.date_from.localeCompare(b.date_from));
 }
 
 function editionTitle(ed: MembershipEdition) {

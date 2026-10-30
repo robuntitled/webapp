@@ -70,6 +70,9 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={
+                    link.href === '/destinazioni' || link.href === '/partenze' ? false : undefined
+                  }
                   onClick={() => setOpen(false)}
                   className={mobileLinkClass(isActive(link.href))}
                   aria-current={isActive(link.href) ? 'page' : undefined}
