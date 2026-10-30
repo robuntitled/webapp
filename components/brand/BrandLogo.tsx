@@ -1,10 +1,9 @@
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { BRAND_NAME } from '@/lib/brand/noivia';
 
-/** Wordmark crop 955×366. */
-export const LOGO_RATIO = 2.67;
+/** Wordmark Noivia (SVG) — indigo + route coral/lilac. */
+export const LOGO_RATIO = 3.3;
 
-/** Wordmark Flygetr — PNG con alpha, senza cornice. */
 export function BrandLogo({
   size,
   responsive = false,
@@ -12,6 +11,8 @@ export function BrandLogo({
   priority = false,
   /** Ombra solo su sfondi scuri (es. hero login). */
   elevated = false,
+  /** Wordmark bianco per hero/nav overlay. */
+  variant = 'default',
 }: {
   size?: number;
   /** Navbar: altezza guidata da --nl-logo-h (hero → collapsed). */
@@ -19,33 +20,39 @@ export function BrandLogo({
   className?: string;
   priority?: boolean;
   elevated?: boolean;
+  variant?: 'default' | 'white';
 }) {
-  const dimensionStyle =
-    size != null
-      ? ({ height: size, width: Math.round(size * LOGO_RATIO) } as const)
-      : undefined;
+  const height = size ?? (responsive ? undefined : 44);
+  const width =
+    height != null ? Math.round(height * LOGO_RATIO) : undefined;
+  const src =
+    variant === 'white'
+      ? '/assets/logoNoivia-white.svg'
+      : '/assets/logoNoivia.svg';
 
   return (
     <span
       className={cn(
         'nl-brand-logo relative inline-block shrink-0',
-        !responsive && size == null && 'h-11 w-[7.2rem]',
+        !responsive && size == null && 'h-11 w-[9rem]',
         className
       )}
-      style={dimensionStyle}
+      style={
+        height != null
+          ? ({ height, width: width ?? Math.round(height * LOGO_RATIO) } as const)
+          : undefined
+      }
     >
-      <Image
-        src="/assets/logoFlygetr.png"
-        alt="Flygetr"
-        fill
-        priority={priority}
-        sizes={
-          responsive
-            ? '(max-width: 768px) 160px, (max-width: 1024px) 200px, 240px'
-            : `${Math.round((size ?? 44) * LOGO_RATIO)}px`
-        }
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={BRAND_NAME}
+        width={width ?? 145}
+        height={height ?? 44}
+        decoding="async"
+        {...(priority ? { fetchPriority: 'high' as const } : {})}
         className={cn(
-          'object-contain object-left',
+          'h-full w-full object-contain object-left',
           elevated && 'drop-shadow-[0_1px_8px_rgba(0,0,0,0.22)]'
         )}
       />
@@ -53,4 +60,4 @@ export function BrandLogo({
   );
 }
 
-export const BRAND_NAME = 'Flygetr';
+export { BRAND_NAME } from '@/lib/brand/noivia';

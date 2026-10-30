@@ -10,20 +10,22 @@ import {
   wizardDestinationCards,
 } from '@/lib/itineraries/catalog';
 
-const appName = process.env.LEGAL_TRADE_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'Flygetr';
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand/noivia';
+
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? BRAND_NAME;
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it';
 
 export const metadata: Metadata = {
   title: {
-    absolute: `${appName} — Il tuo viaggio senza tour operator`,
+    absolute: `${appName} — ${BRAND_TAGLINE}`,
   },
   description:
-    'Scegli un itinerario ufficiale, forma il gruppo e prenota voli e hotel per conto proprio. Niente pacchetto, niente tour operator.',
+    'Scegli la meta, le date e con chi partire. Organizza il tuo viaggio o unisciti a un gruppo — senza tour operator.',
   alternates: { canonical: siteUrl },
   openGraph: {
-    title: `${appName} — Il tuo viaggio senza tour operator`,
+    title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Itinerario ufficiale, gruppo in formazione, ognuno prenota i servizi per conto proprio.',
+      'Due percorsi uguali: organizza tu, oppure unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
     url: siteUrl,
     siteName: appName,
     locale: 'it_IT',
@@ -32,9 +34,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${appName} — Il tuo viaggio senza tour operator`,
+    title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Itinerario ufficiale, gruppo in formazione, ognuno prenota i servizi per conto proprio.',
+      'Due percorsi uguali: organizza tu, oppure unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
     images: ['/images/heroes/hero-login.jpg'],
   },
 };

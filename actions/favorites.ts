@@ -33,7 +33,7 @@ export async function toggleFavoriteItinerary(
       return { saved: true, error: 'Impossibile togliere il like.' };
     }
     revalidatePath('/pratiche');
-    revalidatePath('/destinazioni');
+    revalidatePath('/organizza');
     revalidatePath('/dashboard/preferiti');
     return { saved: false };
   }
@@ -48,7 +48,7 @@ export async function toggleFavoriteItinerary(
     return { saved: false, error: 'Impossibile salvare l’itinerario.' };
   }
   revalidatePath('/pratiche');
-  revalidatePath('/destinazioni');
+  revalidatePath('/organizza');
   revalidatePath('/dashboard/preferiti');
   return { saved: true };
 }

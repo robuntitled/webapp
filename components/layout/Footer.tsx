@@ -10,7 +10,8 @@ function hideSiteFooter(pathname: string | null): boolean {
   // Auth / onboarding / workspace immersivi: niente footer.
   // Home e itinerario pubblici lo mostrano (navigazione e fiducia).
   if (pathname === '/accedi') return true;
-  if (pathname.startsWith('/pratica')) return true;
+  if (pathname.startsWith('/pratica') && !pathname.includes('/prossimo')) return true;
+  // mostra footer su /pratica/[id]/prossimo; nascondi workspace immersivo
   if (pathname.startsWith('/onboarding')) return true;
   if (pathname.startsWith('/completa-registrazione')) return true;
   if (/^\/partenze\/[^/]+/.test(pathname)) return true;
@@ -34,7 +35,7 @@ export function Footer({ company }: FooterProps) {
               <BrandLogo size={40} />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Viaggi nel mondo in solo, con amici o in gruppo.
+              Viaggi nel mondo, da solo, con amici o in gruppo.
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Privacy:{' '}
@@ -49,10 +50,16 @@ export function Footer({ company }: FooterProps) {
 
           <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <Link
-              href="/destinazioni"
+              href="/organizza"
               className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
             >
-              Cerca viaggi
+              Organizza
+            </Link>
+            <Link
+              href="/gruppi"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
+              Gruppi
             </Link>
             <Link
               href="/privacy"

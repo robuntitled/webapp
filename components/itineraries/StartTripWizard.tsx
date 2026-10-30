@@ -133,7 +133,7 @@ export function StartTripWizard({
         {step === 'dest' ? (
           <CatalogBrowseChrome
             compact
-            path="destinazioni"
+            path="organizza"
             continent={filters.continent}
             onContinentChange={(continent) => setFilters({ ...filters, continent })}
           >

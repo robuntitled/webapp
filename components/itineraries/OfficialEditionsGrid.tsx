@@ -15,7 +15,8 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatEditionDateRange, formatItDate } from '@/lib/itineraries/dates';
 import {
   editionBadgeDisplay,
-  editionFlightsStatusLabel,
+  editionBudgetOrientativeLabel,
+  editionFlightsThresholdLabel,
   editionGroupHint,
   editionParticipantsLabel,
   editionScarcity,
@@ -99,10 +100,14 @@ export function EditionCard({
     interested_count: ed.interested_count,
     confirmed_count: ed.confirmed_count,
   });
-  const flightsStatus = editionFlightsStatusLabel(confirmed, minConfirmed);
+  const flightsStatus = editionFlightsThresholdLabel(confirmed, minConfirmed);
   const groupHint = editionGroupHint(confirmed, minConfirmed);
   const tripDuration = durationLabel(days);
   const dense = compact && carousel;
+  const budgetLabel = editionBudgetOrientativeLabel(
+    tpl?.budget_orientative_eur.total_hint,
+    days
+  );
 
   return (
     <div className="h-full">
@@ -251,6 +256,18 @@ export function EditionCard({
             </p>
           ) : null}
         </section>
+
+        {budgetLabel && !dense ? (
+          <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] font-semibold leading-snug text-[var(--color-text)]">
+            {budgetLabel}
+          </p>
+        ) : null}
+
+        {!dense && !compact ? (
+          <span className="mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] bg-primary px-3 text-sm font-semibold text-white">
+            Scopri
+          </span>
+        ) : null}
       </div>
       </Link>
     </div>

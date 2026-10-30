@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
 import {
   editionBadgeDisplay,
+  editionBudgetOrientativeLabel,
+  editionFlightsStatusLabel,
+  editionFlightsThresholdLabel,
   editionGroupHint,
   editionParticipantsLabel,
   editionScarcity,
@@ -57,5 +60,20 @@ describe('edition present', () => {
     expect(formatEditionDateRange('2027-01-08', '2027-01-28')).toBe(
       '08 → 28 gennaio 2027'
     );
+  });
+
+  it('isolates flights threshold wording (not members)', () => {
+    expect(editionFlightsStatusLabel(0, 4)).toBe('0 di 4 voli');
+    expect(editionFlightsThresholdLabel(0, 4)).toBe('0 di 4 voli per partire');
+    expect(editionFlightsThresholdLabel(4, 4)).toBe(
+      '4 di 4 voli — soglia raggiunta'
+    );
+  });
+
+  it('labels budget as orientative, never group price', () => {
+    expect(editionBudgetOrientativeLabel(1700, 14)).toBe(
+      'Budget orientativo da ~1.700 € · 14 giorni'
+    );
+    expect(editionBudgetOrientativeLabel(null)).toBeNull();
   });
 });

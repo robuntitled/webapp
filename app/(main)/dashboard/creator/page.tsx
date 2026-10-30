@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 export const metadata = {
-  title: 'Per i Creator — Flygetr',
+  title: 'Per i Creator — Noivia',
 };
 
 export default async function CreatorPage() {
@@ -30,7 +30,7 @@ export default async function CreatorPage() {
           <li>Niente pacchetto: ognuno prenota col proprio fornitore.</li>
         </ul>
         <Button asChild className="mt-10">
-          <Link href="/destinazioni">Scegli un itinerario</Link>
+          <Link href="/organizza">Scegli un itinerario</Link>
         </Button>
         <p className="mt-4 text-sm text-muted-foreground">
           <Link href="/pratiche" className="text-primary underline underline-offset-4 hover:text-[var(--color-primary-hover)]">

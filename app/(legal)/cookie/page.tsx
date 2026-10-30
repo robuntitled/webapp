@@ -40,7 +40,7 @@ export default function CookiePage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="3. Cookie utilizzati da Flygetr">
+      <LegalSection title="3. Cookie utilizzati da Noivia">
         <LegalTable>
           <LegalTableHead>
             <LegalTableHeaderCell>Nome</LegalTableHeaderCell>

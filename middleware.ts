@@ -73,7 +73,7 @@ const authMiddleware = auth((req) => {
   }
 
   if (pathname === ONBOARDING_PATH && userId && privacyOk && onboardingDone) {
-    return redirectOnRequest(req, '/destinazioni');
+    return redirectOnRequest(req, '/organizza');
   }
 
   if ((pathname === '/' || pathname === '/accedi') && userId && privacyOk) {

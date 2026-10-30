@@ -1,0 +1,6 @@
+<svg height="100" width="330" viewBox="0 0 330 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Noivia">
+  <text x="0" y="86" font-family="Plus Jakarta Sans, Inter, system-ui, sans-serif" font-weight="800" font-size="92" letter-spacing="-3" fill="#232A6B">noıvıa</text>
+  <path d="M 116.948 16 Q 151.668 -10 186.388 16" fill="none" stroke="#C9442A" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 9"/>
+  <circle cx="116.948" cy="22" r="10" fill="#C9442A"/>
+  <circle cx="186.388" cy="22" r="10" fill="#8A92E6"/>
+</svg>

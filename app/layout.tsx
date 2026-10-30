@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
@@ -9,6 +9,7 @@ import { auth } from '@/auth';
 import { CookieBanner } from '@/components/legal/CookieBanner';
 import { Footer } from '@/components/layout/Footer';
 import { getCompanyProfile } from '@/lib/privacy/company';
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand/noivia';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,31 +17,42 @@ const inter = Inter({
   display: 'swap',
 });
 
-const appName = process.env.LEGAL_TRADE_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'Flygetr';
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+  display: 'swap',
+});
+
+// UI brand = Noivia. LEGAL_* / domini restano env (TODO cutover — vedi BRAND_TODO).
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? BRAND_NAME;
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: appName,
+    default: `${appName} — ${BRAND_TAGLINE}`,
     template: `%s — ${appName}`,
   },
   description:
-    'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+    'Scegli la meta, le date e con chi partire. Itinerario pronto, chat del viaggio, voli e hotel prenotati da te — senza tour operator.',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }, { url: '/icons/icon.svg', type: 'image/svg+xml' }],
+    apple: '/icons/icon.svg',
+  },
   openGraph: {
     type: 'website',
     locale: 'it_IT',
     siteName: appName,
-    title: appName,
+    title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+      'Organizza il tuo viaggio o unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
     images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: appName }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: appName,
+    title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Crea un viaggio o unisciti a uno in formazione. Prenoti i servizi quando il gruppo è solido.',
+      'Organizza il tuo viaggio o unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
     images: ['/images/heroes/hero-login.jpg'],
   },
   // Omio / Impact affiliate site verification
@@ -60,7 +72,7 @@ export default async function RootLayout({
   return (
     <html lang="it">
       <body
-        className={`${inter.variable} font-sans pb-[var(--cookie-banner-pad,0px)]`}
+        className={`${inter.variable} ${plusJakarta.variable} font-sans pb-[var(--cookie-banner-pad,0px)]`}
       >
         <Providers session={session}>
           <div className="flex min-h-dvh flex-col">

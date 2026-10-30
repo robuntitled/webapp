@@ -51,7 +51,7 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
 
       <CatalogBrowseChrome
         compact
-        path="unisciti"
+        path="gruppi"
         continent={filters.continent}
         onContinentChange={(continent) => setFilters({ ...filters, continent })}
       >

@@ -17,13 +17,13 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
   const { id } = await params;
   const { tab, stay } = await searchParams;
   if (id.startsWith('seed-')) {
-    redirect('/partenze');
+    redirect('/gruppi');
   }
 
   const edition = await getEdition(id);
-  if (!edition) redirect('/partenze');
+  if (!edition) redirect('/gruppi');
   if (edition.status === 'closed' || edition.status === 'locked') {
-    redirect('/partenze');
+    redirect('/gruppi');
   }
 
   const template = findItineraryTemplate(edition.template_id);
@@ -42,7 +42,7 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
 
   // Private = solo via /invito/[token]. Niente Partecipa pubblico su /partenze/[id].
   if (edition.edition_type === 'private') {
-    redirect('/partenze');
+    redirect('/gruppi');
   }
 
   const members = await listEditionMembers(id, { withRatings: true });
@@ -59,7 +59,7 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
       members={members}
       isMember={false}
       canJoin
-      backHref="/partenze"
+      backHref="/gruppi"
       backLabel="Torna a Unisciti"
       initialTab={tab}
       initialStay={stay}

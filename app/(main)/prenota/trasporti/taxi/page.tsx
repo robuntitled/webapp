@@ -18,7 +18,7 @@ export default async function PrenotaTrasportiTaxiPage() {
   return (
     <PrenotaPageShell
       title="Taxi"
-      subtitle="Transfer privati e taxi aeroporto. Ricerca su Flygetr · pagamento GetTransfer."
+      subtitle="Transfer privati e taxi aeroporto. Ricerca su Noivia · pagamento GetTransfer."
       badge="GetTransfer"
     >
       <PrenotaTransportSubnav />

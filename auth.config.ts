@@ -36,7 +36,7 @@ export const authConfig = {
      * next-auth/react (`new URL(data.url)`).
      */
     async redirect({ url, baseUrl }) {
-      const fallback = '/destinazioni';
+      const fallback = '/organizza';
       const toSafePath = (raw: string): string | null => {
         try {
           const parsed = raw.startsWith('/')

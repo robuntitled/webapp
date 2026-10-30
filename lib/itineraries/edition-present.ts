@@ -82,10 +82,35 @@ export function editionParticipantsLabel(input: {
   return enrolled === 1 ? '👥 1 iscritto al gruppo' : `👥 ${enrolled} iscritti al gruppo`;
 }
 
+/**
+ * Soglia partenza = voli confermati (non = iscritti).
+ * Isolata qui: l’owner non ha ancora deciso members vs flights.
+ */
 export function editionFlightsStatusLabel(confirmed: number, minConfirmed: number): string {
   const min = Math.max(minConfirmed, 1);
-  const flightLabel = min === 1 ? 'volo confermato' : 'voli confermati';
-  return `${confirmed} di ${min} ${flightLabel}`;
+  return `${confirmed} di ${min} voli`;
+}
+
+/** Etichetta completa con contesto soglia (es. "0 di 4 voli per partire"). */
+export function editionFlightsThresholdLabel(confirmed: number, minConfirmed: number): string {
+  const min = Math.max(minConfirmed, 1);
+  if (confirmed >= min) return `${confirmed} di ${min} voli — soglia raggiunta`;
+  return `${confirmed} di ${min} voli per partire`;
+}
+
+/** Budget orientativo per durata template — mai "prezzo del gruppo". */
+export function editionBudgetOrientativeLabel(
+  totalHint: number | null | undefined,
+  durationDays?: number | null
+): string | null {
+  if (totalHint == null || totalHint <= 0) return null;
+  const rounded = Math.round(totalHint);
+  const formatted = rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const amount = `~${formatted} €`;
+  if (durationDays && durationDays > 0) {
+    return `Budget orientativo da ${amount} · ${durationDays} giorni`;
+  }
+  return `Budget orientativo da ${amount}`;
 }
 
 export function editionGroupHint(confirmed: number, minConfirmed: number): string {

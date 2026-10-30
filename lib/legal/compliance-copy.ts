@@ -15,7 +15,7 @@ export const COMPLIANCE_COPY = {
   /** Da mostrare vicino a qualsiasi elenco di servizi prenotabili. */
   separateBooking: 'Ogni servizio è prenotato separatamente con il rispettivo fornitore.',
   /** Disclaimer di qualificazione, ripetuto nei punti in cui si aggregano servizi. */
-  notAPackage: 'Flygetr non organizza pacchetti turistici né vende viaggi.',
+  notAPackage: 'Noivia non organizza pacchetti turistici né vende viaggi.',
   /** Prezzo: mai "totale viaggio". Solo somma di contratti separati. */
   priceIsSumOfServices:
     'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
@@ -24,10 +24,10 @@ export const COMPLIANCE_COPY = {
     'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
   /** Responsabilità. */
   responsibility:
-    'Flygetr fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
+    'Noivia fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
   /** Messaggio guida (onboarding, homepage, Trip). */
   guide:
-    'Su Flygetr scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
+    'Su Noivia scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
   /** Etichetta unica per qualsiasi cifra aggregata. */
   budgetLabel: 'Budget orientativo',
   budgetFilterLabel: 'Fascia di spesa stimata',

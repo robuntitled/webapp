@@ -56,7 +56,9 @@ export async function startPracticeAction(input: {
     }
     revalidatePath('/pratiche');
     revalidatePath('/partenze');
-    redirect(`/pratica/${result.practice.id}`);
+    revalidatePath('/gruppi');
+    revalidatePath('/organizza');
+    redirect(`/pratica/${result.practice.id}/prossimo`);
   }
 
   const result = await createOrReuseDraftPractice({
@@ -70,7 +72,8 @@ export async function startPracticeAction(input: {
     return { error: result.error ?? 'Impossibile creare il viaggio.' };
   }
   revalidatePath('/pratiche');
-  redirect(`/pratica/${result.practice.id}`);
+  revalidatePath('/organizza');
+  redirect(`/pratica/${result.practice.id}/prossimo`);
 }
 
 export async function joinEditionAction(editionId: string): Promise<{ error: string } | never> {

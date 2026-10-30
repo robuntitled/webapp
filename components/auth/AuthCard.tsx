@@ -321,7 +321,7 @@ export function AuthCard() {
           />
 
           <div className="flex flex-col items-center text-center">
-            <Link href="/" aria-label="Flygetr — home">
+            <Link href="/" aria-label="Noivia — home">
               <BrandLogo size={42} priority />
             </Link>
             <h1 className="mt-3 font-display text-[1.375rem] font-semibold leading-[1.2] tracking-[-0.02em] text-slate-900 sm:text-[1.45rem]">

@@ -83,7 +83,7 @@ export async function GET(request: Request) {
   if ('error' in gate) {
     if (gate.error.status === 401) {
       return NextResponse.json(
-        { error: 'Accedi a Flygetr per cercare hotel.', code: 'auth_required' },
+        { error: 'Accedi a Noivia per cercare hotel.', code: 'auth_required' },
         { status: 401 }
       );
     }

@@ -9,13 +9,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: siteUrl, lastModified: now, changeFrequency: 'weekly', priority: 1 },
     {
-      url: `${siteUrl}/destinazioni`,
+      url: `${siteUrl}/organizza`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/partenze`,
+      url: `${siteUrl}/gruppi`,
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,

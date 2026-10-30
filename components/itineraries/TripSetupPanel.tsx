@@ -274,7 +274,7 @@ export function TripSetupPanel({
         destinationSlug={overviewTemplate.destination_slug}
         destinationName={overviewTemplate.destination_name}
         eyebrow="Configura il tuo viaggio"
-        backLabel="Destinazioni"
+        backLabel="Organizza"
         onBack={onBack}
         action={
           <PlanSaveButton

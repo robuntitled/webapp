@@ -1,19 +1,20 @@
 export type HomeTravelMode = 'solo' | 'friends' | 'group';
 
-export type HomeEntryPath = 'destinazioni' | 'unisciti';
+export type HomeEntryPath = 'destinazioni' | 'unisciti' | 'organizza' | 'gruppi';
 
 export function parseHomeEntryPath(
   vista?: string | null,
   modalita?: string | null
 ): HomeEntryPath {
-  if (vista === 'partenze' || vista === 'unisciti' || modalita === 'amici') {
-    return 'unisciti';
+  if (vista === 'partenze' || vista === 'unisciti' || vista === 'gruppi' || modalita === 'amici') {
+    return 'gruppi';
   }
-  return 'destinazioni';
+  return 'organizza';
 }
 
 export function homeEntryPathToHref(path: HomeEntryPath): string {
-  return path === 'unisciti' ? '/partenze' : '/destinazioni';
+  if (path === 'unisciti' || path === 'gruppi') return '/gruppi';
+  return '/organizza';
 }
 
 /** Compat: vecchi query param → path di ingresso. */
@@ -21,15 +22,14 @@ export function parseHomeTravelMode(
   vista?: string | null,
   modalita?: string | null
 ): HomeTravelMode {
-  if (vista === 'partenze' || vista === 'unisciti') return 'group';
+  if (vista === 'partenze' || vista === 'unisciti' || vista === 'gruppi') return 'group';
   if (modalita === 'amici') return 'friends';
   return 'solo';
 }
 
 export function homeTravelModeToPath(mode: HomeTravelMode): string {
-  if (mode === 'group') return '/partenze';
-  if (mode === 'friends') return '/destinazioni';
-  return '/destinazioni';
+  if (mode === 'group') return '/gruppi';
+  return '/organizza';
 }
 
 export function homeTravelModeToTravelMode(
