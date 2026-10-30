@@ -51,12 +51,12 @@ const calendarClassNames = {
   // MonthGrid è un <table>: table-fixed tiene 7 colonne a larghezza uguale.
   // Non usare display:grid su <tr> — collassa i giorni a sinistra (es. "282930").
   month_grid: 'w-full min-w-0 table-fixed border-collapse',
-  month_caption:
-    'pointer-events-none relative z-0 mb-2 flex h-11 items-center justify-center px-12',
-  caption_label: 'truncate text-sm font-semibold capitalize text-slate-900 sm:text-base',
-  nav: 'absolute inset-x-0 top-0 z-20 flex items-center justify-between',
-  button_previous: 'pointer-events-auto z-20',
-  button_next: 'pointer-events-auto z-20',
+  // Caption nascosta: il mese è già nella barra frecce sopra (altrimenti compare due volte).
+  month_caption: 'hidden',
+  caption_label: 'hidden',
+  nav: 'hidden',
+  button_previous: 'hidden',
+  button_next: 'hidden',
   weekdays: 'mb-1 w-full',
   weekday:
     'w-[14.2857%] p-0 text-center text-[0.72rem] font-semibold uppercase tracking-normal text-slate-700 sm:text-[0.8rem]',

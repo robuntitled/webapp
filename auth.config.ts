@@ -30,8 +30,10 @@ export const authConfig = {
       return true;
     },
     /**
-     * Sempre path relativi sicuri. Evita che AUTH_URL (prod) mandi i redirect
-     * delle preview su un altro host: Location relativi restano sull'origine corrente.
+     * Path relativi sicuri. AUTH_URL di prod non deve governare l’host:
+     * Location relativi restano sull’origine della request; il wrapper
+     * `rewriteAuthResponseToRequestHost` assolutizza il JSON `{url}` per
+     * next-auth/react (`new URL(data.url)`).
      */
     async redirect({ url, baseUrl }) {
       const fallback = '/destinazioni';

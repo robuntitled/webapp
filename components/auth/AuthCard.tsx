@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Map, Plane, Users } from 'lucide-react';
 import { mapAuthError } from '@/lib/auth/oauth-errors';
@@ -256,6 +256,17 @@ export function AuthCard() {
           goAfterAuth();
         }
       } catch {
+        // next-auth/react fa `new URL(data.url)`: URL relativi da AUTH_URL rewrite
+        // potevano far fallire un login riuscito. Se la sessione c’è, prosegui comunque.
+        try {
+          const session = await getSession();
+          if (session?.user) {
+            goAfterAuth();
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
         setError('Si è verificato un errore inaspettato.');
       } finally {
         setIsLoading(false);
@@ -299,10 +310,10 @@ export function AuthCard() {
         forceCover
       />
 
-      <div className="relative z-10 flex min-h-dvh items-start justify-center px-4 py-6 sm:items-center sm:py-10">
+      <div className="relative z-10 flex min-h-dvh items-start justify-center px-4 py-6 sm:py-10">
         <ScrollReveal
           variant="card"
-          className="relative mb-[max(1.5rem,var(--cookie-banner-pad,0px))] flex w-full max-w-[29.7rem] flex-col rounded-[1.35rem] border border-white/80 bg-white/95 p-5 shadow-[0_32px_64px_-24px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-7 space-y-3.5 sm:space-y-4 text-foreground"
+          className="relative mb-[max(1.5rem,var(--cookie-banner-pad,0px))] mt-2 flex w-full max-w-[29.7rem] flex-col rounded-[1.35rem] border border-white/80 bg-white/95 p-5 shadow-[0_32px_64px_-24px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mt-[min(8vh,4rem)] sm:p-7 space-y-3.5 sm:space-y-4 text-foreground"
         >
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-teal-500 to-accent"
@@ -479,17 +490,23 @@ export function AuthCard() {
               </div>
             )}
 
-            {info && (
-              <p className="text-sm text-center bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 rounded-lg py-2 px-3">
-                {info}
-              </p>
-            )}
-
-            {error && (
-              <p className="text-sm text-destructive text-center bg-destructive/10 rounded-lg py-2 px-3">
-                {error}
-              </p>
-            )}
+            {/* Slot fisso: evita che la card salti quando compare il banner errore/info */}
+            <div
+              className="min-h-[2.75rem]"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {info ? (
+                <p className="text-sm text-center bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 rounded-lg py-2 px-3">
+                  {info}
+                </p>
+              ) : null}
+              {error ? (
+                <p className="text-sm text-destructive text-center bg-destructive/10 rounded-lg py-2 px-3">
+                  {error}
+                </p>
+              ) : null}
+            </div>
 
             {(pendingVerifyEmail || error.includes('non ancora confermata')) && (
               <Button

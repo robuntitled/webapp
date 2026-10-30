@@ -448,7 +448,7 @@ export function TripSetupPanel({
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/90 bg-white/90 px-4 py-4 backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/90 bg-white/90 px-4 py-4 pr-[7.75rem] backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pr-0 sm:backdrop-blur-none">
         <div className="mx-auto flex max-w-lg flex-col items-center gap-3 sm:max-w-none">
           <p className="text-center text-sm font-medium text-slate-700">
             {canCreate ? 'Tutto pronto — crea il viaggio' : missingHint}

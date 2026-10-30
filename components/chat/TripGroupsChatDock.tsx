@@ -194,7 +194,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : String(unreadTotal)) : null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3 pb-[max(0px,env(safe-area-inset-bottom))]">
+    <div className="fixed bottom-5 right-4 z-[55] flex flex-col items-end gap-3 pb-[max(0px,env(safe-area-inset-bottom))] sm:right-5">
       <div className="flex flex-col items-end gap-3">
       <AnimatePresence>
         {open && (
@@ -438,14 +438,14 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
         aria-label={open ? 'Chiudi chat di gruppo' : 'Apri chat di gruppo'}
         title={open ? 'Chiudi chat' : 'Chat di gruppo'}
         className={cn(
-          'relative h-12 min-w-[9.5rem] gap-2 rounded-full border border-white/10 bg-[#0b1220]/92 px-6 font-semibold text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md',
+          'relative h-12 min-w-12 gap-2 rounded-full border border-white/10 bg-[#0b1220]/92 px-3 font-semibold text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md sm:min-w-[9.5rem] sm:px-6',
           'hover:bg-[#161d2b] hover:text-white',
           open && 'ring-2 ring-accent/70'
         )}
         onClick={() => setOpen((v) => !v)}
       >
         <MessageCircle className="h-5 w-5 text-accent" aria-hidden />
-        <span>{open ? 'Chiudi' : 'Chat'}</span>
+        <span className="hidden sm:inline">{open ? 'Chiudi' : 'Chat'}</span>
         {!open && badge && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#0b1220]">
             {badge}
