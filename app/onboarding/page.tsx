@@ -7,7 +7,7 @@ import { BRAND_IMAGES } from '@/lib/brand/images';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 
 export const metadata = {
-  title: 'Inizio — Noivia',
+  title: 'Inizio',
 };
 
 export const dynamic = 'force-dynamic';

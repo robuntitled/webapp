@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { BRAND_NAME } from '@/lib/brand/noivia';
+import { BRAND_NAME } from '@/lib/brand';
 
 /**
  * Wordmark Noivia — SVG con path (Plus Jakarta ExtraBold convertito),
@@ -60,4 +60,4 @@ export function BrandLogo({
   );
 }
 
-export { BRAND_NAME } from '@/lib/brand/noivia';
+export { BRAND_NAME } from '@/lib/brand';

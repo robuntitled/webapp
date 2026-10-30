@@ -4,6 +4,7 @@ import { ProssimoPasso } from '@/components/itineraries/ProssimoPasso';
 import { getPractice } from '@/lib/data/practices';
 import { getEdition } from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { getSiteUrl } from '@/lib/brand';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -20,8 +21,7 @@ export default async function ProssimoPassoPage({ params }: PageProps) {
   const edition = practice.edition_id ? await getEdition(practice.edition_id) : null;
 
   const inviteToken = edition?.invite_token ?? null;
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it').replace(/\/$/, '');
-  const inviteUrl = inviteToken ? `${appUrl}/invito/${inviteToken}` : null;
+  const inviteUrl = inviteToken ? `${getSiteUrl()}/invito/${inviteToken}` : null;
 
   return (
     <ProssimoPasso

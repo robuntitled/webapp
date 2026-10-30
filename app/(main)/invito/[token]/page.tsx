@@ -12,6 +12,7 @@ import { formatItDate } from '@/lib/itineraries/dates';
 import { editionJoinReason } from '@/lib/itineraries/edition-present';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
+import { getSiteUrl } from '@/lib/brand';
 
 type PageProps = {
   params: Promise<{ token: string }>;
@@ -37,7 +38,7 @@ export default async function InvitoPage({ params }: PageProps) {
   if (!edition) notFound();
   const template = findItineraryTemplate(edition.template_id);
   const host = await getEditionHost(edition.id);
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it'}/invito/${token}`;
+  const shareUrl = `${getSiteUrl()}/invito/${token}`;
   const invitePath = `/invito/${token}`;
   const isLoggedIn = Boolean(session?.user?.id);
   const destination = template?.destination_name ?? 'Viaggio con amici';

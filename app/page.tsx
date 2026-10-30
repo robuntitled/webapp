@@ -9,34 +9,29 @@ import {
   publishedDestinations,
   wizardDestinationCards,
 } from '@/lib/itineraries/catalog';
+import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE, getSiteUrl } from '@/lib/brand';
 
-import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand/noivia';
-
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? BRAND_NAME;
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it';
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   title: {
-    absolute: `${appName} — ${BRAND_TAGLINE}`,
+    absolute: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
   },
-  description:
-    'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
+  description: BRAND_DESCRIPTION,
   alternates: { canonical: siteUrl },
   openGraph: {
-    title: `${appName} — ${BRAND_TAGLINE}`,
-    description:
-      'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
+    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    description: BRAND_DESCRIPTION,
     url: siteUrl,
-    siteName: appName,
+    siteName: BRAND_NAME,
     locale: 'it_IT',
     type: 'website',
-    images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: appName }],
+    images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: BRAND_NAME }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${appName} — ${BRAND_TAGLINE}`,
-    description:
-      'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
+    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    description: BRAND_DESCRIPTION,
     images: ['/images/heroes/hero-login.jpg'],
   },
 };

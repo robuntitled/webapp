@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'crypto';
 import { getAppBaseUrl } from '@/lib/auth/app-url';
 import { sendTransactionalEmail } from '@/lib/email/send';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { BRAND_NAME } from '@/lib/brand';
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -39,11 +40,11 @@ export async function issueEmailVerification(userId: string, email: string): Pro
   }
 
   const verifyUrl = `${getAppBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
-  const subject = 'Conferma la tua email — Noivia';
+  const subject = `Conferma la tua email — ${BRAND_NAME}`;
   const text = [
     'Ciao!',
     '',
-    'Conferma la tua email per attivare l’account Noivia:',
+    `Conferma la tua email per attivare l’account ${BRAND_NAME}:`,
     verifyUrl,
     '',
     'Il link scade tra 24 ore. Se non hai creato tu l’account, ignora questo messaggio.',
@@ -51,7 +52,7 @@ export async function issueEmailVerification(userId: string, email: string): Pro
 
   const html = `
     <p>Ciao!</p>
-    <p>Conferma la tua email per attivare l’account <strong>Noivia</strong>.</p>
+    <p>Conferma la tua email per attivare l’account <strong>${BRAND_NAME}</strong>.</p>
     <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 20px;background:#7c3aed;color:#fff;border-radius:999px;text-decoration:none;font-weight:600">Conferma email</a></p>
     <p style="color:#666;font-size:13px">Oppure apri questo link:<br/>${verifyUrl}</p>
     <p style="color:#666;font-size:13px">Scade tra 24 ore. Se non hai creato tu l’account, ignora questo messaggio.</p>

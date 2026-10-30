@@ -1,8 +1,8 @@
 import type { MetadataRoute } from 'next';
-
-const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://flygetr.it').replace(/\/$/, '');
+import { getSiteUrl } from '@/lib/brand';
 
 export default function robots(): MetadataRoute.Robots {
+  const siteUrl = getSiteUrl();
   return {
     rules: [
       {

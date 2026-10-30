@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAppBaseUrl } from '@/lib/auth/app-url';
+import { brandEmailFrom } from '@/lib/brand';
 
 export type SendEmailResult =
   | { ok: true; mode: 'resend' | 'log' }
@@ -9,6 +10,7 @@ export type SendEmailResult =
 /**
  * Invio email: Resend se RESEND_API_KEY, altrimenti log server (dev / fallback).
  * Non blocca la registrazione se il provider fallisce — il link resta in log in dev.
+ * Display name = BRAND_NAME; indirizzo mittente resta env / resend.dev.
  */
 export async function sendTransactionalEmail(options: {
   to: string;
@@ -20,7 +22,7 @@ export async function sendTransactionalEmail(options: {
   const from =
     process.env.EMAIL_FROM?.trim() ||
     process.env.RESEND_FROM?.trim() ||
-    'Noivia <onboarding@resend.dev>';
+    brandEmailFrom('onboarding@resend.dev');
 
   if (apiKey) {
     try {

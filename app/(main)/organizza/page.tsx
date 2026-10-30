@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { OrganizzaWizard } from '@/components/itineraries/OrganizzaWizard';
 import { wizardDestinationCards } from '@/lib/itineraries/catalog';
-import { BRAND_NAME } from '@/lib/brand/noivia';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +10,6 @@ export const metadata: Metadata = {
   description:
     'Organizza il tuo viaggio in pochi passi: meta, date e con chi. Privato da solo o con amici.',
   openGraph: {
-    title: `Organizza — ${BRAND_NAME}`,
     description:
       'Stepper lineare: scegli meta, date e compagni. Il viaggio resta privato finché non lo rendi pubblico.',
   },

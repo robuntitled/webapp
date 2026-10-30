@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { GruppiHub } from '@/components/itineraries/GruppiHub';
 import { listJoinableEditions } from '@/lib/data/editions';
-import { BRAND_NAME } from '@/lib/brand/noivia';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +9,6 @@ export const metadata: Metadata = {
   description:
     'Unisciti a un gruppo con date già fissate e budget orientativo. Prenota il tuo volo quando vuoi.',
   openGraph: {
-    title: `Gruppi — ${BRAND_NAME}`,
     description:
       'Partenze pubbliche in formazione. Soglia = voli confermati. Budget orientativo, non prezzo del gruppo.',
   },

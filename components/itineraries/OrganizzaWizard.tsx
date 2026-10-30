@@ -48,7 +48,7 @@ import {
   patchOrganizzaDraft,
   prevOrganizzaStep,
 } from '@/lib/itineraries/organizza-steps';
-import { BRAND_NAME } from '@/lib/brand/noivia';
+import { BRAND_NAME } from '@/lib/brand';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
 

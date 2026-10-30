@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
-import { BRAND_NAME } from '@/lib/brand/noivia';
+import { BRAND_NAME } from '@/lib/brand';
 
 export type LandingDestination = {
   slug: string;

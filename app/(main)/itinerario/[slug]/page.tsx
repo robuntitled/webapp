@@ -3,7 +3,6 @@ import { notFound, redirect } from 'next/navigation';
 import { findItineraryBySlug } from '@/lib/itineraries/catalog';
 import { parseDurationParam } from '@/lib/itineraries/params';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
-import { BRAND_NAME } from '@/lib/brand/noivia';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -19,10 +18,11 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const days = duration ?? template.duration_days;
   const title = `${template.destination_name} in ${days} giorni`;
   const description = `${template.summary?.slice(0, 140) || template.destination_name}. ${COMPLIANCE_COPY.budgetLabel}: stime, non un pacchetto.`;
+  // Title senza brand (template root aggiunge "— Noivia"). No OG title a mano.
   return {
     title,
     description,
-    openGraph: { title: `${title} — ${BRAND_NAME}`, description },
+    openGraph: { description },
   };
 }
 
