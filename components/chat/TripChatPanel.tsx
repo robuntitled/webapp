@@ -14,6 +14,8 @@ type TripChatPanelProps = {
   tripId: string;
   currentUserId: string;
   canAccess: boolean;
+  /** Messaggio quando canAccess è false (membro ma chat ancora chiusa, ecc.). */
+  lockReason?: string;
   compact?: boolean;
   /** Layout senza Card, per dock espandibile */
   dockMode?: boolean;
@@ -27,6 +29,7 @@ export function TripChatPanel({
   tripId,
   currentUserId,
   canAccess,
+  lockReason,
   compact = false,
   dockMode = false,
 }: TripChatPanelProps) {
@@ -134,11 +137,21 @@ export function TripChatPanel({
   };
 
   if (!canAccess) {
+    const body =
+      lockReason ?? 'Unisciti al viaggio per chattare con la crew.';
+    if (dockMode) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-2 px-6 py-10 text-center text-sm text-muted-foreground">
+          <MessageCircle className="h-8 w-8 opacity-40" aria-hidden />
+          <p>{body}</p>
+        </div>
+      );
+    }
     return (
       <Card className="rounded-2xl border-0 shadow-md">
         <CardContent className="p-6 text-center text-sm text-muted-foreground">
           <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
-          Unisciti al viaggio per chattare con la crew.
+          {body}
         </CardContent>
       </Card>
     );

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { BedDouble, Loader2, Plane, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { joinEditionAction } from '@/actions/practices';
+import { joinEditionAction, renameEditionAction } from '@/actions/practices';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
 import { ItineraryExplorerWidget } from '@/components/itineraries/workspace/ItineraryExplorerWidget';
 import {
@@ -15,6 +15,7 @@ import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/works
 import { WorkspaceStatusCard } from '@/components/itineraries/workspace/WorkspaceStatusCard';
 import { WorkspaceTabs, type WorkspaceTabItem } from '@/components/itineraries/workspace/WorkspaceTabs';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -36,6 +37,9 @@ type TripWorkspaceProps = {
   practice?: PracticeRow | null;
   editionId?: string | null;
   editionType?: 'official' | 'private' | null;
+  /** Nome custom edizione (null → destinazione). */
+  tripTitle?: string | null;
+  canRename?: boolean;
   members?: EditionMemberCard[];
   isMember?: boolean;
   canJoin?: boolean;
@@ -52,6 +56,8 @@ export function TripWorkspace({
   practice = null,
   editionId = null,
   editionType = null,
+  tripTitle = null,
+  canRename = false,
   members = [],
   isMember = Boolean(practice),
   canJoin = false,
@@ -65,6 +71,10 @@ export function TripWorkspace({
   const { data: session } = useSession();
   const [tab, setTab] = useState<WorkspaceTab>(() => parseWorkspaceTab(initialTab));
   const [pendingJoin, startJoin] = useTransition();
+  const [pendingRename, startRename] = useTransition();
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(tripTitle ?? '');
+  const displayName = tripTitle?.trim() || template.destination_name;
 
   const flightBooked = Boolean(practice?.flight_booking || practice?.flight_confirmed_at);
   const hotels = practice?.hotel_bookings ?? [];
@@ -146,7 +156,7 @@ export function TripWorkspace({
       <div className="nl-page w-full space-y-5 py-5 sm:space-y-6 sm:py-6">
         <WorkspaceHero
           destinationSlug={template.destination_slug}
-          destinationName={template.destination_name}
+          destinationName={displayName}
           eyebrow={editionLabel}
           meta={`${formatItDate(dateFrom)} – ${formatItDate(dateTo)} · ${template.duration_days} giorni`}
           backHref={backHref}
@@ -156,7 +166,9 @@ export function TripWorkspace({
             <>
               {members.length > 0 ? (
                 <WorkspaceMetaChip icon={Users}>
-                  {members.length} nel gruppo
+                  {members.length === 1
+                    ? 'Solo tu'
+                    : `${members.length} nel gruppo`}
                 </WorkspaceMetaChip>
               ) : null}
               <WorkspaceMetaChip icon={Wallet}>
@@ -166,6 +178,80 @@ export function TripWorkspace({
             </>
           }
         />
+
+        {canRename && editionId && practice ? (
+          <div className="ws-widget flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 sm:px-5">
+            {editingName ? (
+              <>
+                <Input
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value.slice(0, 80))}
+                  placeholder={template.destination_name}
+                  className="h-11 max-w-sm flex-1 rounded-xl"
+                  maxLength={80}
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="min-h-11 rounded-full"
+                  disabled={pendingRename}
+                  onClick={() => {
+                    startRename(async () => {
+                      const res = await renameEditionAction({
+                        editionId,
+                        title: nameDraft.trim() || null,
+                        practiceId: practice.id,
+                      });
+                      if ('error' in res) {
+                        toast.error(res.error);
+                        return;
+                      }
+                      setEditingName(false);
+                      toast.message(
+                        res.title ? `Rinominato: ${res.title}` : 'Nome ripristinato'
+                      );
+                      router.refresh();
+                    });
+                  }}
+                >
+                  {pendingRename ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salva'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="min-h-11 rounded-full"
+                  onClick={() => {
+                    setNameDraft(tripTitle ?? '');
+                    setEditingName(false);
+                  }}
+                >
+                  Annulla
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="min-w-0 flex-1 text-sm text-slate-600">
+                  Nome viaggio:{' '}
+                  <span className="font-semibold text-slate-900">{displayName}</span>
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11 rounded-full"
+                  onClick={() => {
+                    setNameDraft(tripTitle ?? '');
+                    setEditingName(true);
+                  }}
+                >
+                  Rinomina
+                </Button>
+              </>
+            )}
+          </div>
+        ) : null}
 
         <WorkspaceTabs items={tabItems} value={tab} onChange={selectTab} />
 
@@ -280,7 +366,7 @@ export function TripWorkspace({
             ) : practice ? (
               <FlightSearchPanel
                 hideSearchForm
-                defaultOrigin="Italia"
+                defaultOrigin="FCO"
                 defaultDestination={template.destination_name}
                 defaultStartDate={dateFrom}
                 defaultEndDate={dateTo}

@@ -707,7 +707,7 @@ async function searchOneOrigin(params: {
       country: 'IT',
       cabinClass: 'ECONOMY',
     }),
-    timeoutMs: 12_000,
+    timeoutMs: 8_000,
   });
 
   const contexts = collectOfferContexts(raw);
@@ -751,10 +751,15 @@ export async function searchFlightRates(params: {
   currency?: string;
   /** Default 2: copre i hub senza aspettare 5 timeout LiteAPI. */
   maxOrigins?: number;
-}): Promise<{ offers: LiteApiFlightOffer[]; destinationIata: string; originsSearched: string[] }> {
+}): Promise<{
+  offers: LiteApiFlightOffer[];
+  destinationIata: string;
+  originsSearched: string[];
+  originsFailed: string[];
+}> {
   const destinationIata = resolveIataFlexible(params.destination);
   if (!destinationIata) {
-    return { offers: [], destinationIata: '', originsSearched: [] };
+    return { offers: [], destinationIata: '', originsSearched: [], originsFailed: [] };
   }
 
   const resolvedOrigins = params.originCountry
@@ -773,7 +778,7 @@ export async function searchFlightRates(params: {
         : [];
 
   if (!origins.length) {
-    return { offers: [], destinationIata, originsSearched: [] };
+    return { offers: [], destinationIata, originsSearched: [], originsFailed: [] };
   }
 
   const returnDate =
@@ -803,10 +808,15 @@ export async function searchFlightRates(params: {
   );
 
   const offers: LiteApiFlightOffer[] = [];
-  for (const r of results) {
+  const originsFailed: string[] = [];
+  results.forEach((r, i) => {
+    const origin = batch[i]!;
     if (r.status === 'fulfilled') offers.push(...r.value);
-    else console.warn('[flights] origin search failed', r.reason);
-  }
+    else {
+      originsFailed.push(origin);
+      console.warn('[flights] origin search failed', origin, r.reason);
+    }
+  });
 
   offers.sort((a, b) => a.price - b.price);
 
@@ -818,7 +828,12 @@ export async function searchFlightRates(params: {
     return true;
   });
 
-  return { offers: unique, destinationIata, originsSearched: batch };
+  return {
+    offers: unique,
+    destinationIata,
+    originsSearched: batch,
+    originsFailed,
+  };
 }
 
 export async function fetchCheapestFlightOffer(params: {

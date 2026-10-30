@@ -116,7 +116,7 @@ export function StartTripWizard({
             <CatalogHeroSearchBar
               value={filters}
               onChange={setFilters}
-              placeholder="Cerca la tua destinazione"
+              placeholder="Cerca destinazione"
               resultsId="risultati-itinerari"
               durationOptions={durationOptions}
             />

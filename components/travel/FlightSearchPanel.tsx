@@ -235,6 +235,7 @@ export function FlightSearchPanel({
   const [endDate, setEndDate] = useState(defaultEndDate);
   const [adults, setAdults] = useState(defaultAdults);
   const [loading, setLoading] = useState(false);
+  const [loadingHint, setLoadingHint] = useState<string | null>(null);
   const [offers, setOffers] = useState<FlightOfferView[] | null>(null);
   const [sort, setSort] = useState<FlightSort>('best');
   const [message, setMessage] = useState<string | null>(null);
@@ -385,7 +386,15 @@ export function FlightSearchPanel({
     setDestinationQuery(placeDisplayValue(destination));
 
     setLoading(true);
+    setLoadingHint('Contattiamo il provider voli…');
     setMessage(null);
+    const hintTimers = [
+      window.setTimeout(() => setLoadingHint('Cerchiamo le migliori tariffe…'), 4_000),
+      window.setTimeout(
+        () => setLoadingHint('Ancora un momento — la tratta è lunga…'),
+        9_000
+      ),
+    ];
     try {
       const params = new URLSearchParams({
         startDate,
@@ -417,6 +426,7 @@ export function FlightSearchPanel({
         offers?: FlightOfferView[];
         message?: string;
         error?: string;
+        code?: string;
         originsSearched?: string[];
       };
 
@@ -426,9 +436,14 @@ export function FlightSearchPanel({
         return;
       }
       if (!res.ok) {
-        toast.error(data.error ?? 'Ricerca voli fallita', { duration: 7000 });
+        const err =
+          data.error ??
+          (data.code === 'upstream_error'
+            ? 'Servizio voli temporaneamente non disponibile. Riprova.'
+            : 'Ricerca voli fallita');
+        toast.error(err, { duration: 7000 });
         setOffers(null);
-        setMessage(data.error ?? 'Ricerca voli non riuscita. Riprova.');
+        setMessage(err);
         return;
       }
 
@@ -444,6 +459,8 @@ export function FlightSearchPanel({
       setOffers(null);
       setMessage('Errore di rete. Riprova.');
     } finally {
+      hintTimers.forEach((id) => window.clearTimeout(id));
+      setLoadingHint(null);
       setLoading(false);
     }
   }, [
@@ -780,12 +797,17 @@ export function FlightSearchPanel({
       {loading && !offers && (
         <div
           className={cn(
-            'flex items-center justify-center gap-2 rounded-2xl py-10 text-sm',
+            'flex flex-col items-center justify-center gap-2 rounded-2xl py-10 text-sm',
             darkUi ? 'bg-[#0b1220] text-white/60' : 'bg-slate-50 py-14 text-slate-500'
           )}
         >
-          <Loader2 className="h-5 w-5 animate-spin text-accent" />
-          Cerchiamo i voli migliori…
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-accent" />
+            {loadingHint ?? 'Cerchiamo i voli migliori…'}
+          </div>
+          <p className="max-w-xs text-center text-xs opacity-70">
+            Di solito meno di 10 secondi. Se impiega di più, spesso è il provider.
+          </p>
         </div>
       )}
 
@@ -799,10 +821,25 @@ export function FlightSearchPanel({
         <div
           className={cn(
             'flex flex-col items-center gap-3 rounded-2xl px-4 py-8 text-center',
-            darkUi ? 'bg-slate-50' : 'bg-slate-50 py-10'
+            message &&
+              /non riuscita|timeout|provider|rete|configurato/i.test(message)
+              ? 'border border-amber-200 bg-amber-50'
+              : darkUi
+                ? 'bg-slate-50'
+                : 'bg-slate-50 py-10'
           )}
         >
-          <p className={cn('max-w-sm text-sm', darkUi ? 'text-white/65' : 'text-slate-600')}>
+          <p
+            className={cn(
+              'max-w-sm text-sm',
+              message &&
+                /non riuscita|timeout|provider|rete|configurato/i.test(message)
+                ? 'text-amber-950'
+                : darkUi
+                  ? 'text-white/65'
+                  : 'text-slate-600'
+            )}
+          >
             {message ?? 'Pronto a cercare i voli per questa tratta.'}
           </p>
           <Button

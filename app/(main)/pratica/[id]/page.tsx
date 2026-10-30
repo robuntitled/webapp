@@ -24,6 +24,9 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
     ? await listEditionMembers(practice.edition_id, { withRatings: true })
     : [];
 
+  const isCreator =
+    Boolean(edition?.created_by) && edition?.created_by === session.user.id;
+
   return (
     <TripWorkspace
       template={template}
@@ -32,6 +35,8 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
       practice={practice}
       editionId={practice.edition_id}
       editionType={edition?.edition_type ?? null}
+      tripTitle={edition?.title ?? null}
+      canRename={Boolean(practice.edition_id) && isCreator}
       members={members}
       isMember
       canJoin={false}

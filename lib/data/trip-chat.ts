@@ -192,8 +192,8 @@ export async function markTripChatRead(editionId: string, userId: string): Promi
 }
 
 export async function hideTripChat(editionId: string, userId: string): Promise<void> {
-  const allowed = await canAccessTripChat(editionId, userId);
-  if (!allowed) throw new Error('La chat si apre dopo il primo volo confermato nel gruppo');
+  const member = await isTripMember(editionId, userId);
+  if (!member) throw new Error('Non sei membro di questo viaggio');
 
   const { error } = await supabaseAdmin.from('edition_chat_hides').upsert(
     {
@@ -224,6 +224,7 @@ type MembershipEdition = {
   template_id: string;
   date_from: string;
   date_to: string;
+  title: string | null;
   memberIds: string[];
 };
 
@@ -236,11 +237,24 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
   if (error || !mine?.length) return [];
 
   const ids = mine.map((r) => r.edition_id as string);
-  const { data: editions } = await supabaseAdmin
-    .from('editions')
-    .select('id, template_id, date_from, date_to, status')
-    .in('id', ids)
-    .in('status', ['open', 'formed', 'locked']);
+  let editions: Record<string, unknown>[] | null = null;
+  {
+    const withTitle = await supabaseAdmin
+      .from('editions')
+      .select('id, template_id, date_from, date_to, status, title')
+      .in('id', ids)
+      .in('status', ['open', 'formed', 'locked']);
+    if (withTitle.error && /title|42703/i.test(withTitle.error.message)) {
+      const fallback = await supabaseAdmin
+        .from('editions')
+        .select('id, template_id, date_from, date_to, status')
+        .in('id', ids)
+        .in('status', ['open', 'formed', 'locked']);
+      editions = (fallback.data as Record<string, unknown>[] | null) ?? [];
+    } else {
+      editions = (withTitle.data as Record<string, unknown>[] | null) ?? [];
+    }
+  }
   if (!editions?.length) return [];
 
   const today = new Date().toISOString().slice(0, 10);
@@ -258,7 +272,10 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
         template_id: e.template_id as string,
         date_from: String(e.date_from).slice(0, 10),
         date_to: String(e.date_to).slice(0, 10),
-        memberIds: (members ?? []).map((m) => m.user_id as string),
+        title: (e.title as string | null | undefined) ?? null,
+        memberIds: [
+          ...new Set((members ?? []).map((m) => m.user_id as string)),
+        ],
       };
     })
   );
@@ -267,7 +284,8 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
 
 function editionTitle(ed: MembershipEdition) {
   const tpl = findItineraryTemplate(ed.template_id);
-  const dest = tpl?.destination_name ?? ed.template_id;
+  const dest =
+    ed.title?.trim() || tpl?.destination_name || ed.template_id;
   return `${dest} · ${formatItDate(ed.date_from)}`;
 }
 
@@ -290,29 +308,34 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
 
   for (const ed of editions) {
     if (hidden.has(ed.id)) continue;
+    // Dedup membri (difesa da eventuali doppioni lato DB)
+    const memberIds = [...new Set(ed.memberIds)];
+    const participantCount = memberIds.length;
     const confirmedCount = await countConfirmedEditionMembers(ed.id);
-    if (confirmedCount < 1) continue;
-    const participantCount = ed.memberIds.length;
+    const chatUnlocked = confirmedCount >= 1;
     const since = readAt.get(ed.id) ?? '1970-01-01T00:00:00.000Z';
     const tpl = findItineraryTemplate(ed.template_id);
 
     const [{ count: unreadCount }, { data: lastRows }] = await Promise.all([
-      supabaseAdmin
-        .from('edition_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('edition_id', ed.id)
-        .neq('user_id', userId)
-        .gt('created_at', since),
-      supabaseAdmin
-        .from('edition_messages')
-        .select('body, created_at')
-        .eq('edition_id', ed.id)
-        .order('created_at', { ascending: false })
-        .limit(1),
+      chatUnlocked
+        ? supabaseAdmin
+            .from('edition_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('edition_id', ed.id)
+            .neq('user_id', userId)
+            .gt('created_at', since)
+        : Promise.resolve({ count: 0 }),
+      chatUnlocked
+        ? supabaseAdmin
+            .from('edition_messages')
+            .select('body, created_at')
+            .eq('edition_id', ed.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+        : Promise.resolve({ data: [] as { body: string; created_at: string }[] }),
     ]);
 
     const last = lastRows?.[0];
-    if (participantCount < 2 && !last) continue;
 
     groups.push({
       id: ed.id,
@@ -327,7 +350,12 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
         ? last.body.length > 80
           ? `${last.body.slice(0, 80)}…`
           : last.body
-        : null,
+        : chatUnlocked
+          ? null
+          : participantCount < 2
+            ? 'Solo tu per ora — invita qualcuno'
+            : 'Chat in attesa del primo volo confermato',
+      chatUnlocked,
     });
   }
 

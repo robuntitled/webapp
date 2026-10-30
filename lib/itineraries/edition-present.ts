@@ -74,10 +74,10 @@ export function editionBadgeDisplay(
 
 export function editionParticipantsLabel(input: {
   interested_count?: number;
-  /** @deprecated usare solo interested_count (iscritti al gruppo) */
   confirmed_count?: number;
 }): string | null {
-  const enrolled = input.interested_count ?? 0;
+  // interested + confirmed = membri attivi (status mutuamente esclusivi)
+  const enrolled = (input.interested_count ?? 0) + (input.confirmed_count ?? 0);
   if (enrolled <= 0) return null;
   return enrolled === 1 ? '👥 1 iscritto al gruppo' : `👥 ${enrolled} iscritti al gruppo`;
 }

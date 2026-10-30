@@ -249,7 +249,12 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                 <TripChatPanel
                   tripId={activeGroup.id}
                   currentUserId={currentUserId}
-                  canAccess
+                  canAccess={activeGroup.chatUnlocked}
+                  lockReason={
+                    activeGroup.chatUnlocked
+                      ? undefined
+                      : 'La chat si apre dopo il primo volo confermato nel gruppo.'
+                  }
                   dockMode
                 />
               </div>
@@ -330,8 +335,8 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                       </div>
                     ) : filteredGroups.length === 0 ? (
                       <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-                        Nessuna chat di gruppo. Quando qualcuno si aggiunge alla partenza,
-                        compare qui.
+                        Nessuna partenza in corso. Quando crei o ti unisci a un viaggio,
+                        la chat compare qui.
                       </p>
                     ) : (
                       <ul className="divide-y">

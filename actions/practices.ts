@@ -4,7 +4,11 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createOrReuseDraftPractice, createPractice } from '@/lib/data/practices';
-import { createPrivateEdition, joinEdition } from '@/lib/data/editions';
+import {
+  createPrivateEdition,
+  joinEdition,
+  updateEditionTitle,
+} from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import {
   confirmPracticeActivity,
@@ -28,6 +32,7 @@ export async function startPracticeAction(input: {
   mode: TravelMode;
   dateFrom: string;
   dateTo?: string;
+  title?: string | null;
 }): Promise<{ error: string } | never> {
   const userId = await requireUser();
   if (!findItineraryTemplate(input.templateId)) {
@@ -44,8 +49,11 @@ export async function startPracticeAction(input: {
       dateFrom: input.dateFrom,
       dateTo: input.dateTo,
       mode: input.mode,
+      title: input.title,
     });
-    if ('error' in result) return result;
+    if ('error' in result) {
+      return { error: result.error ?? 'Impossibile creare il viaggio.' };
+    }
     revalidatePath('/pratiche');
     revalidatePath('/partenze');
     redirect(`/pratica/${result.practice.id}`);
@@ -58,7 +66,9 @@ export async function startPracticeAction(input: {
     dateFrom: input.dateFrom,
     dateTo: input.dateTo,
   });
-  if ('error' in result) return result;
+  if ('error' in result) {
+    return { error: result.error ?? 'Impossibile creare il viaggio.' };
+  }
   revalidatePath('/pratiche');
   redirect(`/pratica/${result.practice.id}`);
 }
@@ -66,7 +76,9 @@ export async function startPracticeAction(input: {
 export async function joinEditionAction(editionId: string): Promise<{ error: string } | never> {
   const userId = await requireUser();
   const result = await joinEdition({ userId, editionId });
-  if ('error' in result) return result;
+  if ('error' in result) {
+    return { error: result.error ?? 'Impossibile unirsi al viaggio.' };
+  }
   revalidatePath('/pratiche');
   redirect(`/pratica/${result.practice.id}`);
 }
@@ -114,4 +126,23 @@ export async function confirmActivityAction(
   revalidatePath(`/pratica/${practiceId}`);
   revalidatePath('/pratiche');
   return { ok: true as const };
+}
+
+export async function renameEditionAction(input: {
+  editionId: string;
+  title: string | null;
+  practiceId?: string;
+}): Promise<{ ok: true; title: string | null } | { error: string }> {
+  const userId = await requireUser();
+  const result = await updateEditionTitle({
+    editionId: input.editionId,
+    userId,
+    title: input.title,
+  });
+  if ('error' in result) return result;
+  revalidatePath('/pratiche');
+  revalidatePath('/partenze');
+  if (input.practiceId) revalidatePath(`/pratica/${input.practiceId}`);
+  revalidatePath(`/partenze/${input.editionId}`);
+  return result;
 }

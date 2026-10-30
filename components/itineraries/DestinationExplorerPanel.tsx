@@ -45,11 +45,7 @@ function DestinationStateCard({
       ) : (
         <div className="text-left" aria-disabled="true">
           <DestinationCardMedia dest={dest} cover={cover} published={false} />
-          <div className="space-y-2 border-t border-slate-100 px-3 py-3">
-            <p className="text-xs leading-relaxed text-slate-600">
-              Itinerario in arrivo. Non è ancora prenotabile: per partire ora scegli
-              Thailandia.
-            </p>
+          <div className="border-t border-slate-100 px-3 py-3">
             <button
               type="button"
               disabled
@@ -193,11 +189,21 @@ export function DestinationExplorerPanel({
       ? sections
       : sections.filter((s) => s.continent === continent);
 
+  const hasComingSoon = visibleSections.some((s) =>
+    s.items.some((d) => d.published === false)
+  );
+
   return (
     <div
       id={resultsId}
       className="scroll-mt-[calc(var(--nl-nav-height)+0.75rem)] space-y-6"
     >
+      {hasComingSoon ? (
+        <p className="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950">
+          Alcune mete sono in arrivo e non ancora prenotabili. Per partire ora scegli
+          Thailandia.
+        </p>
+      ) : null}
       {visibleSections.length === 0 ? (
         <p className="py-10 text-center text-sm text-slate-600">
           Nessuna destinazione con questo filtro.

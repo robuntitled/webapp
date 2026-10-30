@@ -45,7 +45,10 @@ describe('edition present', () => {
   it('formats participants and group hints', () => {
     expect(
       editionParticipantsLabel({ interested_count: 2, confirmed_count: 1 })
-    ).toBe('👥 2 iscritti al gruppo');
+    ).toBe('👥 3 iscritti al gruppo');
+    expect(editionParticipantsLabel({ interested_count: 1, confirmed_count: 0 })).toBe(
+      '👥 1 iscritto al gruppo'
+    );
     expect(editionGroupHint(1, 6)).toBe('Ancora 5 voli per la soglia');
     expect(editionGroupHint(6, 6)).toBe('Soglia voli raggiunta — il gruppo può partire');
   });

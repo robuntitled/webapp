@@ -32,12 +32,20 @@ type NotificationItem = {
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'ora';
-  if (mins < 60) return `${mins} min`;
+  if (mins < 1) return 'adesso';
+  if (mins === 1) return '1 minuto fa';
+  if (mins < 60) return `${mins} minuti fa`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} h`;
+  if (hours === 1) return '1 ora fa';
+  if (hours < 24) return `${hours} ore fa`;
   const days = Math.floor(hours / 24);
-  return `${days} g`;
+  if (days === 1) return '1 giorno fa';
+  if (days < 30) return `${days} giorni fa`;
+  const months = Math.floor(days / 30);
+  if (months === 1) return '1 mese fa';
+  if (months < 12) return `${months} mesi fa`;
+  const years = Math.floor(days / 365);
+  return years === 1 ? '1 anno fa' : `${years} anni fa`;
 }
 
 export function NotificationBell() {
@@ -100,7 +108,7 @@ export function NotificationBell() {
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

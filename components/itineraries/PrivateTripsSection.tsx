@@ -172,7 +172,7 @@ export function PrivateTripsSection({
           Viaggi privati
         </h2>
         <p className="text-sm text-slate-600">
-          Solo su invito o link — non compaiono nel catalogo pubblico sotto.
+          Solo su invito o link — non compaiono tra le partenze pubbliche sopra.
         </p>
       </div>
 

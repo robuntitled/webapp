@@ -17,6 +17,8 @@ import {
 } from '@/components/itineraries/TripWhenPicker';
 import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/workspace/WorkspaceHero';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { templatesForDestination } from '@/lib/itineraries/catalog';
 import { pickTemplateForTrip, templateWithFittedDays, type TripVibe } from '@/lib/itineraries/fit';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -191,6 +193,7 @@ export function TripSetupPanel({
   const [whenSelection, setWhenSelection] = useState<TripWhenSelection | null>(null);
   const [vibe, setVibe] = useState<TripVibe | null>(null);
   const [mode, setMode] = useState<TravelMode | null>(null);
+  const [tripName, setTripName] = useState('');
   const [editingWhen, setEditingWhen] = useState(true);
   const [editingVibe, setEditingVibe] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -259,6 +262,7 @@ export function TripSetupPanel({
         mode,
         dateFrom: format(whenSelection.dateFrom, 'yyyy-MM-dd'),
         dateTo: format(whenSelection.dateTo, 'yyyy-MM-dd'),
+        title: tripName.trim() || null,
       });
       if (result?.error) toast.error(result.error);
     });
@@ -415,6 +419,26 @@ export function TripSetupPanel({
                 })}
               </div>
             </SetupSection>
+          ) : null}
+
+          {modeReady && (mode === 'friends' || mode === 'group') ? (
+            <div className="ws-widget rounded-2xl px-4 py-4 sm:px-5">
+              <Label htmlFor="trip-name" className="text-sm font-semibold text-slate-900">
+                Nome del viaggio{' '}
+                <span className="font-normal text-slate-500">(opzionale)</span>
+              </Label>
+              <Input
+                id="trip-name"
+                value={tripName}
+                onChange={(e) => setTripName(e.target.value.slice(0, 80))}
+                placeholder={overviewTemplate.destination_name}
+                className="mt-2 h-11 rounded-xl"
+                maxLength={80}
+              />
+              <p className="mt-1.5 text-xs text-slate-500">
+                Se vuoto, usiamo «{overviewTemplate.destination_name}». Potrai rinominarlo dopo.
+              </p>
+            </div>
           ) : null}
         </div>
 

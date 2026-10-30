@@ -26,6 +26,8 @@ export type EditionRow = {
   status: EditionStatus;
   invite_token: string | null;
   created_by?: string | null;
+  /** Nome opzionale; se assente → destinazione template. */
+  title?: string | null;
   confirmed_count?: number;
   interested_count?: number;
 };
@@ -123,11 +125,42 @@ export async function getEdition(id: string): Promise<EditionRow | null> {
   const { data, error } = await supabaseAdmin
     .from('editions')
     .select(
-      'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by'
+      'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by, title'
     )
     .eq('id', id)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    // title column may be missing pre-041
+    if (missing(error)) {
+      const fallback = await supabaseAdmin
+        .from('editions')
+        .select(
+          'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by'
+        )
+        .eq('id', id)
+        .maybeSingle();
+      if (fallback.error || !fallback.data) return null;
+      const [{ count: confirmed }, { count: interested }] = await Promise.all([
+        supabaseAdmin
+          .from('edition_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('edition_id', id)
+          .eq('status', 'confirmed'),
+        supabaseAdmin
+          .from('edition_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('edition_id', id)
+          .eq('status', 'interested'),
+      ]);
+      return {
+        ...(fallback.data as EditionRow),
+        confirmed_count: confirmed ?? 0,
+        interested_count: interested ?? 0,
+      };
+    }
+    return null;
+  }
+  if (!data) return null;
   const [{ count: confirmed }, { count: interested }] = await Promise.all([
     supabaseAdmin
       .from('edition_members')
@@ -195,6 +228,8 @@ export async function createPrivateEdition(input: {
   dateTo?: string;
   /** friends = invito; group = partenza a cui altri possono unirsi. */
   mode?: 'friends' | 'group';
+  /** Nome opzionale del viaggio (default destinazione). */
+  title?: string | null;
 }) {
   const travelMode = input.mode === 'group' ? 'group' : 'friends';
   const template = findItineraryTemplate(input.templateId);
@@ -202,6 +237,10 @@ export async function createPrivateEdition(input: {
   const dates = input.dateTo
     ? { date_from: input.dateFrom.slice(0, 10), date_to: input.dateTo.slice(0, 10) }
     : datesForDuration(input.dateFrom, template.duration_days);
+  const title =
+    input.title?.trim() && input.title.trim() !== template.destination_name
+      ? input.title.trim().slice(0, 80)
+      : null;
 
   const existingDraft = await findDraftPractice({
     userId: input.userId,
@@ -220,14 +259,30 @@ export async function createPrivateEdition(input: {
         editionId: edition.id,
       });
       if ('error' in reused) return reused;
+      const patch: Record<string, string | null> = {};
       if (edition.date_from !== dates.date_from || edition.date_to !== dates.date_to) {
-        await supabaseAdmin
+        patch.date_from = dates.date_from;
+        patch.date_to = dates.date_to;
+      }
+      if (title !== undefined && title !== (edition.title ?? null)) {
+        patch.title = title;
+      }
+      if (Object.keys(patch).length) {
+        const { error: patchErr } = await supabaseAdmin
           .from('editions')
-          .update({ date_from: dates.date_from, date_to: dates.date_to })
+          .update(patch)
           .eq('id', edition.id);
+        if (patchErr && !missing(patchErr)) {
+          console.warn('[editions] patch private', patchErr.message);
+        }
       }
       return {
-        edition: { ...edition, date_from: dates.date_from, date_to: dates.date_to },
+        edition: {
+          ...edition,
+          date_from: dates.date_from,
+          date_to: dates.date_to,
+          title: title ?? edition.title ?? null,
+        },
         practice: reused.practice,
         invitePath: edition.invite_token ? `/invito/${edition.invite_token}` : null,
       };
@@ -235,23 +290,45 @@ export async function createPrivateEdition(input: {
   }
 
   const token = randomUUID();
+  const baseInsert = {
+    template_id: input.templateId,
+    date_from: dates.date_from,
+    date_to: dates.date_to,
+    edition_type: 'private' as const,
+    // Soglia voli (non = persone nel gruppo).
+    min_confirmed: 2,
+    status: 'open' as const,
+    invite_token: token,
+    created_by: input.userId,
+  };
 
-  const { data: edition, error } = await supabaseAdmin
-    .from('editions')
-    .insert({
-      template_id: input.templateId,
-      date_from: dates.date_from,
-      date_to: dates.date_to,
-      edition_type: 'private',
-      min_confirmed: 2,
-      status: 'open',
-      invite_token: token,
-      created_by: input.userId,
-    })
-    .select('*')
-    .single();
-  if (error || !edition) {
-    return { error: error?.message ?? 'Impossibile creare l’edizione privata.' };
+  let edition: EditionRow | null = null;
+  {
+    const first = await supabaseAdmin
+      .from('editions')
+      .insert(title ? { ...baseInsert, title } : baseInsert)
+      .select('*')
+      .single();
+    if (first.data) {
+      edition = first.data as EditionRow;
+    } else if (title && missing(first.error)) {
+      // Migration 041 non applicata: crea senza title
+      const retry = await supabaseAdmin
+        .from('editions')
+        .insert(baseInsert)
+        .select('*')
+        .single();
+      if (retry.error || !retry.data) {
+        return {
+          error: retry.error?.message ?? 'Impossibile creare l’edizione privata.',
+        };
+      }
+      edition = retry.data as EditionRow;
+    } else {
+      return {
+        error: first.error?.message ?? 'Impossibile creare l’edizione privata.',
+      };
+    }
   }
 
   const practice = await createOrReuseDraftPractice({
@@ -260,21 +337,59 @@ export async function createPrivateEdition(input: {
     mode: travelMode,
     dateFrom: dates.date_from,
     dateTo: dates.date_to,
-    editionId: edition.id as string,
+    editionId: edition.id,
   });
   if ('error' in practice) return practice;
 
-  await supabaseAdmin.from('edition_members').insert({
-    edition_id: edition.id,
-    user_id: input.userId,
-    status: 'interested',
-  });
+  // upsert: evita doppioni se create viene richiamata in race
+  await supabaseAdmin.from('edition_members').upsert(
+    {
+      edition_id: edition.id,
+      user_id: input.userId,
+      status: 'interested',
+    },
+    { onConflict: 'edition_id,user_id' }
+  );
 
   return {
-    edition: edition as EditionRow,
+    edition,
     practice: practice.practice,
     invitePath: `/invito/${token}`,
   };
+}
+
+/** Aggiorna il nome del viaggio (richiede migration 041). */
+export async function updateEditionTitle(input: {
+  editionId: string;
+  userId: string;
+  title: string | null;
+}): Promise<{ ok: true; title: string | null } | { error: string }> {
+  const edition = await getEdition(input.editionId);
+  if (!edition) return { error: 'Viaggio non trovato.' };
+  if (edition.created_by && edition.created_by !== input.userId) {
+    return { error: 'Solo il creatore può rinominare il viaggio.' };
+  }
+  const template = findItineraryTemplate(edition.template_id);
+  const trimmed = input.title?.trim() ?? '';
+  const next =
+    !trimmed || trimmed === (template?.destination_name ?? '')
+      ? null
+      : trimmed.slice(0, 80);
+
+  const { error } = await supabaseAdmin
+    .from('editions')
+    .update({ title: next })
+    .eq('id', input.editionId);
+  if (error) {
+    if (missing(error)) {
+      return {
+        error:
+          'Rinomina non disponibile finché non si applica la migration 041_edition_title.',
+      };
+    }
+    return { error: error.message };
+  }
+  return { ok: true, title: next };
 }
 
 export async function listEditionMembers(
@@ -289,7 +404,11 @@ export async function listEditionMembers(
     .neq('status', 'left')
     .order('joined_at', { ascending: true });
   if (error || !data?.length) return [];
-  const ids = data.map((r) => r.user_id as string);
+  // Dedup per user_id (conteggio «nel gruppo» senza doppio creatore)
+  const uniqueRows = [
+    ...new Map(data.map((r) => [r.user_id as string, r])).values(),
+  ];
+  const ids = uniqueRows.map((r) => r.user_id as string);
   const { data: users } = await supabaseAdmin
     .from('users')
     .select('id, first_name, last_name, username, image')
@@ -297,7 +416,7 @@ export async function listEditionMembers(
   const map = new Map((users ?? []).map((u) => [u.id as string, u]));
   const ratings = options?.withRatings ? await getUserRatingSummaries(ids) : null;
 
-  return data.map((row) => {
+  return uniqueRows.map((row) => {
     const u = map.get(row.user_id as string);
     const rating = ratings?.get(row.user_id as string);
     return {

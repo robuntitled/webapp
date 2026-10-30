@@ -97,6 +97,7 @@ export function EditionCard({
   const badgeLabel = editionBadgeDisplay(scarcity, spotsLeft);
   const participants = editionParticipantsLabel({
     interested_count: ed.interested_count,
+    confirmed_count: ed.confirmed_count,
   });
   const flightsStatus = editionFlightsStatusLabel(confirmed, minConfirmed);
   const groupHint = editionGroupHint(confirmed, minConfirmed);
