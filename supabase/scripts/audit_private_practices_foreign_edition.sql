@@ -2,6 +2,10 @@
 -- create da un altro utente. NON esegue UPDATE/DELETE.
 -- Uso: eseguire manualmente in SQL editor Supabase (preview/prod a scelta del proprietario).
 --
+-- Nota: include sia join legittimi via /invito sia eventuali "Crea viaggio" che
+-- riusavano per bug l’edition di terzi. Il proprietario distingue caso per caso.
+-- Conteggio preview (sola lettura, 2026-10-30): 5 righe.
+--
 -- Criterio: practice.user_id <> editions.created_by
 --           AND editions.edition_type = 'private'
 --           AND practice.mode IN ('friends', 'group')
