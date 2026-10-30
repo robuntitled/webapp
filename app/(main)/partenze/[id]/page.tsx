@@ -40,6 +40,11 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
     }
   }
 
+  // Private = solo via /invito/[token]. Niente Partecipa pubblico su /partenze/[id].
+  if (edition.edition_type === 'private') {
+    redirect('/partenze');
+  }
+
   const members = await listEditionMembers(id, { withRatings: true });
   const dateFrom = String(edition.date_from).slice(0, 10);
   const dateTo = String(edition.date_to).slice(0, 10);

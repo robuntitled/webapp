@@ -11,6 +11,7 @@ import {
   findPracticeForEdition,
 } from '@/lib/data/practices';
 import type { EditionMemberCard } from '@/lib/itineraries/bookings';
+import { canReusePrivateEditionForUser } from '@/lib/itineraries/private-edition';
 import type { EditionStatus, EditionType } from '@/lib/itineraries/types';
 import { getUserRatingSummaries } from '@/lib/data/user-ratings';
 
@@ -56,9 +57,11 @@ function isUpcomingEdition(dateFrom: string): boolean {
 }
 
 export async function listJoinableEditions(templateId?: string): Promise<EditionRow[]> {
+  // Solo partenze pubbliche (official). Le private sono invite-only (/invito/[token]).
   let query = supabaseAdmin
     .from('editions')
     .select('id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token')
+    .eq('edition_type', 'official')
     .in('status', ['open', 'formed']);
   if (templateId) query = query.eq('template_id', templateId);
   const { data, error } = await query.order('date_from', { ascending: true });
@@ -247,44 +250,55 @@ export async function createPrivateEdition(input: {
     templateId: input.templateId,
     mode: travelMode,
   });
+
+  // Riuso SOLO della propria edition privata (mai match su dest/date di terzi).
   if (existingDraft?.edition_id) {
-    const edition = await getEdition(existingDraft.edition_id);
-    if (edition) {
+    const candidate = await getEdition(existingDraft.edition_id);
+    if (canReusePrivateEditionForUser(candidate, input.userId) && candidate) {
       const reused = await createOrReuseDraftPractice({
         userId: input.userId,
         templateId: input.templateId,
         mode: travelMode,
         dateFrom: dates.date_from,
         dateTo: dates.date_to,
-        editionId: edition.id,
+        editionId: candidate.id,
       });
       if ('error' in reused) return reused;
       const patch: Record<string, string | null> = {};
-      if (edition.date_from !== dates.date_from || edition.date_to !== dates.date_to) {
+      if (candidate.date_from !== dates.date_from || candidate.date_to !== dates.date_to) {
         patch.date_from = dates.date_from;
         patch.date_to = dates.date_to;
       }
-      if (title !== undefined && title !== (edition.title ?? null)) {
+      if (title !== undefined && title !== (candidate.title ?? null)) {
         patch.title = title;
       }
       if (Object.keys(patch).length) {
         const { error: patchErr } = await supabaseAdmin
           .from('editions')
           .update(patch)
-          .eq('id', edition.id);
+          .eq('id', candidate.id)
+          .eq('created_by', input.userId);
         if (patchErr && !missing(patchErr)) {
           console.warn('[editions] patch private', patchErr.message);
         }
       }
+      await supabaseAdmin.from('edition_members').upsert(
+        {
+          edition_id: candidate.id,
+          user_id: input.userId,
+          status: 'interested',
+        },
+        { onConflict: 'edition_id,user_id' }
+      );
       return {
         edition: {
-          ...edition,
+          ...candidate,
           date_from: dates.date_from,
           date_to: dates.date_to,
-          title: title ?? edition.title ?? null,
+          title: title ?? candidate.title ?? null,
         },
         practice: reused.practice,
-        invitePath: edition.invite_token ? `/invito/${edition.invite_token}` : null,
+        invitePath: candidate.invite_token ? `/invito/${candidate.invite_token}` : null,
       };
     }
   }
@@ -331,17 +345,31 @@ export async function createPrivateEdition(input: {
     }
   }
 
-  const practice = await createOrReuseDraftPractice({
-    userId: input.userId,
-    templateId: input.templateId,
-    mode: travelMode,
-    dateFrom: dates.date_from,
-    dateTo: dates.date_to,
-    editionId: edition.id,
-  });
+  // Se la bozza è agganciata a un’edition altrui (join/invito), NON sovrascriverla:
+  // crea una pratica nuova per la propria edition privata.
+  const draftPointsElsewhere = Boolean(
+    existingDraft?.edition_id && existingDraft.edition_id !== edition.id
+  );
+  const practice = draftPointsElsewhere
+    ? await createPractice({
+        userId: input.userId,
+        templateId: input.templateId,
+        mode: travelMode,
+        dateFrom: dates.date_from,
+        dateTo: dates.date_to,
+        editionId: edition.id,
+      })
+    : await createOrReuseDraftPractice({
+        userId: input.userId,
+        templateId: input.templateId,
+        mode: travelMode,
+        dateFrom: dates.date_from,
+        dateTo: dates.date_to,
+        editionId: edition.id,
+      });
   if ('error' in practice) return practice;
 
-  // upsert: evita doppioni se create viene richiamata in race
+  // Unico membro iniziale: il creatore
   await supabaseAdmin.from('edition_members').upsert(
     {
       edition_id: edition.id,
@@ -476,6 +504,9 @@ export async function joinEdition(input: { userId: string; editionId: string }) 
 
   const existing = await findPracticeForEdition(input.userId, edition.id);
   if (existing) return { practice: existing };
+
+  // Official: Partecipa da /partenze. Private: solo dopo risoluzione invito (/invito).
+  // (La pagina /partenze/[id] non espone più le private ai non-membri.)
 
   await supabaseAdmin.from('edition_members').upsert({
     edition_id: edition.id,

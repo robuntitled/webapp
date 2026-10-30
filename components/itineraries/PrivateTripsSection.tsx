@@ -180,7 +180,7 @@ export function PrivateTripsSection({
         <div className="px-1 py-5 text-center">
           <p className="text-sm text-slate-600 sm:text-base">
             {noPrivateAtAll
-              ? 'Non hai ancora viaggi privati disponibili.'
+              ? 'I viaggi privati non sono pubblici: entra con un link di invito, oppure creane uno tuo.'
               : 'Nessun viaggio privato con questi filtri.'}
           </p>
           {noPrivateAtAll ? (
