@@ -1,8 +1,10 @@
 /** Brand UI Noivia (Indaco Rotta). Non tocca LEGAL_* / domini / email. */
 
 export const BRAND_NAME = 'Noivia';
-export const BRAND_TAGLINE = 'Il tuo viaggio senza tour operator';
-export const BRAND_SLOGAN = 'noi, via! · Il tuo viaggio senza tour operator';
+export const BRAND_TAGLINE = 'Il tuo viaggio, senza tour operator';
+export const BRAND_SLOGAN = 'noi, via! · Il tuo viaggio, senza tour operator';
+export const BRAND_HOME_SUBTITLE =
+  'Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.';
 
 /** TODO owner: registrare domini e aggiornare env/LEGAL_* */
 export const BRAND_TODO = [
@@ -11,7 +13,19 @@ export const BRAND_TODO = [
   'Aggiornare privacy@ / supporto@ e LEGAL_* email',
   'Aggiornare AUTH_URL / cookie domain dopo cutover DNS',
   'Aggiornare OG images e email sender branding',
+  'Documentare licenze cover destinazioni (oggi Wikimedia/Unsplash preesistenti)',
 ] as const;
+
+/** Asset brand (path-based SVG — niente <text> live). */
+export const BRAND_ASSETS = {
+  wordmark: '/assets/logoNoivia.svg',
+  wordmarkWhite: '/assets/logoNoivia-white.svg',
+  mark: '/assets/iconNoivia.svg',
+  favicon: '/favicon.svg',
+  icon192: '/icons/icon-192.png',
+  icon512: '/icons/icon-512.png',
+  appleTouch: '/apple-touch-icon.png',
+} as const;
 
 export const BRAND_COLORS = {
   brand: '#232A6B',

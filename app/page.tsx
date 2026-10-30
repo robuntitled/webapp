@@ -20,12 +20,12 @@ export const metadata: Metadata = {
     absolute: `${appName} — ${BRAND_TAGLINE}`,
   },
   description:
-    'Scegli la meta, le date e con chi partire. Organizza il tuo viaggio o unisciti a un gruppo — senza tour operator.',
+    'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
   alternates: { canonical: siteUrl },
   openGraph: {
     title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Due percorsi uguali: organizza tu, oppure unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
+      'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
     url: siteUrl,
     siteName: appName,
     locale: 'it_IT',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Due percorsi uguali: organizza tu, oppure unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
+      'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
     images: ['/images/heroes/hero-login.jpg'],
   },
 };

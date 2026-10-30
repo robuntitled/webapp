@@ -109,12 +109,16 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
             </Button>
           </div>
           <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-5">
-            <Compass className="h-6 w-6 text-accent" />
+            <Compass className="h-6 w-6 text-primary" />
             <p className="font-bold text-[var(--color-text)]">Non trovi le date giuste?</p>
             <p className="text-sm text-[var(--color-text-secondary)]">
               Organizza il tuo viaggio e rendilo pubblico come gruppo.
             </p>
-            <Button asChild className="mt-auto w-fit rounded-[10px] bg-accent hover:bg-[var(--color-accent-hover)]">
+            {/* Unico coral della pagina Gruppi */}
+            <Button
+              asChild
+              className="mt-auto w-fit rounded-[10px] bg-accent hover:bg-[var(--color-accent-hover)]"
+            >
               <Link href="/organizza">Organizza</Link>
             </Button>
           </div>

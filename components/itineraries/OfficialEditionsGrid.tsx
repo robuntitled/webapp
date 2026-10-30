@@ -52,15 +52,15 @@ function durationFromDates(dateFrom: string, dateTo: string): number | null {
 
 const SCARCITY_STYLES = {
   open: 'bg-primary text-white',
-  warming: 'bg-accent text-white',
-  closing: 'bg-accent text-white',
+  warming: 'bg-primary text-white',
+  closing: 'bg-[var(--color-brand-dark)] text-white',
   formed: 'bg-emerald-600 text-white',
 } as const;
 
 const PROGRESS_STYLES = {
   open: 'bg-primary',
-  warming: 'bg-accent',
-  closing: 'bg-accent',
+  warming: 'bg-primary',
+  closing: 'bg-[var(--color-brand-dark)]',
   formed: 'bg-emerald-600',
 } as const;
 

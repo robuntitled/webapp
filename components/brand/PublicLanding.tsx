@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
-import { TRAVEL_HERO_IMAGES } from '@/lib/brand/travel-heroes';
 import { BRAND_NAME } from '@/lib/brand/noivia';
 
 export type LandingDestination = {
@@ -54,6 +53,12 @@ const GRUPPI_POINTS = [
   'Chat di gruppo per conoscersi prima di partire',
 ] as const;
 
+/** Hero: solo asset locali già in repo (niente stock nuovi senza licenza). */
+const HOME_HERO_IMAGES = ['/images/heroes/hero-login.jpg'] as const;
+
+const pathBtnClass =
+  'mt-auto h-12 w-full rounded-[10px] bg-primary font-semibold text-white hover:bg-[var(--color-primary-hover)] sm:w-auto';
+
 export function PublicLanding({
   featured,
   comingSoon,
@@ -67,9 +72,9 @@ export function PublicLanding({
     <div className="overflow-x-hidden bg-white text-[var(--color-text)]">
       <section className="relative isolate flex min-h-[min(100dvh,36rem)] flex-col overflow-hidden sm:min-h-[min(100dvh,42rem)]">
         <HeroBackground
-          images={[...TRAVEL_HERO_IMAGES]}
+          images={[...HOME_HERO_IMAGES]}
           overlay="photo"
-          parallax
+          parallax={false}
           intervalMs={7000}
           forceCover
         />
@@ -94,6 +99,7 @@ export function PublicLanding({
             >
               <Link href={accediHref()}>Accedi</Link>
             </Button>
+            {/* Unico coral della home */}
             <Button
               asChild
               size="sm"
@@ -130,21 +136,20 @@ export function PublicLanding({
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-28 pt-6 text-center sm:pb-32">
           <div className="max-w-3xl motion-safe:animate-[nl-landing-in_700ms_ease_forwards]">
             <h1 className="font-display text-[clamp(1.75rem,5vw,3.25rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.25)]">
-              Scegli la meta, le date e con chi partire.
+              Il tuo viaggio, senza tour operator.
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-[clamp(0.95rem,1.4vw,1.15rem)] leading-relaxed text-white/92">
-              Al resto pensiamo noi: itinerario pronto, chat del viaggio e voli e hotel prenotati da
-              te, senza tour operator.
+              Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Due percorsi equivalenti */}
+      {/* Due percorsi equivalenti — stesso peso CTA (indigo); coral solo su Registrati */}
       <section className="nl-page relative z-20 -mt-24 w-full pb-4 sm:-mt-28">
         <div className="grid gap-5 md:grid-cols-2 md:gap-6">
           <article className="flex flex-col gap-3.5 rounded-[18px] border border-[var(--color-border)] bg-white p-7 shadow-[var(--shadow-soft)]">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#FDEEE9] text-accent">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
               <Compass className="h-6 w-6" />
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight">
@@ -161,12 +166,8 @@ export function PublicLanding({
                 </li>
               ))}
             </ul>
-            <Button
-              asChild
-              size="lg"
-              className="mt-auto h-12 w-full rounded-[10px] bg-accent font-semibold text-white hover:bg-[var(--color-accent-hover)] sm:w-auto"
-            >
-              <Link href="/organizza">Organizza il tuo viaggio →</Link>
+            <Button asChild size="lg" className={pathBtnClass}>
+              <Link href="/organizza">Organizza →</Link>
             </Button>
           </article>
 
@@ -189,28 +190,23 @@ export function PublicLanding({
                 </li>
               ))}
             </ul>
-            <Button
-              asChild
-              size="lg"
-              className="mt-auto h-12 w-full rounded-[10px] bg-primary font-semibold text-white hover:bg-[var(--color-primary-hover)] sm:w-auto"
-            >
-              <Link href="/gruppi">Vedi i gruppi →</Link>
+            <Button asChild size="lg" className={pathBtnClass}>
+              <Link href="/gruppi">Unisciti a un gruppo →</Link>
             </Button>
           </article>
         </div>
       </section>
 
-      {/* Disponibile ora */}
       {thai ? (
         <section className="nl-page w-full py-14 sm:py-16">
-          <p className="text-[12px] font-bold uppercase tracking-[0.09em] text-accent">
+          <p className="text-[12px] font-bold uppercase tracking-[0.09em] text-primary">
             Disponibile ora
           </p>
           <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
             Parti adesso per la {thai.name}
           </h2>
           <div className="mt-6 grid overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-white shadow-[var(--shadow-soft)] md:grid-cols-[1.25fr_1fr]">
-            <div className="relative min-h-[220px] md:min-h-[340px]">
+            <div className="relative min-h-[220px] bg-[var(--color-tint)] md:min-h-[340px]">
               <Image
                 src={coverForDestination(thai.slug)}
                 alt={thai.name}
@@ -239,8 +235,8 @@ export function PublicLanding({
                 </span>
               </div>
               {(thailandia?.budgetHint ?? thai.budgetHint) != null ? (
-                <span className="inline-flex w-fit rounded-full bg-[#FDEEE9] px-3 py-1.5 text-sm font-bold text-accent">
-                  stima da ~
+                <span className="inline-flex w-fit rounded-full bg-[var(--color-tint)] px-3 py-1.5 text-sm font-bold text-primary">
+                  {COMPLIANCE_COPY.budgetLabel.toLowerCase()} da ~
                   {(thailandia?.budgetHint ?? thai.budgetHint)?.toLocaleString('it-IT')} € a
                   persona
                 </span>
@@ -248,7 +244,7 @@ export function PublicLanding({
               <div className="mt-1 flex flex-wrap gap-2">
                 <Button
                   asChild
-                  className="rounded-[10px] bg-accent font-semibold hover:bg-[var(--color-accent-hover)]"
+                  className="rounded-[10px] bg-primary font-semibold hover:bg-[var(--color-primary-hover)]"
                 >
                   <Link href={`/organizza?slug=${thai.slug}`}>Organizza</Link>
                 </Button>
@@ -267,7 +263,6 @@ export function PublicLanding({
         </section>
       ) : null}
 
-      {/* In arrivo */}
       {comingSoon.length > 0 ? (
         <section className="border-t border-[var(--color-border)] bg-[var(--color-tint)]/40 py-14 sm:py-16">
           <div className="nl-page w-full">
@@ -291,7 +286,7 @@ export function PublicLanding({
                   id={`in-arrivo-${dest.slug}`}
                   className="overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-white"
                 >
-                  <div className="relative h-24">
+                  <div className="relative h-24 bg-[var(--color-tint)]">
                     <Image
                       src={coverForDestination(dest.slug)}
                       alt={dest.name}

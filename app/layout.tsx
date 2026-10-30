@@ -34,10 +34,14 @@ export const metadata: Metadata = {
     template: `%s — ${appName}`,
   },
   description:
-    'Scegli la meta, le date e con chi partire. Itinerario pronto, chat del viaggio, voli e hotel prenotati da te — senza tour operator.',
+    'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }, { url: '/icons/icon.svg', type: 'image/svg+xml' }],
-    apple: '/icons/icon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
     type: 'website',
@@ -45,14 +49,14 @@ export const metadata: Metadata = {
     siteName: appName,
     title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Organizza il tuo viaggio o unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
+      'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
     images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: appName }],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${appName} — ${BRAND_TAGLINE}`,
     description:
-      'Organizza il tuo viaggio o unisciti a un gruppo. Ognuno prenota voli e hotel per conto proprio.',
+      'Il tuo viaggio, senza tour operator. Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.',
     images: ['/images/heroes/hero-login.jpg'],
   },
   // Omio / Impact affiliate site verification

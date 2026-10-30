@@ -118,7 +118,7 @@ function StepperBar({
               className={cn(
                 'flex w-full min-h-14 items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition',
                 current &&
-                  'border-accent shadow-[0_0_0_3px_rgba(201,68,42,0.15)] bg-white',
+                  'border-primary shadow-[0_0_0_3px_rgba(35,42,107,0.12)] bg-white',
                 complete && !current && 'border-[var(--color-border)] bg-white',
                 !current && !complete && 'border-[var(--color-border)] bg-[var(--color-tint)]/60',
                 !clickable && 'cursor-default opacity-70'
@@ -128,7 +128,7 @@ function StepperBar({
                 className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
                   complete && 'bg-primary text-white',
-                  current && 'bg-accent text-white',
+                  current && 'bg-primary text-white',
                   !complete && !current && 'bg-white text-[var(--color-text-secondary)]'
                 )}
               >
@@ -413,7 +413,7 @@ export function OrganizzaWizard({
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
           <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-7">
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent">
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
               Passo {stepNum + 1} di {ORGANIZZA_STEPS.length}
             </p>
 
@@ -660,7 +660,7 @@ export function OrganizzaWizard({
                     />
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
                       Riepilogo
                     </p>
                     <h2 className="font-display text-xl font-extrabold text-[var(--color-text)]">
@@ -725,9 +725,9 @@ export function OrganizzaWizard({
                   ))}
                 </ul>
 
-                <div className="rounded-2xl bg-[#FDEEE9] px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                <div className="rounded-2xl bg-[var(--color-tint)] px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                       Stima del costo
                     </p>
                     <p className="mt-1 text-lg font-extrabold text-[var(--color-text)]">

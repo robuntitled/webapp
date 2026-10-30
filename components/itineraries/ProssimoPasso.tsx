@@ -6,7 +6,6 @@ import { Check, Copy, Lock, MessageCircle, Plane } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
-import { cn } from '@/lib/utils';
 
 type Props = {
   practiceId: string;
@@ -76,12 +75,8 @@ export function ProssimoPasso({
 
           <ol className="mt-8 space-y-3">
             {showInvite ? (
-              <li
-                className={cn(
-                  'rounded-2xl border-2 border-accent bg-white p-4 sm:p-5'
-                )}
-              >
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-accent">
+              <li className="rounded-2xl border-2 border-primary bg-white p-4 sm:p-5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
                   Ora · Passo 1 — Invita gli amici
                 </p>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">

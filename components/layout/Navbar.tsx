@@ -52,7 +52,7 @@ export async function Navbar() {
               <Button
                 asChild
                 size="sm"
-                className="h-11 min-h-11 rounded-[10px] bg-accent px-3.5 text-[0.8125rem] font-semibold text-white shadow-none hover:bg-[var(--color-accent-hover)]"
+                className="h-11 min-h-11 rounded-[10px] bg-primary px-3.5 text-[0.8125rem] font-semibold text-white shadow-none hover:bg-[var(--color-primary-hover)]"
               >
                 <Link href="/accedi?mode=register">Registrati</Link>
               </Button>

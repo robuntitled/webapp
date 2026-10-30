@@ -1,7 +1,10 @@
 import { cn } from '@/lib/utils';
 import { BRAND_NAME } from '@/lib/brand/noivia';
 
-/** Wordmark Noivia (SVG) — indigo + route coral/lilac. */
+/**
+ * Wordmark Noivia — SVG con path (Plus Jakarta ExtraBold convertito),
+ * indipendente dal font runtime. Route coral/lilac sopra le ı.
+ */
 export const LOGO_RATIO = 3.3;
 
 export function BrandLogo({
@@ -9,13 +12,10 @@ export function BrandLogo({
   responsive = false,
   className,
   priority = false,
-  /** Ombra solo su sfondi scuri (es. hero login). */
   elevated = false,
-  /** Wordmark bianco per hero/nav overlay. */
   variant = 'default',
 }: {
   size?: number;
-  /** Navbar: altezza guidata da --nl-logo-h (hero → collapsed). */
   responsive?: boolean;
   className?: string;
   priority?: boolean;
