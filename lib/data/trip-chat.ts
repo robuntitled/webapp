@@ -232,6 +232,8 @@ function normalizeUserId(id: string): string {
   return String(id).trim().toLowerCase();
 }
 
+type PracticeDateHint = { date_from: string; date_to: string };
+
 /** Tutte le edizioni di cui l'utente è membro (interested/confirmed) o ha una pratica. */
 async function loadMembershipEditions(userId: string): Promise<MembershipEdition[]> {
   const [{ data: mine }, { data: practiceRows }] = await Promise.all([
@@ -242,19 +244,29 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
       .in('status', ['interested', 'confirmed']),
     supabaseAdmin
       .from('practices')
-      .select('edition_id')
+      .select('edition_id, date_from, date_to, created_at')
       .eq('user_id', userId)
       .neq('status', 'cancelled')
-      .not('edition_id', 'is', null),
+      .not('edition_id', 'is', null)
+      .order('created_at', { ascending: false }),
   ]);
+
+  // Date “reali” per l’utente: la pratica può divergere da editions.date_* (drift DB).
+  const practiceByEdition = new Map<string, PracticeDateHint>();
+  for (const r of practiceRows ?? []) {
+    const eid = r.edition_id as string | null;
+    if (!eid || practiceByEdition.has(eid)) continue;
+    practiceByEdition.set(eid, {
+      date_from: String(r.date_from).slice(0, 10),
+      date_to: String(r.date_to).slice(0, 10),
+    });
+  }
 
   const idSet = new Set<string>();
   for (const r of mine ?? []) {
     if (r.edition_id) idSet.add(r.edition_id as string);
   }
-  for (const r of practiceRows ?? []) {
-    if (r.edition_id) idSet.add(r.edition_id as string);
-  }
+  for (const eid of practiceByEdition.keys()) idSet.add(eid);
   const ids = [...idSet];
   if (!ids.length) return [];
 
@@ -278,21 +290,20 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
   }
   if (!editions.length) return [];
 
-  // Solo escludi viaggi finiti da oltre 2 giorni (tieni in corso / futuri).
+  // Live se editions O la pratica dell’utente è ancora in corso/futura.
   const cutoff = new Date();
   cutoff.setUTCDate(cutoff.getUTCDate() - 2);
   const cutoffIso = cutoff.toISOString().slice(0, 10);
   const live = editions.filter((e) => {
-    const status = String(e.status ?? '');
-    if (status === 'closed') {
-      const dateTo = String(e.date_to ?? '').slice(0, 10);
-      return dateTo >= cutoffIso;
-    }
+    const id = e.id as string;
+    const practice = practiceByEdition.get(id);
+    if (practice?.date_to && practice.date_to >= cutoffIso) return true;
+    if (practice?.date_from && practice.date_from >= cutoffIso) return true;
     const dateTo = String(e.date_to ?? '').slice(0, 10);
     const dateFrom = String(e.date_from ?? '').slice(0, 10);
     if (dateTo && dateTo >= cutoffIso) return true;
     if (dateFrom && dateFrom >= cutoffIso) return true;
-    return !dateTo && !dateFrom;
+    return false;
   });
 
   const withMembers = await Promise.all(
@@ -310,11 +321,13 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
           })
         ).values(),
       ];
+      const practice = practiceByEdition.get(e.id as string);
       return {
         id: e.id as string,
         template_id: e.template_id as string,
-        date_from: String(e.date_from).slice(0, 10),
-        date_to: String(e.date_to).slice(0, 10),
+        // Preferisci date pratica (allineate a notifiche / itinerario utente)
+        date_from: practice?.date_from ?? String(e.date_from).slice(0, 10),
+        date_to: practice?.date_to ?? String(e.date_to).slice(0, 10),
         title: (e.title as string | null | undefined) ?? null,
         memberIds,
       };
