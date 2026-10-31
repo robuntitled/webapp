@@ -2,8 +2,6 @@
 
 Webapp di viaggi di gruppo: **Next.js 15 App Router**, auth **NextAuth v5**, dati su **Supabase PostgreSQL**, deploy su **Vercel**.
 
-> Per il dettaglio del Trip Composer (orchestrator, blocchi, AI pipeline) vedi anche [`ARCHITECTURE-TRIP-COMPOSER.md`](./ARCHITECTURE-TRIP-COMPOSER.md).
-
 ---
 
 ## Stack tecnologico (panoramica)

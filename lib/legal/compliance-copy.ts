@@ -6,7 +6,7 @@
  * DPR 430/2001 art. 6; Reg. (UE) 2024/1689 (AI Act) trasparenza.
  *
  * Regola guida: la qualificazione giuridica reale deve coincidere con ciò che
- * dichiariamo. Flygetr = piattaforma di planning + suggerimenti; l'esecuzione
+ * dichiariamo. Noivia = piattaforma di planning + suggerimenti; l'esecuzione
  * di ogni servizio è del rispettivo fornitore. Nessun pacchetto, nessun prezzo
  * globale, nessun checkout unico.
  */
@@ -15,19 +15,34 @@ export const COMPLIANCE_COPY = {
   /** Da mostrare vicino a qualsiasi elenco di servizi prenotabili. */
   separateBooking: 'Ogni servizio è prenotato separatamente con il rispettivo fornitore.',
   /** Disclaimer di qualificazione, ripetuto nei punti in cui si aggregano servizi. */
-  notAPackage: 'Flygetr non organizza pacchetti turistici né vende viaggi.',
+  notAPackage: 'Noivia non organizza pacchetti turistici né vende viaggi.',
   /** Prezzo: mai "totale viaggio". Solo somma di contratti separati. */
   priceIsSumOfServices:
     'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
+  /**
+   * Checkout voli/hotel: chi vende e chi è merchant of record.
+   * Fatti da codice/config (LiteAPI / Nuitee Connect). Ragione sociale completa: LEGAL_*.
+   */
+  checkoutMerchantOfRecord:
+    'Prenotazione e pagamento gestiti da LiteAPI / Nuitée (payment processor e merchant of record). Noivia agisce come intermediario.',
+  /** TODO owner: completare LEGAL_* (ragione sociale intermediario) in .env — vedi company.defaults. */
+  checkoutMerchantLegalTodo:
+    'TODO LEGAL_*: completare ragione sociale / P.IVA intermediario (LEGAL_COMPANY_NAME, LEGAL_VAT_ID) prima del go-live.',
+  /**
+   * Hotel: il totale mostrato include già il markup LiteAPI (LITEAPI_MARGIN / default 10%).
+   * Non esporre la % al cliente; solo che il prezzo include la commissione di servizio.
+   */
+  hotelServiceFeeIncluded:
+    'Totale comprensivo di tutte le commissioni. Il prezzo include la commissione di servizio Noivia.',
   /** Trasparenza AI (AI Act). */
   aiGenerated:
     'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
   /** Responsabilità. */
   responsibility:
-    'Flygetr fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
+    'Noivia fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
   /** Messaggio guida (onboarding, homepage, Trip). */
   guide:
-    'Su Flygetr scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
+    'Su Noivia scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
   /** Etichetta unica per qualsiasi cifra aggregata. */
   budgetLabel: 'Budget orientativo',
   budgetFilterLabel: 'Fascia di spesa stimata',
@@ -45,7 +60,7 @@ export const POST_THRESHOLD_CHECKLIST = [
 
 /**
  * "Soglia del gruppo" — sostituisce "garanzia di partenza".
- * Non è un'obbligazione di viaggio di Flygetr (evita il profilo da organizzatore,
+ * Non è un'obbligazione di viaggio di Noivia (evita il profilo da organizzatore,
  * art. 41 D.Lgs. 62/2018): è una condizione sociale del gruppo.
  */
 export function groupThresholdCopy(

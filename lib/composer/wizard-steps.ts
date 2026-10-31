@@ -1,10 +1,5 @@
-/** Fasi wizard: template → config → editor → pubblica in formazione */
+/** Fasi wizard legacy salvate in bozze `composer_drafts` (GDPR). */
 export type ComposerWizardStep = 'source' | 'landing' | 'plan' | 'review';
-
-/** Step legacy salvati in bozze precedenti */
-export type LegacyComposerWizardStep = 'intake' | 'setup';
-
-export const WIZARD_STEPS: ComposerWizardStep[] = ['source', 'landing', 'review'];
 
 export function normalizeWizardStep(
   step: string | null | undefined
@@ -14,17 +9,4 @@ export function normalizeWizardStep(
     return step;
   }
   return 'source';
-}
-
-export function wizardStepLabel(step: ComposerWizardStep): string {
-  switch (step) {
-    case 'source':
-      return 'Template';
-    case 'landing':
-      return 'Config';
-    case 'plan':
-      return 'Editor';
-    case 'review':
-      return 'Pubblica';
-  }
 }

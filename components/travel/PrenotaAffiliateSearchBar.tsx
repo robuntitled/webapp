@@ -18,7 +18,7 @@ export type PrenotaAffiliateSearchBarProps = {
   startDate: string;
   endDate: string;
   adults: number;
-  children?: number;
+  childrenCount?: number;
   onCityChange: (v: string) => void;
   onStartDateChange: (v: string) => void;
   onEndDateChange: (v: string) => void;
@@ -38,7 +38,7 @@ export function PrenotaAffiliateSearchBar({
   startDate,
   endDate,
   adults,
-  children = 0,
+  childrenCount = 0,
   onCityChange,
   onStartDateChange,
   onEndDateChange,
@@ -92,7 +92,7 @@ export function PrenotaAffiliateSearchBar({
           />
           <GuestsPicker
             adults={adults}
-            childrenCount={children}
+            childrenCount={childrenCount}
             onAdultsChange={onAdultsChange}
             onChildrenChange={onChildrenChange ?? (() => {})}
             label="Persone"

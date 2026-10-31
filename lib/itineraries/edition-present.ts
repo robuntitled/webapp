@@ -44,7 +44,7 @@ export function editionScarcity(input: {
   }
   if (confirmed >= 1) {
     return {
-      label: 'Ultimi posti',
+      label: 'In formazione',
       variant: 'warming',
       sublabel: `${confirmed}/${min} hanno già prenotato il volo`,
     };
@@ -56,6 +56,7 @@ export function editionScarcity(input: {
   };
 }
 
+/** Badge card: solo disponibilità reale o stato gruppo — niente «ultimi posti». */
 export function editionBadgeDisplay(
   scarcity: { variant: EditionScarcityVariant },
   spotsLeft: number
@@ -66,9 +67,17 @@ export function editionBadgeDisplay(
     case 'open':
       return 'Gruppo in formazione';
     case 'closing':
-      return spotsLeft > 0 ? `Ultimi ${spotsLeft} posti` : 'In chiusura';
+      return spotsLeft > 0
+        ? spotsLeft === 1
+          ? 'Manca 1 volo'
+          : `Mancano ${spotsLeft} voli`
+        : 'In chiusura';
     case 'warming':
-      return spotsLeft > 0 ? `Ultimi ${spotsLeft} posti` : 'Ultimi posti';
+      return spotsLeft > 0
+        ? spotsLeft === 1
+          ? 'Manca 1 volo'
+          : `Mancano ${spotsLeft} voli`
+        : 'In formazione';
   }
 }
 
@@ -76,26 +85,52 @@ export function editionParticipantsLabel(input: {
   interested_count?: number;
   confirmed_count?: number;
 }): string | null {
-  const interested = input.interested_count ?? 0;
-  const confirmed = input.confirmed_count ?? 0;
-  const count = Math.max(interested, confirmed);
-  if (count <= 0) return null;
-  return count === 1 ? '👥 1 persona partecipa' : `👥 ${count} persone partecipano`;
+  // interested + confirmed = membri attivi (status mutuamente esclusivi)
+  const enrolled = (input.interested_count ?? 0) + (input.confirmed_count ?? 0);
+  if (enrolled <= 0) return null;
+  return enrolled === 1 ? '👥 1 iscritto al gruppo' : `👥 ${enrolled} iscritti al gruppo`;
 }
 
+/**
+ * Soglia partenza = voli confermati (non = iscritti).
+ * Isolata qui: l’owner non ha ancora deciso members vs flights.
+ */
 export function editionFlightsStatusLabel(confirmed: number, minConfirmed: number): string {
   const min = Math.max(minConfirmed, 1);
-  const flightLabel = min === 1 ? 'volo confermato' : 'voli confermati';
-  return `${confirmed} di ${min} ${flightLabel}`;
+  return `${confirmed} di ${min} voli`;
+}
+
+/** Etichetta completa con contesto soglia (es. "0 di 4 voli per partire"). */
+export function editionFlightsThresholdLabel(confirmed: number, minConfirmed: number): string {
+  const min = Math.max(minConfirmed, 1);
+  if (confirmed >= min) return `${confirmed} di ${min} voli — soglia raggiunta`;
+  return `${confirmed} di ${min} voli per partire`;
+}
+
+/** Budget orientativo per durata template — mai "prezzo del gruppo". */
+export function editionBudgetOrientativeLabel(
+  totalHint: number | null | undefined,
+  durationDays?: number | null
+): string | null {
+  if (totalHint == null || totalHint <= 0) return null;
+  const rounded = Math.round(totalHint);
+  const formatted = rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const amount = `~${formatted} €`;
+  if (durationDays && durationDays > 0) {
+    return `Budget orientativo da ${amount} · ${durationDays} giorni`;
+  }
+  return `Budget orientativo da ${amount}`;
 }
 
 export function editionGroupHint(confirmed: number, minConfirmed: number): string {
-  if (minConfirmed <= 0) return confirmed > 0 ? 'Soglia gruppo raggiunta' : 'In attesa delle prime conferme';
-  if (confirmed >= minConfirmed) return 'Soglia gruppo raggiunta';
+  if (minConfirmed <= 0) {
+    return confirmed > 0 ? 'Soglia voli raggiunta' : 'In attesa del primo volo';
+  }
+  if (confirmed >= minConfirmed) return 'Soglia voli raggiunta — il gruppo può partire';
   const remaining = minConfirmed - confirmed;
   return remaining === 1
-    ? 'Ancora 1 conferma necessaria'
-    : `Ancora ${remaining} conferme necessarie`;
+    ? 'Ancora 1 volo per la soglia'
+    : `Ancora ${remaining} voli per la soglia`;
 }
 
 export function editionJoinReason(input: {

@@ -179,18 +179,33 @@ const PRIMARY_PHOTO_IDS = new Set(
   Object.values(UNIQUE_DESTINATION_COVERS).map(unsplashPhotoId)
 );
 
+/** Wikimedia thumbs a 3840px spesso falliscono via `/_next/image` (HTTP 400). */
+function normalizeRemoteCoverUrl(url: string): string {
+  if (!url.includes('upload.wikimedia.org')) return url;
+  return url.replace(/\/(\d{4,})px-/g, (_m, px: string) => {
+    const n = Number(px);
+    return `/${n > 1280 ? 1280 : n}px-`;
+  });
+}
+
 export function coverForDestination(idOrLabel: string): string {
   const dest = findDestination(idOrLabel);
   const key = (dest?.id ?? idOrLabel).trim().toLowerCase();
-  if (UNIQUE_DESTINATION_COVERS[key]) return UNIQUE_DESTINATION_COVERS[key];
-  if (dest && UNIQUE_DESTINATION_COVERS[dest.id]) return UNIQUE_DESTINATION_COVERS[dest.id];
+  if (UNIQUE_DESTINATION_COVERS[key]) {
+    return normalizeRemoteCoverUrl(UNIQUE_DESTINATION_COVERS[key]!);
+  }
+  if (dest && UNIQUE_DESTINATION_COVERS[dest.id]) {
+    return normalizeRemoteCoverUrl(UNIQUE_DESTINATION_COVERS[dest.id]!);
+  }
 
   const generated =
     (dest && GENERATED_DESTINATION_COVERS[dest.id]) || GENERATED_DESTINATION_COVERS[key];
   if (generated && !PRIMARY_PHOTO_IDS.has(unsplashPhotoId(generated))) {
-    return generated;
+    return normalizeRemoteCoverUrl(generated);
   }
-  return UNIQUE_DESTINATION_COVERS.thailandia ?? DEFAULT_TRIP_IMAGE;
+  return normalizeRemoteCoverUrl(
+    UNIQUE_DESTINATION_COVERS.thailandia ?? DEFAULT_TRIP_IMAGE
+  );
 }
 
 const DESTINATION_POOLS: Record<string, string[]> = {
@@ -227,7 +242,9 @@ function destinationCoverPool(slug: string): string[] {
 /** Stessa meta, date diverse: foto diverse dal pool della destinazione. Mai foto di un’altra meta. */
 export function uniqueCover(seed: string, index = 0): string {
   const pool = destinationCoverPool(seed);
-  return pool[index % pool.length] ?? coverForDestination(seed);
+  return normalizeRemoteCoverUrl(
+    pool[index % pool.length] ?? coverForDestination(seed)
+  );
 }
 
 /** Una foto per slug, mai due slug con lo stesso URL. */

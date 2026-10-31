@@ -135,6 +135,11 @@ export function isFlightPendingConfirmation(status: string | null | undefined): 
   return parseFlightStatus(status) === 'pending';
 }
 
+/** Solo confirmed/ticketed contano come posto gruppo / pratica confermata. */
+export function flightStatusConfirmsSeat(status: string | null | undefined): boolean {
+  return parseFlightStatus(status) === 'confirmed';
+}
+
 export function formatFlightBookingStatus(status: string | null | undefined): {
   label: string;
   description: string;

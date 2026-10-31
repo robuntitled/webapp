@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
 import {
   editionBadgeDisplay,
+  editionBudgetOrientativeLabel,
+  editionFlightsStatusLabel,
+  editionFlightsThresholdLabel,
   editionGroupHint,
   editionParticipantsLabel,
   editionScarcity,
@@ -36,23 +39,55 @@ describe('edition present', () => {
     expect(info.variant).toBe('formed');
   });
 
-  it('formats badge labels for card display', () => {
+  it('formats badge labels without false scarcity', () => {
     expect(editionBadgeDisplay({ variant: 'open' }, 6)).toBe('Gruppo in formazione');
-    expect(editionBadgeDisplay({ variant: 'warming' }, 5)).toBe('Ultimi 5 posti');
+    expect(editionBadgeDisplay({ variant: 'warming' }, 5)).toBe('Mancano 5 voli');
+    expect(editionBadgeDisplay({ variant: 'closing' }, 1)).toBe('Manca 1 volo');
     expect(editionBadgeDisplay({ variant: 'formed' }, 0)).toBe('Gruppo confermato');
+  });
+
+  it('never uses Ultimi posti wording', () => {
+    const near = new Date();
+    near.setDate(near.getDate() + 40);
+    const warming = editionScarcity({
+      confirmed_count: 2,
+      min_confirmed: 4,
+      date_from: near.toISOString().slice(0, 10),
+    });
+    expect(warming.label).not.toMatch(/ultimi/i);
+    expect(warming.label).toBe('In formazione');
+    expect(editionBadgeDisplay(warming, 2)).not.toMatch(/ultimi/i);
   });
 
   it('formats participants and group hints', () => {
     expect(
       editionParticipantsLabel({ interested_count: 2, confirmed_count: 1 })
-    ).toBe('👥 2 persone partecipano');
-    expect(editionGroupHint(1, 6)).toBe('Ancora 5 conferme necessarie');
-    expect(editionGroupHint(6, 6)).toBe('Soglia gruppo raggiunta');
+    ).toBe('👥 3 iscritti al gruppo');
+    expect(editionParticipantsLabel({ interested_count: 1, confirmed_count: 0 })).toBe(
+      '👥 1 iscritto al gruppo'
+    );
+    expect(editionGroupHint(1, 6)).toBe('Ancora 5 voli per la soglia');
+    expect(editionGroupHint(6, 6)).toBe('Soglia voli raggiunta — il gruppo può partire');
   });
 
   it('formats edition date range', () => {
     expect(formatEditionDateRange('2027-01-08', '2027-01-28')).toBe(
       '08 → 28 gennaio 2027'
     );
+  });
+
+  it('isolates flights threshold wording (not members)', () => {
+    expect(editionFlightsStatusLabel(0, 4)).toBe('0 di 4 voli');
+    expect(editionFlightsThresholdLabel(0, 4)).toBe('0 di 4 voli per partire');
+    expect(editionFlightsThresholdLabel(4, 4)).toBe(
+      '4 di 4 voli — soglia raggiunta'
+    );
+  });
+
+  it('labels budget as orientative, never group price', () => {
+    expect(editionBudgetOrientativeLabel(1700, 14)).toBe(
+      'Budget orientativo da ~1.700 € · 14 giorni'
+    );
+    expect(editionBudgetOrientativeLabel(null)).toBeNull();
   });
 });

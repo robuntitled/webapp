@@ -268,7 +268,7 @@ export function PrenotaActivitiesClient({
         startDate={startDate}
         endDate={endDate}
         adults={adults}
-        children={children}
+        childrenCount={children}
         onCityChange={setCity}
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}

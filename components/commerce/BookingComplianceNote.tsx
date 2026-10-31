@@ -1,9 +1,30 @@
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
-export function BookingComplianceNote() {
+type Props = {
+  /** Mostra la riga MoR LiteAPI/Nuitée + Noivia intermediario (checkout). */
+  showMerchantOfRecord?: boolean;
+  /** Hotel: totale già con commissione di servizio Noivia. */
+  showHotelServiceFee?: boolean;
+};
+
+export function BookingComplianceNote({
+  showMerchantOfRecord = false,
+  showHotelServiceFee = false,
+}: Props) {
   return (
-    <p className="text-xs leading-relaxed text-muted-foreground">
-      {COMPLIANCE_COPY.separateBooking}
-    </p>
+    <div className="space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+      <p>{COMPLIANCE_COPY.separateBooking}</p>
+      {showMerchantOfRecord ? (
+        <p>{COMPLIANCE_COPY.checkoutMerchantOfRecord}</p>
+      ) : null}
+      {showHotelServiceFee ? (
+        <p>{COMPLIANCE_COPY.hotelServiceFeeIncluded}</p>
+      ) : null}
+      {showMerchantOfRecord ? (
+        <p className="text-[10px] text-muted-foreground/80">
+          {COMPLIANCE_COPY.checkoutMerchantLegalTodo}
+        </p>
+      ) : null}
+    </div>
   );
 }

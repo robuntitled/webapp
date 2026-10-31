@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { BRAND_NAME } from '@/lib/brand';
 import { LEGAL_PLACEHOLDERS } from '@/lib/privacy/company.defaults';
 
 /**
@@ -9,6 +10,12 @@ import { LEGAL_PLACEHOLDERS } from '@/lib/privacy/company.defaults';
  */
 
 export { LEGAL_PLACEHOLDERS };
+
+/** Env legacy Flygetr: non mostrare in UI dopo rebrand (finché LEGAL_* non è aggiornato). */
+function isLegacyFlygetrValue(value: string | undefined): boolean {
+  if (!value) return false;
+  return /flygetr/i.test(value);
+}
 
 export type CompanyProfile = {
   /** Ragione sociale (titolare del trattamento) */
@@ -59,7 +66,11 @@ export function isCompanyProfileComplete(): boolean {
 
 export function getCompanyProfile(): CompanyProfile {
   const companyName = valueOrPlaceholder('LEGAL_COMPANY_NAME', LEGAL_PLACEHOLDERS.companyName);
-  const tradeName = env('LEGAL_TRADE_NAME') ?? env('NEXT_PUBLIC_APP_NAME') ?? LEGAL_PLACEHOLDERS.tradeName;
+  // Prefer LEGAL_TRADE_NAME → BRAND_NAME. Ignora NEXT_PUBLIC_APP_NAME se ancora "Flygetr".
+  const tradeNameRaw = env('LEGAL_TRADE_NAME') ?? env('NEXT_PUBLIC_APP_NAME');
+  const tradeName = isLegacyFlygetrValue(tradeNameRaw)
+    ? BRAND_NAME
+    : (tradeNameRaw ?? BRAND_NAME ?? LEGAL_PLACEHOLDERS.tradeName);
   const vatId = valueOrPlaceholder('LEGAL_VAT_ID', LEGAL_PLACEHOLDERS.vatId);
   const fiscalCode = valueOrPlaceholder('LEGAL_FISCAL_CODE', LEGAL_PLACEHOLDERS.fiscalCode);
   const addressLine = valueOrPlaceholder('LEGAL_ADDRESS_LINE', LEGAL_PLACEHOLDERS.addressLine);
@@ -67,8 +78,14 @@ export function getCompanyProfile(): CompanyProfile {
   const province = valueOrPlaceholder('LEGAL_PROVINCE', LEGAL_PLACEHOLDERS.province);
   const postalCode = valueOrPlaceholder('LEGAL_POSTAL_CODE', LEGAL_PLACEHOLDERS.postalCode);
   const country = env('LEGAL_COUNTRY') ?? LEGAL_PLACEHOLDERS.country;
-  const privacyEmail = valueOrPlaceholder('LEGAL_EMAIL_PRIVACY', LEGAL_PLACEHOLDERS.privacyEmail);
-  const supportEmail = valueOrPlaceholder('LEGAL_EMAIL_SUPPORT', LEGAL_PLACEHOLDERS.supportEmail);
+  const privacyRaw = env('LEGAL_EMAIL_PRIVACY');
+  const privacyEmail = isLegacyFlygetrValue(privacyRaw)
+    ? LEGAL_PLACEHOLDERS.privacyEmail
+    : valueOrPlaceholder('LEGAL_EMAIL_PRIVACY', LEGAL_PLACEHOLDERS.privacyEmail);
+  const supportRaw = env('LEGAL_EMAIL_SUPPORT');
+  const supportEmail = isLegacyFlygetrValue(supportRaw)
+    ? LEGAL_PLACEHOLDERS.supportEmail
+    : valueOrPlaceholder('LEGAL_EMAIL_SUPPORT', LEGAL_PLACEHOLDERS.supportEmail);
   const dpoEmail = valueOrPlaceholder('LEGAL_EMAIL_DPO', LEGAL_PLACEHOLDERS.dpoEmail);
   const pec = valueOrPlaceholder('LEGAL_PEC', LEGAL_PLACEHOLDERS.pec);
   const phone = valueOrPlaceholder('LEGAL_PHONE', LEGAL_PLACEHOLDERS.phone);

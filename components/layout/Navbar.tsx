@@ -16,18 +16,20 @@ export async function Navbar() {
 
   return (
     <AppHeader>
-      <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 md:gap-8 lg:gap-12">
+      <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 md:gap-4">
         <Link
-          href="/destinazioni"
-          className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-          aria-label="Flygetr — home"
+          href="/"
+          className="justify-self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+          aria-label="Noivia — home"
         >
           <BrandLogo responsive priority />
         </Link>
 
-        <NavbarNav isLoggedIn={!!session?.user} />
+        <div className="flex min-w-0 items-center justify-center">
+          <NavbarNav isLoggedIn={!!session?.user} />
+        </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-1 md:gap-1.5">
+        <div className="flex shrink-0 items-center justify-end justify-self-end gap-0.5 sm:gap-1 md:gap-1.5">
           <MobileNav isLoggedIn={!!session?.user} />
           {session?.user ? (
             <>
@@ -41,18 +43,18 @@ export async function Navbar() {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-9 rounded-full px-4 font-medium text-slate-700 hover:bg-slate-900/[0.05] hover:text-primary',
+                  'h-11 min-h-11 rounded-[10px] px-3.5 text-[0.8125rem] font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-tint)] hover:text-[var(--color-brand)]',
                   'group-data-[hero=true]/nav:text-white/95 group-data-[hero=true]/nav:hover:bg-white/10 group-data-[hero=true]/nav:hover:text-white group-data-[hero=true]/nav:[text-shadow:0_1px_8px_rgba(0,0,0,0.35)]'
                 )}
               >
-                <Link href="/">Accedi</Link>
+                <Link href="/accedi">Accedi</Link>
               </Button>
               <Button
                 asChild
                 size="sm"
-                className="h-9 rounded-full bg-accent px-4 font-semibold text-white shadow-none hover:bg-accent/90"
+                className="h-11 min-h-11 rounded-[10px] bg-primary px-3.5 text-[0.8125rem] font-semibold text-white shadow-none hover:bg-[var(--color-primary-hover)]"
               >
-                <Link href="/">Registrati</Link>
+                <Link href="/accedi?mode=register">Registrati</Link>
               </Button>
             </div>
           )}

@@ -7,7 +7,7 @@ import { BRAND_IMAGES } from '@/lib/brand/images';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 
 export const metadata = {
-  title: 'Inizio — Flygetr',
+  title: 'Inizio',
 };
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ export default async function OnboardingPage() {
     redirect('/completa-registrazione');
   }
   if (session.user.onboardingCompleted) {
-    redirect('/destinazioni');
+    redirect('/organizza');
   }
 
   return (
@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
         overlay="gradient"
       />
       <header className="relative z-10 px-4 py-5">
-        <Link href="/" className="inline-block" aria-label="Flygetr — home">
+        <Link href="/" className="inline-block" aria-label="Noivia — home">
           <BrandLogo size={52} />
         </Link>
       </header>

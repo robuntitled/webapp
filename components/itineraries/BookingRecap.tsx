@@ -2,8 +2,9 @@
 
 import { Check, Copy, ExternalLink, Hotel, Loader2, Plane, Ticket } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
+import { useIntervalWhenVisible } from '@/hooks/useIntervalWhenVisible';
 import {
   formatBookingMoney,
   formatFlightBookingStatus,
@@ -114,12 +115,12 @@ export function FlightBookingCard({
     }
   }, [pending, practiceId, router]);
 
-  useEffect(() => {
-    if (!practiceId || !pending) return;
-    void sync();
-    const id = window.setInterval(() => void sync(), 20_000);
-    return () => window.clearInterval(id);
-  }, [pending, practiceId, sync]);
+  useIntervalWhenVisible(
+    () => {
+      void sync();
+    },
+    practiceId && pending ? 30_000 : null
+  );
 
   return (
     <section className="space-y-3 rounded-3xl bg-[#161d2b] p-4">

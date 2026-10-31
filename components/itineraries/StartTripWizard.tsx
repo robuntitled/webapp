@@ -104,19 +104,19 @@ export function StartTripWizard({
   return (
     <div
       className={cn(
-        'composer-shell relative min-h-[calc(100vh-4rem)] bg-white',
-        'overflow-visible'
+        'composer-shell relative min-h-[calc(100vh-4rem)] overflow-x-hidden bg-white'
       )}
     >
       {step === 'dest' ? (
         <CatalogPageHero
-          title="La tua vacanza, in tre click"
-          subtitle="Scegli la destinazione, definisci date e stile, configura il viaggio."
+          compact
+          title="Organizza il viaggio. Il gruppo fa il resto."
+          subtitle="Date e inviti — prenoti separati, zero tour operator."
           search={
             <CatalogHeroSearchBar
               value={filters}
               onChange={setFilters}
-              placeholder="Cerca nazione, continente o vibe"
+              placeholder="Cerca meta"
               resultsId="risultati-itinerari"
               durationOptions={durationOptions}
             />
@@ -127,12 +127,13 @@ export function StartTripWizard({
       <div
         className={cn(
           'relative z-10 w-full',
-          step === 'dest' ? '' : 'nl-home-content pt-6 pb-10'
+          step === 'dest' ? '' : 'nl-page pt-6 pb-10'
         )}
       >
         {step === 'dest' ? (
           <CatalogBrowseChrome
-            path="destinazioni"
+            compact
+            path="organizza"
             continent={filters.continent}
             onContinentChange={(continent) => setFilters({ ...filters, continent })}
           >

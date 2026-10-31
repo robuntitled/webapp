@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MapContainer,
   TileLayer,
@@ -17,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
 import { cn } from '@/lib/utils';
 
 export type HotelMapPin = {
@@ -49,10 +51,7 @@ type HotelsResultsMapProps = {
   expandable?: boolean;
 };
 
-const CARTO_URL =
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const CARTO_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
+const MAP_TILES = getLeafletTileLayer();
 
 function formatPrice(amount: number | undefined, currency?: string) {
   if (amount == null || Number.isNaN(amount)) return null;
@@ -325,8 +324,8 @@ function MapCanvas({
         style={{ zIndex: 0 }}
       >
         <TileLayer
-          url={CARTO_URL}
-          attribution={CARTO_ATTR}
+          url={MAP_TILES.url}
+          attribution={MAP_TILES.attribution}
           keepBuffer={4}
           updateWhenZooming={false}
           updateWhenIdle
@@ -379,8 +378,13 @@ export function HotelsResultsMap({
   expandable = true,
 }: HotelsResultsMapProps) {
   const [expanded, setExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [sizeTick, setSizeTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!expanded) return;
@@ -430,12 +434,20 @@ export function HotelsResultsMap({
     );
   }
 
+  const closeExpanded = () => {
+    setExpanded(false);
+    setSelectedId(null);
+  };
+
   const toggle = (
     <button
       type="button"
       onClick={() => {
-        setExpanded((v) => !v);
-        setSelectedId(null);
+        if (expanded) closeExpanded();
+        else {
+          setExpanded(true);
+          setSelectedId(null);
+        }
       }}
       className="absolute right-2.5 top-2.5 z-[2000] inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background/95 px-2.5 text-xs font-semibold text-foreground shadow-lg backdrop-blur transition hover:bg-muted"
       aria-label={expanded ? 'Riduci mappa' : 'Espandi mappa'}
@@ -454,43 +466,7 @@ export function HotelsResultsMap({
     </button>
   );
 
-  if (expanded) {
-    return (
-      <div className="fixed inset-0 z-[200] flex flex-col bg-slate-950/40 p-2 backdrop-blur-[2px] sm:p-4">
-        <div className="relative mb-2 flex items-center justify-between gap-2 px-1">
-          <p className="text-sm font-semibold text-white drop-shadow">
-            Mappa · {pins.length} punti
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setExpanded(false);
-              setSelectedId(null);
-            }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/20 bg-white/95 px-3 text-xs font-semibold text-slate-900 shadow-lg transition hover:bg-white"
-          >
-            <X className="h-3.5 w-3.5" />
-            Chiudi
-          </button>
-        </div>
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
-          {expandable ? toggle : null}
-          <MapCanvas
-            pins={pins}
-            highlightedId={highlightedId}
-            selectedId={selectedId}
-            onSelect={selectPin}
-            onBookClick={onBookClick}
-            onClearSelection={() => setSelectedId(null)}
-            scrollZoom
-            sizeTick={sizeTick}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  const inlineMap = (
     <div
       className={cn(
         'relative overflow-hidden rounded-2xl border border-border/70',
@@ -510,5 +486,53 @@ export function HotelsResultsMap({
         floatingCompact
       />
     </div>
+  );
+
+  const fullscreenOverlay =
+    expanded && mounted
+      ? createPortal(
+          <div className="fixed inset-0 z-[9999] flex flex-col bg-white">
+            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+              <p className="text-sm font-semibold text-slate-900">
+                Mappa · {pins.length} {pins.length === 1 ? 'hotel' : 'hotel'}
+              </p>
+              <button
+                type="button"
+                onClick={closeExpanded}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50"
+              >
+                <Minimize2 className="h-3.5 w-3.5" />
+                Riduci
+              </button>
+            </header>
+            <div className="relative min-h-0 flex-1">
+              <MapCanvas
+                pins={pins}
+                highlightedId={highlightedId}
+                selectedId={selectedId}
+                onSelect={selectPin}
+                onBookClick={onBookClick}
+                onClearSelection={() => setSelectedId(null)}
+                scrollZoom
+                sizeTick={sizeTick}
+              />
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <>
+      {expanded ? (
+        <div
+          className={cn('min-h-[280px] rounded-2xl border border-dashed border-transparent', className)}
+          aria-hidden
+        />
+      ) : (
+        inlineMap
+      )}
+      {fullscreenOverlay}
+    </>
   );
 }

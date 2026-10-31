@@ -21,7 +21,7 @@ type PhoneVerificationSectionProps = {
 
 /**
  * Solo stato + inserimento codice se già inviato.
- * L’invio OTP avviene solo da create/join viaggio (PhoneVerifyGate).
+ * L’invio OTP avviene da create/join viaggio quando richiesto dal flusso.
  */
 export function PhoneVerificationSection({
   phoneMasked,

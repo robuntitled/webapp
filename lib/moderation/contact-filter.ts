@@ -1,9 +1,10 @@
 import { deobfuscateForContact } from '@/lib/moderation/deobfuscate';
 
-/** Domini propri ammessi (link Flygetr ok). */
+/** Domini propri ammessi (link Noivia / legacy flygetr ok). */
 const ALLOWED_HOST_SNIPPETS = [
   'nomadlink',
   'bradigo',
+  'noivia',
   'flygetr',
   'webapp-bice-six-42.vercel.app',
 ];

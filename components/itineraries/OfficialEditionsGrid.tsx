@@ -11,10 +11,12 @@ import {
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatEditionDateRange, formatItDate } from '@/lib/itineraries/dates';
 import {
   editionBadgeDisplay,
-  editionFlightsStatusLabel,
+  editionBudgetOrientativeLabel,
+  editionFlightsThresholdLabel,
   editionGroupHint,
   editionParticipantsLabel,
   editionScarcity,
@@ -34,17 +36,31 @@ function durationFromId(templateId: string, fallback?: number | null) {
   return m ? Number(m[1]) : null;
 }
 
+/** Giorni inclusivi dal range date (fonte di verità per la label). */
+function durationFromDates(dateFrom: string, dateTo: string): number | null {
+  try {
+    const days =
+      differenceInCalendarDays(
+        parseISO(dateTo.slice(0, 10)),
+        parseISO(dateFrom.slice(0, 10))
+      ) + 1;
+    return days > 0 ? days : null;
+  } catch {
+    return null;
+  }
+}
+
 const SCARCITY_STYLES = {
   open: 'bg-primary text-white',
-  warming: 'bg-accent text-white',
-  closing: 'bg-accent text-white',
+  warming: 'bg-primary text-white',
+  closing: 'bg-[var(--color-brand-dark)] text-white',
   formed: 'bg-emerald-600 text-white',
 } as const;
 
 const PROGRESS_STYLES = {
   open: 'bg-primary',
-  warming: 'bg-accent',
-  closing: 'bg-accent',
+  warming: 'bg-primary',
+  closing: 'bg-[var(--color-brand-dark)]',
   formed: 'bg-emerald-600',
 } as const;
 
@@ -61,6 +77,8 @@ export function EditionCard({
   scarcity,
   progress,
   highlight = false,
+  compact = false,
+  carousel = false,
 }: {
   ed: OfficialEditionCard;
   tpl: ReturnType<typeof findItineraryTemplate>;
@@ -69,6 +87,9 @@ export function EditionCard({
   scarcity: ReturnType<typeof editionScarcity>;
   progress: number;
   highlight?: boolean;
+  compact?: boolean;
+  /** Ancora più compatto per il carosello Viaggi privati. */
+  carousel?: boolean;
 }) {
   const destination = tpl?.destination_name ?? ed.template_id;
   const confirmed = ed.confirmed_count ?? 0;
@@ -77,11 +98,16 @@ export function EditionCard({
   const badgeLabel = editionBadgeDisplay(scarcity, spotsLeft);
   const participants = editionParticipantsLabel({
     interested_count: ed.interested_count,
-    confirmed_count: confirmed,
+    confirmed_count: ed.confirmed_count,
   });
-  const flightsStatus = editionFlightsStatusLabel(confirmed, minConfirmed);
+  const flightsStatus = editionFlightsThresholdLabel(confirmed, minConfirmed);
   const groupHint = editionGroupHint(confirmed, minConfirmed);
   const tripDuration = durationLabel(days);
+  const dense = compact && carousel;
+  const budgetLabel = editionBudgetOrientativeLabel(
+    tpl?.budget_orientative_eur.total_hint,
+    days
+  );
 
   return (
     <div className="h-full">
@@ -92,7 +118,12 @@ export function EditionCard({
           highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
         )}
       >
-      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden rounded-t-2xl">
+      <div
+        className={cn(
+          'relative w-full shrink-0 overflow-hidden rounded-t-2xl',
+          dense ? 'aspect-[2/1]' : compact ? 'aspect-[7/2]' : 'aspect-[3/1]'
+        )}
+      >
         <Image
           src={cover}
           alt={destination}
@@ -109,49 +140,97 @@ export function EditionCard({
           {badgeLabel}
         </span>
         {ed.edition_type === 'private' ? (
-          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 shadow-sm">
+          <span
+            className={cn(
+              'absolute left-3 top-3 rounded-full bg-white/92 font-semibold uppercase tracking-wide text-slate-700 shadow-sm',
+              dense ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'
+            )}
+          >
             Privato
           </span>
         ) : (
-          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 shadow-sm">
+          <span
+            className={cn(
+              'absolute left-3 top-3 rounded-full bg-white/92 font-semibold uppercase tracking-wide text-slate-700 shadow-sm',
+              dense ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'
+            )}
+          >
             Gruppo
           </span>
         )}
       </div>
 
-      <div className="flex flex-col gap-[0.65rem] p-[clamp(0.9rem,1.2vw,1.15rem)]">
-        <h3 className="font-display text-[clamp(1.15rem,0.35vw+1.05rem,1.35rem)] font-bold leading-snug text-slate-900">
+      <div
+        className={cn(
+          'flex flex-col',
+          dense ? 'gap-1 p-2.5' : compact ? 'gap-2 p-3' : 'gap-[0.65rem] p-[clamp(0.9rem,1.2vw,1.15rem)]'
+        )}
+      >
+        <h3
+          className={cn(
+            'font-display font-bold leading-snug text-slate-900',
+            dense
+              ? 'text-[0.98rem]'
+              : compact
+                ? 'text-[clamp(1rem,0.2vw+0.95rem,1.15rem)]'
+                : 'text-[clamp(1.15rem,0.35vw+1.05rem,1.35rem)]'
+          )}
+        >
           {destination}
         </h3>
 
-        <div className="space-y-0.5">
-          <p className="text-[clamp(0.92rem,0.2vw+0.86rem,1rem)] font-medium leading-snug text-slate-700">
+        <div className={dense ? 'space-y-0' : 'space-y-0.5'}>
+          <p
+            className={cn(
+              'font-medium leading-snug text-slate-800',
+              dense
+                ? 'text-[0.8rem]'
+                : 'text-[clamp(0.92rem,0.2vw+0.86rem,1rem)]'
+            )}
+          >
             {formatEditionDateRange(ed.date_from, ed.date_to)}
+            {dense && tripDuration ? (
+              <span className="text-slate-600"> · {tripDuration}</span>
+            ) : null}
           </p>
-          {tripDuration ? (
-            <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-500">
+          {!dense && tripDuration ? (
+            <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-600">
               {tripDuration}
             </p>
           ) : null}
         </div>
 
-        {participants ? (
-          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-600">
+        {participants && !dense ? (
+          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-700">
             {participants}
           </p>
         ) : null}
 
         <section
-          className="mt-1 w-full space-y-2 border-t border-slate-100 pt-3"
+          className={cn(
+            'w-full border-t border-slate-100',
+            dense ? 'mt-0.5 space-y-1 pt-1.5' : compact ? 'mt-0.5 space-y-1.5 pt-2' : 'mt-1 space-y-2 pt-3'
+          )}
           aria-labelledby={`group-status-${ed.id}`}
         >
+          {!dense ? (
+            <p
+              id={`group-status-${ed.id}`}
+              className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-600"
+            >
+              Soglia voli
+            </p>
+          ) : (
+            <p id={`group-status-${ed.id}`} className="sr-only">
+              Soglia voli
+            </p>
+          )}
           <p
-            id={`group-status-${ed.id}`}
-            className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-400"
+            className={cn(
+              'font-medium leading-snug text-slate-800',
+              dense ? 'text-[0.78rem]' : 'text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)]'
+            )}
           >
-            Stato del gruppo
-          </p>
-          <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] font-medium leading-snug text-slate-800">
             <span aria-hidden="true">✈ </span>
             {flightsStatus}
           </p>
@@ -161,7 +240,7 @@ export function EditionCard({
             aria-valuemin={0}
             aria-valuemax={Math.max(minConfirmed, 1)}
             aria-label={flightsStatus}
-            className="h-2.5 w-full rounded-full bg-slate-200"
+            className={cn('w-full rounded-full bg-slate-200', dense ? 'h-1.5' : 'h-2.5')}
           >
             <div
               className={cn(
@@ -171,10 +250,24 @@ export function EditionCard({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-500">
-            {groupHint}
-          </p>
+          {!dense ? (
+            <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-600">
+              {groupHint}
+            </p>
+          ) : null}
         </section>
+
+        {budgetLabel && !dense ? (
+          <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] font-semibold leading-snug text-[var(--color-text)]">
+            {budgetLabel}
+          </p>
+        ) : null}
+
+        {!dense && !compact ? (
+          <span className="mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] bg-primary px-3 text-sm font-semibold text-white">
+            Scopri
+          </span>
+        ) : null}
       </div>
       </Link>
     </div>
@@ -226,7 +319,9 @@ export function OfficialEditionsGrid({
         const tpl = findItineraryTemplate(ed.template_id);
         const slug = editionDestinationSlug(ed);
         const dest = findCatalogDestination(slug) ?? findCatalogDestination(ed.template_id);
-        const days = durationFromId(ed.template_id, tpl?.duration_days);
+        const days =
+          durationFromDates(String(ed.date_from), String(ed.date_to)) ??
+          durationFromId(ed.template_id, tpl?.duration_days);
         const scarcity = editionScarcity(ed);
         const progress = editionThresholdProgress(ed.confirmed_count ?? 0, ed.min_confirmed);
         return {
@@ -291,7 +386,7 @@ export function OfficialEditionsGrid({
         <CatalogHeroSearchBar
           value={filters}
           onChange={setFilters}
-          placeholder="Cerca destinazione o date"
+          placeholder="Cerca meta"
           resultsId="risultati-partenze"
           durationOptions={durationOptions}
         />
@@ -314,9 +409,15 @@ export function OfficialEditionsGrid({
       ) : null}
 
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <h2 className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900">
-          Istanze disponibili
-        </h2>
+        <div className="min-w-0 space-y-1">
+          <h2 className="font-display text-[clamp(1.05rem,1vw+0.95rem,1.25rem)] font-semibold text-slate-900">
+            Partenze aperte
+          </h2>
+          <p className="max-w-xl text-sm text-slate-600">
+            Pubbliche e aperte a tutti — unisciti, prenota il volo. Il viaggio parte alla soglia
+            del gruppo.
+          </p>
+        </div>
         <div
           className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white p-0.5 shadow-sm"
           role="group"
@@ -327,7 +428,7 @@ export function OfficialEditionsGrid({
           </span>
           {(
             [
-              { id: 'conferme', label: 'Conferme' },
+              { id: 'conferme', label: 'Soglia voli' },
               { id: 'partenza', label: 'Data di partenza' },
             ] as const
           ).map((opt) => {

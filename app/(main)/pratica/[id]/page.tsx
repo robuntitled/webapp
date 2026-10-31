@@ -24,6 +24,15 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
     ? await listEditionMembers(practice.edition_id, { withRatings: true })
     : [];
 
+  // Mostra Rinomina anche senza migration 041 / created_by legacy.
+  // Il salvataggio resta soft-fail se la colonna title manca.
+  const canRename = Boolean(
+    practice.edition_id &&
+      ((edition?.created_by != null && edition.created_by === session.user.id) ||
+        (edition?.edition_type === 'private' && !edition.created_by) ||
+        (!edition && practice.mode === 'friends'))
+  );
+
   return (
     <TripWorkspace
       template={template}
@@ -32,6 +41,8 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
       practice={practice}
       editionId={practice.edition_id}
       editionType={edition?.edition_type ?? null}
+      tripTitle={edition?.title ?? null}
+      canRename={canRename}
       members={members}
       isMember
       canJoin={false}

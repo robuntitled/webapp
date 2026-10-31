@@ -12,13 +12,13 @@ export const metadata: Metadata = {
 export default async function PrenotaTrasportiBusPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/prenota/trasporti/bus');
+    redirect('/accedi?callbackUrl=/prenota/trasporti/bus');
   }
 
   return (
     <PrenotaPageShell
       title="Bus"
-      subtitle="Autobus e pullman in Europa. Ricerca su Flygetr · prenotazione Omio."
+      subtitle="Autobus e pullman in Europa. Ricerca su Noivia · prenotazione Omio."
       badge="Omio"
     >
       <PrenotaTransportSubnav />

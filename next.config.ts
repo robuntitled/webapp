@@ -34,14 +34,29 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: '/punti', destination: '/destinazioni', permanent: true },
+      // Nuova IA Noivia
+      { source: '/destinazioni', destination: '/organizza', permanent: false },
+      { source: '/partenze', destination: '/gruppi', permanent: false },
+      { source: '/punti', destination: '/organizza', permanent: true },
       { source: '/dashboard/punti', destination: '/pratiche', permanent: true },
       { source: '/dashboard/cashback', destination: '/pratiche', permanent: true },
+      { source: '/dashboard', destination: '/organizza', permanent: true },
+      { source: '/dashboard/cerca', destination: '/organizza', permanent: true },
+      { source: '/dashboard/crea', destination: '/organizza', permanent: true },
+      { source: '/dashboard/miei-viaggi', destination: '/pratiche', permanent: true },
+      { source: '/prenota/voli/ricerca', destination: '/prenota/voli', permanent: true },
+      { source: '/viaggi/:id', destination: '/pratiche', permanent: true },
+      { source: '/viaggi/:id/prenota', destination: '/pratiche', permanent: true },
+      { source: '/edizione/:id', destination: '/partenze/:id', permanent: true },
+      { source: '/itinerario/:slug/partenze', destination: '/gruppi', permanent: true },
     ];
   },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // Evita richieste _next/image a w=3840 (spesso 400 / inutili su hero).
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',

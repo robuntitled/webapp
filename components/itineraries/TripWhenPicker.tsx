@@ -1,13 +1,23 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { addDays, differenceInCalendarDays, format, nextFriday, startOfDay } from 'date-fns';
+import {
+  addDays,
+  addMonths,
+  differenceInCalendarDays,
+  format,
+  nextFriday,
+  startOfDay,
+  startOfMonth,
+} from 'date-fns';
 import { it } from 'date-fns/locale';
 import { it as itDayPicker } from 'react-day-picker/locale';
 import type { DateRange } from 'react-day-picker';
 import {
   CalendarDays,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Palmtree,
   PartyPopper,
@@ -38,19 +48,38 @@ const calendarClassNames = {
   root: 'w-full min-w-0',
   months: 'relative flex w-full min-w-0 flex-col gap-6 2xl:flex-row 2xl:gap-8',
   month: 'w-full min-w-0 space-y-3',
-  month_caption: 'relative mb-2 flex h-10 items-center justify-center',
-  caption_label: 'text-sm font-semibold capitalize text-slate-900 sm:text-base',
-  nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
-  weekday: 'flex-1 text-center text-[0.65rem] font-bold uppercase tracking-wider text-slate-400',
-  week: 'mt-1 flex w-full',
-  day: 'aspect-square min-w-0 flex-1 p-0',
+  // MonthGrid è un <table>: table-fixed tiene 7 colonne a larghezza uguale.
+  // Non usare display:grid su <tr> — collassa i giorni a sinistra (es. "282930").
+  month_grid: 'w-full min-w-0 table-fixed border-collapse',
+  // Caption nascosta: il mese è già nella barra frecce sopra (altrimenti compare due volte).
+  month_caption: 'hidden',
+  caption_label: 'hidden',
+  nav: 'hidden',
+  button_previous: 'hidden',
+  button_next: 'hidden',
+  weekdays: 'mb-1 w-full',
+  weekday:
+    'w-[14.2857%] p-0 text-center text-[0.72rem] font-semibold uppercase tracking-normal text-slate-700 sm:text-[0.8rem]',
+  week: 'mt-1 w-full',
+  day: 'h-auto w-[14.2857%] p-0 align-middle',
+  day_button: 'h-full min-h-11 w-full min-w-0',
   range_start: 'rounded-l-full bg-primary/15',
   range_middle: 'rounded-none bg-primary/10',
   range_end: 'rounded-r-full bg-primary/15',
-  today: 'font-bold text-primary',
-  outside: 'text-slate-300 opacity-50',
-  disabled: 'text-slate-200 opacity-40',
+  today: 'font-semibold text-primary ring-1 ring-primary/40',
+  outside: 'text-slate-400 opacity-70',
+  disabled: 'text-slate-400 opacity-55',
 } as const;
+
+const CALENDAR_LABELS = {
+  labelNext: () => 'Vai al mese successivo',
+  labelPrevious: () => 'Vai al mese precedente',
+  labelMonthDropdown: () => 'Scegli il mese',
+  labelYearDropdown: () => 'Scegli l’anno',
+} as const;
+
+/** Una lettera: evita LUNMARMER… schiacciati nelle celle strette. */
+const WEEKDAY_SHORT = ['L', 'M', 'M', 'G', 'V', 'S', 'D'] as const;
 
 export type TripWhenSelection = {
   dateFrom: Date;
@@ -86,6 +115,11 @@ export function TripWhenPicker({
   const [internalVibe, setInternalVibe] = useState<TripVibe>(value?.vibe ?? 'relax');
   const vibe = showVibe ? internalVibe : (vibeProp ?? value?.vibe ?? null);
   const [monthCount, setMonthCount] = useState(1);
+  const bookingStart = startOfMonth(new Date());
+  const bookingEnd = addMonths(bookingStart, 18);
+  const [displayMonth, setDisplayMonth] = useState<Date>(
+    () => value?.dateFrom ?? nextFriday(startOfDay(new Date()))
+  );
   const [range, setRange] = useState<DateRange | undefined>(() =>
     value
       ? { from: value.dateFrom, to: value.dateTo }
@@ -315,28 +349,93 @@ export function TripWhenPicker({
           </div>
         ) : (
           <div className="min-w-0 p-4 sm:p-5">
+            <p className="mb-3 text-center text-xs text-slate-600">
+              Date selezionabili da oggi fino a{' '}
+              {format(bookingEnd, 'MMMM yyyy', { locale: it })}. I giorni passati
+              non sono cliccabili.
+            </p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                aria-label="Vai al mese precedente"
+                disabled={
+                  startOfMonth(displayMonth).getTime() <= bookingStart.getTime()
+                }
+                onClick={() =>
+                  setDisplayMonth((m) => {
+                    const prev = addMonths(startOfMonth(m), -1);
+                    return prev < bookingStart ? bookingStart : prev;
+                  })
+                }
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden />
+              </button>
+              <p className="min-w-0 flex-1 truncate text-center text-sm font-semibold capitalize text-slate-900 sm:text-base">
+                {format(displayMonth, 'MMMM yyyy', { locale: it })}
+                {monthCount > 1
+                  ? ` – ${format(addMonths(displayMonth, 1), 'MMMM yyyy', { locale: it })}`
+                  : ''}
+              </p>
+              <button
+                type="button"
+                aria-label="Vai al mese successivo"
+                disabled={
+                  startOfMonth(addMonths(displayMonth, monthCount)).getTime() >
+                  startOfMonth(bookingEnd).getTime()
+                }
+                onClick={() =>
+                  setDisplayMonth((m) => {
+                    const next = addMonths(startOfMonth(m), 1);
+                    const lastAllowed = startOfMonth(
+                      addMonths(bookingEnd, 1 - monthCount)
+                    );
+                    return next > lastAllowed ? lastAllowed : next;
+                  })
+                }
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
             {flexible ? (
               <Calendar
                 mode="range"
                 locale={itDayPicker}
+                labels={CALENDAR_LABELS}
+                hideNavigation
                 numberOfMonths={monthCount}
+                month={displayMonth}
+                onMonthChange={setDisplayMonth}
+                startMonth={bookingStart}
+                endMonth={bookingEnd}
                 selected={range}
                 onSelect={onRangeSelect}
-                disabled={(d) => d < startOfDay(new Date())}
-                defaultMonth={range?.from ?? fridayHints[0]}
-                className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.15rem] sm:[--cell-size:2.4rem] [&_button[data-day]]:min-w-0"
+                disabled={(d) => d < startOfDay(new Date()) || d > bookingEnd}
+                formatters={{
+                  formatWeekdayName: (date) => WEEKDAY_SHORT[(date.getDay() + 6) % 7]!,
+                }}
+                className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.75rem] sm:[--cell-size:2.5rem] [&_button[data-day]]:min-w-0"
                 classNames={calendarClassNames}
               />
             ) : (
               <Calendar
                 mode="single"
                 locale={itDayPicker}
+                labels={CALENDAR_LABELS}
+                hideNavigation
                 numberOfMonths={monthCount}
+                month={displayMonth}
+                onMonthChange={setDisplayMonth}
+                startMonth={bookingStart}
+                endMonth={bookingEnd}
                 selected={single}
                 onSelect={onSingleSelect}
-                disabled={(d) => d < startOfDay(new Date())}
-                defaultMonth={single ?? fridayHints[0]}
-                className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.15rem] sm:[--cell-size:2.4rem] [&_button[data-day]]:min-w-0"
+                disabled={(d) => d < startOfDay(new Date()) || d > bookingEnd}
+                formatters={{
+                  formatWeekdayName: (date) => WEEKDAY_SHORT[(date.getDay() + 6) % 7]!,
+                }}
+                className="mx-auto w-full min-w-0 rounded-2xl bg-white p-1 text-slate-900 [--cell-size:2.75rem] sm:[--cell-size:2.5rem] [&_button[data-day]]:min-w-0"
                 classNames={calendarClassNames}
               />
             )}

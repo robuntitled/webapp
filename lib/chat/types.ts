@@ -8,6 +8,8 @@ export type ChatGroupItem = {
   unreadCount: number;
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
+  /** False finché nessuno ha confermato il volo (messaggi ancora bloccati). */
+  chatUnlocked: boolean;
 };
 
 export type ChatContact = {

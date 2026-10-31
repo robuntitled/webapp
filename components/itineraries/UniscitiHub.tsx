@@ -33,15 +33,16 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
   );
 
   return (
-    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-visible bg-white">
+    <div className="composer-shell relative min-h-[calc(100vh-4rem)] overflow-x-hidden bg-white">
       <CatalogPageHero
-        title="Unisciti a un viaggio"
-        subtitle="Partenze già create — pubbliche e private — a cui puoi partecipare."
+        compact
+        title="Un posto nel gruppo, già pronto."
+        subtitle="Entra nel gruppo, aspetta la soglia, prenota il volo."
         search={
           <CatalogHeroSearchBar
             value={filters}
             onChange={setFilters}
-            placeholder="Cerca destinazione, date o durata"
+            placeholder="Cerca meta"
             resultsId="risultati-partenze"
             durationOptions={durationOptions}
           />
@@ -49,17 +50,18 @@ export function UniscitiHub({ editions }: { editions: OfficialEditionCard[] }) {
       />
 
       <CatalogBrowseChrome
-        path="unisciti"
+        compact
+        path="gruppi"
         continent={filters.continent}
         onContinentChange={(continent) => setFilters({ ...filters, continent })}
       >
-        <PrivateTripsSection editions={privateEditions} filters={filters} />
         <OfficialEditionsGrid
           editions={publicEditions}
           filters={filters}
           onFiltersChange={setFilters}
           showFiltersBar={false}
         />
+        <PrivateTripsSection editions={privateEditions} filters={filters} />
       </CatalogBrowseChrome>
     </div>
   );

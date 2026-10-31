@@ -12,8 +12,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
+import {
+  CheckoutBackLink,
+  CheckoutStepShell,
+  getCheckoutReturnHref,
+} from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
 import { Button } from '@/components/ui/button';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -71,6 +77,8 @@ export function HotelCheckoutClient({
     status: string | null;
     amountEur: number;
     practiceId?: string;
+    reconciliationPending?: boolean;
+    reconciliationMessage?: string;
   } | null>(null);
 
   const displayPrice = roundMoney(
@@ -144,6 +152,8 @@ export function HotelCheckoutClient({
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
+          reconciliationPending?: boolean;
+          message?: string;
         };
         if (!res.ok) {
           toast.error(data.error ?? 'Conferma prenotazione fallita');
@@ -155,11 +165,19 @@ export function HotelCheckoutClient({
           status: data.status ?? null,
           amountEur,
           practiceId: hotelDraft?.practiceId,
+          reconciliationPending: Boolean(data.reconciliationPending),
+          reconciliationMessage: data.message,
         });
         clearHotelOfferDraft();
         clearHotelPaymentPending();
         setStep('done');
-        toast.success('Hotel prenotato');
+        if (data.reconciliationPending) {
+          toast.message(
+            data.message ?? 'Prenotazione ricevuta, stiamo completando la registrazione'
+          );
+        } else {
+          toast.success('Hotel prenotato');
+        }
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href);
           url.search = '';
@@ -296,18 +314,26 @@ export function HotelCheckoutClient({
   }
 
   if (step === 'done') {
+    const reconciling = Boolean(confirmation?.reconciliationPending);
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-3xl border border-border bg-card p-6 text-center shadow-sm">
-        <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
-        <h2 className="font-display text-2xl font-semibold">Prenotazione confermata</h2>
+        <CheckCircle2
+          className={`mx-auto h-12 w-12 ${reconciling ? 'text-amber-600' : 'text-emerald-600'}`}
+        />
+        <h2 className="font-display text-2xl font-semibold">
+          {reconciling ? 'Prenotazione ricevuta' : 'Prenotazione confermata'}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          {confirmation?.bookingRef
-            ? `Codice: ${confirmation.bookingRef}`
-            : confirmation?.bookingId
-              ? `ID: ${confirmation.bookingId}`
-              : 'Riceverai i dettagli via email.'}
+          {reconciling
+            ? confirmation?.reconciliationMessage ??
+              'Prenotazione ricevuta, stiamo completando la registrazione'
+            : confirmation?.bookingRef
+              ? `Codice: ${confirmation.bookingRef}`
+              : confirmation?.bookingId
+                ? `ID: ${confirmation.bookingId}`
+                : 'Riceverai i dettagli via email.'}
         </p>
-        <BookingComplianceNote />
+        <BookingComplianceNote showMerchantOfRecord showHotelServiceFee />
         <Button
           className="rounded-xl"
           onClick={() => {
@@ -327,111 +353,104 @@ export function HotelCheckoutClient({
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-4">
+        <CheckoutBackLink
+          href={getCheckoutReturnHref(draft?.practiceId, 'hotel')}
+          label={draft?.practiceId ? 'Torna alla selezione hotel' : 'Torna alla ricerca'}
+        />
+
         {step === 'details' ? (
-          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-            <div className="bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-5 py-4 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                Passo 1 di 2
-              </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold">
-                Ospiti e contatto
-              </h2>
-            </div>
-            <div className="space-y-4 p-5 sm:p-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1.5 text-sm">
-                  <Label>Nome titolare</Label>
-                  <Input
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
-                </label>
-                <label className="space-y-1.5 text-sm">
-                  <Label>Cognome titolare</Label>
-                  <Input
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
-                </label>
-              </div>
+          <CheckoutStepShell
+            step={1}
+            totalSteps={2}
+            title="Ospiti e contatto"
+            description="Dati del titolare e dell’ospite in camera, poi pagamento sicuro."
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1.5 text-sm">
-                <Label>Email</Label>
+                <Label>Nome titolare</Label>
                 <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   className="h-11 rounded-xl"
                 />
               </label>
-              <div className="rounded-2xl border border-border/60 bg-muted/30 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Ospite in camera (se diverso)
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Input
-                    placeholder="Nome ospite"
-                    value={guestFirstName}
-                    onChange={(e) => setGuestFirstName(e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
-                  <Input
-                    placeholder="Cognome ospite"
-                    value={guestLastName}
-                    onChange={(e) => setGuestLastName(e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-              </div>
-              <Button
-                type="button"
-                disabled={submitting}
-                onClick={() => void startPrebook()}
-                className="h-12 w-full rounded-xl text-base font-semibold"
-              >
-                {submitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Continua al pagamento
-              </Button>
+              <label className="space-y-1.5 text-sm">
+                <Label>Cognome titolare</Label>
+                <Input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="h-11 rounded-xl"
+                />
+              </label>
             </div>
-          </div>
+            <label className="block space-y-1.5 text-sm">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 rounded-xl"
+              />
+            </label>
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Ospite in camera (se diverso)
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  placeholder="Nome ospite"
+                  value={guestFirstName}
+                  onChange={(e) => setGuestFirstName(e.target.value)}
+                  className="h-11 rounded-xl bg-white"
+                />
+                <Input
+                  placeholder="Cognome ospite"
+                  value={guestLastName}
+                  onChange={(e) => setGuestLastName(e.target.value)}
+                  className="h-11 rounded-xl bg-white"
+                />
+              </div>
+            </div>
+            <Button
+              type="button"
+              disabled={submitting}
+              onClick={() => void startPrebook()}
+              className="h-12 w-full rounded-xl text-base font-semibold"
+            >
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Continua al pagamento
+            </Button>
+          </CheckoutStepShell>
         ) : null}
 
         {step === 'payment' && payment ? (
-          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-            <div className="bg-gradient-to-r from-[oklch(0.22_0.05_220)] to-primary px-5 py-4 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                Passo 2 di 2
+          <CheckoutStepShell
+            step={2}
+            totalSteps={2}
+            title="Pagamento"
+            description={`Totale ${formatMoney(displayPrice, displayCurrency)}`}
+            footer={
+              <CheckoutBackLink
+                label="Modifica ospiti"
+                onClick={() => setStep('details')}
+              />
+            }
+          >
+            {paymentReturnUrl ? (
+              <LiteApiPaymentWidget
+                key={payment.secretKey}
+                secretKey={payment.secretKey}
+                paymentEnv={payment.paymentEnv}
+                returnUrl={paymentReturnUrl}
+              />
+            ) : null}
+            {submitting ? (
+              <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Conferma prenotazione in corso…
               </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold text-white">
-                Pagamento
-              </h2>
-              <p className="mt-1 text-sm text-white/75">
-                Totale{' '}
-                <span className="font-semibold text-white">
-                  {formatMoney(displayPrice, displayCurrency)}
-                </span>
-              </p>
-            </div>
-            <div className="space-y-4 p-5 sm:p-6">
-              {paymentReturnUrl ? (
-                <LiteApiPaymentWidget
-                  key={payment.secretKey}
-                  secretKey={payment.secretKey}
-                  paymentEnv={payment.paymentEnv}
-                  returnUrl={paymentReturnUrl}
-                />
-              ) : null}
-              {submitting ? (
-                <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Conferma prenotazione in corso…
-                </p>
-              ) : null}
-            </div>
-          </div>
+            ) : null}
+          </CheckoutStepShell>
         ) : null}
       </div>
 
@@ -496,7 +515,11 @@ export function HotelCheckoutClient({
             <p className="font-display text-2xl font-semibold">
               {formatMoney(displayPrice, displayCurrency)}
             </p>
+            <p className="mt-1 text-[11px] text-white/70">
+              {COMPLIANCE_COPY.hotelServiceFeeIncluded}
+            </p>
           </div>
+          <BookingComplianceNote showMerchantOfRecord />
         </aside>
       ) : null}
     </div>

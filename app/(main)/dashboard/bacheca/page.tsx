@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function BachecaPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/dashboard/bacheca');
+    redirect('/accedi?callbackUrl=/dashboard/bacheca');
   }
 
   const photoPins = await listCommunityPhotoPins(200);

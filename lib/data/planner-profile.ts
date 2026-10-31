@@ -3,13 +3,6 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { plannerProfileSchema } from '@/lib/validations/planner';
 import type { PlannerProfile } from '@/types/planner';
-import type { ComposerDraft } from '@/types/composer';
-import {
-  normalizeWizardStep,
-  type ComposerWizardStep,
-} from '@/lib/composer/wizard-steps';
-
-export type { ComposerWizardStep } from '@/lib/composer/wizard-steps';
 
 export async function getPlannerProfile(userId: string): Promise<PlannerProfile | null> {
   const { data, error } = await supabaseAdmin
@@ -41,60 +34,4 @@ export async function upsertPlannerProfile(
 
   if (error) throw new Error(error.message);
   return parsed;
-}
-
-export async function getComposerDraft(userId: string): Promise<{
-  draft: Partial<ComposerDraft>;
-  currentStep: ComposerWizardStep;
-  plannerProfile: PlannerProfile | null;
-  updatedAt: string | null;
-} | null> {
-  const { data, error } = await supabaseAdmin
-    .from('composer_drafts')
-    .select('draft, current_step, planner_profile, updated_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  const plannerParsed = data.planner_profile
-    ? plannerProfileSchema.safeParse(data.planner_profile)
-    : null;
-
-  return {
-    draft: (data.draft as Partial<ComposerDraft>) ?? {},
-    currentStep: normalizeWizardStep(data.current_step),
-    plannerProfile: plannerParsed?.success ? plannerParsed.data : null,
-    updatedAt: data.updated_at ?? null,
-  };
-}
-
-export async function upsertComposerDraft(
-  userId: string,
-  payload: {
-    draft: Partial<ComposerDraft>;
-    currentStep: ComposerWizardStep;
-    plannerProfile?: PlannerProfile | null;
-  }
-): Promise<void> {
-  const row: Record<string, unknown> = {
-    user_id: userId,
-    draft: payload.draft,
-    current_step: payload.currentStep,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (payload.plannerProfile) {
-    row.planner_profile = plannerProfileSchema.parse(payload.plannerProfile);
-  }
-
-  const { error } = await supabaseAdmin
-    .from('composer_drafts')
-    .upsert(row, { onConflict: 'user_id' });
-
-  if (error) throw new Error(error.message);
-}
-
-export async function deleteComposerDraft(userId: string): Promise<void> {
-  await supabaseAdmin.from('composer_drafts').delete().eq('user_id', userId);
 }

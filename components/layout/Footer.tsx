@@ -4,7 +4,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { CompanyProfile } from '@/lib/privacy/company';
-import { isComposerPath } from '@/lib/ui/app-chrome';
+
+function hideSiteFooter(pathname: string | null): boolean {
+  if (!pathname) return false;
+  // Auth / onboarding / workspace immersivi: niente footer.
+  // Home e itinerario pubblici lo mostrano (navigazione e fiducia).
+  if (pathname === '/accedi') return true;
+  if (pathname.startsWith('/pratica') && !pathname.includes('/prossimo')) return true;
+  // mostra footer su /pratica/[id]/prossimo; nascondi workspace immersivo
+  if (pathname.startsWith('/onboarding')) return true;
+  if (pathname.startsWith('/completa-registrazione')) return true;
+  if (/^\/partenze\/[^/]+/.test(pathname)) return true;
+  return false;
+}
 
 type FooterProps = {
   company: CompanyProfile;
@@ -12,42 +24,63 @@ type FooterProps = {
 
 export function Footer({ company }: FooterProps) {
   const pathname = usePathname();
-  if (pathname === '/' || isComposerPath(pathname)) return null;
+  if (hideSiteFooter(pathname)) return null;
 
   return (
     <footer className="mt-auto border-t border-border bg-card text-foreground">
       <div className="nl-page py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <div className="mb-4 flex items-center gap-2.5">
+            <div className="mb-4">
               <BrandLogo size={40} />
-              <span className="font-display text-xl font-semibold">{company.tradeName}</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Viaggi di gruppo nel mondo — raccontati da chi li vive e li fotografa.
+              Viaggi nel mondo, da solo, con amici o in gruppo.
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Privacy:{' '}
-              <a
-                href={`mailto:${company.privacyEmail}`}
-                className="text-primary underline underline-offset-2 hover:text-[var(--color-primary-hover)] transition-colors"
-              >
-                {company.privacyEmail}
-              </a>
+              {company.privacyEmail.startsWith('[') ? (
+                <span className="text-amber-800/90">{company.privacyEmail}</span>
+              ) : (
+                <a
+                  href={`mailto:${company.privacyEmail}`}
+                  className="text-primary underline underline-offset-2 hover:text-[var(--color-primary-hover)] transition-colors"
+                >
+                  {company.privacyEmail}
+                </a>
+              )}
             </p>
           </div>
 
-          <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <Link href="/destinazioni" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
-              Cerca viaggi
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link
+              href="/organizza"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
+              Organizza
             </Link>
-            <Link href="/privacy" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link
+              href="/gruppi"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
+              Gruppi
+            </Link>
+            <Link
+              href="/privacy"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Privacy
             </Link>
-            <Link href="/termini" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link
+              href="/termini"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Termini
             </Link>
-            <Link href="/cookie" className="text-primary hover:text-[var(--color-primary-hover)] transition-colors">
+            <Link
+              href="/cookie"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+            >
               Cookie
             </Link>
           </nav>

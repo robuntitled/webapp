@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { guardPaidApi } from '@/lib/api/request-guard';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { searchFlightRates } from '@/lib/liteapi/flights';
@@ -8,7 +8,7 @@ import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
 
 export const runtime = 'nodejs';
-export const maxDuration = 25;
+export const maxDuration = 20;
 
 const schema = z.object({
   destination: z.string().trim().min(2).max(120),
@@ -22,12 +22,19 @@ const schema = z.object({
 });
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: 'Accedi per cercare voli.', code: 'auth_required' },
-      { status: 401 }
-    );
+  const gate = await guardPaidApi(request, 'liteapi-flights-search', {
+    perUser: 20,
+    perIp: 40,
+    windowMs: 60_000,
+  });
+  if ('error' in gate) {
+    if (gate.error.status === 401) {
+      return NextResponse.json(
+        { error: 'Accedi per cercare voli.', code: 'auth_required' },
+        { status: 401 }
+      );
+    }
+    return gate.error;
   }
 
   if (!isLiteApiConfigured()) {
@@ -84,18 +91,42 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { offers, destinationIata, originsSearched } = await searchFlightRates({
-      destination: destIata,
-      departureDate: parsed.data.startDate,
-      returnDate: parsed.data.tripType === 'oneway' ? null : parsed.data.endDate,
-      tripType: parsed.data.tripType,
-      originIata,
-      originCountry,
-      adults: parsed.data.adults,
-      currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
-    });
+    const { offers, destinationIata, originsSearched, originsFailed } =
+      await searchFlightRates({
+        destination: destIata,
+        departureDate: parsed.data.startDate,
+        returnDate: parsed.data.tripType === 'oneway' ? null : parsed.data.endDate,
+        tripType: parsed.data.tripType,
+        originIata,
+        originCountry,
+        adults: parsed.data.adults,
+        currency: parsed.data.currency?.toUpperCase() ?? 'EUR',
+      });
 
     const cheapest = offers[0] ?? null;
+    const allOriginsFailed =
+      originsSearched.length > 0 &&
+      originsFailed.length >= originsSearched.length &&
+      offers.length === 0;
+
+    if (allOriginsFailed) {
+      return NextResponse.json(
+        {
+          configured: true,
+          found: false,
+          count: 0,
+          quote: null,
+          offers: [],
+          destinationIata,
+          originsSearched,
+          originsFailed,
+          tripType: parsed.data.tripType,
+          error: `Ricerca voli non riuscita da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata} (timeout o errore provider). Riprova tra poco.`,
+          code: 'upstream_error',
+        },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       configured: true,
@@ -105,14 +136,15 @@ export async function GET(request: Request) {
       offers: offers.slice(0, 30),
       destinationIata,
       originsSearched,
+      originsFailed,
       tripType: parsed.data.tripType,
       message: cheapest
         ? undefined
         : originsSearched.length > 1
-          ? `Nessun volo trovato da ${originsSearched.slice(0, 6).join(', ')}${originsSearched.length > 6 ? '…' : ''} verso ${destinationIata}. Prova altre date.`
+          ? `Nessun volo trovato da ${originsSearched.slice(0, 6).join(', ')}${originsSearched.length > 6 ? '…' : ''} verso ${destinationIata}. Prova altre date o un altro aeroporto di partenza.`
           : originsSearched.length === 1
-            ? `Nessun volo trovato da ${originsSearched[0]} verso ${destinationIata}. Prova altre date.`
-            : `Origine non riconosciuta. Scegli un aeroporto (es. Nairobi NBO).`,
+            ? `Nessun volo trovato da ${originsSearched[0]} verso ${destinationIata}. Prova altre date o un altro aeroporto di partenza.`
+            : `Origine non riconosciuta. Scegli un aeroporto (es. FCO).`,
     });
   } catch (e) {
     if (e instanceof LiteApiError) {

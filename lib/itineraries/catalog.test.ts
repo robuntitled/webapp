@@ -3,7 +3,9 @@ import {
   assertTemplateShape,
   findItineraryBySlug,
   findItineraryTemplate,
+  minBudgetHintForDestination,
   OFFICIAL_EDITION_SEEDS,
+  orientativeBudgetHint,
   publishedDestinations,
   PUBLISHED_TEMPLATES,
 } from '@/lib/itineraries/catalog';
@@ -31,6 +33,16 @@ describe('itinerary catalog (T10)', () => {
   it('switches duration on the same slug', () => {
     expect(findItineraryBySlug('thailandia', 10)?.template_id).toBe('thailandia-10d');
     expect(findItineraryBySlug('thailandia', 21)?.days).toHaveLength(21);
+  });
+
+  it('maps non-exact duration to nearest template (not shortest)', () => {
+    // 15 giorni → 14d (1700), non 10d (1330)
+    expect(findItineraryBySlug('thailandia', 15)?.template_id).toBe('thailandia-14d');
+    expect(orientativeBudgetHint('thailandia', 15)).toBe(1700);
+    expect(orientativeBudgetHint('thailandia', 14)).toBe(1700);
+    expect(orientativeBudgetHint('thailandia', 10)).toBe(1330);
+    expect(orientativeBudgetHint('thailandia')).toBe(1330);
+    expect(minBudgetHintForDestination('thailandia')).toBe(1330);
   });
 
   it('seeds official editions with matching duration dates', () => {

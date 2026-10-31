@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 export default async function PrenotaVoliPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/prenota/voli');
+    redirect('/accedi?callbackUrl=/prenota/voli');
   }
 
   return (

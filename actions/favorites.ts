@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { scopedForUser } from '@/lib/supabase-scoped';
 import { revalidatePath } from 'next/cache';
 
 export async function toggleFavoriteItinerary(
@@ -13,18 +13,19 @@ export async function toggleFavoriteItinerary(
   }
   const userId = session.user.id;
   if (!templateId.trim()) return { saved: false, error: 'Itinerario non valido.' };
+  const { db } = scopedForUser(userId);
 
-  const { data: existing } = await supabaseAdmin
+  const { data: existing } = await db
     .from('favorite_itineraries')
     .select('id')
     .match({ user_id: userId, template_id: templateId })
     .maybeSingle();
 
   if (existing) {
-    const { error } = await supabaseAdmin
+    const { error } = await db
       .from('favorite_itineraries')
       .delete()
-      .match({ id: existing.id });
+      .match({ id: existing.id, user_id: userId });
     if (error) {
       if (error.code === '42P01') {
         return { saved: false, error: 'Preferiti itinerari non ancora sul database.' };
@@ -32,12 +33,12 @@ export async function toggleFavoriteItinerary(
       return { saved: true, error: 'Impossibile togliere il like.' };
     }
     revalidatePath('/pratiche');
-    revalidatePath('/destinazioni');
+    revalidatePath('/organizza');
     revalidatePath('/dashboard/preferiti');
     return { saved: false };
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('favorite_itineraries')
     .insert({ user_id: userId, template_id: templateId });
   if (error) {
@@ -47,7 +48,7 @@ export async function toggleFavoriteItinerary(
     return { saved: false, error: 'Impossibile salvare l’itinerario.' };
   }
   revalidatePath('/pratiche');
-  revalidatePath('/destinazioni');
+  revalidatePath('/organizza');
   revalidatePath('/dashboard/preferiti');
   return { saved: true };
 }

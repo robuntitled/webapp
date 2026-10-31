@@ -15,8 +15,8 @@ export const authConfig = {
     maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
-    signIn: '/',
-    error: '/',
+    signIn: '/accedi',
+    error: '/accedi',
   },
   providers: [],
   callbacks: {
@@ -28,6 +28,29 @@ export const authConfig = {
       );
       if (isProtected) return isLoggedIn;
       return true;
+    },
+    /**
+     * Path relativi sicuri. AUTH_URL di prod non deve governare l’host:
+     * Location relativi restano sull’origine della request; il wrapper
+     * `rewriteAuthResponseToRequestHost` assolutizza il JSON `{url}` per
+     * next-auth/react (`new URL(data.url)`).
+     */
+    async redirect({ url, baseUrl }) {
+      const fallback = '/organizza';
+      const toSafePath = (raw: string): string | null => {
+        try {
+          const parsed = raw.startsWith('/')
+            ? new URL(raw, baseUrl)
+            : new URL(raw);
+          const path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+          if (!path.startsWith('/') || path.startsWith('//')) return null;
+          if (path.startsWith('/api') || path.startsWith('/_next')) return null;
+          return path;
+        } catch {
+          return null;
+        }
+      };
+      return toSafePath(url) ?? fallback;
     },
     async signIn({ user, account }) {
       return handleOAuthSignIn(user, account);
@@ -44,9 +67,10 @@ export const authConfig = {
         if (session.travelIntent !== undefined) {
           token.travelIntent = session.travelIntent;
         }
-        return populateJwtToken(token);
+        return populateJwtToken(token, { force: true });
       }
-      return populateJwtToken(token);
+      // Login / nuovo token: sync immediato. Poi refresh al massimo ogni JWT_USER_REFRESH_MS.
+      return populateJwtToken(token, { force: trigger === 'signIn' });
     },
     async session({ session, token }) {
       return populateSession(session, token);

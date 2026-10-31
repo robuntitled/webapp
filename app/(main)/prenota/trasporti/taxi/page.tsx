@@ -12,13 +12,13 @@ export const metadata: Metadata = {
 export default async function PrenotaTrasportiTaxiPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/?callbackUrl=/prenota/trasporti/taxi');
+    redirect('/accedi?callbackUrl=/prenota/trasporti/taxi');
   }
 
   return (
     <PrenotaPageShell
       title="Taxi"
-      subtitle="Transfer privati e taxi aeroporto. Ricerca su Flygetr · pagamento GetTransfer."
+      subtitle="Transfer privati e taxi aeroporto. Ricerca su Noivia · pagamento GetTransfer."
       badge="GetTransfer"
     >
       <PrenotaTransportSubnav />

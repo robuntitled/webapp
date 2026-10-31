@@ -14,6 +14,8 @@ type HeroBackgroundProps = {
   intervalMs?: number;
   /** Scroll-linked parallax on the hero imagery. */
   parallax?: boolean;
+  /** Sempre object-cover (niente letterbox scuro su mobile). */
+  forceCover?: boolean;
 };
 
 export function HeroBackground({
@@ -23,6 +25,7 @@ export function HeroBackground({
   className,
   intervalMs = 8000,
   parallax = false,
+  forceCover = false,
 }: HeroBackgroundProps) {
   const [index, setIndex] = useState(0);
   const [cssParallax, setCssParallax] = useState(false);
@@ -45,9 +48,9 @@ export function HeroBackground({
 
   const overlayClass = {
     light: 'bg-[var(--color-bg)]/85',
-    dark: 'bg-stone-950/50',
+    dark: 'bg-stone-950/40',
     gradient: 'bg-[var(--color-bg)]/85',
-    photo: 'bg-gradient-to-r from-stone-950/70 via-stone-950/35 to-transparent',
+    photo: 'bg-gradient-to-r from-stone-950/55 via-stone-950/30 to-transparent',
   }[overlay];
 
   const useParallax = parallax && !reduced;
@@ -80,9 +83,9 @@ export function HeroBackground({
               src={src}
               alt=""
               fill
-              priority={i < 3}
-              quality={50}
-              sizes="100vw"
+              priority={i === 0}
+              quality={40}
+              sizes="(max-width: 768px) 100vw, 1200px"
               className="scale-110 object-cover blur-2xl brightness-[0.55] saturate-125"
             />
             {/* Foto completa su schermi alti; cover solo se il viewport è abbastanza largo. */}
@@ -90,11 +93,12 @@ export function HeroBackground({
               src={src}
               alt={active ? alt : ''}
               fill
-              priority={i < 3}
-              quality={85}
-              sizes="100vw"
+              priority={i === 0}
+              quality={80}
+              sizes="(max-width: 768px) 100vw, 1920px"
               className={cn(
-                'nl-hero-slide object-center will-change-transform',
+                'object-center will-change-transform',
+                forceCover ? 'object-cover' : 'nl-hero-slide',
                 active && 'nl-hero-slide-active'
               )}
               style={active && jsParallaxTransform ? { transform: jsParallaxTransform } : undefined}

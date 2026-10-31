@@ -1,10 +1,11 @@
 import 'server-only';
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { scopedForUser } from '@/lib/supabase-scoped';
 
 export async function loadFavoriteItineraryIds(userId: string): Promise<Set<string>> {
   if (!userId) return new Set();
-  const { data, error } = await supabaseAdmin
+  const { db } = scopedForUser(userId);
+  const { data, error } = await db
     .from('favorite_itineraries')
     .select('template_id')
     .eq('user_id', userId);

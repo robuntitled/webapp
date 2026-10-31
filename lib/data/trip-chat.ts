@@ -192,8 +192,8 @@ export async function markTripChatRead(editionId: string, userId: string): Promi
 }
 
 export async function hideTripChat(editionId: string, userId: string): Promise<void> {
-  const allowed = await canAccessTripChat(editionId, userId);
-  if (!allowed) throw new Error('La chat si apre dopo il primo volo confermato nel gruppo');
+  const member = await isTripMember(editionId, userId);
+  if (!member) throw new Error('Non sei membro di questo viaggio');
 
   const { error } = await supabaseAdmin.from('edition_chat_hides').upsert(
     {
@@ -224,27 +224,87 @@ type MembershipEdition = {
   template_id: string;
   date_from: string;
   date_to: string;
+  title: string | null;
   memberIds: string[];
 };
 
+function normalizeUserId(id: string): string {
+  return String(id).trim().toLowerCase();
+}
+
+type PracticeDateHint = { date_from: string; date_to: string };
+
+/** Tutte le edizioni di cui l'utente è membro (interested/confirmed) o ha una pratica. */
 async function loadMembershipEditions(userId: string): Promise<MembershipEdition[]> {
-  const { data: mine, error } = await supabaseAdmin
-    .from('edition_members')
-    .select('edition_id')
-    .eq('user_id', userId)
-    .neq('status', 'left');
-  if (error || !mine?.length) return [];
+  const [{ data: mine }, { data: practiceRows }] = await Promise.all([
+    supabaseAdmin
+      .from('edition_members')
+      .select('edition_id')
+      .eq('user_id', userId)
+      .in('status', ['interested', 'confirmed']),
+    supabaseAdmin
+      .from('practices')
+      .select('edition_id, date_from, date_to, created_at')
+      .eq('user_id', userId)
+      .neq('status', 'cancelled')
+      .not('edition_id', 'is', null)
+      .order('created_at', { ascending: false }),
+  ]);
 
-  const ids = mine.map((r) => r.edition_id as string);
-  const { data: editions } = await supabaseAdmin
-    .from('editions')
-    .select('id, template_id, date_from, date_to, status')
-    .in('id', ids)
-    .in('status', ['open', 'formed', 'locked']);
-  if (!editions?.length) return [];
+  // Date “reali” per l’utente: la pratica può divergere da editions.date_* (drift DB).
+  const practiceByEdition = new Map<string, PracticeDateHint>();
+  for (const r of practiceRows ?? []) {
+    const eid = r.edition_id as string | null;
+    if (!eid || practiceByEdition.has(eid)) continue;
+    practiceByEdition.set(eid, {
+      date_from: String(r.date_from).slice(0, 10),
+      date_to: String(r.date_to).slice(0, 10),
+    });
+  }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const live = editions.filter((e) => String(e.date_to).slice(0, 10) >= today);
+  const idSet = new Set<string>();
+  for (const r of mine ?? []) {
+    if (r.edition_id) idSet.add(r.edition_id as string);
+  }
+  for (const eid of practiceByEdition.keys()) idSet.add(eid);
+  const ids = [...idSet];
+  if (!ids.length) return [];
+
+  // Nessun filtro status in query: se sei membro, la chat deve elencarla.
+  // title può mancare (migration 041 non applicata).
+  let editions: Record<string, unknown>[] = [];
+  {
+    const withTitle = await supabaseAdmin
+      .from('editions')
+      .select('id, template_id, date_from, date_to, status, title')
+      .in('id', ids);
+    if (withTitle.error) {
+      const fallback = await supabaseAdmin
+        .from('editions')
+        .select('id, template_id, date_from, date_to, status')
+        .in('id', ids);
+      editions = (fallback.data as Record<string, unknown>[] | null) ?? [];
+    } else {
+      editions = (withTitle.data as Record<string, unknown>[] | null) ?? [];
+    }
+  }
+  if (!editions.length) return [];
+
+  // Live se editions O la pratica dell’utente è ancora in corso/futura.
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - 2);
+  const cutoffIso = cutoff.toISOString().slice(0, 10);
+  const live = editions.filter((e) => {
+    const id = e.id as string;
+    const practice = practiceByEdition.get(id);
+    if (practice?.date_to && practice.date_to >= cutoffIso) return true;
+    if (practice?.date_from && practice.date_from >= cutoffIso) return true;
+    const dateTo = String(e.date_to ?? '').slice(0, 10);
+    const dateFrom = String(e.date_from ?? '').slice(0, 10);
+    if (dateTo && dateTo >= cutoffIso) return true;
+    if (dateFrom && dateFrom >= cutoffIso) return true;
+    return false;
+  });
 
   const withMembers = await Promise.all(
     live.map(async (e) => {
@@ -252,22 +312,34 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
         .from('edition_members')
         .select('user_id')
         .eq('edition_id', e.id)
-        .neq('status', 'left');
+        .in('status', ['interested', 'confirmed']);
+      const memberIds = [
+        ...new Map(
+          (members ?? []).map((m) => {
+            const id = m.user_id as string;
+            return [normalizeUserId(id), id] as const;
+          })
+        ).values(),
+      ];
+      const practice = practiceByEdition.get(e.id as string);
       return {
         id: e.id as string,
         template_id: e.template_id as string,
-        date_from: String(e.date_from).slice(0, 10),
-        date_to: String(e.date_to).slice(0, 10),
-        memberIds: (members ?? []).map((m) => m.user_id as string),
+        // Preferisci date pratica (allineate a notifiche / itinerario utente)
+        date_from: practice?.date_from ?? String(e.date_from).slice(0, 10),
+        date_to: practice?.date_to ?? String(e.date_to).slice(0, 10),
+        title: (e.title as string | null | undefined) ?? null,
+        memberIds,
       };
     })
   );
-  return withMembers;
+  return withMembers.sort((a, b) => a.date_from.localeCompare(b.date_from));
 }
 
 function editionTitle(ed: MembershipEdition) {
   const tpl = findItineraryTemplate(ed.template_id);
-  const dest = tpl?.destination_name ?? ed.template_id;
+  const dest =
+    ed.title?.trim() || tpl?.destination_name || ed.template_id;
   return `${dest} · ${formatItDate(ed.date_from)}`;
 }
 
@@ -288,31 +360,40 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
 
   const groups: ChatGroupItem[] = [];
 
+  const todayIso = new Date().toISOString().slice(0, 10);
   for (const ed of editions) {
-    if (hidden.has(ed.id)) continue;
+    // Hide vale solo per viaggi già conclusi: se la pratica è ancora live, rimostra.
+    // (Non c’è UI di unhide; altrimenti membership future restano irrecuperabili.)
+    const stillLive = ed.date_to >= todayIso || ed.date_from >= todayIso;
+    if (hidden.has(ed.id) && !stillLive) continue;
+    // Dedup membri (difesa da eventuali doppioni lato DB)
+    const memberIds = [...new Set(ed.memberIds)];
+    const participantCount = memberIds.length;
     const confirmedCount = await countConfirmedEditionMembers(ed.id);
-    if (confirmedCount < 1) continue;
-    const participantCount = ed.memberIds.length;
+    const chatUnlocked = confirmedCount >= 1;
     const since = readAt.get(ed.id) ?? '1970-01-01T00:00:00.000Z';
     const tpl = findItineraryTemplate(ed.template_id);
 
     const [{ count: unreadCount }, { data: lastRows }] = await Promise.all([
-      supabaseAdmin
-        .from('edition_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('edition_id', ed.id)
-        .neq('user_id', userId)
-        .gt('created_at', since),
-      supabaseAdmin
-        .from('edition_messages')
-        .select('body, created_at')
-        .eq('edition_id', ed.id)
-        .order('created_at', { ascending: false })
-        .limit(1),
+      chatUnlocked
+        ? supabaseAdmin
+            .from('edition_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('edition_id', ed.id)
+            .neq('user_id', userId)
+            .gt('created_at', since)
+        : Promise.resolve({ count: 0 }),
+      chatUnlocked
+        ? supabaseAdmin
+            .from('edition_messages')
+            .select('body, created_at')
+            .eq('edition_id', ed.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+        : Promise.resolve({ data: [] as { body: string; created_at: string }[] }),
     ]);
 
     const last = lastRows?.[0];
-    if (participantCount < 2 && !last) continue;
 
     groups.push({
       id: ed.id,
@@ -327,7 +408,12 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
         ? last.body.length > 80
           ? `${last.body.slice(0, 80)}…`
           : last.body
-        : null,
+        : chatUnlocked
+          ? null
+          : participantCount < 2
+            ? 'Solo tu per ora — invita qualcuno'
+            : 'Chat in attesa del primo volo confermato',
+      chatUnlocked,
     });
   }
 

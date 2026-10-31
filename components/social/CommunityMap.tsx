@@ -7,11 +7,11 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
 import type { CommunityPhotoPin } from '@/lib/data/community-map';
 import { cn } from '@/lib/utils';
 
-const CARTO_URL =
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const MAP_TILES = getLeafletTileLayer();
 
 type CommunityMapProps = {
   photoPins: CommunityPhotoPin[];
@@ -221,7 +221,7 @@ export function CommunityMap({ photoPins, className }: CommunityMapProps) {
             ]}
             maxBoundsViscosity={1}
           >
-            <TileLayer url={CARTO_URL} noWrap />
+            <TileLayer url={MAP_TILES.url} attribution={MAP_TILES.attribution} noWrap />
             <MapResizeSync expanded={expanded} sizeTick={sizeTick} />
             <FitBounds points={fitPoints} />
             {displayPhotos.map((pin) => (

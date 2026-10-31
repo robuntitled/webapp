@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -21,6 +20,7 @@ import { DEFAULT_TRIP_IMAGE } from '@/lib/brand/images';
 import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useIntervalWhenVisible } from '@/hooks/useIntervalWhenVisible';
 
 type TripGroupsChatDockProps = {
   currentUserId: string;
@@ -29,7 +29,6 @@ type TripGroupsChatDockProps = {
 type Tab = 'chats' | 'friends';
 
 export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('chats');
   const [loading, setLoading] = useState(true);
@@ -42,8 +41,6 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
   const [searchHits, setSearchHits] = useState<ChatSearchHit[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [hidingId, setHidingId] = useState<string | null>(null);
-
-  const hideOnComposer = pathname?.startsWith('/dashboard/crea');
 
   const loadGroups = useCallback(async () => {
     try {
@@ -90,12 +87,9 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     }
   }, []);
 
-  useEffect(() => {
-    if (hideOnComposer) return;
+  useIntervalWhenVisible(() => {
     void loadGroups();
-    const interval = setInterval(() => void loadGroups(), 30_000);
-    return () => clearInterval(interval);
-  }, [hideOnComposer, loadGroups]);
+  }, 60_000);
 
   useEffect(() => {
     if (!open || tab !== 'friends') return;
@@ -190,8 +184,6 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     }
   };
 
-  if (hideOnComposer) return null;
-
   // Mostra il dock anche senza gruppi (tab Amici / empty state)
   if (!loading && groups.length === 0 && !open) {
     // ancora utile se ci sono contatti — carichiamo lazy all’apertura
@@ -202,7 +194,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : String(unreadTotal)) : null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3 pb-[max(0px,env(safe-area-inset-bottom))]">
+    <div className="fixed bottom-5 right-4 z-[55] flex flex-col items-end gap-3 pb-[max(0px,env(safe-area-inset-bottom))] sm:right-5">
       <div className="flex flex-col items-end gap-3">
       <AnimatePresence>
         {open && (
@@ -257,7 +249,12 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                 <TripChatPanel
                   tripId={activeGroup.id}
                   currentUserId={currentUserId}
-                  canAccess
+                  canAccess={activeGroup.chatUnlocked}
+                  lockReason={
+                    activeGroup.chatUnlocked
+                      ? undefined
+                      : 'La chat si apre dopo il primo volo confermato nel gruppo.'
+                  }
                   dockMode
                 />
               </div>
@@ -338,8 +335,8 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                       </div>
                     ) : filteredGroups.length === 0 ? (
                       <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-                        Nessuna chat di gruppo. Quando qualcuno si aggiunge alla partenza,
-                        compare qui.
+                        Nessuna partenza in corso. Quando crei o ti unisci a un viaggio,
+                        la chat compare qui.
                       </p>
                     ) : (
                       <ul className="divide-y">
@@ -443,15 +440,17 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
       <Button
         type="button"
         size="lg"
+        aria-label={open ? 'Chiudi chat di gruppo' : 'Apri chat di gruppo'}
+        title={open ? 'Chiudi chat' : 'Chat di gruppo'}
         className={cn(
-          'relative h-12 min-w-[9.5rem] gap-2 rounded-full border border-white/10 bg-[#0b1220]/92 px-6 font-semibold text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md',
+          'relative h-12 min-w-12 gap-2 rounded-full border border-white/10 bg-[#0b1220]/92 px-3 font-semibold text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md sm:min-w-[9.5rem] sm:px-6',
           'hover:bg-[#161d2b] hover:text-white',
           open && 'ring-2 ring-accent/70'
         )}
         onClick={() => setOpen((v) => !v)}
       >
-        <MessageCircle className="h-5 w-5 text-accent" />
-        <span>{open ? 'Chiudi' : 'Chat'}</span>
+        <MessageCircle className="h-5 w-5 text-accent" aria-hidden />
+        <span className="hidden sm:inline">{open ? 'Chiudi' : 'Chat'}</span>
         {!open && badge && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#0b1220]">
             {badge}

@@ -8,7 +8,7 @@ export function LandingDestinations() {
   const featured = publishedDestinations();
 
   return (
-    <div className="mt-8 grid grid-cols-2 gap-2 sm:max-w-md">
+    <div className="mt-8 grid grid-cols-2 gap-3 sm:max-w-2xl sm:grid-cols-3">
       {featured.map((dest) => (
         <Link
           key={dest.slug}

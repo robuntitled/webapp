@@ -51,7 +51,7 @@ describe('textLooksUnsafe', () => {
     expect(findTextBlockReason('Contattami su telegram')).toBe('off_platform');
   });
 
-  it('allows Flygetr links', () => {
+  it('allows Noivia / legacy Flygetr links', () => {
     expect(
       textLooksUnsafe('Unisciti su https://nomadlink.app/viaggi/123')
     ).toBe(false);

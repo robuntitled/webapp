@@ -1,8 +1,13 @@
 import NextAuth from 'next-auth';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { authConfig } from '@/auth.config';
 import { GDPR_PUBLIC_PATHS, ONBOARDING_PATH } from '@/lib/auth-session';
 import { postLoginPath } from '@/lib/onboarding/steps';
+import {
+  absoluteUrlOnRequest,
+  rewriteAuthResponseToRequestHost,
+} from '@/lib/auth/request-origin';
 
 const { auth } = NextAuth(authConfig);
 
@@ -13,46 +18,90 @@ function isOnboardingExempt(pathname: string): boolean {
   if (pathname === ONBOARDING_PATH || pathname.startsWith(`${ONBOARDING_PATH}/`)) {
     return true;
   }
+  if (pathname.startsWith('/invito/')) return true;
   if (pathname.startsWith('/api')) return true;
   return false;
 }
 
-export default auth((req) => {
+/** Redirect sullo stesso host della richiesta (non AUTH_URL / nextUrl riscritto). */
+function redirectOnRequest(req: NextRequest, path: string) {
+  return NextResponse.redirect(absoluteUrlOnRequest(path, req.headers, req.nextUrl.origin));
+}
+
+/**
+ * Auth.js con AUTH_URL di prod riscrive nextUrl e setta callback-url sul dominio
+ * sbagliato anche dal middleware. Riscriviamo Location/Set-Cookie sull'host reale.
+ */
+const authMiddleware = auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
   const userId = session?.user?.id;
   const privacyOk = Boolean(session?.user?.privacyConsentAccepted);
   const onboardingDone = Boolean(session?.user?.onboardingCompleted);
 
+  if (pathname === '/' && !userId) {
+    const q = req.nextUrl.searchParams;
+    if (
+      q.has('callbackUrl') ||
+      q.has('error') ||
+      q.has('verify') ||
+      q.has('code') ||
+      q.get('mode') === 'register'
+    ) {
+      const target = absoluteUrlOnRequest('/accedi', req.headers, req.nextUrl.origin);
+      q.forEach((value, key) => target.searchParams.set(key, value));
+      return NextResponse.redirect(target);
+    }
+  }
+
   if (userId && !privacyOk) {
     const isExempt = GDPR_PUBLIC.has(pathname) || pathname.startsWith('/api');
     if (!isExempt) {
-      return NextResponse.redirect(new URL('/completa-registrazione', req.nextUrl));
+      return redirectOnRequest(req, '/completa-registrazione');
     }
   }
 
   if (pathname === '/completa-registrazione' && userId && privacyOk) {
-    return NextResponse.redirect(
-      new URL(postLoginPath({ onboardingCompleted: onboardingDone }), req.nextUrl)
+    return redirectOnRequest(
+      req,
+      postLoginPath({ onboardingCompleted: onboardingDone })
     );
   }
 
   if (userId && privacyOk && !onboardingDone && !isOnboardingExempt(pathname)) {
-    return NextResponse.redirect(new URL(ONBOARDING_PATH, req.nextUrl));
+    return redirectOnRequest(req, ONBOARDING_PATH);
   }
 
   if (pathname === ONBOARDING_PATH && userId && privacyOk && onboardingDone) {
-    return NextResponse.redirect(new URL('/destinazioni', req.nextUrl));
+    return redirectOnRequest(req, '/organizza');
   }
 
-  if (pathname === '/' && userId && privacyOk) {
-    return NextResponse.redirect(
-      new URL(postLoginPath({ onboardingCompleted: onboardingDone }), req.nextUrl)
+  if ((pathname === '/' || pathname === '/accedi') && userId && privacyOk) {
+    return redirectOnRequest(
+      req,
+      postLoginPath({ onboardingCompleted: onboardingDone })
     );
   }
 
   return NextResponse.next();
 });
+
+export default async function middleware(req: NextRequest) {
+  // auth() tipizza il 2° arg come AppRouteHandlerFnContext; in middleware basta la request.
+  const res = await (authMiddleware as (req: NextRequest) => Promise<Response | undefined>)(
+    req
+  );
+  if (!(res instanceof Response)) return res;
+
+  // Non ricostruire NextResponse.next() / rewrite: un `new Response(body)` perde i
+  // marker interni e fa tornare 400 sulle prefetch RSC (es. /destinazioni da /partenze).
+  const isPassthrough =
+    res.headers.get('x-middleware-next') === '1' ||
+    res.headers.has('x-middleware-rewrite');
+  if (isPassthrough) return res;
+
+  return rewriteAuthResponseToRequestHost(req, res);
+}
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
