@@ -19,6 +19,21 @@ export const COMPLIANCE_COPY = {
   /** Prezzo: mai "totale viaggio". Solo somma di contratti separati. */
   priceIsSumOfServices:
     'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
+  /**
+   * Checkout voli/hotel: chi vende e chi è merchant of record.
+   * Fatti da codice/config (LiteAPI / Nuitee Connect). Ragione sociale completa: LEGAL_*.
+   */
+  checkoutMerchantOfRecord:
+    'Prenotazione e pagamento gestiti da LiteAPI / Nuitée (payment processor e merchant of record). Noivia agisce come intermediario.',
+  /** TODO owner: completare LEGAL_* (ragione sociale intermediario) in .env — vedi company.defaults. */
+  checkoutMerchantLegalTodo:
+    'TODO LEGAL_*: completare ragione sociale / P.IVA intermediario (LEGAL_COMPANY_NAME, LEGAL_VAT_ID) prima del go-live.',
+  /**
+   * Hotel: il totale mostrato include già il markup LiteAPI (LITEAPI_MARGIN / default 10%).
+   * Non esporre la % al cliente; solo che il prezzo include la commissione di servizio.
+   */
+  hotelServiceFeeIncluded:
+    'Totale comprensivo di tutte le commissioni. Il prezzo include la commissione di servizio Noivia.',
   /** Trasparenza AI (AI Act). */
   aiGenerated:
     'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',

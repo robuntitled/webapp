@@ -25,22 +25,35 @@ async function participantRow(tripId: string, userId: string) {
   return data;
 }
 
-/** Legacy creator-trip seat confirm (still used when booking passes tripId). */
+/**
+ * Legacy creator-trip seat confirm (still used when booking passes tripId).
+ * `providerStatus` — se pending/failed/cancelled non marca il posto come confirmed.
+ */
 export async function confirmParticipantFlight(opts: {
   tripId: string;
   userId: string;
   bookingRef?: string | null;
+  /** Raw provider status; omitted = treat as confirmed (legacy callers). */
+  providerStatus?: string | null;
 }): Promise<{ ok: boolean; reason?: string }> {
   const row = await participantRow(opts.tripId, opts.userId);
   if (!row?.user_id) {
     return { ok: false, reason: 'not_participant' };
   }
 
+  const { parseFlightStatus } = await import('@/lib/itineraries/bookings');
+  const kind =
+    opts.providerStatus === undefined
+      ? 'confirmed'
+      : parseFlightStatus(opts.providerStatus);
+  const seatConfirmed = kind === 'confirmed';
+
+  // Schema: seat_status IN ('provisional', 'confirmed') — pending provider ⇒ provisional.
   const { error } = await supabaseAdmin
     .from('trip_participants')
     .update({
-      seat_status: 'confirmed',
-      flight_confirmed_at: new Date().toISOString(),
+      seat_status: seatConfirmed ? 'confirmed' : 'provisional',
+      flight_confirmed_at: seatConfirmed ? new Date().toISOString() : null,
       flight_booking_ref: opts.bookingRef ?? null,
     })
     .eq('trip_id', opts.tripId)

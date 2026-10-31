@@ -19,6 +19,7 @@ import {
 } from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
 import { Button } from '@/components/ui/button';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -76,6 +77,8 @@ export function HotelCheckoutClient({
     status: string | null;
     amountEur: number;
     practiceId?: string;
+    reconciliationPending?: boolean;
+    reconciliationMessage?: string;
   } | null>(null);
 
   const displayPrice = roundMoney(
@@ -149,6 +152,8 @@ export function HotelCheckoutClient({
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
+          reconciliationPending?: boolean;
+          message?: string;
         };
         if (!res.ok) {
           toast.error(data.error ?? 'Conferma prenotazione fallita');
@@ -160,11 +165,19 @@ export function HotelCheckoutClient({
           status: data.status ?? null,
           amountEur,
           practiceId: hotelDraft?.practiceId,
+          reconciliationPending: Boolean(data.reconciliationPending),
+          reconciliationMessage: data.message,
         });
         clearHotelOfferDraft();
         clearHotelPaymentPending();
         setStep('done');
-        toast.success('Hotel prenotato');
+        if (data.reconciliationPending) {
+          toast.message(
+            data.message ?? 'Prenotazione ricevuta, stiamo completando la registrazione'
+          );
+        } else {
+          toast.success('Hotel prenotato');
+        }
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href);
           url.search = '';
@@ -301,18 +314,26 @@ export function HotelCheckoutClient({
   }
 
   if (step === 'done') {
+    const reconciling = Boolean(confirmation?.reconciliationPending);
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-3xl border border-border bg-card p-6 text-center shadow-sm">
-        <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
-        <h2 className="font-display text-2xl font-semibold">Prenotazione confermata</h2>
+        <CheckCircle2
+          className={`mx-auto h-12 w-12 ${reconciling ? 'text-amber-600' : 'text-emerald-600'}`}
+        />
+        <h2 className="font-display text-2xl font-semibold">
+          {reconciling ? 'Prenotazione ricevuta' : 'Prenotazione confermata'}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          {confirmation?.bookingRef
-            ? `Codice: ${confirmation.bookingRef}`
-            : confirmation?.bookingId
-              ? `ID: ${confirmation.bookingId}`
-              : 'Riceverai i dettagli via email.'}
+          {reconciling
+            ? confirmation?.reconciliationMessage ??
+              'Prenotazione ricevuta, stiamo completando la registrazione'
+            : confirmation?.bookingRef
+              ? `Codice: ${confirmation.bookingRef}`
+              : confirmation?.bookingId
+                ? `ID: ${confirmation.bookingId}`
+                : 'Riceverai i dettagli via email.'}
         </p>
-        <BookingComplianceNote />
+        <BookingComplianceNote showMerchantOfRecord showHotelServiceFee />
         <Button
           className="rounded-xl"
           onClick={() => {
@@ -494,7 +515,11 @@ export function HotelCheckoutClient({
             <p className="font-display text-2xl font-semibold">
               {formatMoney(displayPrice, displayCurrency)}
             </p>
+            <p className="mt-1 text-[11px] text-white/70">
+              {COMPLIANCE_COPY.hotelServiceFeeIncluded}
+            </p>
           </div>
+          <BookingComplianceNote showMerchantOfRecord />
         </aside>
       ) : null}
     </div>

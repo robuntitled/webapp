@@ -4,6 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import {
   flightFingerprint,
+  flightStatusConfirmsSeat,
+  parseFlightStatus,
   type ActivityBookingRecap,
   type EditionPeerFlight,
   type FlightBookingRecap,
@@ -245,41 +247,72 @@ export async function savePracticeFlightBooking(input: {
 }): Promise<{ practice: PracticeRow } | { error: string }> {
   const current = await getPractice(input.practiceId, input.userId);
   if (!current) return { error: 'Pratica non trovata.' };
+
+  const kind = parseFlightStatus(input.recap.status);
+  // Solo lo stato provider "confirmed" conferma pratica/posto gruppo.
+  // Pending / failed / cancelled / unknown: salva il recap senza promuovere a confirmed.
+  const isConfirmed = flightStatusConfirmsSeat(input.recap.status);
+
+  const patch: Record<string, unknown> = {
+    flight_booking: input.recap,
+  };
+  if (isConfirmed) {
+    patch.status = 'confirmed';
+    patch.flight_confirmed_at = input.recap.bookedAt;
+  } else if (kind === 'failed' || kind === 'cancelled') {
+    // Non upgrade: se non era già confermata, resta allo stato corrente.
+    // Se era confermata e il provider annulla, togliamo la conferma volo.
+    if (current.flight_confirmed_at) {
+      patch.flight_confirmed_at = null;
+      if (current.status === 'confirmed') patch.status = 'draft';
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('practices')
-    .update({
-      status: 'confirmed',
-      flight_confirmed_at: input.recap.bookedAt,
-      flight_booking: input.recap,
-    })
+    .update(patch)
     .eq('id', input.practiceId)
     .eq('user_id', input.userId)
     .select('*')
     .single();
   if (error || !data) {
-    if (missing(error)) return confirmPracticeFlight(input.practiceId, input.userId);
+    if (missing(error)) {
+      // Schema legacy senza flight_booking: conferma solo se provider confirmed.
+      if (isConfirmed) return confirmPracticeFlight(input.practiceId, input.userId);
+      return { error: error?.message ?? 'Salvataggio volo fallito.' };
+    }
     return { error: error?.message ?? 'Salvataggio volo fallito.' };
   }
   const practice = data as PracticeRow;
   if (practice.edition_id) {
-    await supabaseAdmin
-      .from('edition_members')
-      .update({ status: 'confirmed' })
-      .eq('edition_id', practice.edition_id)
-      .eq('user_id', input.userId);
-    await maybeFormEdition(practice.edition_id);
-    const { notifyEditionFlightConfirmed } = await import('@/lib/notifications/edition');
-    const { countConfirmedEditionMembers, postFirstFlightChatUnlock, postJoinRequestChatPing } =
-      await import('@/lib/data/trip-chat');
-    void notifyEditionFlightConfirmed({
-      editionId: practice.edition_id,
-      userId: input.userId,
-    });
-    const confirmed = await countConfirmedEditionMembers(practice.edition_id);
-    if (confirmed === 1) {
-      void postFirstFlightChatUnlock(practice.edition_id, input.userId);
-    } else if (confirmed > 1) {
-      void postJoinRequestChatPing(practice.edition_id, input.userId);
+    if (isConfirmed) {
+      await supabaseAdmin
+        .from('edition_members')
+        .update({ status: 'confirmed' })
+        .eq('edition_id', practice.edition_id)
+        .eq('user_id', input.userId);
+      await maybeFormEdition(practice.edition_id);
+      const { notifyEditionFlightConfirmed } = await import('@/lib/notifications/edition');
+      const { countConfirmedEditionMembers, postFirstFlightChatUnlock, postJoinRequestChatPing } =
+        await import('@/lib/data/trip-chat');
+      void notifyEditionFlightConfirmed({
+        editionId: practice.edition_id,
+        userId: input.userId,
+      });
+      const confirmed = await countConfirmedEditionMembers(practice.edition_id);
+      if (confirmed === 1) {
+        void postFirstFlightChatUnlock(practice.edition_id, input.userId);
+      } else if (confirmed > 1) {
+        void postJoinRequestChatPing(practice.edition_id, input.userId);
+      }
+    } else if (kind === 'failed' || kind === 'cancelled') {
+      // Posto gruppo non conta come confermato se il volo non lo è.
+      await supabaseAdmin
+        .from('edition_members')
+        .update({ status: 'interested' })
+        .eq('edition_id', practice.edition_id)
+        .eq('user_id', input.userId)
+        .eq('status', 'confirmed');
     }
   }
   return { practice };

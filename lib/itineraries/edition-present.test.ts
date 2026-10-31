@@ -39,10 +39,24 @@ describe('edition present', () => {
     expect(info.variant).toBe('formed');
   });
 
-  it('formats badge labels for card display', () => {
+  it('formats badge labels without false scarcity', () => {
     expect(editionBadgeDisplay({ variant: 'open' }, 6)).toBe('Gruppo in formazione');
-    expect(editionBadgeDisplay({ variant: 'warming' }, 5)).toBe('Ultimi 5 posti');
+    expect(editionBadgeDisplay({ variant: 'warming' }, 5)).toBe('Mancano 5 voli');
+    expect(editionBadgeDisplay({ variant: 'closing' }, 1)).toBe('Manca 1 volo');
     expect(editionBadgeDisplay({ variant: 'formed' }, 0)).toBe('Gruppo confermato');
+  });
+
+  it('never uses Ultimi posti wording', () => {
+    const near = new Date();
+    near.setDate(near.getDate() + 40);
+    const warming = editionScarcity({
+      confirmed_count: 2,
+      min_confirmed: 4,
+      date_from: near.toISOString().slice(0, 10),
+    });
+    expect(warming.label).not.toMatch(/ultimi/i);
+    expect(warming.label).toBe('In formazione');
+    expect(editionBadgeDisplay(warming, 2)).not.toMatch(/ultimi/i);
   });
 
   it('formats participants and group hints', () => {

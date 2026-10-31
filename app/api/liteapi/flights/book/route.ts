@@ -6,6 +6,11 @@ import { LiteApiError } from '@/lib/liteapi/client';
 import { bookFlight } from '@/lib/liteapi/flight-booking';
 import { confirmParticipantFlight } from '@/lib/data/trip-commitments';
 import { savePracticeFlightBooking } from '@/lib/data/practices';
+import {
+  BOOKING_RECONCILIATION_USER_MESSAGE,
+  recordBookingReconciliation,
+  withSaveRetry,
+} from '@/lib/data/booking-reconciliation';
 import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 
@@ -70,8 +75,13 @@ export async function POST(request: Request) {
         tripId: parsed.data.tripId,
         userId: session.user.id,
         bookingRef: result.bookingRef,
+        providerStatus: result.status,
       }).catch((err: unknown) => console.error('[flights/book] confirm seat', err));
     }
+
+    let reconciliationPending = false;
+    let savedPracticeId: string | undefined;
+
     if (parsed.data.practiceId && parsed.data.snapshot) {
       const recap = {
         bookingId: result.bookingId,
@@ -84,35 +94,69 @@ export async function POST(request: Request) {
         returnLeg: parsed.data.snapshot.returnLeg ?? null,
         bookedAt: new Date().toISOString(),
       };
-      const saved = await savePracticeFlightBooking({
-        practiceId: parsed.data.practiceId,
-        userId: session.user.id,
-        recap,
-      }).catch((err) => {
-        console.error('[flights/book] practice', err);
-        return null;
-      });
-      const email = session.user.email;
-      if (email && saved && 'practice' in saved) {
-        const dest =
-          findItineraryTemplate(saved.practice.template_id)?.destination_name ?? 'il tuo viaggio';
-        void sendBookingConfirmationEmail({
-          to: email,
+
+      const saveResult = await withSaveRetry('flights/book practice', () =>
+        savePracticeFlightBooking({
+          practiceId: parsed.data.practiceId!,
+          userId: session.user.id,
+          recap,
+        })
+      );
+
+      if (saveResult.ok && saveResult.value && 'practice' in saveResult.value) {
+        const saved = saveResult.value;
+        savedPracticeId = saved.practice.id;
+        const email = session.user.email;
+        if (email) {
+          const dest =
+            findItineraryTemplate(saved.practice.template_id)?.destination_name ??
+            'il tuo viaggio';
+          void sendBookingConfirmationEmail({
+            to: email,
+            kind: 'flight',
+            destinationName: dest,
+            practiceId: saved.practice.id,
+            bookingRef: result.bookingRef,
+            amountEur: recap.amountEur,
+            currency: recap.currency,
+            flight: recap,
+          });
+        }
+      } else {
+        const errMsg =
+          !saveResult.ok
+            ? saveResult.error
+            : 'error' in saveResult.value
+              ? saveResult.value.error
+              : 'Salvataggio pratica fallito';
+        reconciliationPending = true;
+        await recordBookingReconciliation({
+          userId: session.user.id,
+          practiceId: parsed.data.practiceId,
           kind: 'flight',
-          destinationName: dest,
-          practiceId: saved.practice.id,
-          bookingRef: result.bookingRef,
-          amountEur: recap.amountEur,
-          currency: recap.currency,
-          flight: recap,
+          providerBookingId: result.bookingId,
+          providerBookingRef: result.bookingRef,
+          providerStatus: result.status,
+          amountEur: parsed.data.amountEur ?? null,
+          currency: parsed.data.snapshot.currency ?? 'EUR',
+          payload: { recap, prebookId: parsed.data.prebookId, transactionId: parsed.data.transactionId },
+          lastError: errMsg,
         });
       }
     }
+
     return NextResponse.json({
       ok: true,
       bookingId: result.bookingId,
       bookingRef: result.bookingRef,
       status: result.status,
+      ...(reconciliationPending
+        ? {
+            reconciliationPending: true,
+            message: BOOKING_RECONCILIATION_USER_MESSAGE,
+          }
+        : {}),
+      ...(savedPracticeId ? { practiceId: savedPracticeId } : {}),
     });
   } catch (e) {
     if (e instanceof LiteApiError) {

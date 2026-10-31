@@ -44,7 +44,7 @@ export function editionScarcity(input: {
   }
   if (confirmed >= 1) {
     return {
-      label: 'Ultimi posti',
+      label: 'In formazione',
       variant: 'warming',
       sublabel: `${confirmed}/${min} hanno già prenotato il volo`,
     };
@@ -56,6 +56,7 @@ export function editionScarcity(input: {
   };
 }
 
+/** Badge card: solo disponibilità reale o stato gruppo — niente «ultimi posti». */
 export function editionBadgeDisplay(
   scarcity: { variant: EditionScarcityVariant },
   spotsLeft: number
@@ -66,9 +67,17 @@ export function editionBadgeDisplay(
     case 'open':
       return 'Gruppo in formazione';
     case 'closing':
-      return spotsLeft > 0 ? `Ultimi ${spotsLeft} posti` : 'In chiusura';
+      return spotsLeft > 0
+        ? spotsLeft === 1
+          ? 'Manca 1 volo'
+          : `Mancano ${spotsLeft} voli`
+        : 'In chiusura';
     case 'warming':
-      return spotsLeft > 0 ? `Ultimi ${spotsLeft} posti` : 'Ultimi posti';
+      return spotsLeft > 0
+        ? spotsLeft === 1
+          ? 'Manca 1 volo'
+          : `Mancano ${spotsLeft} voli`
+        : 'In formazione';
   }
 }
 
