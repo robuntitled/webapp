@@ -3,15 +3,17 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { PublicLanding } from '@/components/brand/PublicLanding';
 import { listJoinableEditions } from '@/lib/data/editions';
 import {
-  findItineraryBySlug,
   findItineraryTemplate,
   minBudgetHintForDestination,
+  orientativeBudgetHint,
   publishedDestinations,
   wizardDestinationCards,
 } from '@/lib/itineraries/catalog';
 import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE, getSiteUrl } from '@/lib/brand';
+import { BRAND_IMAGES } from '@/lib/brand/images';
 
 const siteUrl = getSiteUrl();
+const HOME_OG = BRAND_IMAGES.heroes.home;
 
 export const metadata: Metadata = {
   title: {
@@ -26,13 +28,20 @@ export const metadata: Metadata = {
     siteName: BRAND_NAME,
     locale: 'it_IT',
     type: 'website',
-    images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: BRAND_NAME }],
+    images: [
+      {
+        url: HOME_OG,
+        width: 1920,
+        height: 1329,
+        alt: 'Barche longtail in Thailandia — paesaggio di viaggio',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
     description: BRAND_DESCRIPTION,
-    images: ['/images/heroes/hero-login.jpg'],
+    images: [HOME_OG],
   },
 };
 
@@ -76,13 +85,17 @@ export default async function HomePage() {
       published: false as const,
     }));
 
-  const thailandiaTpl = findItineraryBySlug('thailandia', 14);
-  const thailandia = thailandiaTpl
-    ? {
-        durationDays: thailandiaTpl.duration_days,
-        budgetHint: thailandiaTpl.budget_orientative_eur.total_hint,
-      }
-    : null;
+  // Stesso SoT di Organizza step 1: «da ~» = minimo tra le durate pubblicate.
+  // (14g = 1700 solo su partenze/recap con quella durata; 10g = 1330.)
+  const thaiMin = minBudgetHintForDestination('thailandia');
+  const thailandia =
+    thaiMin != null
+      ? {
+          durationDays: null as number | null,
+          budgetHint: thaiMin,
+          budgetHint14: orientativeBudgetHint('thailandia', 14),
+        }
+      : null;
 
   const openEditions = editions
     .filter((e) => e.edition_type !== 'private')

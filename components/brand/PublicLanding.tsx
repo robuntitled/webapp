@@ -10,6 +10,7 @@ import { coverForDestination } from '@/lib/composer/destination-covers';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
+import { BRAND_IMAGES } from '@/lib/brand/images';
 
 export type LandingDestination = {
   slug: string;
@@ -36,8 +37,9 @@ type Props = {
   comingSoon: LandingDestination[];
   openEditions: LandingEdition[];
   thailandia?: {
-    durationDays: number;
+    durationDays: number | null;
     budgetHint: number;
+    budgetHint14?: number | null;
   } | null;
 };
 
@@ -53,8 +55,8 @@ const GRUPPI_POINTS = [
   'Chat di gruppo per conoscersi prima di partire',
 ] as const;
 
-/** Hero: solo asset locali già in repo (niente stock nuovi senza licenza). */
-const HOME_HERO_IMAGES = ['/images/heroes/hero-login.jpg'] as const;
+/** Hero home: Thailandia (Unsplash) — docs/IMAGE-LICENSES.md */
+const HOME_HERO_IMAGES = [BRAND_IMAGES.heroes.home] as const;
 
 const pathBtnClass =
   'mt-auto h-12 w-full rounded-[10px] bg-primary font-semibold text-white hover:bg-[var(--color-primary-hover)] sm:w-auto';
@@ -73,6 +75,7 @@ export function PublicLanding({
       <section className="relative isolate flex min-h-[min(100dvh,36rem)] flex-col overflow-hidden sm:min-h-[min(100dvh,42rem)]">
         <HeroBackground
           images={[...HOME_HERO_IMAGES]}
+          alt="Barche longtail su acqua turchese in Thailandia"
           overlay="photo"
           parallax={false}
           intervalMs={7000}

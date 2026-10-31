@@ -1,4 +1,4 @@
-# Flygetr
+# Noivia
 
 Piattaforma per trovare e creare viaggi di gruppo. Costruita con Next.js 15, Supabase e NextAuth.
 

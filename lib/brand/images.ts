@@ -23,14 +23,18 @@ export type HeroSlide =
 
 export const BRAND_IMAGES = {
   heroes: {
+    /** Home: Thailandia longtail boats (Unsplash) — vedi docs/IMAGE-LICENSES.md */
+    home: '/images/heroes/hero-home-thailand.jpg',
     login: '/images/heroes/hero-login.jpg',
     dashboard: '/images/heroes/hero-dashboard.jpg',
     slideshow: [
+      '/images/heroes/hero-home-thailand.jpg',
+      '/images/heroes/hero-04.jpg',
+      '/images/heroes/hero-05.jpg',
+      '/images/heroes/hero-dashboard.jpg',
       '/images/heroes/hero-login.jpg',
       '/images/heroes/hero-02.jpg',
       '/images/heroes/hero-03.jpg',
-      '/images/heroes/hero-04.jpg',
-      '/images/heroes/hero-05.jpg',
       '/images/heroes/hero-06.jpg',
     ] satisfies HeroSlide[],
   },

@@ -56,6 +56,22 @@ export function minBudgetHintForDestination(slug: string): number | null {
   return Math.min(...templates.map((t) => t.budget_orientative_eur.total_hint));
 }
 
+/**
+ * Unica fonte per budget orientativo UI.
+ * - Senza durata → minimo tra template pubblicati («da ~X»).
+ * - Con durata → total_hint del template più vicino (exact match, altrimenti nearest).
+ */
+export function orientativeBudgetHint(
+  slug: string,
+  durationDays?: number | null
+): number | null {
+  if (durationDays != null && durationDays > 0) {
+    const t = findItineraryBySlug(slug, durationDays);
+    return t?.budget_orientative_eur.total_hint ?? null;
+  }
+  return minBudgetHintForDestination(slug);
+}
+
 export function catalogBudgetBounds(): { min: number; max: number } {
   const totals = PUBLISHED_TEMPLATES.map((t) => t.budget_orientative_eur.total_hint);
   if (!totals.length) return { min: 0, max: 5000 };
@@ -66,14 +82,32 @@ export function findItineraryTemplate(templateId: string): ItineraryTemplate | u
   return PUBLISHED_TEMPLATES.find((t) => t.template_id === templateId);
 }
 
+/**
+ * Template per slug (+ durata).
+ * Se la durata non ha match esatto, sceglie la più vicina (preferisce ≤ giorni richiesti a parità di distanza).
+ * Prima: fallback a list[0] (sempre 10g) → budget sbagliato sul riepilogo Organizza.
+ */
 export function findItineraryBySlug(
   slug: string,
   durationDays?: number
 ): ItineraryTemplate | undefined {
   const list = templatesForDestination(slug);
   if (!list.length) return undefined;
-  if (durationDays) return list.find((t) => t.duration_days === durationDays) ?? list[0];
-  return list[Math.min(1, list.length - 1)] ?? list[0];
+  if (durationDays == null || !Number.isFinite(durationDays) || durationDays <= 0) {
+    return list[Math.min(1, list.length - 1)] ?? list[0];
+  }
+  const exact = list.find((t) => t.duration_days === durationDays);
+  if (exact) return exact;
+
+  return [...list].sort((a, b) => {
+    const aDiff = Math.abs(a.duration_days - durationDays);
+    const bDiff = Math.abs(b.duration_days - durationDays);
+    if (aDiff !== bDiff) return aDiff - bDiff;
+    const aOver = a.duration_days > durationDays ? 1 : 0;
+    const bOver = b.duration_days > durationDays ? 1 : 0;
+    if (aOver !== bOver) return aOver - bOver;
+    return a.duration_days - b.duration_days;
+  })[0];
 }
 
 export function firstStayCity(t: ItineraryTemplate) {

@@ -6,7 +6,7 @@
  * DPR 430/2001 art. 6; Reg. (UE) 2024/1689 (AI Act) trasparenza.
  *
  * Regola guida: la qualificazione giuridica reale deve coincidere con ciò che
- * dichiariamo. Flygetr = piattaforma di planning + suggerimenti; l'esecuzione
+ * dichiariamo. Noivia = piattaforma di planning + suggerimenti; l'esecuzione
  * di ogni servizio è del rispettivo fornitore. Nessun pacchetto, nessun prezzo
  * globale, nessun checkout unico.
  */
@@ -60,7 +60,7 @@ export const POST_THRESHOLD_CHECKLIST = [
 
 /**
  * "Soglia del gruppo" — sostituisce "garanzia di partenza".
- * Non è un'obbligazione di viaggio di Flygetr (evita il profilo da organizzatore,
+ * Non è un'obbligazione di viaggio di Noivia (evita il profilo da organizzatore,
  * art. 41 D.Lgs. 62/2018): è una condizione sociale del gruppo.
  */
 export function groupThresholdCopy(

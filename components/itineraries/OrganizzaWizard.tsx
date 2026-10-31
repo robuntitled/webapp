@@ -31,7 +31,7 @@ import {
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import {
   findItineraryBySlug,
-  minBudgetHintForDestination,
+  orientativeBudgetHint,
   templatesForDestination,
 } from '@/lib/itineraries/catalog';
 import {
@@ -430,7 +430,7 @@ export function OrganizzaWizard({
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {published.map((dest) => {
-                    const budget = minBudgetHintForDestination(dest.slug);
+                    const budget = orientativeBudgetHint(dest.slug);
                     const active = draft.slug === dest.slug;
                     return (
                       <button
@@ -728,16 +728,27 @@ export function OrganizzaWizard({
                 <div className="rounded-2xl bg-[var(--color-tint)] px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      Stima del costo
+                      {COMPLIANCE_COPY.budgetLabel}
                     </p>
                     <p className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
-                      ~{template.budget_orientative_eur.total_hint.toLocaleString('it-IT')} €{' '}
-                      <span className="text-sm font-semibold">a persona</span>
+                      ~
+                      {(
+                        orientativeBudgetHint(
+                          template.destination_slug,
+                          draft.durationDays ?? template.duration_days
+                        ) ?? template.budget_orientative_eur.total_hint
+                      ).toLocaleString('it-IT')}{' '}
+                      € <span className="text-sm font-semibold">a persona</span>
                     </p>
+                    {draft.durationDays ? (
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                        Stima orientativa per ~{draft.durationDays} giorni
+                      </p>
+                    ) : null}
                   </div>
                   <p className="mt-2 max-w-xs text-xs text-[var(--color-text-secondary)] sm:mt-0 sm:text-right">
-                    {COMPLIANCE_COPY.budgetLabel}: stima voli/hotel, non un prezzo del pacchetto.
-                    Ognuno prenota per conto proprio.
+                    Stima voli/hotel, non un prezzo del pacchetto. Ognuno prenota per conto
+                    proprio.
                   </p>
                 </div>
 

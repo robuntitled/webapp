@@ -10,8 +10,10 @@ describe('company placeholders', () => {
   });
 
   it('ha valori di default per campi non obbligatori', () => {
-    expect(LEGAL_PLACEHOLDERS.tradeName).toBe('Flygetr');
+    expect(LEGAL_PLACEHOLDERS.tradeName).toBe('Noivia');
     expect(LEGAL_PLACEHOLDERS.country).toBe('Italia');
-    expect(LEGAL_PLACEHOLDERS.privacyEmail).toContain('@');
+    expect(LEGAL_PLACEHOLDERS.privacyEmail).toMatch(/TODO LEGAL_EMAIL_PRIVACY/i);
+    expect(LEGAL_PLACEHOLDERS.supportEmail).toMatch(/TODO LEGAL_EMAIL_SUPPORT/i);
+    expect(LEGAL_PLACEHOLDERS.privacyEmail).not.toMatch(/flygetr/i);
   });
 });

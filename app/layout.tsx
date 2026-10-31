@@ -52,13 +52,20 @@ export const metadata: Metadata = {
     siteName: BRAND_NAME,
     title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
     description: BRAND_DESCRIPTION,
-    images: [{ url: '/images/heroes/hero-login.jpg', width: 1920, height: 1080, alt: BRAND_NAME }],
+    images: [
+      {
+        url: '/images/heroes/hero-home-thailand.jpg',
+        width: 1920,
+        height: 1329,
+        alt: 'Barche longtail in Thailandia — paesaggio di viaggio',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
     description: BRAND_DESCRIPTION,
-    images: ['/images/heroes/hero-login.jpg'],
+    images: ['/images/heroes/hero-home-thailand.jpg'],
   },
   // Omio / Impact affiliate site verification
   other: {

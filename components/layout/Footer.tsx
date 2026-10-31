@@ -39,12 +39,16 @@ export function Footer({ company }: FooterProps) {
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Privacy:{' '}
-              <a
-                href={`mailto:${company.privacyEmail}`}
-                className="text-primary underline underline-offset-2 hover:text-[var(--color-primary-hover)] transition-colors"
-              >
-                {company.privacyEmail}
-              </a>
+              {company.privacyEmail.startsWith('[') ? (
+                <span className="text-amber-800/90">{company.privacyEmail}</span>
+              ) : (
+                <a
+                  href={`mailto:${company.privacyEmail}`}
+                  className="text-primary underline underline-offset-2 hover:text-[var(--color-primary-hover)] transition-colors"
+                >
+                  {company.privacyEmail}
+                </a>
+              )}
             </p>
           </div>
 
