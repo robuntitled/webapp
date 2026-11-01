@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
+import { accediHref } from '@/lib/auth/callback-url';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { staysFromTemplate, formatItDate } from '@/lib/itineraries/dates';
 import { getStayBookingProgress, isStayBooked } from '@/lib/itineraries/stay-progress';
@@ -120,7 +121,7 @@ export function TripWorkspace({
   function joinTrip() {
     if (!editionId) return;
     if (!session?.user) {
-      router.push(`/accedi?callbackUrl=${encodeURIComponent(`/partenze/${editionId}`)}`);
+      router.push(accediHref(`/partenze/${editionId}`, 'register'));
       return;
     }
     startJoin(async () => {
@@ -155,8 +156,9 @@ export function TripWorkspace({
     canJoin && !isMember ? (
       <Button
         type="button"
+        variant="cta"
         size="sm"
-        className="rounded-full bg-accent px-5 font-semibold text-white shadow-lg shadow-accent/25 hover:bg-accent/90"
+        className="rounded-full px-5 font-semibold shadow-lg shadow-[var(--color-cta)]/25"
         disabled={pendingJoin}
         onClick={joinTrip}
       >

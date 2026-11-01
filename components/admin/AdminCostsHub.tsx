@@ -86,7 +86,7 @@ export function AdminCostsHub({ initial }: { initial: HubPayload }) {
             minute: '2-digit',
             second: '2-digit',
           })}{' '}
-          · refresh ogni 30s
+          · refresh ogni 5 min
         </p>
         <Button
           type="button"

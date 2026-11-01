@@ -2,20 +2,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COOKIE_CONSENT_KEY } from '@/lib/privacy/constants';
 import { persistCookieConsent, readCookieConsent } from '@/lib/privacy/cookie-consent';
 
+function mockStorage() {
+  const store: Record<string, string> = {};
+  return {
+    store,
+    getItem(key: string) {
+      return store[key] ?? null;
+    },
+    setItem(key: string, value: string) {
+      store[key] = value;
+    },
+    removeItem(key: string) {
+      delete store[key];
+    },
+  };
+}
+
 describe('cookie consent migration', () => {
   beforeEach(() => {
-    vi.stubGlobal('localStorage', {
-      store: {} as Record<string, string>,
-      getItem(key: string) {
-        return this.store[key] ?? null;
-      },
-      setItem(key: string, value: string) {
-        this.store[key] = value;
-      },
-      removeItem(key: string) {
-        delete this.store[key];
-      },
-    });
+    const ls = mockStorage();
+    vi.stubGlobal('localStorage', ls);
     vi.stubGlobal('document', {
       cookie: '',
     });

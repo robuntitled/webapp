@@ -496,7 +496,7 @@ export async function listEditionMembers(
 export async function joinEdition(input: { userId: string; editionId: string }) {
   const edition = await getEdition(input.editionId);
   if (!edition || edition.id.startsWith('seed-')) {
-    return { error: 'Edizione non disponibile. Applica la migration 032 sul database.' };
+    return { error: 'Questa partenza non è ancora disponibile.' };
   }
   if (edition.status === 'closed' || edition.status === 'locked') {
     return { error: 'Edizione chiusa.' };

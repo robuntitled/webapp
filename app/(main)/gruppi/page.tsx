@@ -1,17 +1,22 @@
 import type { Metadata } from 'next';
 import { GruppiHub } from '@/components/itineraries/GruppiHub';
+import { pageOpenGraph } from '@/lib/brand/seo';
 import { listJoinableEditions } from '@/lib/data/editions';
 
 export const dynamic = 'force-dynamic';
 
+const DESCRIPTION =
+  'Partenze di gruppo con itinerario pronto: guarda date e budget orientativo e unisciti al gruppo.';
+
 export const metadata: Metadata = {
   title: 'Gruppi',
-  description:
-    'Unisciti a un gruppo con date già fissate e budget orientativo. Prenota il tuo volo quando vuoi.',
-  openGraph: {
-    description:
-      'Partenze pubbliche in formazione. Soglia = voli confermati. Budget orientativo, non prezzo del gruppo.',
-  },
+  description: DESCRIPTION,
+  alternates: { canonical: '/gruppi' },
+  openGraph: pageOpenGraph(
+    '/gruppi',
+    'Gruppi',
+    'Guarda le partenze di gruppo e unisciti a un viaggio.'
+  ),
 };
 
 export default async function GruppiPage() {

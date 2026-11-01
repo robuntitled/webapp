@@ -3,48 +3,19 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { COOKIE_CONSENT_KEY } from '@/lib/privacy/constants';
-
-function readConsent(): boolean {
-  try {
-    const legacyKey = 'nomadlink-cookie-consent';
-    const fromLs =
-      localStorage.getItem(COOKIE_CONSENT_KEY) || localStorage.getItem(legacyKey);
-    if (fromLs) {
-      if (!localStorage.getItem(COOKIE_CONSENT_KEY)) {
-        localStorage.setItem(COOKIE_CONSENT_KEY, fromLs);
-      }
-      return true;
-    }
-  } catch {
-    /* private mode */
-  }
-  if (typeof document !== 'undefined') {
-    return document.cookie.split(';').some((c) => c.trim().startsWith(`${COOKIE_CONSENT_KEY}=`));
-  }
-  return false;
-}
-
-function persistConsent() {
-  try {
-    localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted');
-  } catch {
-    /* ignore */
-  }
-  document.cookie = `${COOKIE_CONSENT_KEY}=accepted; path=/; max-age=31536000; SameSite=Lax`;
-}
+import { persistCookieConsent, readCookieConsent } from '@/lib/privacy/cookie-consent';
 
 export function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!readConsent()) setVisible(true);
+    if (!readCookieConsent()) setVisible(true);
   }, []);
 
   useEffect(() => {
     const root = document.documentElement;
     if (visible) {
-      root.style.setProperty('--cookie-banner-pad', '4.75rem');
+      root.style.setProperty('--cookie-banner-pad', '3.25rem');
       root.dataset.cookieBanner = '1';
     } else {
       root.style.removeProperty('--cookie-banner-pad');
@@ -57,7 +28,7 @@ export function CookieBanner() {
   }, [visible]);
 
   const accept = () => {
-    persistConsent();
+    persistCookieConsent();
     setVisible(false);
   };
 
@@ -67,7 +38,7 @@ export function CookieBanner() {
     <div
       role="dialog"
       aria-label="Consenso cookie"
-      className="fixed inset-x-3 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 shadow-xl backdrop-blur-sm sm:inset-x-auto sm:right-4 sm:left-auto sm:max-w-xs sm:flex-col sm:items-stretch sm:gap-2 sm:p-3"
+      className="fixed inset-x-0 bottom-0 z-[60] flex items-center gap-2 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-xl backdrop-blur-sm sm:inset-x-auto sm:bottom-[max(0.5rem,env(safe-area-inset-bottom))] sm:left-auto sm:right-4 sm:max-w-xs sm:rounded-2xl sm:border"
     >
       <p className="min-w-0 flex-1 text-[11px] leading-snug text-slate-700 sm:text-xs">
         Solo cookie tecnici.{' '}
@@ -75,12 +46,7 @@ export function CookieBanner() {
           Policy
         </Link>
       </p>
-      <Button
-        type="button"
-        onClick={accept}
-        size="sm"
-        className="h-11 min-w-11 shrink-0 rounded-full px-4 touch-manipulation"
-      >
+      <Button type="button" onClick={accept} size="sm" variant="outline" className="h-10 shrink-0 rounded-full px-4 touch-manipulation">
         Ok
       </Button>
     </div>

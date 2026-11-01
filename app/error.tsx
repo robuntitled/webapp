@@ -25,6 +25,9 @@ export default function Error({
       <p className="mt-2 max-w-md text-sm text-stone-600">
         Riprova tra un momento. Se il problema continua, torna alla home.
       </p>
+      {error.digest ? (
+        <p className="mt-3 font-mono text-xs text-stone-500">Codice errore: {error.digest}</p>
+      ) : null}
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <Button type="button" onClick={() => reset()}>
           Riprova

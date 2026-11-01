@@ -11,7 +11,6 @@ const MODEL_RATES: Record<string, { inputPer1M: number; outputPer1M: number }> =
   'gemini-2.5-flash': { inputPer1M: 0.3, outputPer1M: 2.5 },
   // TODO verify price: premium name not on public list — use 2.5-flash as conservative upper bound
   [PREMIUM_GEMINI_MODEL]: { inputPer1M: 0.3, outputPer1M: 2.5 },
-  [DEFAULT_GEMINI_MODEL]: { inputPer1M: 0.1, outputPer1M: 0.4 },
 };
 
 function ratesFor(model?: string) {

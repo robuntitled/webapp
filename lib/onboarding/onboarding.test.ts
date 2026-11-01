@@ -31,13 +31,13 @@ describe('onboarding paths', () => {
 
   it('sends returning users to itinerari', () => {
     expect(postLoginPath({ onboardingCompleted: true, travelIntent: 'create' })).toBe(
-      '/destinazioni'
+      '/organizza'
     );
   });
 
   it('branches after first onboarding', () => {
-    expect(afterOnboardingPath('create')).toBe('/destinazioni');
-    expect(afterOnboardingPath('book')).toBe('/partenze');
+    expect(afterOnboardingPath('create')).toBe('/organizza');
+    expect(afterOnboardingPath('book')).toBe('/organizza');
   });
 });
 

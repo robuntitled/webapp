@@ -78,17 +78,11 @@ export function HeroBackground({
             )}
             aria-hidden={!active}
           >
-            {/* Riempie i bordi su viewport alti/stretti senza zoomare il soggetto. */}
-            <Image
-              src={src}
-              alt=""
-              fill
-              priority={i === 0}
-              quality={40}
-              sizes="(max-width: 768px) 100vw, 1200px"
-              className="scale-110 object-cover blur-2xl brightness-[0.55] saturate-125"
+            {/* Sfondo soft — evita doppio download della stessa immagine */}
+            <div
+              className="absolute inset-0 scale-110 bg-gradient-to-br from-[#0b1220] via-[#1a1f52] to-[#232a6b] blur-2xl brightness-[0.55]"
+              aria-hidden
             />
-            {/* Foto completa su schermi alti; cover solo se il viewport è abbastanza largo. */}
             <Image
               src={src}
               alt={active ? alt : ''}

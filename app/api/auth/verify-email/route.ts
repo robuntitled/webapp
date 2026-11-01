@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { verifyEmailToken } from '@/lib/auth/email-verification';
 import { getAppBaseUrl } from '@/lib/auth/app-url';
+import { safeCallbackPath } from '@/lib/auth/callback-url';
 import { rateLimitAsync } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/api/request-guard';
 
 /**
- * GET /api/auth/verify-email?token=...
- * Redirect a / con messaggio successo/errore.
+ * GET /api/auth/verify-email?token=...&callbackUrl=...
+ * Redirect a / con messaggio successo/errore, preservando un callback sicuro.
  */
 export async function GET(request: Request) {
   const ip = clientIp(request);
@@ -20,7 +21,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const token = new URL(request.url).searchParams.get('token') ?? '';
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token') ?? '';
+  const callback = safeCallbackPath(url.searchParams.get('callbackUrl'), '');
   const result = await verifyEmailToken(token);
 
   if (!result.ok) {
@@ -29,7 +32,10 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.redirect(
-    `${getAppBaseUrl()}/?verify=ok&email=${encodeURIComponent(result.email)}`
-  );
+  const qs = new URLSearchParams({
+    verify: 'ok',
+    email: result.email,
+  });
+  if (callback) qs.set('callbackUrl', callback);
+  return NextResponse.redirect(`${getAppBaseUrl()}/?${qs.toString()}`);
 }

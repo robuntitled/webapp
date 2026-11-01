@@ -123,8 +123,8 @@ export function TurnstileWidget({
   return (
     <div className={className}>
       <div ref={containerRef} className="cf-turnstile min-h-[65px]" />
-      <p className="mt-1.5 text-[10px] text-muted-foreground text-center">
-        Protezione anti-bot · Cloudflare Turnstile
+      <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+        Protezione anti-bot
       </p>
     </div>
   );

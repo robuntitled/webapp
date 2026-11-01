@@ -5,8 +5,8 @@ import { TripWorkspace } from '@/components/itineraries/workspace/TripWorkspace'
 import { getEdition, listEditionMembers } from '@/lib/data/editions';
 import { findPracticeForEdition } from '@/lib/data/practices';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
-import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { BRAND_NAME, getSiteUrl } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
@@ -32,12 +32,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const dateFrom = String(edition.date_from).slice(0, 10);
   const dateTo = String(edition.date_to).slice(0, 10);
   const range = formatEditionDateRange(dateFrom, dateTo);
+  let tripDays: number | null = null;
+  try {
+    tripDays =
+      differenceInCalendarDays(parseISO(dateTo), parseISO(dateFrom)) + 1;
+    if (tripDays <= 0) tripDays = null;
+  } catch {
+    tripDays = template?.duration_days ?? null;
+  }
   const title = `${destination} · ${range}`;
-  const description = [
-    `Gruppo in partenza per ${destination} (${range}).`,
-    `${COMPLIANCE_COPY.budgetLabel}: stime, non un prezzo del gruppo.`,
-    'Unisciti e prenota il tuo volo.',
-  ].join(' ');
+  const description = `Partenza di gruppo per ${destination}, ${range}${
+    tripDays ? ` (${tripDays} giorni)` : ''
+  }: itinerario giorno per giorno, iscritti e budget orientativo.`;
 
   const canonical = `${getSiteUrl()}/partenze/${id}`;
 
@@ -109,7 +115,7 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
       isMember={false}
       canJoin
       backHref="/gruppi"
-      backLabel="Torna a Unisciti"
+      backLabel="Torna ai gruppi"
       initialTab={tab}
       initialStay={stay}
     />

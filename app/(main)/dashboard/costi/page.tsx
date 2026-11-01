@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { isAdminEmail } from '@/lib/admin';
 import { getAdminCostHub } from '@/lib/admin/provider-hub';
 import { AdminCostsHub } from '@/components/admin/AdminCostsHub';
+import { ResolveReconciliationButton } from '@/components/admin/ResolveReconciliationButton';
 import {
   countPendingBookingReconciliations,
   listPendingBookingReconciliations,
@@ -69,6 +70,7 @@ export default async function CostiDashboardPage() {
                       {r.last_error}
                     </span>
                   ) : null}
+                  <ResolveReconciliationButton id={r.id} />
                 </li>
               ))}
             </ul>
