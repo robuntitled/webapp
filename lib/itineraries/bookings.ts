@@ -21,6 +21,9 @@ export type FlightBookingRecap = {
   offerId?: string | null;
   amountEur?: number | null;
   currency?: string | null;
+  /** Idempotency: LiteAPI prebook / payment transaction */
+  prebookId?: string | null;
+  transactionId?: string | null;
   outbound: FlightLegRecap;
   returnLeg: FlightLegRecap | null;
   bookedAt: string;
@@ -37,6 +40,8 @@ export type HotelBookingRecap = {
   checkout?: string | null;
   amountEur?: number | null;
   currency?: string | null;
+  prebookId?: string | null;
+  transactionId?: string | null;
   bookedAt: string;
 };
 

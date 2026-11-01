@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { getLiteApiPaymentEnv, isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { prebookFlight } from '@/lib/liteapi/flight-booking';
+import { storePrebookQuote } from '@/lib/liteapi/prebook-store';
 
 const passengerSchema = z.object({
   title: z.enum(['MR', 'MRS', 'MS', 'MISS']),
@@ -59,6 +60,14 @@ export async function POST(request: Request) {
 
   try {
     const result = await prebookFlight(parsed.data);
+    await storePrebookQuote('flight', result.prebookId, {
+      userId: session.user.id,
+      kind: 'flight',
+      offerId: parsed.data.offerId,
+      price: result.price,
+      currency: result.currency,
+      createdAt: new Date().toISOString(),
+    });
     const env = getLiteApiPaymentEnv();
     return NextResponse.json({
       ok: true,
@@ -73,21 +82,24 @@ export async function POST(request: Request) {
     });
   } catch (e) {
     if (e instanceof LiteApiError) {
-      console.error('[flights/prebook]', e.status, e.message, e.body);
+      const ref = `F-PB-${Date.now().toString(36).slice(-6)}`;
+      console.error('[flights/prebook]', ref, e.status, e.message, e.body);
       const expired = e.status === 404;
       return NextResponse.json(
         {
           error: expired
-            ? 'Offerta scaduta. Torna ai risultati e cerca di nuovo.'
-            : e.message,
+            ? 'Questa offerta non è più disponibile. Torna alla ricerca.'
+            : 'Il fornitore non ha risposto. Riprova tra poco.',
           code: expired ? 'offer_expired' : 'prebook_error',
+          ref,
         },
         { status: expired ? 404 : e.status >= 400 && e.status < 600 ? e.status : 502 }
       );
     }
-    console.error('[flights/prebook]', e);
+    const ref = `F-PB-${Date.now().toString(36).slice(-6)}`;
+    console.error('[flights/prebook]', ref, e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Errore prebook.' },
+      { error: 'Il fornitore non ha risposto. Riprova tra poco.', ref },
       { status: 500 }
     );
   }

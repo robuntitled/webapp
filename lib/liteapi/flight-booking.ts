@@ -47,6 +47,8 @@ export type FlightBookResult = {
   bookingId: string | null;
   bookingRef: string | null;
   status: string | null;
+  price: number | null;
+  currency: string | null;
   raw: unknown;
 };
 
@@ -195,6 +197,7 @@ export async function prebookFlight(params: {
 function parseFlightBookPayload(raw: unknown): FlightBookResult {
   const item = unwrapDataItem(raw);
   const booking = asRecord(item?.booking) ?? item;
+  const priced = extractPrice(booking) ?? extractPrice(item);
 
   return {
     bookingId:
@@ -207,6 +210,8 @@ function parseFlightBookPayload(raw: unknown): FlightBookResult {
       toStr(booking?.pnr) ??
       toStr(booking?.orderReference),
     status: toStr(item?.status) ?? toStr(booking?.status),
+    price: priced.price,
+    currency: priced.currency,
     raw,
   };
 }

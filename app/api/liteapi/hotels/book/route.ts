@@ -1,18 +1,24 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookHotel } from '@/lib/liteapi/hotel-booking';
-import { confirmParticipantHotel, tripAllowsHotelBooking } from '@/lib/data/trip-commitments';
-import { savePracticeHotelBooking } from '@/lib/data/practices';
+import { confirmParticipantHotel } from '@/lib/data/trip-commitments';
+import { getPractice, savePracticeHotelBooking } from '@/lib/data/practices';
+import { checkHotelEligibility } from '@/lib/data/hotel-eligibility';
 import {
   BOOKING_RECONCILIATION_USER_MESSAGE,
   recordBookingReconciliation,
   withSaveRetry,
 } from '@/lib/data/booking-reconciliation';
+import { loadPrebookQuote, resolveBookedAmount } from '@/lib/liteapi/prebook-store';
 import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import type { HotelBookingRecap } from '@/lib/itineraries/bookings';
+
+const PAYMENT_VERIFY_MESSAGE =
+  'Pagamento ricevuto, stiamo verificando la prenotazione. Ti scriviamo per email.' as const;
 
 const schema = z.object({
   prebookId: z.string().trim().min(4).max(200),
@@ -35,6 +41,7 @@ const schema = z.object({
     .max(9),
   tripId: z.string().uuid().optional(),
   practiceId: z.string().uuid().optional(),
+  /** Ignored — server amount from prebook store / book response (A2). */
   amountEur: z.number().finite().nonnegative().max(1_000_000).optional(),
   snapshot: z
     .object({
@@ -48,6 +55,17 @@ const schema = z.object({
     })
     .optional(),
 });
+
+async function persistRecon(input: Parameters<typeof recordBookingReconciliation>[0]) {
+  const r = await recordBookingReconciliation(input);
+  if ('error' in r) {
+    console.error('[hotels/book] reconciliation persist FAILED', {
+      ...input,
+      dbError: r.error,
+    });
+  }
+  return r;
+}
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -76,51 +94,118 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    if (parsed.data.tripId) {
-      const allowed = await tripAllowsHotelBooking(parsed.data.tripId);
-      if (!allowed) {
-        return NextResponse.json(
-          {
-            error:
-              'Hotel disponibile solo dopo la soglia voli. Conferma prima il tuo volo sul Trip.',
-          },
-          { status: 403 }
-        );
-      }
-    }
+  const { prebookId, transactionId, practiceId, tripId, snapshot } = parsed.data;
+  const quoteLoad = await loadPrebookQuote('hotel', prebookId, session.user.id);
+  if (quoteLoad.ok === false && quoteLoad.reason === 'forbidden') {
+    return NextResponse.json({ error: 'Sessione prebook non valida.' }, { status: 403 });
+  }
+  const quote = quoteLoad.ok ? quoteLoad.quote : null;
 
+  // Idempotency: already saved with same prebook/transaction
+  if (practiceId) {
+    const existing = await getPractice(practiceId, session.user.id);
+    const hotels = existing?.hotel_bookings ?? [];
+    const dup = hotels.find(
+      (h) =>
+        (h.prebookId && h.prebookId === prebookId) ||
+        (h.transactionId && h.transactionId === transactionId)
+    );
+    if (dup) {
+      return NextResponse.json({
+        ok: true,
+        bookingId: dup.bookingId,
+        bookingRef: dup.bookingRef,
+        status: 'CONFIRMED',
+        practiceId,
+        idempotent: true,
+      });
+    }
+  }
+
+  // After payment: eligibility failure → reconcile, do not book again
+  const eligibility = await checkHotelEligibility({
+    userId: session.user.id,
+    practiceId,
+    tripId,
+  });
+  if (!eligibility.ok) {
+    const amounts = resolveBookedAmount({ quote });
+    await persistRecon({
+      userId: session.user.id,
+      practiceId,
+      kind: 'hotel',
+      providerStatus: 'eligibility_failed_after_payment',
+      amountEur: amounts.amountEur,
+      currency: amounts.currency,
+      payload: { prebookId, transactionId, reason: eligibility.reason },
+      lastError: 'eligibility_failed_after_payment',
+    });
+    return NextResponse.json({
+      ok: true,
+      reconciliationPending: true,
+      message: BOOKING_RECONCILIATION_USER_MESSAGE,
+    });
+  }
+
+  try {
     const result = await bookHotel(parsed.data);
-    if (parsed.data.tripId) {
+    const amounts = resolveBookedAmount({
+      bookPrice: result.price,
+      bookCurrency: result.currency,
+      quote,
+    });
+
+    if (tripId) {
       await confirmParticipantHotel({
-        tripId: parsed.data.tripId,
+        tripId,
         userId: session.user.id,
         matchesGroup: true,
         bookingRef: result.bookingRef,
-      }).catch((err: unknown) => console.error('[hotels/book] confirm hotel', err));
+      }).catch(async (err: unknown) => {
+        console.error('[hotels/book] confirm hotel', err);
+        await persistRecon({
+          userId: session.user.id,
+          practiceId,
+          kind: 'hotel',
+          providerBookingId: result.bookingId,
+          providerBookingRef: result.bookingRef,
+          providerStatus: result.status,
+          amountEur: amounts.amountEur,
+          currency: amounts.currency,
+          payload: {
+            prebookId,
+            transactionId,
+            seatWriteFailed: true,
+            error: err instanceof Error ? err.message : String(err),
+          },
+          lastError: 'confirm_hotel_failed',
+        });
+      });
     }
 
     let reconciliationPending = false;
     let savedPracticeId: string | undefined;
 
-    if (parsed.data.practiceId && parsed.data.snapshot) {
-      const recap = {
+    if (practiceId && snapshot) {
+      const recap: HotelBookingRecap = {
         bookingId: result.bookingId,
         bookingRef: result.bookingRef,
-        hotelName: parsed.data.snapshot.hotelName,
-        city: parsed.data.snapshot.city ?? null,
-        address: parsed.data.snapshot.address ?? null,
-        roomName: parsed.data.snapshot.roomName ?? null,
-        checkin: parsed.data.snapshot.checkin ?? null,
-        checkout: parsed.data.snapshot.checkout ?? null,
-        amountEur: parsed.data.amountEur ?? null,
-        currency: parsed.data.snapshot.currency ?? 'EUR',
+        hotelName: snapshot.hotelName,
+        city: snapshot.city ?? null,
+        address: snapshot.address ?? null,
+        roomName: snapshot.roomName ?? null,
+        checkin: snapshot.checkin ?? null,
+        checkout: snapshot.checkout ?? null,
+        amountEur: amounts.amountEur,
+        currency: amounts.currency ?? 'EUR',
+        prebookId,
+        transactionId,
         bookedAt: new Date().toISOString(),
       };
 
       const saveResult = await withSaveRetry('hotels/book practice', () =>
         savePracticeHotelBooking({
-          practiceId: parsed.data.practiceId!,
+          practiceId,
           userId: session.user.id,
           recap,
         })
@@ -134,16 +219,24 @@ export async function POST(request: Request) {
           const dest =
             findItineraryTemplate(saved.practice.template_id)?.destination_name ??
             'il tuo viaggio';
-          void sendBookingConfirmationEmail({
-            to: email,
-            kind: 'hotel',
-            destinationName: dest,
-            practiceId: saved.practice.id,
-            bookingRef: result.bookingRef,
-            amountEur: recap.amountEur,
-            currency: recap.currency,
-            hotel: recap,
-          });
+          after(() =>
+            sendBookingConfirmationEmail({
+              to: email,
+              kind: 'hotel',
+              destinationName: dest,
+              practiceId: saved.practice.id,
+              bookingRef: result.bookingRef,
+              amountEur: recap.amountEur,
+              currency: recap.currency,
+              hotel: recap,
+            })
+              .then(() =>
+                console.info('[hotels/book] email ok', saved.practice.id)
+              )
+              .catch((err) =>
+                console.error('[hotels/book] email fail', saved.practice.id, err)
+              )
+          );
         }
       } else {
         const errMsg =
@@ -153,19 +246,40 @@ export async function POST(request: Request) {
               ? saveResult.value.error
               : 'Salvataggio pratica fallito';
         reconciliationPending = true;
-        await recordBookingReconciliation({
+        await persistRecon({
           userId: session.user.id,
-          practiceId: parsed.data.practiceId,
+          practiceId,
           kind: 'hotel',
           providerBookingId: result.bookingId,
           providerBookingRef: result.bookingRef,
           providerStatus: result.status,
-          amountEur: parsed.data.amountEur ?? null,
-          currency: parsed.data.snapshot.currency ?? 'EUR',
-          payload: { recap, prebookId: parsed.data.prebookId, transactionId: parsed.data.transactionId },
+          amountEur: amounts.amountEur,
+          currency: amounts.currency,
+          payload: { recap, prebookId, transactionId },
           lastError: errMsg,
         });
       }
+    } else {
+      // No practice/snapshot — orphan row for support
+      reconciliationPending = true;
+      await persistRecon({
+        userId: session.user.id,
+        practiceId: practiceId ?? null,
+        kind: 'hotel',
+        providerBookingId: result.bookingId,
+        providerBookingRef: result.bookingRef,
+        providerStatus: result.status ?? 'orphan_booking',
+        amountEur: amounts.amountEur,
+        currency: amounts.currency,
+        payload: {
+          orphan: true,
+          prebookId,
+          transactionId,
+          snapshot: snapshot ?? null,
+          offerId: amounts.offerId,
+        },
+        lastError: 'orphan_booking_no_practice',
+      });
     }
 
     return NextResponse.json({
@@ -182,23 +296,61 @@ export async function POST(request: Request) {
       ...(savedPracticeId ? { practiceId: savedPracticeId } : {}),
     });
   } catch (e) {
+    const amounts = resolveBookedAmount({ quote });
     if (e instanceof LiteApiError) {
       console.error('[hotels/book]', e.status, e.message, e.body);
-      return NextResponse.json(
-        {
-          error:
-            e.status === 409
-              ? 'Prenotazione già in corso o in conflitto. Controlla l’email o riprova.'
-              : e.message,
-          code: e.status === 409 ? 'conflict' : 'book_error',
+      if (e.status === 409) {
+        return NextResponse.json(
+          {
+            error:
+              'Prenotazione già in corso o in conflitto. Controlla l’email o riprova.',
+            code: 'conflict',
+          },
+          { status: 409 }
+        );
+      }
+      const ref = `H-BK-${Date.now().toString(36).slice(-6)}`;
+      await persistRecon({
+        userId: session.user.id,
+        practiceId,
+        kind: 'hotel',
+        providerStatus: 'book_failed',
+        amountEur: amounts.amountEur,
+        currency: amounts.currency,
+        payload: {
+          prebookId,
+          transactionId,
+          providerHttp: e.status,
+          providerMessage: e.message,
+          ref,
         },
-        { status: e.status >= 400 && e.status < 600 ? e.status : 502 }
+        lastError: `book_failed:${e.status}`,
+      });
+      return NextResponse.json(
+        { error: PAYMENT_VERIFY_MESSAGE, code: 'book_error', ref },
+        { status: 200 }
       );
     }
-    console.error('[hotels/book]', e);
+    const ref = `H-BK-${Date.now().toString(36).slice(-6)}`;
+    console.error('[hotels/book]', ref, e);
+    await persistRecon({
+      userId: session.user.id,
+      practiceId,
+      kind: 'hotel',
+      providerStatus: 'book_failed',
+      amountEur: amounts.amountEur,
+      currency: amounts.currency,
+      payload: {
+        prebookId,
+        transactionId,
+        error: e instanceof Error ? e.message : String(e),
+        ref,
+      },
+      lastError: 'book_failed',
+    });
     return NextResponse.json(
-      { error: 'Errore conferma prenotazione hotel.' },
-      { status: 500 }
+      { error: PAYMENT_VERIFY_MESSAGE, ref },
+      { status: 200 }
     );
   }
 }

@@ -236,7 +236,11 @@ export function HotelCheckoutClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ offerId: draft.offerId }),
+        body: JSON.stringify({
+          offerId: draft.offerId,
+          practiceId: draft.practiceId,
+          tripId: draft.tripId,
+        }),
       });
       const data = (await res.json()) as {
         error?: string;
