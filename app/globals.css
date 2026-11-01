@@ -915,8 +915,14 @@
   }
 
   .leaflet-container {
-    background: #e8eef2;
+    background: #eef0fa;
     font: inherit;
+  }
+
+  /* Pin Leaflet: niente box bianco intorno all’icona custom */
+  .rl-trip-pin {
+    background: transparent !important;
+    border: none !important;
   }
 
   .leaflet-tile-container img {
