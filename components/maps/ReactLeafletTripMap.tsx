@@ -73,14 +73,15 @@ function FitBounds({
     if (pins.length === 0) return;
     const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng] as [number, number]));
     if (pins.length === 1) {
-      if (animate) map.flyTo(pins[0], 12, { duration: 0.75 });
-      else map.setView([pins[0].lat, pins[0].lng], 12);
+      // Zoom moderato: basemap stilizzata resta leggibile senza griglia densissima di strade
+      if (animate) map.flyTo(pins[0], 11, { duration: 0.75 });
+      else map.setView([pins[0].lat, pins[0].lng], 11);
       return;
     }
     if (animate) {
-      map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 12, duration: 0.85 });
+      map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 11, duration: 0.85 });
     } else {
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 11 });
     }
   }, [map, pins, animate, highlightedPinId]);
 
