@@ -1,3 +1,5 @@
+import { BRAND_NAME } from '@/lib/brand';
+
 /**
  * Copy di compliance centralizzata (modello "tool + facilitatore di servizi collegati").
  *
@@ -15,7 +17,7 @@ export const COMPLIANCE_COPY = {
   /** Da mostrare vicino a qualsiasi elenco di servizi prenotabili. */
   separateBooking: 'Ogni servizio è prenotato separatamente con il rispettivo fornitore.',
   /** Disclaimer di qualificazione, ripetuto nei punti in cui si aggregano servizi. */
-  notAPackage: 'Noivia non organizza pacchetti turistici né vende viaggi.',
+  notAPackage: `${BRAND_NAME} ti aiuta a pianificare il viaggio e a trovare compagni di viaggio. Ogni servizio è prenotato separatamente con il fornitore indicato al momento del pagamento.`,
   /** Prezzo: mai "totale viaggio". Solo somma di contratti separati. */
   priceIsSumOfServices:
     'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
@@ -25,15 +27,11 @@ export const COMPLIANCE_COPY = {
    */
   checkoutMerchantOfRecord:
     'Prenotazione e pagamento gestiti da LiteAPI / Nuitée (payment processor e merchant of record). Noivia agisce come intermediario.',
-  /** TODO owner: completare LEGAL_* (ragione sociale intermediario) in .env — vedi company.defaults. */
-  checkoutMerchantLegalTodo:
-    'TODO LEGAL_*: completare ragione sociale / P.IVA intermediario (LEGAL_COMPANY_NAME, LEGAL_VAT_ID) prima del go-live.',
   /**
    * Hotel: il totale mostrato include già il markup LiteAPI (LITEAPI_MARGIN / default 10%).
    * Non esporre la % al cliente; solo che il prezzo include la commissione di servizio.
    */
-  hotelServiceFeeIncluded:
-    'Totale comprensivo di tutte le commissioni. Il prezzo include la commissione di servizio Noivia.',
+  hotelServiceFeeIncluded: `Il prezzo include il costo del servizio ${BRAND_NAME}.`,
   /** Trasparenza AI (AI Act). */
   aiGenerated:
     'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
@@ -41,8 +39,7 @@ export const COMPLIANCE_COPY = {
   responsibility:
     'Noivia fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
   /** Messaggio guida (onboarding, homepage, Trip). */
-  guide:
-    'Su Noivia scegli un itinerario ufficiale. Poi parti da solo, con amici o su una partenza di gruppo. Ognuno prenota voli e hotel per conto proprio. Niente pacchetto, niente checkout unico.',
+  guide: `Su ${BRAND_NAME} scegli un itinerario pronto. Poi parti da solo, con amici o con un gruppo. Voli e hotel li scegli e li paghi tu, servizio per servizio.`,
   /** Etichetta unica per qualsiasi cifra aggregata. */
   budgetLabel: 'Budget orientativo',
   budgetFilterLabel: 'Fascia di spesa stimata',
@@ -55,22 +52,20 @@ export const POST_THRESHOLD_CHECKLIST = [
   'Ognuno cerca voli e hotel per conto proprio: niente checkout unico.',
   'Salvate le tratte e gli alloggi scelti sul Trip, così il gruppo li vede.',
   'Confermate i documenti e le scadenze di ciascun fornitore.',
-  'Chi arriva dopo la soglia trova già itinerario e stime, non un pacchetto.',
+  'Chi arriva dopo trova già itinerario e stime, non un pacchetto.',
 ] as const;
 
 /**
- * "Soglia del gruppo" — sostituisce "garanzia di partenza".
- * Non è un'obbligazione di viaggio di Noivia (evita il profilo da organizzatore,
- * art. 41 D.Lgs. 62/2018): è una condizione sociale del gruppo.
+ * Legacy helper — avoid new user-facing threshold copy; kept for internal references.
  */
 export function groupThresholdCopy(
   minSeats: number,
   solid: boolean,
   mode: 'participants' | 'flights' = 'participants'
 ): string {
-  if (solid) return 'Soglia del gruppo raggiunta: avete il minimo per partire.';
+  if (solid) return 'Gruppo in formazione';
   if (mode === 'flights') {
     return `Hotel e attività si sbloccano quando ${minSeats} partecipanti hanno confermato il volo (posto confermato).`;
   }
-  return `Il viaggio parte se il gruppo raggiunge la soglia di ${minSeats} partecipanti.`;
+  return `Il viaggio parte se il gruppo raggiunge ${minSeats} partecipanti.`;
 }

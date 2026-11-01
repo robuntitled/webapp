@@ -2,6 +2,26 @@ import 'server-only';
 
 import { liteApiFetch } from '@/lib/liteapi/client';
 import { getLiteApiDefaultMargin } from '@/lib/liteapi/config';
+import {
+  parseTaxesAndFees,
+  pickFreeCancellationUntil,
+  type HotelTaxFee,
+} from '@/lib/liteapi/hotel-rate-disclosures';
+import {
+  getCachedHotelCatalog,
+  getCachedHotelRates,
+  hotelCatalogCacheKey,
+  hotelRatesCacheKey,
+  setCachedHotelCatalog,
+  setCachedHotelRates,
+} from '@/lib/liteapi/hotel-cache';
+
+export class HotelSearchValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HotelSearchValidationError';
+  }
+}
 
 export type LiteHotelOffer = {
   hotelId: string;
@@ -23,6 +43,10 @@ export type LiteHotelOffer = {
   commissionAmount: number | null;
   refundable: boolean;
   freeCancellation: boolean;
+  /** null = taxesAndFees not present on rate */
+  taxesAndFees: HotelTaxFee[] | null;
+  freeCancellationUntil: string | null;
+  refundableTag: string | null;
   facilities: string[];
   lat: number | null;
   lng: number | null;
@@ -66,6 +90,12 @@ type RawRate = {
     refundableTag?: string;
     cancelPolicyInfos?: Array<{ cancelTime?: string; amount?: number }>;
   };
+  taxesAndFees?: Array<{
+    included?: boolean;
+    description?: string;
+    amount?: number | string;
+    currency?: string;
+  }>;
   retailRate?: { total?: RawRateTotal[] };
   commission?: RawCommission[];
 };
@@ -303,6 +333,11 @@ function parseOffers(
       const amount = chosenAmount;
 
       const refundable = isRefundableRate(rate);
+      const taxesAndFees = parseTaxesAndFees(rate.taxesAndFees);
+      const freeCancellationUntil = pickFreeCancellationUntil(
+        rate.cancellationPolicies?.cancelPolicyInfos
+      );
+      const refundableTag = rate.cancellationPolicies?.refundableTag ?? null;
       const boardType = rate.boardType ?? rate.boardCode ?? null;
       const fromMeta = hotelCoords(meta);
       const fromCatalog = coordsFallback?.get(hotelId);
@@ -345,6 +380,9 @@ function parseOffers(
         commissionAmount: toNum(rate.commission?.[0]?.amount),
         refundable,
         freeCancellation: refundable,
+        taxesAndFees,
+        freeCancellationUntil,
+        refundableTag,
         facilities: facilityNames(meta),
         lat: coords.lat,
         lng: coords.lng,
@@ -366,11 +404,25 @@ function parseOffers(
   return [...bestByHotel.values()].sort((a, b) => a.totalAmount - b.totalAmount);
 }
 
+type CatalogPayload = {
+  ids: string[];
+  coords: Array<[string, { lat: number; lng: number }]>;
+};
+
 async function fetchHotelCatalog(
   countryCode: string,
   cityName: string,
   max: number
 ): Promise<{ ids: string[]; coordsById: Map<string, { lat: number; lng: number }> }> {
+  const cacheKey = hotelCatalogCacheKey(countryCode, cityName);
+  const cached = await getCachedHotelCatalog<CatalogPayload>(cacheKey);
+  if (cached?.ids?.length) {
+    return {
+      ids: cached.ids.slice(0, max),
+      coordsById: new Map(cached.coords ?? []),
+    };
+  }
+
   const qs = new URLSearchParams({
     countryCode,
     cityName,
@@ -390,7 +442,12 @@ async function fetchHotelCatalog(
       coordsById.set(h.id, { lat: coords.lat, lng: coords.lng });
     }
   }
-  return { ids: [...new Set(ids)].slice(0, max), coordsById };
+  const unique = [...new Set(ids)];
+  await setCachedHotelCatalog(cacheKey, {
+    ids: unique,
+    coords: [...coordsById.entries()],
+  });
+  return { ids: unique.slice(0, max), coordsById };
 }
 
 /**
@@ -414,19 +471,29 @@ export async function searchHotelRates(
   const countryCode = input.countryCode.toUpperCase();
   const cityName = normalizeCityName(input.cityName);
 
-  // Evita richieste con date nel passato (sandbox/prod spesso rispondono vuoto)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  let checkin = input.checkin;
-  let checkout = input.checkout;
+  const checkin = input.checkin;
+  const checkout = input.checkout;
   if (new Date(checkin) < today) {
-    const inD = new Date(today);
-    inD.setDate(inD.getDate() + 21);
-    const outD = new Date(inD);
-    outD.setDate(outD.getDate() + 4);
-    checkin = inD.toISOString().slice(0, 10);
-    checkout = outD.toISOString().slice(0, 10);
-    console.warn('[liteapi hotels] date nel passato → shift a', checkin, checkout);
+    throw new HotelSearchValidationError(
+      'Le date scelte sono nel passato. Scegli nuove date.'
+    );
+  }
+
+  const ratesKey = hotelRatesCacheKey({
+    cityName,
+    countryCode,
+    checkin,
+    checkout,
+    adults,
+    childrenAges,
+    currency,
+    refundableOnly: Boolean(input.refundableRatesOnly),
+  });
+  if (!(input.hotelIds && input.hotelIds.length > 0)) {
+    const cachedRates = await getCachedHotelRates(ratesKey);
+    if (cachedRates?.length) return cachedRates;
   }
 
   const baseBody: Record<string, unknown> = {
@@ -489,7 +556,13 @@ export async function searchHotelRates(
       currency,
       coordsById
     );
-    if (offers.length > 0) return offers.slice(0, limit);
+    if (offers.length > 0) {
+      const sliced = offers.slice(0, limit);
+      if (!(input.hotelIds && input.hotelIds.length > 0)) {
+        await setCachedHotelRates(ratesKey, sliced);
+      }
+      return sliced;
+    }
   }
 
   // Fallback: ricerca diretta per città (inglese)
@@ -503,5 +576,9 @@ export async function searchHotelRates(
     timeoutMs: 25_000,
   });
 
-  return parseOffers(res, cityName, countryCode, currency).slice(0, limit);
+  const fallback = parseOffers(res, cityName, countryCode, currency).slice(0, limit);
+  if (fallback.length > 0 && !(input.hotelIds && input.hotelIds.length > 0)) {
+    await setCachedHotelRates(ratesKey, fallback);
+  }
+  return fallback;
 }

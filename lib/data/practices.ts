@@ -260,11 +260,14 @@ export async function savePracticeFlightBooking(input: {
     patch.status = 'confirmed';
     patch.flight_confirmed_at = input.recap.bookedAt;
   } else if (kind === 'failed' || kind === 'cancelled') {
-    // Non upgrade: se non era già confermata, resta allo stato corrente.
-    // Se era confermata e il provider annulla, togliamo la conferma volo.
-    if (current.flight_confirmed_at) {
-      patch.flight_confirmed_at = null;
-      if (current.status === 'confirmed') patch.status = 'draft';
+    // Volo fallito/annullato: togli conferma e riporta a draft anche da preparing/ready.
+    patch.flight_confirmed_at = null;
+    if (
+      current.status === 'confirmed' ||
+      current.status === 'preparing' ||
+      current.status === 'ready'
+    ) {
+      patch.status = 'draft';
     }
   }
 
@@ -313,6 +316,7 @@ export async function savePracticeFlightBooking(input: {
         .eq('edition_id', practice.edition_id)
         .eq('user_id', input.userId)
         .eq('status', 'confirmed');
+      await maybeFormEdition(practice.edition_id);
     }
   }
   return { practice };
@@ -393,19 +397,28 @@ export async function listEditionPeerFlights(
   return [...grouped.values()];
 }
 
+/** Apre o riapre l'edizione in base ai voli confermati (formed ↔ open). */
 async function maybeFormEdition(editionId: string) {
   const { data: edition } = await supabaseAdmin
     .from('editions')
     .select('id, min_confirmed, status')
     .eq('id', editionId)
     .maybeSingle();
-  if (!edition || edition.status !== 'open') return;
+  if (!edition) return;
+  if (edition.status !== 'open' && edition.status !== 'formed') return;
   const { count } = await supabaseAdmin
     .from('edition_members')
     .select('*', { count: 'exact', head: true })
     .eq('edition_id', editionId)
     .eq('status', 'confirmed');
-  if ((count ?? 0) >= Number(edition.min_confirmed)) {
+  const confirmed = count ?? 0;
+  const min = Number(edition.min_confirmed);
+  if (confirmed >= min && edition.status === 'open') {
     await supabaseAdmin.from('editions').update({ status: 'formed' }).eq('id', editionId);
+  } else if (confirmed < min && edition.status === 'formed') {
+    await supabaseAdmin.from('editions').update({ status: 'open' }).eq('id', editionId);
   }
 }
+
+/** Exported for unit tests (A8). */
+export const __testMaybeFormEdition = maybeFormEdition;

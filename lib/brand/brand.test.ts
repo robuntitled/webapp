@@ -10,13 +10,24 @@ describe('brand source of truth', () => {
     expect(BRAND_NAME).toBe('Noivia');
   });
 
-  it('keeps flygetr.it fallback until NEXT_PUBLIC_APP_URL cutover', () => {
-    const url = getSiteUrl();
-    expect(url.endsWith('/')).toBe(false);
-    // Without env override in tests, fallback is the current domain.
-    if (!process.env.NEXT_PUBLIC_APP_URL) {
-      expect(url).toBe('https://flygetr.it');
-    }
+  it('getSiteUrl precedence without env', () => {
+    const prev = { ...process.env };
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    delete process.env.VERCEL_BRANCH_URL;
+    delete process.env.VERCEL_URL;
+    expect(getSiteUrl()).toBe('http://localhost:3000');
+    process.env.NEXT_PUBLIC_APP_URL = prev.NEXT_PUBLIC_APP_URL;
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = prev.VERCEL_PROJECT_PRODUCTION_URL;
+    process.env.VERCEL_BRANCH_URL = prev.VERCEL_BRANCH_URL;
+    process.env.VERCEL_URL = prev.VERCEL_URL;
+  });
+
+  it('strips trailing slash from NEXT_PUBLIC_APP_URL', () => {
+    const prev = process.env.NEXT_PUBLIC_APP_URL;
+    process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/';
+    expect(getSiteUrl()).toBe('https://example.com');
+    process.env.NEXT_PUBLIC_APP_URL = prev;
   });
 
   it('formats email display name without changing the address', () => {

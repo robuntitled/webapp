@@ -12,6 +12,7 @@ export type FlightSyncResult = {
   updated: boolean;
   status: string | null;
   bookingRef: string | null;
+  error?: string;
 };
 
 export async function syncPracticeFlightStatus(
@@ -54,11 +55,21 @@ export async function syncPracticeFlightStatus(
         status: nextStatus,
         bookingRef: nextRef ?? recap.bookingRef,
       };
-      await savePracticeFlightBooking({
+      const saved = await savePracticeFlightBooking({
         practiceId,
         userId,
         recap: nextRecap,
       });
+      if ('error' in saved) {
+        console.error('[flight-sync] save failed', practiceId, saved.error);
+        return {
+          practiceId,
+          updated: false,
+          status: recap.status,
+          bookingRef: recap.bookingRef,
+          error: saved.error,
+        };
+      }
     }
 
     return {
@@ -107,9 +118,13 @@ export async function syncPendingFlightBookings(): Promise<{
     if (!recap?.bookingId || !isFlightPendingConfirmation(recap.status)) continue;
     scanned++;
     const result = await syncPracticeFlightStatus(row.id as string, row.user_id as string);
-    if (result && 'error' in result) {
+    if ('error' in result && result.error && !('updated' in result)) {
       errors++;
-    } else if (result.updated) {
+      continue;
+    }
+    if ('error' in result && result.error) {
+      errors++;
+    } else if ('updated' in result && result.updated) {
       updated++;
     }
   }

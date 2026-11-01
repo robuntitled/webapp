@@ -12,7 +12,6 @@ import {
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import {
   confirmPracticeActivity,
-  confirmPracticeFlight,
   confirmPracticeHotel,
 } from '@/lib/data/practices';
 import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
@@ -84,14 +83,6 @@ export async function joinEditionAction(editionId: string): Promise<{ error: str
   }
   revalidatePath('/pratiche');
   redirect(`/pratica/${result.practice.id}`);
-}
-
-export async function confirmFlightAction(practiceId: string) {
-  const userId = await requireUser();
-  const result = await confirmPracticeFlight(practiceId, userId);
-  if ('error' in result) return result;
-  revalidatePath(`/pratica/${practiceId}`);
-  return { ok: true as const };
 }
 
 export async function confirmHotelAction(practiceId: string) {

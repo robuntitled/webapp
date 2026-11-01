@@ -68,7 +68,7 @@ export function AdminCostsHub({ initial }: { initial: HubPayload }) {
   }, []);
 
   useEffect(() => {
-    const id = setInterval(() => void refresh(), 30_000);
+    const id = setInterval(() => void refresh(), 5 * 60_000);
     return () => clearInterval(id);
   }, [refresh]);
 

@@ -34,6 +34,11 @@ import {
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
 import { saveHotelOfferDraft } from '@/lib/travel/hotel-offer-draft';
+import { formatEuroExact } from '@/lib/format/euro';
+import {
+  isRefundableTagRfn,
+  type HotelTaxFee,
+} from '@/lib/liteapi/hotel-rate-disclosures';
 import {
   loadSearchFormCache,
   saveSearchFormCache,
@@ -70,6 +75,9 @@ type HotelOffer = {
   currency: string;
   freeCancellation: boolean;
   refundable: boolean;
+  taxesAndFees?: HotelTaxFee[] | null;
+  freeCancellationUntil?: string | null;
+  refundableTag?: string | null;
   facilities: string[];
   lat?: number | null;
   lng?: number | null;
@@ -170,7 +178,9 @@ function applyHotelFilters(
   filters: Record<FilterKey, boolean>
 ): HotelOffer[] {
   let out = list;
-  // freeCancel: gestito via LiteAPI refundableRatesOnly in search (non filtro locale)
+  if (filters.freeCancel) {
+    out = out.filter((h) => h.freeCancellation || h.refundable);
+  }
   if (filters.breakfast) {
     out = out.filter((h) => {
       const board = `${h.boardType ?? ''} ${h.boardName ?? ''}`.toLowerCase();
@@ -366,6 +376,9 @@ export function LiteApiHotelSearch({
       totalAmount: h.totalAmount,
       currency: h.currency,
       freeCancellation: h.freeCancellation || h.refundable,
+      refundable: h.refundable,
+      taxesAndFees: h.taxesAndFees ?? null,
+      freeCancellationUntil: h.freeCancellationUntil ?? null,
       checkin,
       checkout,
       adults,
@@ -389,7 +402,7 @@ export function LiteApiHotelSearch({
     });
   };
 
-  const search = async (opts?: { refundableOnly?: boolean }) => {
+  const search = async () => {
     if (!cityName.trim()) {
       toast.error('Inserisci una città');
       return;
@@ -402,7 +415,6 @@ export function LiteApiHotelSearch({
       toast.error('Il check-out deve essere dopo il check-in');
       return;
     }
-    const refundableOnly = opts?.refundableOnly ?? filters.freeCancel;
     setLoading(true);
     setRawHotels(null);
     setHighlightedId(null);
@@ -416,7 +428,6 @@ export function LiteApiHotelSearch({
       });
       const ages = childAges.slice(0, childrenCount);
       if (ages.length) qs.set('childrenAges', ages.join(','));
-      if (refundableOnly) qs.set('refundableOnly', '1');
       if (countryCode && countryCode.length === 2) {
         qs.set('countryCode', countryCode);
       }
@@ -439,11 +450,7 @@ export function LiteApiHotelSearch({
       const list = data.hotels ?? [];
       setRawHotels(list);
       if (!list.length) {
-        toast.message(
-          refundableOnly
-            ? 'Nessuna tariffa con cancellazione gratis — prova altre date o togli il filtro'
-            : 'Nessun hotel trovato — prova un’altra città o date'
-        );
+        toast.message('Nessun hotel trovato — prova un’altra città o date');
       }
     } catch {
       toast.error('Errore di rete');
@@ -460,14 +467,6 @@ export function LiteApiHotelSearch({
     void search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSearch, cacheReady, checkin, checkout, cityName]);
-
-  // Cancellazione gratis: rioserca su LiteAPI (refundableRatesOnly), non solo filtro locale
-  useEffect(() => {
-    if (!rawHotels) return;
-    if (!cityName.trim() || !checkin || !checkout) return;
-    void search({ refundableOnly: filters.freeCancel });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al toggle freeCancel
-  }, [filters.freeCancel]);
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -714,7 +713,9 @@ export function LiteApiHotelSearch({
                           {(h.freeCancellation || h.refundable) && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                               <Check className="h-3 w-3" />
-                              Cancellazione gratis
+                              {isRefundableTagRfn(h.refundableTag) || h.refundable
+                                ? 'Tariffa rimborsabile'
+                                : 'Cancellazione gratis'}
                             </span>
                           )}
                           {(h.boardName || h.boardType) && (
@@ -728,10 +729,14 @@ export function LiteApiHotelSearch({
                       <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-border/60 pt-3 sm:w-36 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                         <div className="text-right">
                           <p className="font-display text-2xl font-semibold tabular-nums text-primary">
-                            {h.totalAmount.toFixed(0)}
-                            <span className="ml-1 text-sm font-medium text-muted-foreground">
-                              {h.currency}
-                            </span>
+                            {formatEuroExact(h.totalAmount, h.currency) ?? (
+                              <>
+                                {h.totalAmount.toFixed(2)}
+                                <span className="ml-1 text-sm font-medium text-muted-foreground">
+                                  {h.currency}
+                                </span>
+                              </>
+                            )}
                           </p>
                           <p className="text-[11px] text-muted-foreground">
                             totale soggiorno

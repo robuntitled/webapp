@@ -11,7 +11,7 @@ function authorized(request: Request): boolean {
   return header === `Bearer ${secret}`;
 }
 
-/** Poll LiteAPI for PENDING_CONFIRMATION flight bookings — runs every 5 min on Vercel. */
+/** Poll LiteAPI for PENDING_CONFIRMATION flight bookings — daily (Hobby plan). */
 export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

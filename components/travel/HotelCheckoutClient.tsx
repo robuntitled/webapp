@@ -18,6 +18,7 @@ import {
   getCheckoutReturnHref,
 } from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
+import { HotelRateDisclosures } from '@/components/travel/HotelRateDisclosures';
 import { Button } from '@/components/ui/button';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { Input } from '@/components/ui/input';
@@ -239,7 +240,6 @@ export function HotelCheckoutClient({
         body: JSON.stringify({
           offerId: draft.offerId,
           practiceId: draft.practiceId,
-          tripId: draft.tripId,
         }),
       });
       const data = (await res.json()) as {
@@ -522,8 +522,14 @@ export function HotelCheckoutClient({
             <p className="mt-1 text-[11px] text-white/70">
               {COMPLIANCE_COPY.hotelServiceFeeIncluded}
             </p>
+            <HotelRateDisclosures
+              className="mt-2 space-y-1 text-[11px] leading-relaxed text-white/80"
+              taxesAndFees={draft?.taxesAndFees ?? null}
+              refundable={draft?.freeCancellation ?? draft?.refundable}
+              freeCancellationUntil={draft?.freeCancellationUntil ?? null}
+            />
           </div>
-          <BookingComplianceNote showMerchantOfRecord />
+          <BookingComplianceNote showMerchantOfRecord showHotelServiceFee />
         </aside>
       ) : null}
     </div>

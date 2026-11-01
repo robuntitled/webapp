@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { BRAND_NAME } from '@/lib/brand';
+import { BRAND_NAME, getSiteUrl } from '@/lib/brand';
 import { LEGAL_PLACEHOLDERS } from '@/lib/privacy/company.defaults';
 
 /**
@@ -91,7 +91,10 @@ export function getCompanyProfile(): CompanyProfile {
   const phone = valueOrPlaceholder('LEGAL_PHONE', LEGAL_PLACEHOLDERS.phone);
   const rea = valueOrPlaceholder('LEGAL_REA', LEGAL_PLACEHOLDERS.rea);
   const shareCapital = valueOrPlaceholder('LEGAL_SHARE_CAPITAL', LEGAL_PLACEHOLDERS.shareCapital);
-  const websiteUrl = env('LEGAL_WEBSITE_URL') ?? env('NEXT_PUBLIC_APP_URL') ?? LEGAL_PLACEHOLDERS.websiteUrl;
+  const websiteUrl =
+    env('LEGAL_WEBSITE_URL') ??
+    env('NEXT_PUBLIC_APP_URL') ??
+    getSiteUrl();
 
   const isComplete = isCompanyProfileComplete();
   const usesPlaceholders =
