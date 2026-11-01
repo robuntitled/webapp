@@ -11,7 +11,7 @@ import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
 import type { CommunityPhotoPin } from '@/lib/data/community-map';
 import { cn } from '@/lib/utils';
 
-const MAP_TILES = getLeafletTileLayer();
+const MAP_TILES = getLeafletTileLayer('stylized');
 
 type CommunityMapProps = {
   photoPins: CommunityPhotoPin[];
@@ -221,7 +221,12 @@ export function CommunityMap({ photoPins, className }: CommunityMapProps) {
             ]}
             maxBoundsViscosity={1}
           >
-            <TileLayer url={MAP_TILES.url} attribution={MAP_TILES.attribution} noWrap />
+            <TileLayer
+              url={MAP_TILES.url}
+              attribution={MAP_TILES.attribution}
+              subdomains="abcd"
+              noWrap
+            />
             <MapResizeSync expanded={expanded} sizeTick={sizeTick} />
             <FitBounds points={fitPoints} />
             {displayPhotos.map((pin) => (

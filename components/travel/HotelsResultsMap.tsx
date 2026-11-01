@@ -51,7 +51,7 @@ type HotelsResultsMapProps = {
   expandable?: boolean;
 };
 
-const MAP_TILES = getLeafletTileLayer();
+const MAP_TILES = getLeafletTileLayer('stylized');
 
 function formatPrice(amount: number | undefined, currency?: string) {
   if (amount == null || Number.isNaN(amount)) return null;
@@ -320,12 +320,13 @@ function MapCanvas({
         zoom={12}
         scrollWheelZoom={scrollZoom}
         attributionControl={false}
-        className="h-full w-full min-h-[280px] bg-[#e8eef2]"
+        className="h-full w-full min-h-[280px] bg-[#eef0fa]"
         style={{ zIndex: 0 }}
       >
         <TileLayer
           url={MAP_TILES.url}
           attribution={MAP_TILES.attribution}
+          subdomains="abcd"
           keepBuffer={4}
           updateWhenZooming={false}
           updateWhenIdle

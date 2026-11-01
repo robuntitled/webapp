@@ -34,7 +34,8 @@ const PIN_FILL = '#0F766E';
 const PIN_ACTIVE = '#F97316';
 const ROUTE_COLOR = '#0F766E';
 
-const MAP_TILES = getLeafletTileLayer();
+/** Basemap stilizzata senza label locali (zoom + pin invariati). */
+const MAP_TILES = getLeafletTileLayer('stylized');
 
 function isStopPin(pin: MapPin): boolean {
   return pin.id !== 'destination' && Boolean(pin.blockId);
@@ -155,7 +156,7 @@ export function ReactLeafletTripMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={11}
-        className="h-full w-full z-0 grayscale-[20%] contrast-[1.05] [&_.leaflet-control-attribution]:!hidden"
+        className="h-full w-full z-0 saturate-[0.85] contrast-[1.02] [&_.leaflet-control-attribution]:!hidden"
         scrollWheelZoom={interactive}
         dragging={interactive}
         doubleClickZoom={interactive}
@@ -165,7 +166,12 @@ export function ReactLeafletTripMap({
         zoomControl={false}
         attributionControl={false}
       >
-        <TileLayer url={MAP_TILES.url} attribution={MAP_TILES.attribution} maxZoom={19} />
+        <TileLayer
+          url={MAP_TILES.url}
+          attribution={MAP_TILES.attribution}
+          maxZoom={19}
+          subdomains="abcd"
+        />
         <FitBounds pins={fitPins} animate={interactive} highlightedPinId={highlightedPinId} />
         <HighlightFlyTo pins={pins} highlightedPinId={highlightedPinId} />
         {interactive ? <MapClickHandler onMapClick={onMapClick} /> : null}
