@@ -835,7 +835,11 @@ export function OrganizzaWizard({
               </div>
             ) : null}
 
-            <div className="mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] pt-5">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-5">
+              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-success)]">
+                <Check className="h-3.5 w-3.5" />
+                Scelte salvate su questo dispositivo
+              </p>
               <div className="flex flex-wrap gap-2">
                 {step !== 'meta' ? (
                   <Button
