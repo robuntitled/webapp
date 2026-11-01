@@ -224,7 +224,8 @@ export function CommunityMap({ photoPins, className }: CommunityMapProps) {
             <TileLayer
               url={MAP_TILES.url}
               attribution={MAP_TILES.attribution}
-              subdomains="abcd"
+              maxZoom={MAP_TILES.maxZoom}
+              {...(MAP_TILES.subdomains ? { subdomains: MAP_TILES.subdomains } : {})}
               noWrap
             />
             <MapResizeSync expanded={expanded} sizeTick={sizeTick} />

@@ -169,8 +169,8 @@ export function ReactLeafletTripMap({
         <TileLayer
           url={MAP_TILES.url}
           attribution={MAP_TILES.attribution}
-          maxZoom={19}
-          subdomains="abcd"
+          maxZoom={MAP_TILES.maxZoom}
+          {...(MAP_TILES.subdomains ? { subdomains: MAP_TILES.subdomains } : {})}
         />
         <FitBounds pins={fitPins} animate={interactive} highlightedPinId={highlightedPinId} />
         <HighlightFlyTo pins={pins} highlightedPinId={highlightedPinId} />

@@ -9,18 +9,23 @@ describe('getLeafletTileLayer', () => {
     else process.env.NEXT_PUBLIC_CARTO_API_KEY = prev;
   });
 
-  it('defaults to stylized Carto voyager without labels', () => {
+  it('falls back to Esri Light Gray without Carto key (no OSM / no watermark CDN)', () => {
     delete process.env.NEXT_PUBLIC_CARTO_API_KEY;
     const layer = getLeafletTileLayer();
     expect(layer.variant).toBe('stylized');
-    expect(layer.url).toContain('voyager_nolabels');
+    expect(layer.url).toContain('arcgisonline.com');
+    expect(layer.url).toContain('World_Light_Gray_Base');
+    expect(layer.url).toContain('{z}/{y}/{x}');
     expect(layer.url).not.toContain('openstreetmap.org');
-    expect(layer.attribution).toMatch(/CARTO/i);
+    expect(layer.url).not.toContain('cartocdn.com');
+    expect(layer.subdomains).toBeUndefined();
   });
 
-  it('supports soft and labeled variants', () => {
-    expect(getLeafletTileLayer('soft').url).toContain('light_nolabels');
-    expect(getLeafletTileLayer('labeled').url).toContain('/voyager/');
-    expect(getLeafletTileLayer('labeled').url).not.toContain('nolabels');
+  it('uses Carto voyager_nolabels when API key is set', () => {
+    process.env.NEXT_PUBLIC_CARTO_API_KEY = 'test-key';
+    const layer = getLeafletTileLayer('stylized');
+    expect(layer.url).toContain('voyager_nolabels');
+    expect(layer.url).toContain('api_key=test-key');
+    expect(layer.subdomains).toBe('abcd');
   });
 });
