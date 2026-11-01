@@ -1,3 +1,4 @@
+import { auth } from '@/auth';
 import type { Metadata } from 'next';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { PublicLanding } from '@/components/brand/PublicLanding';
@@ -59,6 +60,7 @@ function durationFromDates(dateFrom: string, dateTo: string): number | null {
 }
 
 export default async function HomePage() {
+  const session = await auth();
   const [editions, cards] = await Promise.all([
     listJoinableEditions().catch(() => []),
     Promise.resolve(wizardDestinationCards()),
@@ -122,6 +124,7 @@ export default async function HomePage() {
       comingSoon={comingSoon}
       openEditions={openEditions}
       thailandia={thailandia}
+      isLoggedIn={Boolean(session?.user?.id)}
     />
   );
 }

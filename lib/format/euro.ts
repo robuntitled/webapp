@@ -5,7 +5,7 @@ export function formatEuro(
 ): string | null {
   if (amount == null || !Number.isFinite(amount) || amount <= 0) return null;
   const formatted = new Intl.NumberFormat('it-IT', {
-    useGrouping: true,
+    useGrouping: 'always',
     maximumFractionDigits: 0,
   }).format(Math.round(amount));
   const body = opts?.currencySuffix === false ? formatted : `${formatted} €`;

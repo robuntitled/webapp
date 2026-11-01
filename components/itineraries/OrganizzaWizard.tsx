@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -48,9 +48,40 @@ import {
   patchOrganizzaDraft,
   prevOrganizzaStep,
 } from '@/lib/itineraries/organizza-steps';
+import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
+import { formatEuro } from '@/lib/format/euro';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { cn } from '@/lib/utils';
+
+const ORGANIZZA_STORAGE_KEY = 'nl-organizza-draft-v1';
+
+type StoredOrganizza = {
+  draft: OrganizzaDraft;
+  step: OrganizzaStepId;
+  whenSelection: TripWhenSelection | null;
+};
+
+function loadOrganizzaStorage(): StoredOrganizza | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(ORGANIZZA_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredOrganizza;
+    if (!parsed?.draft || typeof parsed.draft !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearOrganizzaStorage() {
+  try {
+    sessionStorage.removeItem(ORGANIZZA_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 type DestCard = {
   slug: string;
@@ -260,8 +291,10 @@ export function OrganizzaWizard({
   initialDuration?: number;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [pending, startTransition] = useTransition();
+  const [hydrated, setHydrated] = useState(false);
 
   const startTpl = initialSlug
     ? findItineraryBySlug(initialSlug, initialDuration)
@@ -277,6 +310,32 @@ export function OrganizzaWizard({
       : EMPTY_ORGANIZZA_DRAFT
   );
   const [whenSelection, setWhenSelection] = useState<TripWhenSelection | null>(null);
+
+  useEffect(() => {
+    const stored = loadOrganizzaStorage();
+    const resume = searchParams.get('ripresa') === '1';
+    if (stored?.draft) {
+      setDraft(patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, stored.draft));
+      if (stored.whenSelection) setWhenSelection(stored.whenSelection);
+      if (resume && stored.draft.slug && stored.draft.dateFrom && stored.draft.company) {
+        setStep('riepilogo');
+      } else if (stored.step) {
+        setStep(stored.step);
+      }
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restore once on mount
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      const payload: StoredOrganizza = { draft, step, whenSelection };
+      sessionStorage.setItem(ORGANIZZA_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      /* ignore quota */
+    }
+  }, [draft, step, whenSelection, hydrated]);
 
   const template = useMemo(() => {
     if (!draft.slug) return undefined;
@@ -370,10 +429,8 @@ export function OrganizzaWizard({
       return;
     }
     if (!session?.user) {
-      toast.error('Accedi per creare il viaggio.');
-      router.push(
-        `/accedi?callbackUrl=${encodeURIComponent('/organizza')}`
-      );
+      toast.message("Crea l'account per salvare il tuo viaggio.");
+      router.push(accediHref('/organizza?ripresa=1', 'register'));
       return;
     }
     const tpl =
@@ -391,7 +448,11 @@ export function OrganizzaWizard({
         dateTo: draft.dateTo!,
         title: draft.tripName.trim() || null,
       });
-      if (result?.error) toast.error(result.error);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      clearOrganizzaStorage();
     });
   }
 
@@ -429,7 +490,7 @@ export function OrganizzaWizard({
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {published.map((dest) => {
+                  {published.map((dest, destIndex) => {
                     const budget = orientativeBudgetHint(dest.slug);
                     const active = draft.slug === dest.slug;
                     return (
@@ -449,6 +510,7 @@ export function OrganizzaWizard({
                             src={coverForDestination(dest.slug)}
                             alt={dest.name}
                             fill
+                            priority={destIndex === 0}
                             className="object-cover"
                             sizes="(max-width:640px) 100vw, 40vw"
                           />
@@ -466,7 +528,7 @@ export function OrganizzaWizard({
                           <p className="text-xs font-medium text-primary">
                             {dest.allowedDurations.join(' / ')} giorni
                             {budget != null
-                              ? ` · ${COMPLIANCE_COPY.budgetLabel.toLowerCase()} da ~${budget} €`
+                              ? ` · ${COMPLIANCE_COPY.budgetLabel} · ${formatEuro(budget, { approx: false })}`
                               : ''}
                           </p>
                         </div>
@@ -489,7 +551,7 @@ export function OrganizzaWizard({
                             {dest.emoji} {dest.name}
                           </p>
                           <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                            Avvisami — presto
+                            In arrivo. Per ora puoi partire per la Thailandia.
                           </p>
                         </div>
                       ))}
@@ -731,24 +793,26 @@ export function OrganizzaWizard({
                       {COMPLIANCE_COPY.budgetLabel}
                     </p>
                     <p className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
-                      ~
-                      {(
+                      {formatEuro(
                         orientativeBudgetHint(
                           template.destination_slug,
                           draft.durationDays ?? template.duration_days
-                        ) ?? template.budget_orientative_eur.total_hint
-                      ).toLocaleString('it-IT')}{' '}
-                      € <span className="text-sm font-semibold">a persona</span>
+                        ) ?? template.budget_orientative_eur.total_hint,
+                        { approx: false }
+                      )}{' '}
+                      <span className="text-sm font-semibold">a persona</span>
+                      {draft.durationDays ? (
+                        <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
+                          {' '}
+                          · {draft.durationDays} giorni
+                        </span>
+                      ) : null}
                     </p>
-                    {draft.durationDays ? (
-                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                        Stima orientativa per ~{draft.durationDays} giorni
-                      </p>
-                    ) : null}
+                    <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">stima</p>
                   </div>
                   <p className="mt-2 max-w-xs text-xs text-[var(--color-text-secondary)] sm:mt-0 sm:text-right">
-                    Stima voli/hotel, non un prezzo del pacchetto. Ognuno prenota per conto
-                    proprio.
+                    Stima di voli e hotel, non un prezzo finale. Ognuno sceglie e paga i propri
+                    servizi.
                   </p>
                 </div>
 
@@ -771,11 +835,7 @@ export function OrganizzaWizard({
               </div>
             ) : null}
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-5">
-              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-success)]">
-                <Check className="h-3.5 w-3.5" />
-                Scelte salvate automaticamente
-              </p>
+            <div className="mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] pt-5">
               <div className="flex flex-wrap gap-2">
                 {step !== 'meta' ? (
                   <Button
@@ -791,8 +851,9 @@ export function OrganizzaWizard({
                 {step === 'riepilogo' ? (
                   <Button
                     type="button"
+                    variant="cta"
                     size="lg"
-                    className="min-h-11 rounded-[10px] bg-accent px-6 font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                    className="min-h-11 rounded-[10px] px-6"
                     disabled={pending}
                     onClick={createTrip}
                   >
@@ -802,8 +863,9 @@ export function OrganizzaWizard({
                 ) : (
                   <Button
                     type="button"
+                    variant="cta"
                     size="lg"
-                    className="min-h-11 rounded-[10px] bg-accent px-6 font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                    className="min-h-11 rounded-[10px] px-6"
                     disabled={
                       (step === 'meta' && !draft.slug) ||
                       (step === 'date' && !(draft.dateFrom && draft.dateTo)) ||

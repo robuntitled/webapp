@@ -1,5 +1,6 @@
 import type { NominatimResult, PlaceResult } from '@/lib/places/types';
 import { isLatinScriptText, placeUsesLatinScript } from '@/lib/places/latin-script';
+import { getSiteUrl } from '@/lib/brand';
 
 const PLACE_TYPE_LABELS: Record<string, string> = {
   country: 'Nazione',

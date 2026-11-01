@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Calendar, Check, Compass, MapPin, Users } from 'lucide-react';
+import { Calendar, Check, Compass, MapPin, Users } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
 import { BRAND_IMAGES } from '@/lib/brand/images';
+import { formatEuro } from '@/lib/format/euro';
 
 export type LandingDestination = {
   slug: string;
@@ -41,6 +42,7 @@ type Props = {
     budgetHint: number;
     budgetHint14?: number | null;
   } | null;
+  isLoggedIn?: boolean;
 };
 
 const ORGANIZZA_POINTS = [
@@ -50,9 +52,9 @@ const ORGANIZZA_POINTS = [
 ] as const;
 
 const GRUPPI_POINTS = [
-  'Date e itinerario già decisi',
-  'Vedi quanti sono iscritti e quanto manca alla partenza',
-  'Chat di gruppo per conoscersi prima di partire',
+  'Date, itinerario e budget orientativo in un colpo d\'occhio',
+  'Vedi quanti sono già iscritti',
+  'Chat di gruppo per conoscersi prima di partire (si apre con il primo volo confermato)',
 ] as const;
 
 /** Hero home: Thailandia (Unsplash) — docs/IMAGE-LICENSES.md */
@@ -66,6 +68,7 @@ export function PublicLanding({
   comingSoon,
   openEditions,
   thailandia,
+  isLoggedIn = false,
 }: Props) {
   const thai = featured.find((d) => d.slug === 'thailandia') ?? featured[0];
   const groupCount = openEditions.length;
@@ -102,11 +105,11 @@ export function PublicLanding({
             >
               <Link href={accediHref()}>Accedi</Link>
             </Button>
-            {/* Unico coral della home */}
+            {/* Unico coral della home — stile esplicito (owner: non cambiare aspetto) */}
             <Button
               asChild
               size="sm"
-              className="h-11 min-h-11 rounded-[10px] bg-accent px-3 font-semibold text-white hover:bg-[var(--color-accent-hover)] sm:px-3.5"
+              className="h-11 min-h-11 rounded-[10px] bg-[var(--color-cta)] px-3 font-semibold text-white hover:bg-[#A93720] sm:px-3.5"
             >
               <Link href={accediHref(undefined, 'register')}>Registrati</Link>
             </Button>
@@ -127,12 +130,14 @@ export function PublicLanding({
             >
               Gruppi
             </Link>
-            <Link
-              href="/pratiche"
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
-            >
-              I miei viaggi
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/pratiche"
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
+              >
+                I miei viaggi
+              </Link>
+            ) : null}
           </nav>
         </header>
 
@@ -182,8 +187,8 @@ export function PublicLanding({
               Unisciti a un gruppo
             </h2>
             <p className="text-[var(--color-text-secondary)]">
-              Partenze già fissate, con date e budget indicativo. Viaggi insieme ad altri
-              viaggiatori.
+              Scegli una partenza di gruppo, conosci gli altri viaggiatori e organizzate il viaggio
+              insieme.
             </p>
             <ul className="space-y-2.5">
               {GRUPPI_POINTS.map((t) => (
@@ -239,9 +244,13 @@ export function PublicLanding({
               </div>
               {(thailandia?.budgetHint ?? thai.budgetHint) != null ? (
                 <span className="inline-flex w-fit rounded-full bg-[var(--color-tint)] px-3 py-1.5 text-sm font-bold text-primary">
-                  {COMPLIANCE_COPY.budgetLabel.toLowerCase()} da ~
-                  {(thailandia?.budgetHint ?? thai.budgetHint)?.toLocaleString('it-IT')} € a
-                  persona
+                  {COMPLIANCE_COPY.budgetLabel} ·{' '}
+                  {formatEuro(thailandia?.budgetHint ?? thai.budgetHint, { approx: false })}
+                  {thailandia?.durationDays
+                    ? ` · ${thailandia.durationDays} giorni`
+                    : thai.allowedDurations?.[0]
+                      ? ` · ${thai.allowedDurations[0]} giorni`
+                      : ''}
                 </span>
               ) : null}
               <div className="mt-1 flex flex-wrap gap-2">
@@ -279,7 +288,7 @@ export function PublicLanding({
                 </h2>
               </div>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                Ti avvisiamo appena diventano prenotabili.
+                In arrivo. Per ora puoi partire per la Thailandia.
               </p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -298,16 +307,8 @@ export function PublicLanding({
                       sizes="160px"
                     />
                   </div>
-                  <div className="px-3 pb-1 pt-2.5">
+                  <div className="px-3 pb-3 pt-2.5">
                     <p className="text-sm font-bold">{dest.name}</p>
-                    <button
-                      type="button"
-                      disabled
-                      className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-primary"
-                    >
-                      <Bell className="h-3.5 w-3.5" />
-                      Avvisami
-                    </button>
                   </div>
                 </div>
               ))}
@@ -318,8 +319,9 @@ export function PublicLanding({
 
       <section className="nl-page w-full py-12 text-center sm:py-14">
         <p className="text-sm text-[var(--color-text-secondary)]">
-          {COMPLIANCE_COPY.budgetLabel} e partenze pubbliche su {BRAND_NAME}.{' '}
-          {COMPLIANCE_COPY.notAPackage}
+          I budget sono orientativi: i costi reali dipendono dai servizi che prenoti. {BRAND_NAME} ti
+          aiuta a pianificare il viaggio e a trovare compagni di viaggio. Ogni servizio è prenotato
+          separatamente con il fornitore indicato al momento del pagamento.
         </p>
       </section>
     </div>

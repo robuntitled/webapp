@@ -8,6 +8,13 @@ const STAY_CITY: Record<string, string> = {
   North: 'Chiang Mai',
 };
 
+/** Etichetta UI per segmenti itinerario (chiavi invariate). */
+export function areaSegmentDisplayLabel(segment: string): string {
+  const key = segment.trim();
+  if (key === 'Islands') return 'Isole';
+  return segment;
+}
+
 export function datesForDuration(dateFrom: string, durationDays: number) {
   const from = parseISO(dateFrom);
   return {

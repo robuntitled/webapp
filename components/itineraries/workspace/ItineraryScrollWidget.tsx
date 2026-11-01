@@ -3,6 +3,7 @@
 import { Moon, Sun, Sunset } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { slotsForDay, type DaySlot } from '@/lib/itineraries/day-slots';
+import { areaSegmentDisplayLabel } from '@/lib/itineraries/dates';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
 
 const SLOT_META: Record<DaySlot, { label: string; Icon: LucideIcon }> = {
@@ -60,7 +61,7 @@ export function ItineraryScrollWidget({
                     </h3>
                     {day.area_segment ? (
                       <span className="text-xs font-medium text-slate-400">
-                        · {day.area_segment}
+                        · {areaSegmentDisplayLabel(day.area_segment)}
                       </span>
                     ) : null}
                   </div>

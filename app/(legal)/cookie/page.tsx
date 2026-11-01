@@ -10,9 +10,14 @@ import {
 } from '@/components/legal/LegalTable';
 import { COOKIE_CONSENT_KEY } from '@/lib/privacy/constants';
 import { getCompanyProfile } from '@/lib/privacy/company';
+import { isPlaceholder } from '@/lib/privacy/is-placeholder';
+import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/brand/seo';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Cookie Policy',
+  alternates: { canonical: '/cookie' },
+  openGraph: pageOpenGraph('/cookie', 'Cookie Policy', 'Informativa sui cookie tecnici utilizzati dal sito.'),
 };
 
 export default function CookiePage() {
@@ -29,7 +34,12 @@ export default function CookiePage() {
         <p>
           Il titolare del trattamento tramite cookie è {company.companyName} ({company.tradeName}).
           Contatto:{' '}
-          <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>.
+          {!isPlaceholder(company.privacyEmail) ? (
+            <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>
+          ) : (
+            'recapiti indicati in informativa privacy quando disponibili'
+          )}
+          .
         </p>
       </LegalSection>
 

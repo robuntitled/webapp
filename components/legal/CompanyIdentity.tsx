@@ -1,5 +1,6 @@
 import type { CompanyProfile } from '@/lib/privacy/company';
 import { formatCompanyAddress } from '@/lib/privacy/company';
+import { isPlaceholder } from '@/lib/privacy/is-placeholder';
 import { Building2, Globe, Mail, Phone } from 'lucide-react';
 import { LegalLink } from '@/components/legal/LegalLink';
 
@@ -24,6 +25,9 @@ function IdentityRow({
 }
 
 export function CompanyIdentity({ company }: { company: CompanyProfile }) {
+  const address = formatCompanyAddress(company);
+  const showAddress = !isPlaceholder(company.addressLine) && !isPlaceholder(company.city);
+
   return (
     <div className="mt-1.5 overflow-hidden rounded-lg border border-slate-200/70 bg-slate-50/50">
       <div className="border-b border-slate-100/90 bg-white/70 px-3.5 py-2">
@@ -32,42 +36,54 @@ export function CompanyIdentity({ company }: { company: CompanyProfile }) {
         </p>
       </div>
       <dl className="px-3.5 sm:px-4">
-        <IdentityRow label="Ragione sociale" icon={Building2}>
-          {company.companyName}
-        </IdentityRow>
-        <IdentityRow label="Nome commerciale">{company.tradeName}</IdentityRow>
-        <IdentityRow label="Sede legale">{formatCompanyAddress(company)}</IdentityRow>
-        <IdentityRow label="P.IVA">{company.vatId}</IdentityRow>
-        {company.fiscalCode && !company.fiscalCode.startsWith('[') ? (
+        {!isPlaceholder(company.companyName) ? (
+          <IdentityRow label="Ragione sociale" icon={Building2}>
+            {company.companyName}
+          </IdentityRow>
+        ) : null}
+        {!isPlaceholder(company.tradeName) ? (
+          <IdentityRow label="Nome commerciale">{company.tradeName}</IdentityRow>
+        ) : null}
+        {showAddress ? (
+          <IdentityRow label="Sede legale">{address}</IdentityRow>
+        ) : null}
+        {!isPlaceholder(company.vatId) ? (
+          <IdentityRow label="P.IVA">{company.vatId}</IdentityRow>
+        ) : null}
+        {!isPlaceholder(company.fiscalCode) ? (
           <IdentityRow label="Codice fiscale">{company.fiscalCode}</IdentityRow>
         ) : null}
-        {company.rea && !company.rea.startsWith('[') ? (
+        {!isPlaceholder(company.rea) ? (
           <IdentityRow label="REA / CCIAA">{company.rea}</IdentityRow>
         ) : null}
-        {company.shareCapital && !company.shareCapital.startsWith('[') ? (
+        {!isPlaceholder(company.shareCapital) ? (
           <IdentityRow label="Capitale sociale">{company.shareCapital}</IdentityRow>
         ) : null}
-        <IdentityRow label="Email privacy" icon={Mail}>
-          <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>
-        </IdentityRow>
-        {company.pec && !company.pec.startsWith('[') ? (
+        {!isPlaceholder(company.privacyEmail) ? (
+          <IdentityRow label="Email privacy" icon={Mail}>
+            <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>
+          </IdentityRow>
+        ) : null}
+        {!isPlaceholder(company.pec) ? (
           <IdentityRow label="PEC" icon={Mail}>
             <LegalLink href={`mailto:${company.pec}`}>{company.pec}</LegalLink>
           </IdentityRow>
         ) : null}
-        {company.dpoEmail && !company.dpoEmail.startsWith('[') ? (
+        {!isPlaceholder(company.dpoEmail) ? (
           <IdentityRow label="Referente privacy">{company.dpoEmail}</IdentityRow>
         ) : null}
-        {company.phone && !company.phone.startsWith('[') ? (
+        {!isPlaceholder(company.phone) ? (
           <IdentityRow label="Telefono" icon={Phone}>
             {company.phone}
           </IdentityRow>
         ) : null}
-        <IdentityRow label="Sito web" icon={Globe}>
-          <LegalLink href={company.websiteUrl} external>
-            {company.websiteUrl}
-          </LegalLink>
-        </IdentityRow>
+        {!isPlaceholder(company.websiteUrl) ? (
+          <IdentityRow label="Sito web" icon={Globe}>
+            <LegalLink href={company.websiteUrl} external>
+              {company.websiteUrl}
+            </LegalLink>
+          </IdentityRow>
+        ) : null}
       </dl>
     </div>
   );
