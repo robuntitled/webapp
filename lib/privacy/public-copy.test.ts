@@ -12,6 +12,12 @@ describe('no visible legal placeholders', () => {
     expect(COMPLIANCE_COPY).not.toHaveProperty('checkoutMerchantLegalTodo');
   });
 
+  it('A2: itinerary source does not falsely claim AI generation', () => {
+    expect(COMPLIANCE_COPY.itinerarySource).not.toMatch(/\bAI\b|generato\/assistito/i);
+    expect(COMPLIANCE_COPY.aiGenerated).not.toMatch(/generato\/assistito da AI/i);
+    expect(COMPLIANCE_COPY.itinerarySource).toMatch(/redazione/i);
+  });
+
   it('footer and booking note strings with default company profile', () => {
     const company = getCompanyProfile();
     const footer = collectFooterVisibleCopy(company);

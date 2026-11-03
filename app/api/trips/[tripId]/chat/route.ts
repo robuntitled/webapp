@@ -28,7 +28,7 @@ export async function GET(request: Request, context: RouteContext) {
   const since = new URL(request.url).searchParams.get('since') ?? undefined;
 
   try {
-    const messages = await getTripMessages(tripId, since);
+    const messages = await getTripMessages(tripId, since, { viewerId: session.user.id });
     return NextResponse.json({ messages });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Errore chat';

@@ -5,7 +5,11 @@ import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookFlight } from '@/lib/liteapi/flight-booking';
 import { confirmParticipantFlight } from '@/lib/data/trip-commitments';
-import { getPractice, savePracticeFlightBooking } from '@/lib/data/practices';
+import {
+  FLIGHT_ALREADY_BOOKED_ERROR,
+  getPractice,
+  savePracticeFlightBooking,
+} from '@/lib/data/practices';
 import {
   BOOKING_RECONCILIATION_USER_MESSAGE,
   recordBookingReconciliation,
@@ -95,19 +99,23 @@ export async function POST(request: Request) {
   if (practiceId) {
     const existing = await getPractice(practiceId, session.user.id);
     const fb = existing?.flight_booking;
-    if (
-      fb &&
-      ((fb.prebookId && fb.prebookId === prebookId) ||
-        (fb.transactionId && fb.transactionId === transactionId))
-    ) {
-      return NextResponse.json({
-        ok: true,
-        bookingId: fb.bookingId,
-        bookingRef: fb.bookingRef,
-        status: fb.status,
-        practiceId,
-        idempotent: true,
-      });
+    if (fb) {
+      // Idempotenza: stesso prebook/transazione → ok senza riprenotare.
+      if (
+        (fb.prebookId && fb.prebookId === prebookId) ||
+        (fb.transactionId && fb.transactionId === transactionId)
+      ) {
+        return NextResponse.json({
+          ok: true,
+          bookingId: fb.bookingId,
+          bookingRef: fb.bookingRef,
+          status: fb.status,
+          practiceId,
+          idempotent: true,
+        });
+      }
+      // A1: blocco PRIMA del provider — evita un secondo addebito che poi non può essere salvato.
+      return NextResponse.json({ error: FLIGHT_ALREADY_BOOKED_ERROR }, { status: 409 });
     }
   }
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
-import { MessageCircle, Send, Loader2 } from 'lucide-react';
+import { Flag, Loader2, MessageCircle, MoreHorizontal, Send, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TripMessageRow } from '@/lib/data/trip-chat';
 import { useIntervalWhenVisible } from '@/hooks/useIntervalWhenVisible';
@@ -25,6 +25,25 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
+async function postModeration(
+  path: '/api/chat/report' | '/api/chat/block',
+  body: Record<string, unknown>
+): Promise<{ ok: boolean; message?: string; error?: string }> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json().catch(() => ({}))) as {
+    message?: string;
+    error?: string;
+  };
+  if (!response.ok) {
+    return { ok: false, error: data.error ?? 'Operazione non riuscita' };
+  }
+  return { ok: true, message: data.message };
+}
+
 export function TripChatPanel({
   tripId,
   currentUserId,
@@ -38,6 +57,8 @@ export function TripChatPanel({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [needsMigration, setNeedsMigration] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [busyModeration, setBusyModeration] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastFetchRef = useRef<string | null>(null);
 
@@ -136,9 +157,76 @@ export function TripChatPanel({
     }
   };
 
+  const reportMessage = async (msg: TripMessageRow) => {
+    const reason = window.prompt(
+      'Perché segnali questo messaggio? (es. spam, minacce, richieste di soldi fuori piattaforma)'
+    );
+    if (!reason || reason.trim().length < 3) return;
+    setBusyModeration(true);
+    setMenuFor(null);
+    try {
+      const result = await postModeration('/api/chat/report', {
+        target: 'message',
+        reason: reason.trim(),
+        editionId: tripId,
+        messageId: msg.id,
+        reportedUserId: msg.user_id,
+      });
+      if (!result.ok) {
+        toast.error(result.error ?? 'Segnalazione non inviata');
+        return;
+      }
+      toast.success(result.message ?? 'Segnalazione ricevuta.');
+    } finally {
+      setBusyModeration(false);
+    }
+  };
+
+  const reportGroup = async () => {
+    const reason = window.prompt('Perché segnali questo gruppo?');
+    if (!reason || reason.trim().length < 3) return;
+    setBusyModeration(true);
+    try {
+      const result = await postModeration('/api/chat/report', {
+        target: 'group',
+        reason: reason.trim(),
+        editionId: tripId,
+      });
+      if (!result.ok) {
+        toast.error(result.error ?? 'Segnalazione non inviata');
+        return;
+      }
+      toast.success(result.message ?? 'Segnalazione ricevuta.');
+    } finally {
+      setBusyModeration(false);
+    }
+  };
+
+  const blockAuthor = async (msg: TripMessageRow) => {
+    const ok = window.confirm(
+      'Bloccare questo utente? Non vedrai più i suoi messaggi in chat. Potrai sbloccarlo dal supporto se serve.'
+    );
+    if (!ok) return;
+    setBusyModeration(true);
+    setMenuFor(null);
+    try {
+      const result = await postModeration('/api/chat/block', {
+        userId: msg.user_id,
+        action: 'block',
+      });
+      if (!result.ok) {
+        toast.error(result.error ?? 'Blocco non riuscito');
+        return;
+      }
+      setMessages((prev) => prev.filter((m) => m.user_id !== msg.user_id));
+      toast.success(result.message ?? 'Utente bloccato.');
+    } finally {
+      setBusyModeration(false);
+    }
+  };
+
   if (!canAccess) {
-    const body =
-      lockReason ?? 'Unisciti al viaggio per chattare con la crew.';
+    const body = lockReason ?? 'Unisciti al viaggio per chattare con la crew.';
     if (dockMode) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-2 px-6 py-10 text-center text-sm text-muted-foreground">
@@ -169,6 +257,17 @@ export function TripChatPanel({
 
   const messagesBody = (
     <>
+      <div className="shrink-0 border-b bg-muted/20 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
+        Non mandare soldi fuori da Noivia. Noivia non verifica l’identità degli utenti.{' '}
+        <button
+          type="button"
+          className="underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+          onClick={() => void reportGroup()}
+          disabled={busyModeration}
+        >
+          Segnala gruppo
+        </button>
+      </div>
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {loading ? (
           <div className="flex justify-center py-8">
@@ -198,16 +297,50 @@ export function TripChatPanel({
                 />
                 <div className={`max-w-[80%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
                   {!mine && (
-                    <UserProfileLink
-                      userId={msg.user_id}
-                      username={msg.user?.username}
-                      firstName={msg.user?.first_name}
-                      lastName={msg.user?.last_name}
-                      mode="name"
-                      size="sm"
-                      nameClassName="text-[10px] text-muted-foreground font-normal"
-                      className="mb-0.5 px-1"
-                    />
+                    <div className="mb-0.5 flex items-center gap-1 px-1">
+                      <UserProfileLink
+                        userId={msg.user_id}
+                        username={msg.user?.username}
+                        firstName={msg.user?.first_name}
+                        lastName={msg.user?.last_name}
+                        mode="name"
+                        size="sm"
+                        nameClassName="text-[10px] text-muted-foreground font-normal"
+                      />
+                      <div className="relative">
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          aria-label="Azioni messaggio"
+                          disabled={busyModeration}
+                          onClick={() =>
+                            setMenuFor((cur) => (cur === msg.id ? null : msg.id))
+                          }
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                        {menuFor === msg.id ? (
+                          <div className="absolute left-0 z-20 mt-1 w-40 rounded-lg border border-border bg-background py-1 text-xs shadow-md">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted"
+                              onClick={() => void reportMessage(msg)}
+                            >
+                              <Flag className="h-3.5 w-3.5" />
+                              Segnala
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-destructive hover:bg-muted"
+                              onClick={() => void blockAuthor(msg)}
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              Blocca
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   )}
                   <div
                     className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${

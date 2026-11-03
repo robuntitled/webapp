@@ -3,14 +3,18 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import {
+  FLIGHT_ALREADY_BOOKED_ERROR,
   flightFingerprint,
   flightStatusConfirmsSeat,
+  isSamePracticeFlightBooking,
   parseFlightStatus,
   type ActivityBookingRecap,
   type EditionPeerFlight,
   type FlightBookingRecap,
   type HotelBookingRecap,
 } from '@/lib/itineraries/bookings';
+
+export { FLIGHT_ALREADY_BOOKED_ERROR, isSamePracticeFlightBooking };
 import { datesForDuration } from '@/lib/itineraries/dates';
 import type { PracticeRow, PracticeStatus, TravelMode } from '@/lib/itineraries/types';
 
@@ -247,6 +251,14 @@ export async function savePracticeFlightBooking(input: {
 }): Promise<{ practice: PracticeRow } | { error: string }> {
   const current = await getPractice(input.practiceId, input.userId);
   if (!current) return { error: 'Pratica non trovata.' };
+
+  // A1: non sovrascrivere un volo già salvato con uno diverso (stesso booking = sync ok).
+  if (
+    current.flight_booking &&
+    !isSamePracticeFlightBooking(current.flight_booking, input.recap)
+  ) {
+    return { error: FLIGHT_ALREADY_BOOKED_ERROR };
+  }
 
   const kind = parseFlightStatus(input.recap.status);
   // Solo lo stato provider "confirmed" conferma pratica/posto gruppo.

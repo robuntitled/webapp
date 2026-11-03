@@ -32,9 +32,15 @@ export const COMPLIANCE_COPY = {
    * Non esporre la % al cliente; solo che il prezzo include la commissione di servizio.
    */
   hotelServiceFeeIncluded: `Il prezzo include il costo del servizio ${BRAND_NAME}.`,
-  /** Trasparenza AI (AI Act). */
+  /**
+   * Fonte itinerario (A2): oggi gli itinerari sono scritti a mano dalla redazione.
+   * Non dichiarare generazione AI finché non è vera.
+   */
+  itinerarySource:
+    'Itinerario preparato dalla redazione Noivia. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
+  /** @deprecated Alias A2 — preferire itinerarySource. */
   aiGenerated:
-    'Itinerario generato/assistito da AI. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
+    'Itinerario preparato dalla redazione Noivia. Verifica sempre orari, prezzi e disponibilità con il fornitore.',
   /** Responsabilità. */
   responsibility:
     'Noivia fornisce account, gruppo e itinerario. Esecuzione, cancellazioni e rimborsi di ogni servizio sono del fornitore.',
