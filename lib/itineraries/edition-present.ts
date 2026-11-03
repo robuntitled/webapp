@@ -39,12 +39,18 @@ export function editionScarcity(input: {
         : `${enrolled} iscritti al gruppo`
       : '';
 
-  // A6: niente «Gruppo confermato» deciso da Noivia — solo formazione / iscritti.
+  // A6 / Legale §L2.3: vietato «Gruppo confermato» deciso da Noivia.
+  // Testi validati: formazione / «Il gruppo ha raggiunto {n} iscritti».
   if (status === 'formed' || confirmed >= min) {
     return {
-      label: 'Gruppo in formazione',
+      label:
+        enrolled > 0
+          ? enrolled === 1
+            ? 'Il gruppo ha raggiunto 1 iscritto'
+            : `Il gruppo ha raggiunto ${enrolled} iscritti`
+          : 'Gruppo in formazione',
       variant: 'formed',
-      sublabel: enrolledLabel,
+      sublabel: '',
     };
   }
   if (days <= 21 && days >= 0) {

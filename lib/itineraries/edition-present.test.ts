@@ -36,7 +36,7 @@ describe('edition present', () => {
     assertNoForbiddenCopy(info.sublabel);
   });
 
-  it('A6: formed threshold uses neutral formazione copy, not Gruppo confermato', () => {
+  it('A6: formed threshold uses Legale §L2.3 iscritti wording, not Gruppo confermato', () => {
     const info = editionScarcity({
       confirmed_count: 4,
       min_confirmed: 4,
@@ -45,9 +45,8 @@ describe('edition present', () => {
       interested_count: 1,
     });
     expect(info.variant).toBe('formed');
-    expect(info.label).toBe('Gruppo in formazione');
+    expect(info.label).toBe('Il gruppo ha raggiunto 5 iscritti');
     expect(info.label).not.toMatch(/confermato/i);
-    expect(info.sublabel).toMatch(/iscritti al gruppo/);
     assertNoForbiddenCopy(info.label);
   });
 

@@ -4,12 +4,16 @@ import {
   getAllegatoBLinkedDraftCopy,
 } from '@/lib/legal/allegato-b-linked';
 
-describe('A7 Allegato B draft', () => {
+describe('A7 Allegato B draft (nuovo-flusso-legale §L1.4)', () => {
   it('marks copy as lawyer-review draft and keeps LEGAL placeholders', () => {
     const copy = getAllegatoBLinkedDraftCopy();
     expect(copy.banner).toBe(ALLEGATO_B_DRAFT_BANNER);
     expect(copy.banner).toMatch(/BOZZA/i);
-    expect(copy.paragraphs.join(' ')).toMatch(/servizio turistico collegato/i);
-    expect(copy.paragraphs.join(' ')).toMatch(/LEGAL_|da definire|TODO LEGAL_/i);
+    expect(copy.title).toMatch(/servizi turistici collegati/i);
+    const body = copy.paragraphs.join(' ');
+    expect(body).toMatch(/NON beneficerai dei diritti applicabili ai pacchetti/i);
+    expect(body).toMatch(/servizio turistico collegato/i);
+    expect(body).toMatch(/insolvenza/i);
+    expect(body).toMatch(/LEGAL_|da definire|TODO LEGAL_/i);
   });
 });
