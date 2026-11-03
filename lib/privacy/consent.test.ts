@@ -7,8 +7,8 @@ describe('privacy consent', () => {
     const adult = new Date(2000, 0, 1);
     const child = new Date();
     child.setFullYear(child.getFullYear() - 10);
-    expect(isMinimumAge(adult, 14)).toBe(true);
-    expect(isMinimumAge(child, 14)).toBe(false);
+    expect(isMinimumAge(adult, 18)).toBe(true);
+    expect(isMinimumAge(child, 18)).toBe(false);
   });
 
   it('genera campi consenso privacy con versione', () => {

@@ -52,7 +52,8 @@ const SCARCITY_STYLES = {
   open: 'bg-primary text-white',
   warming: 'bg-primary text-white',
   closing: 'bg-[var(--color-brand-dark)] text-white',
-  formed: 'bg-emerald-600 text-white',
+  formed: 'bg-slate-700 text-white',
+  comingSoon: 'bg-slate-600 text-white',
 } as const;
 
 function durationLabel(days: number | null): string | null {
@@ -81,7 +82,11 @@ export function EditionCard({
   carousel?: boolean;
 }) {
   const destination = tpl?.destination_name ?? ed.template_id;
-  const badgeLabel = editionBadgeDisplay(scarcity, 0);
+  const comingSoon = Boolean(ed.coming_soon);
+  const badgeLabel = comingSoon ? 'In arrivo' : editionBadgeDisplay(scarcity, 0);
+  const badgeStyle = comingSoon
+    ? SCARCITY_STYLES.comingSoon
+    : SCARCITY_STYLES[scarcity.variant];
   const participants = editionParticipantsLabel({
     interested_count: ed.interested_count,
     confirmed_count: ed.confirmed_count,
@@ -93,15 +98,20 @@ export function EditionCard({
     days
   );
 
-  return (
-    <div className="h-full">
-      <Link
-        href={`/partenze/${ed.id}`}
-        className={cn(
-          'flex h-full w-full cursor-pointer flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
-          highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
-        )}
-      >
+  const cardClass = cn(
+    'flex h-full w-full flex-col rounded-2xl border bg-white shadow-sm transition',
+    comingSoon
+      ? 'cursor-default border-slate-200 opacity-95'
+      : 'cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+    !comingSoon && highlight
+      ? 'border-accent/40 ring-1 ring-accent/20'
+      : !comingSoon
+        ? 'border-slate-200 hover:border-primary/30'
+        : null
+  );
+
+  const inner = (
+    <>
       <div
         className={cn(
           'relative w-full shrink-0 overflow-hidden rounded-t-2xl',
@@ -118,7 +128,7 @@ export function EditionCard({
         <span
           className={cn(
             'absolute right-3 top-3 rounded-full px-2.5 py-1 text-[clamp(0.65rem,0.5vw+0.58rem,0.72rem)] font-semibold leading-tight tracking-wide shadow-md',
-            SCARCITY_STYLES[scarcity.variant]
+            badgeStyle
           )}
         >
           {badgeLabel}
@@ -184,13 +194,19 @@ export function EditionCard({
           ) : null}
         </div>
 
-        {participants && !dense ? (
+        {comingSoon && !dense ? (
+          <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-600">
+            Iscrizioni chiuse finché non c’è un tour operator partner.
+          </p>
+        ) : null}
+
+        {participants && !dense && !comingSoon ? (
           <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-700">
             {participants}
           </p>
         ) : null}
 
-        {scarcity.sublabel && !dense ? (
+        {scarcity.sublabel && !dense && !comingSoon ? (
           <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-600">
             {scarcity.sublabel}
           </p>
@@ -203,12 +219,30 @@ export function EditionCard({
         ) : null}
 
         {!dense && !compact ? (
-          <span className="mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] bg-primary px-3 text-sm font-semibold text-white">
-            Scopri
+          <span
+            className={cn(
+              'mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] px-3 text-sm font-semibold text-white',
+              comingSoon ? 'bg-slate-500' : 'bg-primary'
+            )}
+          >
+            {comingSoon ? 'In arrivo' : 'Scopri'}
           </span>
         ) : null}
       </div>
-      </Link>
+    </>
+  );
+
+  return (
+    <div className="h-full">
+      {comingSoon ? (
+        <div className={cardClass} aria-label={`${destination} — In arrivo`}>
+          {inner}
+        </div>
+      ) : (
+        <Link href={`/partenze/${ed.id}`} className={cardClass}>
+          {inner}
+        </Link>
+      )}
     </div>
   );
 }

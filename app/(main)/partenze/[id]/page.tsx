@@ -103,6 +103,7 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
   const members = await listEditionMembers(id, { withRatings: true });
   const dateFrom = String(edition.date_from).slice(0, 10);
   const dateTo = String(edition.date_to).slice(0, 10);
+  const comingSoon = Boolean(edition.coming_soon);
 
   return (
     <TripWorkspace
@@ -113,7 +114,8 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
       editionType={edition.edition_type}
       members={members}
       isMember={false}
-      canJoin
+      canJoin={!comingSoon}
+      comingSoon={comingSoon}
       backHref="/gruppi"
       backLabel="Torna ai gruppi"
       initialTab={tab}

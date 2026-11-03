@@ -14,6 +14,10 @@ import type { EditionMemberCard } from '@/lib/itineraries/bookings';
 import { canReusePrivateEditionForUser } from '@/lib/itineraries/private-edition';
 import type { EditionStatus, EditionType } from '@/lib/itineraries/types';
 import { getUserRatingSummaries } from '@/lib/data/user-ratings';
+import {
+  EDITION_COMING_SOON_JOIN_ERROR,
+  isEditionComingSoon,
+} from '@/lib/itineraries/edition-joinability';
 
 export type { EditionMemberCard };
 
@@ -31,6 +35,8 @@ export type EditionRow = {
   title?: string | null;
   confirmed_count?: number;
   interested_count?: number;
+  /** A4: senza tour operator → In arrivo (solo codice). */
+  coming_soon?: boolean;
 };
 
 export type EditionHost = {
@@ -88,10 +94,16 @@ export async function listJoinableEditions(templateId?: string): Promise<Edition
           .eq('edition_id', row.id)
           .eq('status', 'interested'),
       ]);
+      const comingSoon = isEditionComingSoon({
+        template_id: row.template_id,
+        date_from: String(row.date_from),
+        edition_type: row.edition_type,
+      });
       return {
         ...row,
         confirmed_count: confirmed ?? 0,
         interested_count: interested ?? 0,
+        coming_soon: comingSoon,
       };
     })
   );
@@ -118,6 +130,12 @@ function fallbackOfficial(templateId?: string): EditionRow[] {
     status: 'open' as const,
     invite_token: null,
     confirmed_count: 0,
+    coming_soon: isEditionComingSoon({
+      template_id: s.template_id,
+      date_from: s.date_from,
+      edition_type: 'official',
+      tourOperatorId: s.tourOperatorId,
+    }),
   }));
 }
 
@@ -155,10 +173,16 @@ export async function getEdition(id: string): Promise<EditionRow | null> {
           .eq('edition_id', id)
           .eq('status', 'interested'),
       ]);
+      const fb = fallback.data as EditionRow;
       return {
-        ...(fallback.data as EditionRow),
+        ...fb,
         confirmed_count: confirmed ?? 0,
         interested_count: interested ?? 0,
+        coming_soon: isEditionComingSoon({
+          template_id: fb.template_id,
+          date_from: String(fb.date_from),
+          edition_type: fb.edition_type,
+        }),
       };
     }
     return null;
@@ -176,10 +200,16 @@ export async function getEdition(id: string): Promise<EditionRow | null> {
       .eq('edition_id', id)
       .eq('status', 'interested'),
   ]);
+  const row = data as EditionRow;
   return {
-    ...(data as EditionRow),
+    ...row,
     confirmed_count: confirmed ?? 0,
     interested_count: interested ?? 0,
+    coming_soon: isEditionComingSoon({
+      template_id: row.template_id,
+      date_from: String(row.date_from),
+      edition_type: row.edition_type,
+    }),
   };
 }
 
@@ -500,6 +530,15 @@ export async function joinEdition(input: { userId: string; editionId: string }) 
   }
   if (edition.status === 'closed' || edition.status === 'locked') {
     return { error: 'Edizione chiusa.' };
+  }
+  if (
+    isEditionComingSoon({
+      template_id: edition.template_id,
+      date_from: String(edition.date_from),
+      edition_type: edition.edition_type,
+    })
+  ) {
+    return { error: EDITION_COMING_SOON_JOIN_ERROR };
   }
 
   const existing = await findPracticeForEdition(input.userId, edition.id);

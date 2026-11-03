@@ -33,6 +33,7 @@ export default async function GruppiPage() {
         interested_count: e.interested_count ?? 0,
         status: e.status,
         edition_type: e.edition_type,
+        coming_soon: e.coming_soon ?? false,
       }))}
     />
   );

@@ -18,6 +18,7 @@ import {
   getCheckoutReturnHref,
 } from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
+import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
 import { HotelRateDisclosures } from '@/components/travel/HotelRateDisclosures';
 import { Button } from '@/components/ui/button';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
@@ -415,6 +416,7 @@ export function HotelCheckoutClient({
                 />
               </div>
             </div>
+            <AllegatoBLinkedNotice />
             <Button
               type="button"
               disabled={submitting}
@@ -440,6 +442,7 @@ export function HotelCheckoutClient({
               />
             }
           >
+            <AllegatoBLinkedNotice />
             {paymentReturnUrl ? (
               <LiteApiPaymentWidget
                 key={payment.secretKey}
@@ -530,6 +533,7 @@ export function HotelCheckoutClient({
             />
           </div>
           <BookingComplianceNote showMerchantOfRecord showHotelServiceFee />
+          <AllegatoBLinkedNotice compact />
         </aside>
       ) : null}
     </div>

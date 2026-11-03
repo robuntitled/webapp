@@ -36,14 +36,18 @@ describe('edition present', () => {
     assertNoForbiddenCopy(info.sublabel);
   });
 
-  it('shows formed when threshold met', () => {
+  it('A6: formed threshold uses neutral formazione copy, not Gruppo confermato', () => {
     const info = editionScarcity({
       confirmed_count: 4,
       min_confirmed: 4,
       date_from: '2026-12-01',
       status: 'formed',
+      interested_count: 1,
     });
     expect(info.variant).toBe('formed');
+    expect(info.label).toBe('Gruppo in formazione');
+    expect(info.label).not.toMatch(/confermato/i);
+    expect(info.sublabel).toMatch(/iscritti al gruppo/);
     assertNoForbiddenCopy(info.label);
   });
 
