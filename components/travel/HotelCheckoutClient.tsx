@@ -32,6 +32,7 @@ import {
   saveHotelPaymentPending,
   type HotelOfferDraft,
 } from '@/lib/travel/hotel-offer-draft';
+import { ensureHotelPracticeOnCheckout } from '@/lib/travel/ensure-trip-for-checkout';
 
 type Step = 'details' | 'payment' | 'done';
 
@@ -195,34 +196,44 @@ export function HotelCheckoutClient({
   );
 
   useEffect(() => {
-    const d = loadHotelOfferDraft();
-    setDraft(d);
+    let cancelled = false;
+    async function boot() {
+      const practiceId = await ensureHotelPracticeOnCheckout().catch(() => null);
+      if (cancelled) return;
+      const d = loadHotelOfferDraft();
+      setDraft(practiceId && d && !d.practiceId ? { ...d, practiceId } : d);
 
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const paid = params.get('paid') === '1';
-    const tid = params.get('tid');
-    const pending = loadHotelPaymentPending();
-    if (pending) {
-      setPayment(pending);
-      setFirstName(pending.holder.firstName);
-      setLastName(pending.holder.lastName);
-      setEmail(pending.holder.email);
-      setGuestFirstName(pending.guest.firstName);
-      setGuestLastName(pending.guest.lastName);
-      setStep('payment');
-      const redirected =
-        params.get('redirect_status') === 'succeeded' || Boolean(params.get('payment_intent'));
-      if ((paid && (!tid || tid === pending.transactionId)) || redirected) {
-        void finalizeBooking(pending.prebookId, pending.transactionId, {
-          firstName: pending.holder.firstName,
-          lastName: pending.holder.lastName,
-          email: pending.holder.email,
-          guestFirstName: pending.guest.firstName,
-          guestLastName: pending.guest.lastName,
-        });
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const paid = params.get('paid') === '1';
+      const tid = params.get('tid');
+      const pending = loadHotelPaymentPending();
+      if (pending) {
+        setPayment(pending);
+        setFirstName(pending.holder.firstName);
+        setLastName(pending.holder.lastName);
+        setEmail(pending.holder.email);
+        setGuestFirstName(pending.guest.firstName);
+        setGuestLastName(pending.guest.lastName);
+        setStep('payment');
+        const redirected =
+          params.get('redirect_status') === 'succeeded' ||
+          Boolean(params.get('payment_intent'));
+        if ((paid && (!tid || tid === pending.transactionId)) || redirected) {
+          void finalizeBooking(pending.prebookId, pending.transactionId, {
+            firstName: pending.holder.firstName,
+            lastName: pending.holder.lastName,
+            email: pending.holder.email,
+            guestFirstName: pending.guest.firstName,
+            guestLastName: pending.guest.lastName,
+          });
+        }
       }
     }
+    void boot();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -232,6 +243,14 @@ export function HotelCheckoutClient({
       toast.error('Compila nome, cognome ed email');
       return;
     }
+    const practiceId =
+      draft.practiceId ?? (await ensureHotelPracticeOnCheckout().catch(() => null));
+    if (!practiceId) {
+      toast.error('Crea prima il viaggio da questo hotel, poi paga.');
+      return;
+    }
+    if (!draft.practiceId) setDraft({ ...draft, practiceId });
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/liteapi/hotels/prebook', {
@@ -240,7 +259,7 @@ export function HotelCheckoutClient({
         credentials: 'same-origin',
         body: JSON.stringify({
           offerId: draft.offerId,
-          practiceId: draft.practiceId,
+          practiceId,
         }),
       });
       const data = (await res.json()) as {

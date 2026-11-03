@@ -5,7 +5,12 @@ import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookHotel } from '@/lib/liteapi/hotel-booking';
 import { confirmParticipantHotel } from '@/lib/data/trip-commitments';
-import { getPractice, savePracticeHotelBooking } from '@/lib/data/practices';
+import {
+  createPracticeFromHotelSearch,
+  getPractice,
+  savePracticeHotelBooking,
+} from '@/lib/data/practices';
+import { practiceDestinationLabel } from '@/lib/itineraries/free-trip';
 import { checkHotelEligibility } from '@/lib/data/hotel-eligibility';
 import {
   BOOKING_RECONCILIATION_USER_MESSAGE,
@@ -260,26 +265,96 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      // No practice/snapshot — orphan row for support
-      reconciliationPending = true;
-      await persistRecon({
-        userId: session.user.id,
-        practiceId: practiceId ?? null,
-        kind: 'hotel',
-        providerBookingId: result.bookingId,
-        providerBookingRef: result.bookingRef,
-        providerStatus: result.status ?? 'orphan_booking',
-        amountEur: amounts.amountEur,
-        currency: amounts.currency,
-        payload: {
-          orphan: true,
-          prebookId,
-          transactionId,
-          snapshot: snapshot ?? null,
-          offerId: amounts.offerId,
-        },
-        lastError: 'orphan_booking_no_practice',
-      });
+      // Fase 1: niente prenotazioni orfane — crea/aggancia un viaggio da hotel.
+      let attached = false;
+      if (snapshot) {
+        const created = await createPracticeFromHotelSearch({
+          userId: session.user.id,
+          seed: {
+            city: snapshot.city ?? snapshot.hotelName,
+            checkin: snapshot.checkin ?? new Date().toISOString().slice(0, 10),
+            checkout:
+              snapshot.checkout ??
+              snapshot.checkin ??
+              new Date().toISOString().slice(0, 10),
+          },
+        });
+        if ('practice' in created) {
+          const recap: HotelBookingRecap = {
+            bookingId: result.bookingId,
+            bookingRef: result.bookingRef,
+            hotelName: snapshot.hotelName,
+            city: snapshot.city ?? null,
+            address: snapshot.address ?? null,
+            roomName: snapshot.roomName ?? null,
+            checkin: snapshot.checkin ?? null,
+            checkout: snapshot.checkout ?? null,
+            amountEur: amounts.amountEur,
+            currency: amounts.currency ?? 'EUR',
+            prebookId,
+            transactionId,
+            bookedAt: new Date().toISOString(),
+          };
+          const saveResult = await withSaveRetry('hotels/book orphan→practice', () =>
+            savePracticeHotelBooking({
+              practiceId: created.practice.id,
+              userId: session.user.id,
+              recap,
+            })
+          );
+          if (saveResult.ok && saveResult.value && 'practice' in saveResult.value) {
+            const attachedPractice = saveResult.value.practice;
+            savedPracticeId = attachedPractice.id;
+            attached = true;
+            const email = session.user.email;
+            if (email) {
+              const dest =
+                findItineraryTemplate(attachedPractice.template_id)?.destination_name ??
+                practiceDestinationLabel({
+                  destinationLabel: attachedPractice.destination_label,
+                  destinationIata: attachedPractice.destination_iata,
+                  templateId: attachedPractice.template_id,
+                });
+              after(() =>
+                sendBookingConfirmationEmail({
+                  to: email,
+                  kind: 'hotel',
+                  destinationName: dest,
+                  practiceId: attachedPractice.id,
+                  bookingRef: result.bookingRef,
+                  amountEur: recap.amountEur,
+                  currency: recap.currency,
+                  hotel: recap,
+                }).catch((err) =>
+                  console.error('[hotels/book] email fail orphan-attach', err)
+                )
+              );
+            }
+          }
+        }
+      }
+
+      if (!attached) {
+        reconciliationPending = true;
+        await persistRecon({
+          userId: session.user.id,
+          practiceId: practiceId ?? null,
+          kind: 'hotel',
+          providerBookingId: result.bookingId,
+          providerBookingRef: result.bookingRef,
+          providerStatus: result.status ?? 'orphan_booking',
+          amountEur: amounts.amountEur,
+          currency: amounts.currency,
+          payload: {
+            orphan: true,
+            prebookId,
+            transactionId,
+            snapshot: snapshot ?? null,
+            offerId: amounts.offerId,
+          },
+          lastError: 'orphan_booking_no_practice',
+        });
+      }
     }
 
     return NextResponse.json({

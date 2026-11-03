@@ -4,6 +4,7 @@ import { TripWorkspace } from '@/components/itineraries/workspace/TripWorkspace'
 import { getPractice } from '@/lib/data/practices';
 import { getEdition, listEditionMembers } from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { practiceDestinationLabel } from '@/lib/itineraries/free-trip';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -17,8 +18,7 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
   const { tab, step, stay } = await searchParams;
   const practice = await getPractice(id, session.user.id);
   if (!practice) notFound();
-  const template = findItineraryTemplate(practice.template_id);
-  if (!template) notFound();
+  const template = findItineraryTemplate(practice.template_id) ?? null;
   const edition = practice.edition_id ? await getEdition(practice.edition_id) : null;
   const members = practice.edition_id
     ? await listEditionMembers(practice.edition_id, { withRatings: true })
@@ -36,6 +36,13 @@ export default async function PraticaPage({ params, searchParams }: PageProps) {
   return (
     <TripWorkspace
       template={template}
+      destinationName={practiceDestinationLabel({
+        templateName: template?.destination_name,
+        destinationLabel: practice.destination_label,
+        destinationIata: practice.destination_iata,
+        templateId: practice.template_id,
+      })}
+      destinationSlug={template?.destination_slug ?? practice.destination_iata ?? 'viaggio'}
       dateFrom={String(practice.date_from).slice(0, 10)}
       dateTo={String(practice.date_to).slice(0, 10)}
       practice={practice}

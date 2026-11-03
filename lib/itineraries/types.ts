@@ -64,7 +64,8 @@ export type PracticeStatus = 'draft' | 'confirmed' | 'preparing' | 'ready' | 'ca
 export type PracticeRow = {
   id: string;
   user_id: string;
-  template_id: string;
+  /** M2: può essere null o `viaggio-libero` se senza itinerario. */
+  template_id: string | null;
   edition_id: string | null;
   mode: TravelMode;
   date_from: string;
@@ -73,9 +74,16 @@ export type PracticeRow = {
   flight_confirmed_at: string | null;
   hotel_confirmed_at: string | null;
   activity_confirmed_at: string | null;
+  /** Legacy: primo / unico volo (pre-M1). */
   flight_booking?: import('./bookings').FlightBookingRecap | null;
+  /** M1: elenco voli (quando la migrazione è applicata). */
+  flight_bookings?: import('./bookings').FlightBookingRecap[] | null;
   hotel_bookings?: import('./bookings').HotelBookingRecap[] | null;
   activity_bookings?: import('./bookings').ActivityBookingRecap[] | null;
+  /** M2: tratte pianificate (intenzioni). */
+  planned_legs?: import('./free-trip').PlannedLeg[] | null;
+  destination_label?: string | null;
+  destination_iata?: string | null;
 };
 
 export type EditionType = 'official' | 'private';

@@ -16,9 +16,11 @@ export function isInTrip(dateFrom: string, dateTo: string): boolean {
 }
 
 export function hasFlightBooked(
-  p: Pick<PracticeRow, 'flight_confirmed_at' | 'flight_booking'>
+  p: Pick<PracticeRow, 'flight_confirmed_at' | 'flight_booking' | 'flight_bookings'>
 ): boolean {
-  return Boolean(p.flight_confirmed_at || p.flight_booking);
+  if (p.flight_confirmed_at) return true;
+  if (p.flight_booking) return true;
+  return Array.isArray(p.flight_bookings) && p.flight_bookings.length > 0;
 }
 
 export function getPracticeLifecyclePhase(p: PracticeRow): PracticeLifecyclePhase {

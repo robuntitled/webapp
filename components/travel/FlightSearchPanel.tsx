@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { addDays, format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
@@ -14,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createTripFromFlightAction } from '@/actions/practices';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { Button } from '@/components/ui/button';
@@ -24,18 +26,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { accediHref } from '@/lib/auth/callback-url';
 import {
   placeDisplayValue,
   resolvePlaceExact,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
 import { resolveFlightDestinationIata } from '@/lib/travel/iata';
-import { saveFlightCheckoutDraft } from '@/lib/travel/flight-checkout-draft';
+import {
+  saveFlightCheckoutDraft,
+  type FlightCheckoutDraft,
+} from '@/lib/travel/flight-checkout-draft';
 import {
   loadSearchFormCache,
   saveSearchFormCache,
   type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
+import { saveTripFromSearchDraft } from '@/lib/travel/trip-from-search-draft';
 import { FlightOfferCard } from '@/components/travel/FlightOfferCard';
 import { cn } from '@/lib/utils';
 
@@ -220,6 +227,8 @@ export function FlightSearchPanel({
   practiceId,
 }: FlightSearchPanelProps) {
   const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
+  const [creatingTrip, startCreateTrip] = useTransition();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
 
   const [tripType, setTripType] = useState<TripType>(defaultTripType);
@@ -976,9 +985,15 @@ export function FlightSearchPanel({
                       : saved
                         ? 'Salvata'
                         : selectLabel ??
-                          (tripType === 'roundtrip' ? 'Scegli ritorno' : 'Seleziona')
+                          (!practiceId && !onOfferSelect
+                            ? 'Crea il viaggio con questo volo'
+                            : tripType === 'roundtrip'
+                              ? 'Scegli ritorno'
+                              : 'Seleziona')
                   }
                   onAction={() => {
+                    if (creatingTrip || authStatus === 'loading') return;
+
                     if (tripType === 'roundtrip' && pickStep === 'outbound') {
                       if (!o.hasReturn) {
                         toast.error(
@@ -1005,7 +1020,7 @@ export function FlightSearchPanel({
                       return;
                     }
 
-                    saveFlightCheckoutDraft({
+                    const checkoutBase = {
                       offerId: o.offerId,
                       price: o.price,
                       currency: o.currency,
@@ -1040,10 +1055,62 @@ export function FlightSearchPanel({
                           : null,
                       adults,
                       tripType,
-                      practiceId,
-                      createdAt: Date.now(),
+                    } as const;
+
+                    // Già collegato a un viaggio → checkout diretto.
+                    if (practiceId) {
+                      saveFlightCheckoutDraft({
+                        ...checkoutBase,
+                        practiceId,
+                        createdAt: Date.now(),
+                      });
+                      router.push('/prenota/voli/checkout');
+                      return;
+                    }
+
+                    // Fase 1: crea viaggio prima del pagamento.
+                    const seed = {
+                      origin: o.origin,
+                      destination: o.destination,
+                      departureAt: o.departureAt,
+                      returnDepartureAt: o.returnDepartureAt,
+                      returnDestination: o.returnDestination ?? o.origin,
+                      tripType,
+                    };
+
+                    if (!session?.user?.id) {
+                      const createdAt = Date.now();
+                      const checkout: FlightCheckoutDraft = {
+                        ...checkoutBase,
+                        createdAt,
+                      };
+                      saveFlightCheckoutDraft(checkout);
+                      saveTripFromSearchDraft({
+                        kind: 'flight',
+                        seed,
+                        checkout,
+                        createdAt,
+                      });
+                      toast.message(
+                        'Per salvare il viaggio ti chiederemo di creare un account.'
+                      );
+                      router.push(accediHref('/prenota/voli/checkout', 'register'));
+                      return;
+                    }
+
+                    startCreateTrip(async () => {
+                      const result = await createTripFromFlightAction({ seed });
+                      if ('error' in result) {
+                        toast.error(result.error);
+                        return;
+                      }
+                      saveFlightCheckoutDraft({
+                        ...checkoutBase,
+                        practiceId: result.practiceId,
+                        createdAt: Date.now(),
+                      });
+                      router.push('/prenota/voli/checkout');
                     });
-                    router.push('/prenota/voli/checkout');
                   }}
                 />
               </li>

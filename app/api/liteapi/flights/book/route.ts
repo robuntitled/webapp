@@ -7,9 +7,11 @@ import { bookFlight } from '@/lib/liteapi/flight-booking';
 import { confirmParticipantFlight } from '@/lib/data/trip-commitments';
 import {
   FLIGHT_ALREADY_BOOKED_ERROR,
+  createPracticeFromFlightSearch,
   getPractice,
   savePracticeFlightBooking,
 } from '@/lib/data/practices';
+import { practiceDestinationLabel } from '@/lib/itineraries/free-trip';
 import {
   BOOKING_RECONCILIATION_USER_MESSAGE,
   recordBookingReconciliation,
@@ -229,25 +231,99 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      reconciliationPending = true;
-      await persistRecon({
-        userId: session.user.id,
-        practiceId: practiceId ?? null,
-        kind: 'flight',
-        providerBookingId: result.bookingId,
-        providerBookingRef: result.bookingRef,
-        providerStatus: result.status ?? 'orphan_booking',
+      // Fase 1: niente prenotazioni orfane — crea/aggancia un viaggio dalla tratta.
+      const recap: FlightBookingRecap = {
+        bookingId: result.bookingId,
+        bookingRef: result.bookingRef,
+        status: result.status,
+        offerId: amounts.offerId ?? quote?.offerId ?? null,
         amountEur: amounts.amountEur,
-        currency: amounts.currency,
-        payload: {
-          orphan: true,
-          prebookId,
-          transactionId,
-          snapshot: snapshot ?? null,
-          offerId: amounts.offerId,
+        currency: amounts.currency ?? 'EUR',
+        prebookId,
+        transactionId,
+        outbound: snapshot?.outbound ?? {
+          origin: '???',
+          destination: '???',
+          airline: null,
         },
-        lastError: 'orphan_booking_no_practice',
-      });
+        returnLeg: snapshot?.returnLeg ?? null,
+        bookedAt: new Date().toISOString(),
+      };
+
+      let attached = false;
+      if (snapshot?.outbound) {
+        const created = await createPracticeFromFlightSearch({
+          userId: session.user.id,
+          seed: {
+            origin: snapshot.outbound.origin,
+            destination: snapshot.outbound.destination,
+            departureAt: snapshot.outbound.departureAt,
+            returnDepartureAt: snapshot.returnLeg?.departureAt,
+            returnDestination: snapshot.returnLeg?.destination,
+            tripType: snapshot.returnLeg ? 'roundtrip' : 'oneway',
+          },
+        });
+        if ('practice' in created) {
+          const saveResult = await withSaveRetry('flights/book orphan→practice', () =>
+            savePracticeFlightBooking({
+              practiceId: created.practice.id,
+              userId: session.user.id,
+              recap,
+            })
+          );
+          if (saveResult.ok && saveResult.value && 'practice' in saveResult.value) {
+            const attachedPractice = saveResult.value.practice;
+            savedPracticeId = attachedPractice.id;
+            attached = true;
+            const email = session.user.email;
+            if (email) {
+              const dest =
+                findItineraryTemplate(attachedPractice.template_id)?.destination_name ??
+                practiceDestinationLabel({
+                  destinationLabel: attachedPractice.destination_label,
+                  destinationIata: attachedPractice.destination_iata,
+                  templateId: attachedPractice.template_id,
+                });
+              after(() =>
+                sendBookingConfirmationEmail({
+                  to: email,
+                  kind: 'flight',
+                  destinationName: dest,
+                  practiceId: attachedPractice.id,
+                  bookingRef: result.bookingRef,
+                  amountEur: recap.amountEur,
+                  currency: recap.currency,
+                  flight: recap,
+                }).catch((err) =>
+                  console.error('[flights/book] email fail orphan-attach', err)
+                )
+              );
+            }
+          }
+        }
+      }
+
+      if (!attached) {
+        reconciliationPending = true;
+        await persistRecon({
+          userId: session.user.id,
+          practiceId: practiceId ?? null,
+          kind: 'flight',
+          providerBookingId: result.bookingId,
+          providerBookingRef: result.bookingRef,
+          providerStatus: result.status ?? 'orphan_booking',
+          amountEur: amounts.amountEur,
+          currency: amounts.currency,
+          payload: {
+            orphan: true,
+            prebookId,
+            transactionId,
+            snapshot: snapshot ?? null,
+            offerId: amounts.offerId,
+          },
+          lastError: 'orphan_booking_no_practice',
+        });
+      }
       if (tripId) {
         await confirmParticipantFlight({
           tripId,

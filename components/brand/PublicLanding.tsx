@@ -143,28 +143,78 @@ export function PublicLanding({
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-28 pt-6 text-center sm:pb-32">
           <div className="max-w-3xl motion-safe:animate-[nl-landing-in_700ms_ease_forwards]">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
+              {BRAND_NAME}
+            </p>
             <h1 className="font-display text-[clamp(1.75rem,5vw,3.25rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.25)]">
-              Il tuo viaggio, senza tour operator.
+              Il viaggio fai da te, senza fare tutto da solo.
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-[clamp(0.95rem,1.4vw,1.15rem)] leading-relaxed text-white/92">
-              Organizzalo con i tuoi amici o unisciti a un gruppo in partenza.
+              Parti dal volo, oppure lasciati ispirare da un itinerario pronto. Ogni servizio lo
+              scegli e lo paghi tu, uno dopo l&apos;altro.
             </p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Button
+                asChild
+                size="lg"
+                className="h-12 min-w-[12rem] rounded-[10px] bg-[var(--color-cta)] px-6 font-semibold text-white hover:bg-[#A93720]"
+              >
+                <Link href="/prenota/voli">Cerca voli</Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 min-w-[12rem] rounded-[10px] border-white/40 bg-white/10 px-6 font-semibold text-white hover:bg-white/20"
+              >
+                <Link href="/organizza">Lasciati ispirare</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Due percorsi equivalenti — stesso peso CTA (indigo); coral solo su Registrati */}
+      {/* Box ricerca: scheda Cerca hotel + seconda via Organizza / Gruppi */}
       <section className="nl-page relative z-20 -mt-24 w-full pb-4 sm:-mt-28">
-        <div className="grid gap-5 md:grid-cols-2 md:gap-6">
+        <div className="rounded-[18px] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-7">
+          <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-3">
+            <Link
+              href="/prenota/voli"
+              className="rounded-full bg-[var(--color-tint)] px-3.5 py-2 text-sm font-semibold text-primary"
+            >
+              Cerca voli
+            </Link>
+            <Link
+              href="/prenota/hotel"
+              className="rounded-full px-3.5 py-2 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-tint)] hover:text-primary"
+            >
+              Cerca hotel
+            </Link>
+          </div>
+          <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
+            Hai già meta e date? Cerca il volo (o l&apos;hotel), poi crea il viaggio da quel
+            risultato. Paghi un servizio alla volta.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button asChild className="rounded-[10px] bg-[var(--color-cta)] font-semibold text-white hover:bg-[#A93720]">
+              <Link href="/prenota/voli">Cerca voli</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-[10px]">
+              <Link href="/prenota/hotel">Cerca hotel</Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2 md:gap-6">
           <article className="flex flex-col gap-3.5 rounded-[18px] border border-[var(--color-border)] bg-white p-7 shadow-[var(--shadow-soft)]">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
               <Compass className="h-6 w-6" />
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight">
-              Organizza il tuo viaggio
+              Lasciati ispirare
             </h2>
             <p className="text-[var(--color-text-secondary)]">
-              Scegli meta, date e con chi. Il viaggio è tuo e decidi tu chi entra.
+              Parti da un itinerario pronto, adatta le date e organizza con chi vuoi.
             </p>
             <ul className="space-y-2.5">
               {ORGANIZZA_POINTS.map((t) => (
@@ -175,7 +225,7 @@ export function PublicLanding({
               ))}
             </ul>
             <Button asChild size="lg" className={pathBtnClass}>
-              <Link href="/organizza">Organizza →</Link>
+              <Link href="/organizza">Lasciati ispirare →</Link>
             </Button>
           </article>
 

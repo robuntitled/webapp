@@ -78,7 +78,10 @@ export function catalogBudgetBounds(): { min: number; max: number } {
   return { min: Math.min(...totals), max: Math.max(...totals) };
 }
 
-export function findItineraryTemplate(templateId: string): ItineraryTemplate | undefined {
+export function findItineraryTemplate(
+  templateId: string | null | undefined
+): ItineraryTemplate | undefined {
+  if (!templateId) return undefined;
   return PUBLISHED_TEMPLATES.find((t) => t.template_id === templateId);
 }
 

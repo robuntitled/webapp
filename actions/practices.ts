@@ -3,7 +3,13 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { createOrReuseDraftPractice, createPractice } from '@/lib/data/practices';
+import {
+  createOrReuseDraftPractice,
+  createPractice,
+  createPracticeFromFlightSearch,
+  createPracticeFromHotelSearch,
+} from '@/lib/data/practices';
+import type { FlightSearchSeed, HotelSearchSeed } from '@/lib/itineraries/from-search';
 import {
   createPrivateEdition,
   joinEdition,
@@ -120,6 +126,48 @@ export async function confirmActivityAction(
   revalidatePath(`/pratica/${practiceId}`);
   revalidatePath('/pratiche');
   return { ok: true as const };
+}
+
+/** Fase 1: crea viaggio in bozza da un risultato volo (prima del pagamento). */
+export async function createTripFromFlightAction(input: {
+  seed: FlightSearchSeed;
+}): Promise<{ practiceId: string } | { error: string }> {
+  const userId = await requireUser();
+  const origin = input.seed.origin?.trim();
+  const destination = input.seed.destination?.trim();
+  if (!origin || !destination) {
+    return { error: 'Origine e destinazione del volo mancanti.' };
+  }
+  const result = await createPracticeFromFlightSearch({
+    userId,
+    seed: { ...input.seed, origin, destination },
+  });
+  if ('error' in result) {
+    return { error: result.error ?? 'Impossibile creare il viaggio.' };
+  }
+  revalidatePath('/pratiche');
+  revalidatePath('/organizza');
+  return { practiceId: result.practice.id };
+}
+
+/** Fase 1: crea viaggio in bozza da un risultato hotel (prima del pagamento). */
+export async function createTripFromHotelAction(input: {
+  seed: HotelSearchSeed;
+}): Promise<{ practiceId: string } | { error: string }> {
+  const userId = await requireUser();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.seed.checkin) || !/^\d{4}-\d{2}-\d{2}$/.test(input.seed.checkout)) {
+    return { error: 'Date hotel non valide.' };
+  }
+  const result = await createPracticeFromHotelSearch({
+    userId,
+    seed: input.seed,
+  });
+  if ('error' in result) {
+    return { error: result.error ?? 'Impossibile creare il viaggio.' };
+  }
+  revalidatePath('/pratiche');
+  revalidatePath('/organizza');
+  return { practiceId: result.practice.id };
 }
 
 export async function renameEditionAction(input: {
