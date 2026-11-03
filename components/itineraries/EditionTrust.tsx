@@ -11,7 +11,7 @@ export function CuratedEditionBadge() {
       <div>
         <p className="text-sm font-semibold text-foreground">Partenza ufficiale curata</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Itinerario verificato, soglia gruppo reale e chat dopo il primo volo confermato.
+          La chat del gruppo si apre con il primo volo confermato.
         </p>
       </div>
     </div>

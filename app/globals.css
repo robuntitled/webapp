@@ -53,6 +53,7 @@
   --color-primary-hover: #1A1F52;
   --color-accent: #C9442A;
   --color-accent-hover: #A93720;
+  --color-cta: #C9442A;
   --color-tint: #EEF0FA;
   --color-lilac: #8A92E6;
   --color-bg: #FFFFFF;
@@ -62,7 +63,7 @@
   --color-text-secondary: #5D6275;
   --color-success: #15803D;
   --color-error: #DC2626;
-  --color-warning: #D97706;
+  --color-warning: #B45309;
 
   --radius: 0.625rem;
   --radius-btn: 10px;
@@ -81,8 +82,8 @@
   --secondary-foreground: #14182E;
   --muted: #EEF0FA;
   --muted-foreground: #5D6275;
-  --accent: #C9442A;
-  --accent-foreground: #FFFFFF;
+  --accent: #EEF0FA;
+  --accent-foreground: #232A6B;
   --destructive: #DC2626;
   --border: #E3E5EC;
   --input: #E3E5EC;
@@ -120,8 +121,8 @@
   --secondary-foreground: #EEF0FA;
   --muted: #2E3568;
   --muted-foreground: #A8AEC8;
-  --accent: #C9442A;
-  --accent-foreground: #FFFFFF;
+  --accent: #2E3568;
+  --accent-foreground: #EEF0FA;
   --destructive: #F87171;
   --border: #2E3568;
   --input: #2E3568;
@@ -130,7 +131,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   html {
     font-size: 16px;

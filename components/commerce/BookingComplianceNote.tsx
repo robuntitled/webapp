@@ -20,11 +20,6 @@ export function BookingComplianceNote({
       {showHotelServiceFee ? (
         <p>{COMPLIANCE_COPY.hotelServiceFeeIncluded}</p>
       ) : null}
-      {showMerchantOfRecord ? (
-        <p className="text-[10px] text-muted-foreground/80">
-          {COMPLIANCE_COPY.checkoutMerchantLegalTodo}
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -48,12 +48,14 @@ export async function POST(request: Request) {
     if (e instanceof LiteApiError) {
       console.error('[flights/verify]', e.status, e.message, e.body);
       const expired = e.status === 404;
+      const ref = `F-VF-${Date.now().toString(36).slice(-6)}`;
       return NextResponse.json(
         {
           error: expired
-            ? 'Offerta scaduta. Torna ai risultati e cerca di nuovo.'
-            : e.message,
+            ? 'Questa offerta non è più disponibile. Torna alla ricerca.'
+            : 'Il fornitore non ha risposto. Riprova tra poco.',
           code: expired ? 'offer_expired' : 'verify_error',
+          ref,
         },
         { status: expired ? 404 : e.status >= 400 && e.status < 600 ? e.status : 502 }
       );

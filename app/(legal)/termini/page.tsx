@@ -3,10 +3,15 @@ import { CompanyIdentity } from '@/components/legal/CompanyIdentity';
 import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
 import { LegalLink } from '@/components/legal/LegalLink';
 import { getCompanyProfile } from '@/lib/privacy/company';
+import { isPlaceholder } from '@/lib/privacy/is-placeholder';
 import { TERMS_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
+import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/brand/seo';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Termini di Servizio',
+  alternates: { canonical: '/termini' },
+  openGraph: pageOpenGraph('/termini', 'Termini di Servizio', 'Termini di utilizzo della piattaforma.'),
 };
 
 export default function TermsPage() {
@@ -121,10 +126,19 @@ export default function TermsPage() {
 
       <LegalSection title="10. Contatti">
         <p>
-          Per assistenza:{' '}
-          <LegalLink href={`mailto:${company.supportEmail}`}>{company.supportEmail}</LegalLink>. Per
-          questioni privacy:{' '}
-          <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>.
+          {!isPlaceholder(company.supportEmail) ? (
+            <>
+              Per assistenza:{' '}
+              <LegalLink href={`mailto:${company.supportEmail}`}>{company.supportEmail}</LegalLink>
+              .{' '}
+            </>
+          ) : null}
+          {!isPlaceholder(company.privacyEmail) ? (
+            <>
+              Per questioni privacy:{' '}
+              <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>.
+            </>
+          ) : null}
         </p>
       </LegalSection>
     </LegalDocument>

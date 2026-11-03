@@ -1,8 +1,4 @@
-/**
- * Source of truth brand UI + SEO.
- * Domini / LEGAL_* / email sender addresses: non toccare (fallback SITE_URL
- * resta flygetr.it finché noivia.it non è registrato).
- */
+/** Source of truth brand UI + SEO. */
 
 export const BRAND_NAME = 'Noivia' as const;
 
@@ -16,16 +12,22 @@ export const BRAND_SLOGAN = `noi, via! · ${BRAND_TAGLINE}` as const;
 export const BRAND_DESCRIPTION =
   `${BRAND_TAGLINE}. ${BRAND_HOME_SUBTITLE}` as const;
 
-/** Fallback finché NEXT_PUBLIC_APP_URL non punta al dominio Noivia. */
-const SITE_URL_FALLBACK = 'https://flygetr.it';
-
 /**
  * Canonical site origin (no trailing slash).
- * Env: NEXT_PUBLIC_APP_URL — non inventiamo il dominio Noivia.
+ * Precedence: NEXT_PUBLIC_APP_URL → VERCEL production → preview → localhost.
  */
 export function getSiteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || SITE_URL_FALLBACK;
-  return raw.replace(/\/$/, '');
+  const fromPublic = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (fromPublic) return fromPublic.replace(/\/$/, '');
+
+  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (prod) return `https://${prod.replace(/\/$/, '')}`;
+
+  const preview =
+    process.env.VERCEL_BRANCH_URL?.trim() || process.env.VERCEL_URL?.trim();
+  if (preview) return `https://${preview.replace(/\/$/, '')}`;
+
+  return 'http://localhost:3000';
 }
 
 /** Evaluated at module load for metadata / sitemap / robots. */

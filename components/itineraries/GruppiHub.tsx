@@ -18,17 +18,12 @@ const HOW = [
   {
     n: 1,
     title: 'Scegli una partenza',
-    body: 'Date, itinerario e budget orientativo sono già decisi.',
+    body: 'Guarda date, itinerario giorno per giorno e budget orientativo.',
   },
   {
     n: 2,
     title: 'Unisciti e conosci il gruppo',
-    body: 'Entra in chat e vedi chi parte con te.',
-  },
-  {
-    n: 3,
-    title: 'Prenota il tuo volo',
-    body: 'Il gruppo parte quando si raggiunge la soglia di voli confermati.',
+    body: 'Vedi chi si è iscritto. La chat del gruppo si apre con il primo volo confermato.',
   },
 ] as const;
 
@@ -56,12 +51,11 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
             Unisciti a un gruppo
           </h1>
           <p className="mt-2 text-base text-[var(--color-text-secondary)] sm:text-lg">
-            Partenze già fissate da altri viaggiatori. Scegli le date, unisciti e prenota il tuo
-            volo.
+            Partenze di gruppo per la Thailandia: guarda le date e unisciti al gruppo.
           </p>
         </header>
 
-        <ol className="grid gap-3 sm:grid-cols-3">
+        <ol className="grid gap-3 sm:grid-cols-2">
           {HOW.map((step) => (
             <li
               key={step.n}
@@ -102,11 +96,8 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
             <Users className="h-6 w-6 text-primary" />
             <p className="font-bold text-[var(--color-text)]">Nuove partenze in arrivo</p>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              Ti avvisiamo quando si apre un nuovo gruppo.
+              Quando ci saranno nuove partenze le trovi qui.
             </p>
-            <Button type="button" variant="outline" className="mt-auto w-fit rounded-[10px]" disabled>
-              Avvisami
-            </Button>
           </div>
           <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-5">
             <Compass className="h-6 w-6 text-primary" />
@@ -114,11 +105,7 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
             <p className="text-sm text-[var(--color-text-secondary)]">
               Organizza il tuo viaggio e rendilo pubblico come gruppo.
             </p>
-            {/* Unico coral della pagina Gruppi */}
-            <Button
-              asChild
-              className="mt-auto w-fit rounded-[10px] bg-accent hover:bg-[var(--color-accent-hover)]"
-            >
+            <Button asChild variant="outline" className="mt-auto w-fit rounded-[10px]">
               <Link href="/organizza">Organizza</Link>
             </Button>
           </div>

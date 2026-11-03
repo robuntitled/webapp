@@ -7,7 +7,7 @@ export function ComplianceNotes({ className }: { className?: string }) {
       <p>{COMPLIANCE_COPY.separateBooking}</p>
       <p>{COMPLIANCE_COPY.notAPackage}</p>
       <p>{COMPLIANCE_COPY.priceIsSumOfServices}</p>
-      <p>{COMPLIANCE_COPY.aiGenerated}</p>
+      <p>{COMPLIANCE_COPY.itinerarySource}</p>
       <p>{COMPLIANCE_COPY.responsibility}</p>
     </div>
   );

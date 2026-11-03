@@ -3,7 +3,7 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const BOOKING_RECONCILIATION_USER_MESSAGE =
-  'Prenotazione ricevuta, stiamo completando la registrazione' as const;
+  'Pagamento ricevuto, stiamo verificando la prenotazione. Ti scriviamo per email.' as const;
 
 export type BookingReconciliationKind = 'flight' | 'hotel';
 
@@ -148,4 +148,71 @@ export async function countPendingBookingReconciliations(): Promise<{
     return { count: 0, tableReady: true };
   }
   return { count: count ?? 0, tableReady: true };
+}
+
+export async function resolveBookingReconciliation(input: {
+  id: string;
+  adminUserId: string;
+  note: string;
+  status?: 'resolved' | 'abandoned';
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const note = input.note.trim();
+  if (!note) return { ok: false, error: 'Nota obbligatoria.' };
+  if (note.length > 2000) return { ok: false, error: 'Nota troppo lunga.' };
+
+  const status = input.status ?? 'resolved';
+  const now = new Date().toISOString();
+
+  const { data: existing, error: loadError } = await supabaseAdmin
+    .from('booking_reconciliation')
+    .select('id, payload, status')
+    .eq('id', input.id)
+    .maybeSingle();
+
+  if (loadError) {
+    if (tableMissing(loadError)) {
+      return { ok: false, error: 'Tabella riconciliazione non disponibile.' };
+    }
+    return { ok: false, error: loadError.message };
+  }
+  if (!existing) return { ok: false, error: 'Riga non trovata.' };
+
+  const prevPayload =
+    existing.payload && typeof existing.payload === 'object'
+      ? (existing.payload as Record<string, unknown>)
+      : {};
+
+  const payload = {
+    ...prevPayload,
+    resolvedNote: note,
+    resolvedBy: input.adminUserId,
+    resolvedAt: now,
+  };
+
+  const { error } = await supabaseAdmin
+    .from('booking_reconciliation')
+    .update({
+      status,
+      payload,
+      updated_at: now,
+      // Columns from migration 043 — ignored if missing until applied.
+      resolved_at: now,
+      resolved_by: input.adminUserId,
+      resolve_note: note,
+    })
+    .eq('id', input.id);
+
+  if (error) {
+    // Retry without 043 columns if they do not exist yet.
+    if (/resolved_at|resolved_by|resolve_note|column/i.test(error.message)) {
+      const retry = await supabaseAdmin
+        .from('booking_reconciliation')
+        .update({ status, payload, updated_at: now })
+        .eq('id', input.id);
+      if (retry.error) return { ok: false, error: retry.error.message };
+      return { ok: true };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { guardPaidApi } from '@/lib/api/request-guard';
 import { isLiteApiConfigured } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
-import { searchHotelRates } from '@/lib/liteapi/hotels';
+import { HotelSearchValidationError, searchHotelRates } from '@/lib/liteapi/hotels';
 import { searchPlaces } from '@/lib/places/nominatim';
 import { guessCountryCodeFromDestination } from '@/lib/travel/destination-hints';
 
@@ -93,8 +93,7 @@ export async function GET(request: Request) {
   if (!isLiteApiConfigured()) {
     return NextResponse.json(
       {
-        error:
-          'LITEAPI_KEY assente su Vercel. Aggiungi la Sandbox Key (Private) e fai Redeploy.',
+        error: 'Servizio hotel temporaneamente non disponibile. Riprova tra poco.',
         configured: false,
         code: 'missing_key',
       },
@@ -188,14 +187,17 @@ export async function GET(request: Request) {
       hotels,
     });
   } catch (e) {
+    if (e instanceof HotelSearchValidationError) {
+      return NextResponse.json({ error: e.message, code: 'invalid_dates' }, { status: 400 });
+    }
     if (e instanceof LiteApiError) {
       console.error('[liteapi hotels]', e.status, e.message, e.body);
       const isAuth = e.status === 401 || /unauthor/i.test(e.message);
       return NextResponse.json(
         {
           error: isAuth
-            ? 'Servizio hotel temporaneamente non disponibile. Verifica la chiave API (sandbox privata) e riprova dopo un redeploy.'
-            : e.message,
+            ? 'Servizio hotel temporaneamente non disponibile. Riprova tra poco.'
+            : 'Il fornitore non ha risposto. Riprova tra poco.',
           configured: true,
           code: isAuth ? 'liteapi_unauthorized' : 'liteapi_error',
         },

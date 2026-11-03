@@ -68,7 +68,7 @@ export function AdminCostsHub({ initial }: { initial: HubPayload }) {
   }, []);
 
   useEffect(() => {
-    const id = setInterval(() => void refresh(), 30_000);
+    const id = setInterval(() => void refresh(), 5 * 60_000);
     return () => clearInterval(id);
   }, [refresh]);
 
@@ -86,7 +86,7 @@ export function AdminCostsHub({ initial }: { initial: HubPayload }) {
             minute: '2-digit',
             second: '2-digit',
           })}{' '}
-          · refresh ogni 30s
+          · refresh ogni 5 min
         </p>
         <Button
           type="button"

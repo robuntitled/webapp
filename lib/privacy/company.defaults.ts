@@ -21,6 +21,6 @@ export const LEGAL_PLACEHOLDERS = {
   phone: '[Telefono da definire]',
   rea: '[Iscrizione REA / CCIAA da definire]',
   shareCapital: '[Capitale sociale da definire]',
-  /** Dominio Noivia non ancora cutover — fallback tecnico finché LEGAL_WEBSITE_URL / NEXT_PUBLIC_APP_URL. */
-  websiteUrl: 'https://flygetr.it',
+  /** Risolto in getCompanyProfile() via getSiteUrl() — non usare flygetr. */
+  websiteUrl: '[URL sito — vedi getSiteUrl]',
 } as const;

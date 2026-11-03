@@ -3,10 +3,15 @@ import { CompanyIdentity } from '@/components/legal/CompanyIdentity';
 import { LegalConfigNotice } from '@/components/legal/LegalConfigNotice';
 import { LegalLink } from '@/components/legal/LegalLink';
 import { getCompanyProfile } from '@/lib/privacy/company';
+import { isPlaceholder } from '@/lib/privacy/is-placeholder';
 import { PRIVACY_POLICY_VERSION, MIN_AGE_YEARS } from '@/lib/privacy/constants';
+import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/brand/seo';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Informativa Privacy',
+  alternates: { canonical: '/privacy' },
+  openGraph: pageOpenGraph('/privacy', 'Informativa Privacy', 'Informativa sul trattamento dei dati personali.'),
 };
 
 export default function PrivacyPage() {
@@ -89,10 +94,13 @@ export default function PrivacyPage() {
           <li>Esportare i tuoi dati da Impostazioni → I tuoi diritti GDPR</li>
           <li>Eliminare il tuo account da Impostazioni → Elimina account</li>
           <li>Revocare il consenso marketing in qualsiasi momento</li>
-          <li>
-            Scrivere a <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>{' '}
-            per altre richieste
-          </li>
+          {!isPlaceholder(company.privacyEmail) ? (
+            <li>
+              Scrivere a{' '}
+              <LegalLink href={`mailto:${company.privacyEmail}`}>{company.privacyEmail}</LegalLink>{' '}
+              per altre richieste
+            </li>
+          ) : null}
           <li>
             Proporre reclamo al Garante per la Protezione dei Dati Personali (garanteprivacy.it)
           </li>

@@ -12,12 +12,34 @@ export function isLiteApiConfigured(): boolean {
   return Boolean(getLiteApiKey());
 }
 
+export type LiteApiMarginInfo = {
+  margin: number;
+  /** true when env was missing/invalid and we fell back to 10 */
+  usedFallback: boolean;
+  /** true when margin is explicitly 0 (owner should confirm) */
+  isZero: boolean;
+  raw: string | null;
+};
+
 /** Markup % di default sulle tariffe (commissione tua). Override per request possibile. */
-export function getLiteApiDefaultMargin(): number {
-  const raw = process.env.LITEAPI_MARGIN?.trim();
-  if (!raw) return 10;
+export function parseLiteApiMargin(rawEnv?: string | null): LiteApiMarginInfo {
+  const raw = (rawEnv ?? process.env.LITEAPI_MARGIN)?.trim() || null;
+  if (!raw) {
+    return { margin: 10, usedFallback: true, isZero: false, raw };
+  }
   const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 && n <= 40 ? n : 10;
+  if (!Number.isFinite(n) || n < 0 || n > 40) {
+    console.warn('[liteapi] LITEAPI_MARGIN invalid, falling back to 10%', { raw });
+    return { margin: 10, usedFallback: true, isZero: false, raw };
+  }
+  if (n === 0) {
+    console.warn('[liteapi] LITEAPI_MARGIN is 0 — no service fee applied');
+  }
+  return { margin: n, usedFallback: false, isZero: n === 0, raw };
+}
+
+export function getLiteApiDefaultMargin(): number {
+  return parseLiteApiMargin().margin;
 }
 
 export function getLiteApiBaseUrl(): string {

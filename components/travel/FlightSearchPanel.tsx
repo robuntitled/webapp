@@ -615,7 +615,7 @@ export function FlightSearchPanel({
               onValueChange={setOriginQuery}
               onClearSelection={() => setOriginPlace(null)}
               onSelect={setOriginPlace}
-              placeholder="Milano, FCO, Italia…"
+              placeholder="Da dove parti? Es. Milano o MXP"
             />
 
             <div className="flex justify-center lg:pb-1">

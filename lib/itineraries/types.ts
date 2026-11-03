@@ -89,6 +89,11 @@ export type OfficialEditionSeed = {
   date_from: string;
   date_to: string;
   min_confirmed: number;
+  /**
+   * Tour operator partner (modello B). Assente/null = partenza «In arrivo», non iscrivibile (A4).
+   * Nessuna scrittura DB: solo codice/seed.
+   */
+  tourOperatorId?: string | null;
 };
 
 export type OfficialEditionCard = {
@@ -101,4 +106,6 @@ export type OfficialEditionCard = {
   interested_count?: number;
   status: string;
   edition_type?: 'official' | 'private';
+  /** A4: senza tour operator → In arrivo, non iscrivibile. */
+  coming_soon?: boolean;
 };

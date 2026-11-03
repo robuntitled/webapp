@@ -29,6 +29,18 @@ export function isApiMetricsEnabled(): boolean {
   return envFlag('API_METRICS', true);
 }
 
+/**
+ * A5: chat gruppo aperta all’iscrizione (membro attivo), invece che al primo volo.
+ * Default OFF = comportamento attuale (sblocco al primo volo confermato).
+ * Costante indipendente dall’env; override opzionale via CHAT_OPEN_AT_SIGNUP senza
+ * richiedere modifiche alle env di produzione.
+ */
+export const CHAT_OPEN_AT_SIGNUP_DEFAULT = false;
+
+export function isChatOpenAtSignup(): boolean {
+  return envFlag('CHAT_OPEN_AT_SIGNUP', CHAT_OPEN_AT_SIGNUP_DEFAULT);
+}
+
 /** TTL cache Places DB (giorni). 0 = mai scadere (legacy). Default 14. */
 export function placesCacheTtlDays(): number {
   const n = Number.parseInt(process.env.PLACES_CACHE_TTL_DAYS ?? '14', 10);

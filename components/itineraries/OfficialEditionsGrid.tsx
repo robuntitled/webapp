@@ -11,16 +11,14 @@ import {
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
+import { BRAND_NAME } from '@/lib/brand';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatEditionDateRange, formatItDate } from '@/lib/itineraries/dates';
 import {
   editionBadgeDisplay,
   editionBudgetOrientativeLabel,
-  editionFlightsThresholdLabel,
-  editionGroupHint,
   editionParticipantsLabel,
   editionScarcity,
-  editionThresholdProgress,
 } from '@/lib/itineraries/edition-present';
 import { cn } from '@/lib/utils';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
@@ -54,14 +52,8 @@ const SCARCITY_STYLES = {
   open: 'bg-primary text-white',
   warming: 'bg-primary text-white',
   closing: 'bg-[var(--color-brand-dark)] text-white',
-  formed: 'bg-emerald-600 text-white',
-} as const;
-
-const PROGRESS_STYLES = {
-  open: 'bg-primary',
-  warming: 'bg-primary',
-  closing: 'bg-[var(--color-brand-dark)]',
-  formed: 'bg-emerald-600',
+  formed: 'bg-slate-700 text-white',
+  comingSoon: 'bg-slate-600 text-white',
 } as const;
 
 function durationLabel(days: number | null): string | null {
@@ -75,7 +67,6 @@ export function EditionCard({
   cover,
   days,
   scarcity,
-  progress,
   highlight = false,
   compact = false,
   carousel = false,
@@ -85,23 +76,21 @@ export function EditionCard({
   cover: string;
   days: number | null;
   scarcity: ReturnType<typeof editionScarcity>;
-  progress: number;
   highlight?: boolean;
   compact?: boolean;
   /** Ancora più compatto per il carosello Viaggi privati. */
   carousel?: boolean;
 }) {
   const destination = tpl?.destination_name ?? ed.template_id;
-  const confirmed = ed.confirmed_count ?? 0;
-  const minConfirmed = ed.min_confirmed;
-  const spotsLeft = Math.max(0, minConfirmed - confirmed);
-  const badgeLabel = editionBadgeDisplay(scarcity, spotsLeft);
+  const comingSoon = Boolean(ed.coming_soon);
+  const badgeLabel = comingSoon ? 'In arrivo' : editionBadgeDisplay(scarcity, 0);
+  const badgeStyle = comingSoon
+    ? SCARCITY_STYLES.comingSoon
+    : SCARCITY_STYLES[scarcity.variant];
   const participants = editionParticipantsLabel({
     interested_count: ed.interested_count,
     confirmed_count: ed.confirmed_count,
   });
-  const flightsStatus = editionFlightsThresholdLabel(confirmed, minConfirmed);
-  const groupHint = editionGroupHint(confirmed, minConfirmed);
   const tripDuration = durationLabel(days);
   const dense = compact && carousel;
   const budgetLabel = editionBudgetOrientativeLabel(
@@ -109,15 +98,20 @@ export function EditionCard({
     days
   );
 
-  return (
-    <div className="h-full">
-      <Link
-        href={`/partenze/${ed.id}`}
-        className={cn(
-          'flex h-full w-full cursor-pointer flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
-          highlight ? 'border-accent/40 ring-1 ring-accent/20' : 'border-slate-200 hover:border-primary/30'
-        )}
-      >
+  const cardClass = cn(
+    'flex h-full w-full flex-col rounded-2xl border bg-white shadow-sm transition',
+    comingSoon
+      ? 'cursor-default border-slate-200 opacity-95'
+      : 'cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+    !comingSoon && highlight
+      ? 'border-accent/40 ring-1 ring-accent/20'
+      : !comingSoon
+        ? 'border-slate-200 hover:border-primary/30'
+        : null
+  );
+
+  const inner = (
+    <>
       <div
         className={cn(
           'relative w-full shrink-0 overflow-hidden rounded-t-2xl',
@@ -134,7 +128,7 @@ export function EditionCard({
         <span
           className={cn(
             'absolute right-3 top-3 rounded-full px-2.5 py-1 text-[clamp(0.65rem,0.5vw+0.58rem,0.72rem)] font-semibold leading-tight tracking-wide shadow-md',
-            SCARCITY_STYLES[scarcity.variant]
+            badgeStyle
           )}
         >
           {badgeLabel}
@@ -200,62 +194,23 @@ export function EditionCard({
           ) : null}
         </div>
 
-        {participants && !dense ? (
+        {comingSoon && !dense ? (
+          <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-600">
+            Iscrizioni chiuse finché non c’è un tour operator partner.
+          </p>
+        ) : null}
+
+        {participants && !dense && !comingSoon ? (
           <p className="text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)] leading-snug text-slate-700">
             {participants}
           </p>
         ) : null}
 
-        <section
-          className={cn(
-            'w-full border-t border-slate-100',
-            dense ? 'mt-0.5 space-y-1 pt-1.5' : compact ? 'mt-0.5 space-y-1.5 pt-2' : 'mt-1 space-y-2 pt-3'
-          )}
-          aria-labelledby={`group-status-${ed.id}`}
-        >
-          {!dense ? (
-            <p
-              id={`group-status-${ed.id}`}
-              className="text-[clamp(0.68rem,0.1vw+0.64rem,0.75rem)] font-semibold uppercase tracking-[0.14em] text-slate-600"
-            >
-              Soglia voli
-            </p>
-          ) : (
-            <p id={`group-status-${ed.id}`} className="sr-only">
-              Soglia voli
-            </p>
-          )}
-          <p
-            className={cn(
-              'font-medium leading-snug text-slate-800',
-              dense ? 'text-[0.78rem]' : 'text-[clamp(0.88rem,0.2vw+0.84rem,0.95rem)]'
-            )}
-          >
-            <span aria-hidden="true">✈ </span>
-            {flightsStatus}
+        {scarcity.sublabel && !dense && !comingSoon ? (
+          <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-600">
+            {scarcity.sublabel}
           </p>
-          <div
-            role="progressbar"
-            aria-valuenow={confirmed}
-            aria-valuemin={0}
-            aria-valuemax={Math.max(minConfirmed, 1)}
-            aria-label={flightsStatus}
-            className={cn('w-full rounded-full bg-slate-200', dense ? 'h-1.5' : 'h-2.5')}
-          >
-            <div
-              className={cn(
-                'h-full rounded-full transition-all',
-                PROGRESS_STYLES[scarcity.variant]
-              )}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          {!dense ? (
-            <p className="text-[clamp(0.78rem,0.15vw+0.74rem,0.85rem)] leading-snug text-slate-600">
-              {groupHint}
-            </p>
-          ) : null}
-        </section>
+        ) : null}
 
         {budgetLabel && !dense ? (
           <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] font-semibold leading-snug text-[var(--color-text)]">
@@ -264,12 +219,30 @@ export function EditionCard({
         ) : null}
 
         {!dense && !compact ? (
-          <span className="mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] bg-primary px-3 text-sm font-semibold text-white">
-            Scopri
+          <span
+            className={cn(
+              'mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] px-3 text-sm font-semibold text-white',
+              comingSoon ? 'bg-slate-500' : 'bg-primary'
+            )}
+          >
+            {comingSoon ? 'In arrivo' : 'Scopri'}
           </span>
         ) : null}
       </div>
-      </Link>
+    </>
+  );
+
+  return (
+    <div className="h-full">
+      {comingSoon ? (
+        <div className={cardClass} aria-label={`${destination} — In arrivo`}>
+          {inner}
+        </div>
+      ) : (
+        <Link href={`/partenze/${ed.id}`} className={cardClass}>
+          {inner}
+        </Link>
+      )}
     </div>
   );
 }
@@ -322,15 +295,19 @@ export function OfficialEditionsGrid({
         const days =
           durationFromDates(String(ed.date_from), String(ed.date_to)) ??
           durationFromId(ed.template_id, tpl?.duration_days);
-        const scarcity = editionScarcity(ed);
-        const progress = editionThresholdProgress(ed.confirmed_count ?? 0, ed.min_confirmed);
+        const scarcity = editionScarcity({
+          confirmed_count: ed.confirmed_count ?? 0,
+          min_confirmed: ed.min_confirmed,
+          date_from: String(ed.date_from).slice(0, 10),
+          status: ed.status,
+          interested_count: ed.interested_count,
+        });
         return {
           ed,
           tpl,
           dest,
           days,
           scarcity,
-          progress,
           cover: uniqueCover(slug || ed.template_id, i),
           name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',
@@ -414,8 +391,7 @@ export function OfficialEditionsGrid({
             Partenze aperte
           </h2>
           <p className="max-w-xl text-sm text-slate-600">
-            Pubbliche e aperte a tutti — unisciti, prenota il volo. Il viaggio parte alla soglia
-            del gruppo.
+            Partenze pubbliche: puoi unirti con un account {BRAND_NAME}.
           </p>
         </div>
         <div
@@ -428,7 +404,7 @@ export function OfficialEditionsGrid({
           </span>
           {(
             [
-              { id: 'conferme', label: 'Soglia voli' },
+              { id: 'conferme', label: 'Iscritti' },
               { id: 'partenza', label: 'Data di partenza' },
             ] as const
           ).map((opt) => {

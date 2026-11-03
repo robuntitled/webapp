@@ -29,6 +29,8 @@ export type HotelBookResult = {
   bookingId: string | null;
   bookingRef: string | null;
   status: string | null;
+  price: number | null;
+  currency: string | null;
   raw: unknown;
 };
 
@@ -158,6 +160,8 @@ export async function bookHotel(params: {
   const item = unwrapData(raw);
   const booking = asRecord(item?.booking) ?? item;
 
+  const priced = extractPrice(booking) ?? extractPrice(item);
+
   return {
     bookingId:
       toStr(item?.bookingId) ??
@@ -169,6 +173,8 @@ export async function bookHotel(params: {
       toStr(booking?.hotelConfirmationCode) ??
       toStr(booking?.confirmationCode),
     status: toStr(item?.status) ?? toStr(booking?.status),
+    price: priced.price,
+    currency: priced.currency,
     raw,
   };
 }

@@ -9,6 +9,7 @@ import {
   slotsForDay,
   type DaySlot,
 } from '@/lib/itineraries/day-slots';
+import { areaSegmentDisplayLabel } from '@/lib/itineraries/dates';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
 import { cn } from '@/lib/utils';
 
@@ -162,7 +163,7 @@ export function ItineraryExplorerWidget({ template }: { template: ItineraryTempl
           {day.area_segment ? (
             <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-500">
               <MapPin className="h-3.5 w-3.5" aria-hidden />
-              {day.area_segment}
+              {areaSegmentDisplayLabel(day.area_segment)}
             </span>
           ) : null}
         </div>

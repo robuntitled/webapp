@@ -75,7 +75,7 @@ export function CatalogHeroSearchBar({
   const priceLabel =
     value.priceMax != null
       ? `≤${value.priceMax >= 1000 ? `${Math.round(value.priceMax / 1000)}k` : value.priceMax}€`
-      : 'Prezzo';
+      : 'Budget orientativo';
 
   return (
     <form

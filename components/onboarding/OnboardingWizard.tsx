@@ -89,11 +89,21 @@ export function OnboardingWizard() {
         return;
       }
       sessionStorage.removeItem(STORAGE_KEY);
+      let next = result.nextPath;
+      try {
+        const saved = sessionStorage.getItem('nl-auth-callback');
+        if (saved && saved.startsWith('/') && !saved.startsWith('//')) {
+          next = saved;
+          sessionStorage.removeItem('nl-auth-callback');
+        }
+      } catch {
+        /* ignore */
+      }
       await update({
         onboardingCompleted: true,
         travelIntent: draft.intent,
       });
-      router.push(result.nextPath);
+      router.push(next);
       router.refresh();
     });
   };

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
+import { accediHref } from '@/lib/auth/callback-url';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { staysFromTemplate, formatItDate } from '@/lib/itineraries/dates';
 import { getStayBookingProgress, isStayBooked } from '@/lib/itineraries/stay-progress';
@@ -43,6 +44,8 @@ type TripWorkspaceProps = {
   members?: EditionMemberCard[];
   isMember?: boolean;
   canJoin?: boolean;
+  /** A4: partenza ufficiale senza tour operator. */
+  comingSoon?: boolean;
   backHref: string;
   backLabel: string;
   initialTab?: string | null;
@@ -61,6 +64,7 @@ export function TripWorkspace({
   members = [],
   isMember = Boolean(practice),
   canJoin = false,
+  comingSoon = false,
   backHref,
   backLabel,
   initialTab,
@@ -120,7 +124,7 @@ export function TripWorkspace({
   function joinTrip() {
     if (!editionId) return;
     if (!session?.user) {
-      router.push(`/accedi?callbackUrl=${encodeURIComponent(`/partenze/${editionId}`)}`);
+      router.push(accediHref(`/partenze/${editionId}`, 'register'));
       return;
     }
     startJoin(async () => {
@@ -152,11 +156,16 @@ export function TripWorkspace({
   ];
 
   const joinButton =
-    canJoin && !isMember ? (
+    comingSoon && !isMember ? (
+      <span className="inline-flex items-center rounded-full bg-slate-700 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
+        In arrivo
+      </span>
+    ) : canJoin && !isMember ? (
       <Button
         type="button"
+        variant="cta"
         size="sm"
-        className="rounded-full bg-accent px-5 font-semibold text-white shadow-lg shadow-accent/25 hover:bg-accent/90"
+        className="rounded-full px-5 font-semibold shadow-lg shadow-[var(--color-cta)]/25"
         disabled={pendingJoin}
         onClick={joinTrip}
       >
@@ -358,20 +367,32 @@ export function TripWorkspace({
             </div>
             {!canBookFlights ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
-                <p className="font-medium text-slate-800">Partecipa per prenotare i voli</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Unisciti al gruppo per sbloccare la ricerca voli.
-                </p>
-                {canJoin && !isMember ? (
-                  <Button
-                    type="button"
-                    className="mt-4 rounded-full"
-                    disabled={pendingJoin}
-                    onClick={joinTrip}
-                  >
-                    Partecipa
-                  </Button>
-                ) : null}
+                {comingSoon ? (
+                  <>
+                    <p className="font-medium text-slate-800">Partenza in arrivo</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Le iscrizioni si apriranno quando sarà collegato un tour operator partner.
+                      Non è possibile unirsi né prenotare ora.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium text-slate-800">Partecipa per prenotare i voli</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Unisciti al gruppo per sbloccare la ricerca voli.
+                    </p>
+                    {canJoin && !isMember ? (
+                      <Button
+                        type="button"
+                        className="mt-4 rounded-full"
+                        disabled={pendingJoin}
+                        onClick={joinTrip}
+                      >
+                        Partecipa
+                      </Button>
+                    ) : null}
+                  </>
+                )}
               </div>
             ) : flightBooked && practice ? (
               <BookingRecap practice={practice} section="flight" />

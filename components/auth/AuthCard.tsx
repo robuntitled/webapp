@@ -21,9 +21,9 @@ import { cn } from '@/lib/utils';
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
 
 const HIGHLIGHTS = [
-  { Icon: Map, text: 'Scegli un itinerario ufficiale, non un pacchetto' },
+  { Icon: Map, text: 'Parti da un itinerario pronto' },
   { Icon: Users, text: 'Parti da solo, con amici o in gruppo' },
-  { Icon: Plane, text: 'Ognuno prenota voli e hotel per conto proprio' },
+  { Icon: Plane, text: 'Voli e hotel li scegli e li paghi tu, servizio per servizio' },
 ] as const;
 
 export function AuthCard() {
@@ -55,8 +55,9 @@ export function AuthCard() {
           .then((r) => r.json())
           .then((data: { missing?: string[] }) => {
             if (data.missing?.length) {
+              console.error('[auth] OAuth config missing', data.missing);
               setError(
-                `Configurazione OAuth incompleta su Vercel. Mancano: ${data.missing.join(', ')}`
+                "L'accesso con Google o Facebook non è disponibile in questo momento. Usa la tua email."
               );
             }
           })
@@ -70,6 +71,13 @@ export function AuthCard() {
       '/onboarding'
     );
     setPostAuthPath(callback);
+    try {
+      if (callback && callback !== '/onboarding') {
+        sessionStorage.setItem('nl-auth-callback', callback);
+      }
+    } catch {
+      /* ignore */
+    }
 
     if (params.get('mode') === 'register') {
       setIsRegisterMode(true);
@@ -153,7 +161,7 @@ export function AuthCard() {
 
       if (TURNSTILE_SITE_KEY && !turnstileToken) {
         setError(
-          'Verifica anti-bot non disponibile o non completata. Riprova tra poco o aggiorna la pagina.'
+          'La verifica di sicurezza non è riuscita. Riprova tra poco o ricarica la pagina.'
         );
         setIsLoading(false);
         return;
@@ -180,7 +188,7 @@ export function AuthCard() {
           const errorText = await response.text();
           setTurnstileToken('');
           setTurnstileKey((k) => k + 1);
-          throw new Error(errorText || 'Qualcosa è andato storto');
+          throw new Error(errorText || 'Qualcosa non ha funzionato. Riprova tra poco.');
         }
 
         const data = (await response.json()) as {
@@ -215,7 +223,11 @@ export function AuthCard() {
           setError('Registrazione riuscita. Prova ad accedere dopo aver verificato l’email.');
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Errore imprevisto');
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : 'Qualcosa non ha funzionato. Riprova tra poco.'
+        );
       } finally {
         setIsLoading(false);
       }
@@ -267,7 +279,7 @@ export function AuthCard() {
         } catch {
           /* ignore */
         }
-        setError('Si è verificato un errore inaspettato.');
+        setError('Qualcosa non ha funzionato. Riprova tra poco.');
       } finally {
         setIsLoading(false);
       }
@@ -472,7 +484,7 @@ export function AuthCard() {
                   onError={() => {
                     setTurnstileToken('');
                     setError(
-                      'Verifica anti-bot non riuscita (dominio non autorizzato o rete). Tocca Riprova oppure chiedi di aggiungere questo host in Cloudflare Turnstile.'
+                      'Non siamo riusciti a completare la verifica di sicurezza. Tocca Riprova o ricarica la pagina.'
                     );
                   }}
                 />
@@ -485,7 +497,7 @@ export function AuthCard() {
                     setError('');
                   }}
                 >
-                  Riprova verifica anti-bot
+                  Riprova
                 </button>
               </div>
             )}
@@ -522,8 +534,9 @@ export function AuthCard() {
 
             <Button
               type="submit"
+              variant="cta"
               disabled={isLoading}
-              className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_10px_24px_-12px_rgba(249,115,22,0.65)]"
+              className="h-11 w-full rounded-xl text-base font-semibold"
             >
               {isLoading ? 'Un attimo…' : isRegisterMode ? 'Registrati' : 'Accedi'}
             </Button>

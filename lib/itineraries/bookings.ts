@@ -21,6 +21,9 @@ export type FlightBookingRecap = {
   offerId?: string | null;
   amountEur?: number | null;
   currency?: string | null;
+  /** Idempotency: LiteAPI prebook / payment transaction */
+  prebookId?: string | null;
+  transactionId?: string | null;
   outbound: FlightLegRecap;
   returnLeg: FlightLegRecap | null;
   bookedAt: string;
@@ -37,6 +40,8 @@ export type HotelBookingRecap = {
   checkout?: string | null;
   amountEur?: number | null;
   currency?: string | null;
+  prebookId?: string | null;
+  transactionId?: string | null;
   bookedAt: string;
 };
 
@@ -106,6 +111,31 @@ export function flightFingerprint(recap: FlightBookingRecap): string {
     r?.departureAt ?? '',
   ].join('|');
 }
+
+/** Stesso booking (idempotenza / sync stato), non un secondo volo diverso. */
+export function isSamePracticeFlightBooking(
+  existing: FlightBookingRecap,
+  next: FlightBookingRecap
+): boolean {
+  if (existing.bookingId && next.bookingId && existing.bookingId === next.bookingId) {
+    return true;
+  }
+  if (existing.prebookId && next.prebookId && existing.prebookId === next.prebookId) {
+    return true;
+  }
+  if (
+    existing.transactionId &&
+    next.transactionId &&
+    existing.transactionId === next.transactionId
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** A1: un solo flight_booking per pratica — blocco secondo acquisto senza migrazione M1. */
+export const FLIGHT_ALREADY_BOOKED_ERROR =
+  'Hai già un volo salvato su questo viaggio. Non è possibile prenotarne un secondo qui: il precedente resterebbe nascosto. Contatta l’assistenza se serve una modifica.';
 
 export type FlightStatusKind = 'pending' | 'confirmed' | 'failed' | 'cancelled' | 'unknown';
 

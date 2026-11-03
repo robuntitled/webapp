@@ -3,14 +3,18 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import {
+  FLIGHT_ALREADY_BOOKED_ERROR,
   flightFingerprint,
   flightStatusConfirmsSeat,
+  isSamePracticeFlightBooking,
   parseFlightStatus,
   type ActivityBookingRecap,
   type EditionPeerFlight,
   type FlightBookingRecap,
   type HotelBookingRecap,
 } from '@/lib/itineraries/bookings';
+
+export { FLIGHT_ALREADY_BOOKED_ERROR, isSamePracticeFlightBooking };
 import { datesForDuration } from '@/lib/itineraries/dates';
 import type { PracticeRow, PracticeStatus, TravelMode } from '@/lib/itineraries/types';
 
@@ -248,6 +252,14 @@ export async function savePracticeFlightBooking(input: {
   const current = await getPractice(input.practiceId, input.userId);
   if (!current) return { error: 'Pratica non trovata.' };
 
+  // A1: non sovrascrivere un volo già salvato con uno diverso (stesso booking = sync ok).
+  if (
+    current.flight_booking &&
+    !isSamePracticeFlightBooking(current.flight_booking, input.recap)
+  ) {
+    return { error: FLIGHT_ALREADY_BOOKED_ERROR };
+  }
+
   const kind = parseFlightStatus(input.recap.status);
   // Solo lo stato provider "confirmed" conferma pratica/posto gruppo.
   // Pending / failed / cancelled / unknown: salva il recap senza promuovere a confirmed.
@@ -260,11 +272,14 @@ export async function savePracticeFlightBooking(input: {
     patch.status = 'confirmed';
     patch.flight_confirmed_at = input.recap.bookedAt;
   } else if (kind === 'failed' || kind === 'cancelled') {
-    // Non upgrade: se non era già confermata, resta allo stato corrente.
-    // Se era confermata e il provider annulla, togliamo la conferma volo.
-    if (current.flight_confirmed_at) {
-      patch.flight_confirmed_at = null;
-      if (current.status === 'confirmed') patch.status = 'draft';
+    // Volo fallito/annullato: togli conferma e riporta a draft anche da preparing/ready.
+    patch.flight_confirmed_at = null;
+    if (
+      current.status === 'confirmed' ||
+      current.status === 'preparing' ||
+      current.status === 'ready'
+    ) {
+      patch.status = 'draft';
     }
   }
 
@@ -313,6 +328,7 @@ export async function savePracticeFlightBooking(input: {
         .eq('edition_id', practice.edition_id)
         .eq('user_id', input.userId)
         .eq('status', 'confirmed');
+      await maybeFormEdition(practice.edition_id);
     }
   }
   return { practice };
@@ -393,19 +409,28 @@ export async function listEditionPeerFlights(
   return [...grouped.values()];
 }
 
+/** Apre o riapre l'edizione in base ai voli confermati (formed ↔ open). */
 async function maybeFormEdition(editionId: string) {
   const { data: edition } = await supabaseAdmin
     .from('editions')
     .select('id, min_confirmed, status')
     .eq('id', editionId)
     .maybeSingle();
-  if (!edition || edition.status !== 'open') return;
+  if (!edition) return;
+  if (edition.status !== 'open' && edition.status !== 'formed') return;
   const { count } = await supabaseAdmin
     .from('edition_members')
     .select('*', { count: 'exact', head: true })
     .eq('edition_id', editionId)
     .eq('status', 'confirmed');
-  if ((count ?? 0) >= Number(edition.min_confirmed)) {
+  const confirmed = count ?? 0;
+  const min = Number(edition.min_confirmed);
+  if (confirmed >= min && edition.status === 'open') {
     await supabaseAdmin.from('editions').update({ status: 'formed' }).eq('id', editionId);
+  } else if (confirmed < min && edition.status === 'formed') {
+    await supabaseAdmin.from('editions').update({ status: 'open' }).eq('id', editionId);
   }
 }
+
+/** Exported for unit tests (A8). */
+export const __testMaybeFormEdition = maybeFormEdition;

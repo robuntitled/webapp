@@ -5,6 +5,7 @@ import type { ChatContact, ChatGroupItem, ChatSearchHit } from '@/lib/chat/types
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
+import { isChatOpenAtSignup } from '@/lib/flags';
 
 export type TripMessageRow = {
   id: string;
@@ -55,12 +56,17 @@ export async function countConfirmedEditionMembers(editionId: string): Promise<n
   return count ?? 0;
 }
 
-/** Chat si apre quando almeno un partecipante ha confermato il volo. */
+/**
+ * Chat sbloccata per l’edizione.
+ * Default (A5 flag OFF): almeno un partecipante ha confermato il volo.
+ * Con CHAT_OPEN_AT_SIGNUP / isChatOpenAtSignup(): aperta all’iscrizione (membro attivo).
+ */
 export async function isEditionChatUnlocked(editionId: string): Promise<boolean> {
+  if (isChatOpenAtSignup()) return true;
   return (await countConfirmedEditionMembers(editionId)) >= 1;
 }
 
-/** Membro attivo + chat sbloccata (primo volo pagato nel gruppo). */
+/** Membro attivo + chat sbloccata (default: primo volo pagato nel gruppo). */
 export async function canAccessTripChat(editionId: string, userId: string): Promise<boolean> {
   const member = await isTripMember(editionId, userId);
   if (!member) return false;
@@ -69,7 +75,8 @@ export async function canAccessTripChat(editionId: string, userId: string): Prom
 
 export async function getTripMessages(
   editionId: string,
-  since?: string
+  since?: string,
+  opts?: { viewerId?: string }
 ): Promise<TripMessageRow[]> {
   let query = supabaseAdmin
     .from('edition_messages')
@@ -89,7 +96,15 @@ export async function getTripMessages(
     if (error.code === '42P01') return [];
     throw new Error(error.message);
   }
-  return (data ?? []).map((row) => mapMessage(row as Record<string, unknown>));
+  let messages = (data ?? []).map((row) => mapMessage(row as Record<string, unknown>));
+  if (opts?.viewerId) {
+    const { listBlockedUserIds } = await import('@/lib/data/chat-moderation');
+    const blocked = new Set(await listBlockedUserIds(opts.viewerId));
+    if (blocked.size > 0) {
+      messages = messages.filter((m) => !blocked.has(m.user_id));
+    }
+  }
+  return messages;
 }
 
 const JOIN_HELLO_LINES = [
@@ -369,8 +384,9 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
     // Dedup membri (difesa da eventuali doppioni lato DB)
     const memberIds = [...new Set(ed.memberIds)];
     const participantCount = memberIds.length;
-    const confirmedCount = await countConfirmedEditionMembers(ed.id);
-    const chatUnlocked = confirmedCount >= 1;
+    const chatUnlocked = isChatOpenAtSignup()
+      ? true
+      : (await countConfirmedEditionMembers(ed.id)) >= 1;
     const since = readAt.get(ed.id) ?? '1970-01-01T00:00:00.000Z';
     const tpl = findItineraryTemplate(ed.template_id);
 

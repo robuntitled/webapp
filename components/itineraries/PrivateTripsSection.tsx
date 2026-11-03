@@ -9,7 +9,7 @@ import { EditionCard } from '@/components/itineraries/OfficialEditionsGrid';
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
-import { editionScarcity, editionThresholdProgress } from '@/lib/itineraries/edition-present';
+import { editionScarcity } from '@/lib/itineraries/edition-present';
 import { editionDestinationSlug } from '@/lib/itineraries/public-destinations';
 import type { OfficialEditionCard } from '@/lib/itineraries/types';
 import type { CatalogFilterState } from '@/components/itineraries/CatalogFiltersBar';
@@ -93,8 +93,13 @@ export function PrivateTripsSection({
           tpl,
           dest,
           days,
-          scarcity: editionScarcity(ed),
-          progress: editionThresholdProgress(ed.confirmed_count ?? 0, ed.min_confirmed),
+          scarcity: editionScarcity({
+            confirmed_count: ed.confirmed_count ?? 0,
+            min_confirmed: ed.min_confirmed,
+            date_from: String(ed.date_from).slice(0, 10),
+            status: ed.status,
+            interested_count: ed.interested_count,
+          }),
           cover: uniqueCover(slug || ed.template_id, i + 80),
           name: (tpl?.destination_name ?? (slug || ed.template_id)).toLowerCase(),
           continent: dest?.continent ?? 'Asia',

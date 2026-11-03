@@ -1,5 +1,6 @@
 import type { NominatimResult, PlaceResult } from '@/lib/places/types';
 import { isLatinScriptText, placeUsesLatinScript } from '@/lib/places/latin-script';
+import { getSiteUrl } from '@/lib/brand';
 
 const PLACE_TYPE_LABELS: Record<string, string> = {
   country: 'Nazione',
@@ -120,7 +121,7 @@ export function parseNominatimResult(result: NominatimResult): PlaceResult {
 
 const NOMINATIM_HEADERS = {
   // Contact: LEGAL_EMAIL_SUPPORT quando compilato; niente mailbox inventata.
-  'User-Agent': 'Noivia/1.0 (travel composer; +https://flygetr.it)',
+  'User-Agent': `Noivia/1.0 (travel composer; +${getSiteUrl()})`,
   Accept: 'application/json',
   'Accept-Language': 'it,en;q=0.9',
 } as const;

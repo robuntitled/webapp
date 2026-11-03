@@ -4,14 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { CompanyProfile } from '@/lib/privacy/company';
+import { isPlaceholder } from '@/lib/privacy/is-placeholder';
 
 function hideSiteFooter(pathname: string | null): boolean {
   if (!pathname) return false;
-  // Auth / onboarding / workspace immersivi: niente footer.
-  // Home e itinerario pubblici lo mostrano (navigazione e fiducia).
   if (pathname === '/accedi') return true;
   if (pathname.startsWith('/pratica') && !pathname.includes('/prossimo')) return true;
-  // mostra footer su /pratica/[id]/prossimo; nascondi workspace immersivo
   if (pathname.startsWith('/onboarding')) return true;
   if (pathname.startsWith('/completa-registrazione')) return true;
   if (/^\/partenze\/[^/]+/.test(pathname)) return true;
@@ -26,6 +24,8 @@ export function Footer({ company }: FooterProps) {
   const pathname = usePathname();
   if (hideSiteFooter(pathname)) return null;
 
+  const showPrivacyEmail = !isPlaceholder(company.privacyEmail);
+
   return (
     <footer className="mt-auto border-t border-border bg-card text-foreground">
       <div className="nl-page py-12">
@@ -37,19 +37,17 @@ export function Footer({ company }: FooterProps) {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Viaggi nel mondo, da solo, con amici o in gruppo.
             </p>
-            <p className="text-sm text-muted-foreground mt-4">
-              Privacy:{' '}
-              {company.privacyEmail.startsWith('[') ? (
-                <span className="text-amber-800/90">{company.privacyEmail}</span>
-              ) : (
+            {showPrivacyEmail ? (
+              <p className="text-sm text-muted-foreground mt-4">
+                Privacy:{' '}
                 <a
                   href={`mailto:${company.privacyEmail}`}
                   className="text-primary underline underline-offset-2 hover:text-[var(--color-primary-hover)] transition-colors"
                 >
                   {company.privacyEmail}
                 </a>
-              )}
-            </p>
+              </p>
+            ) : null}
           </div>
 
           <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -87,8 +85,9 @@ export function Footer({ company }: FooterProps) {
         </div>
 
         <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row sm:justify-between gap-2 text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} {company.tradeName}</span>
-          <span>Conforme al Regolamento UE 2016/679 (GDPR)</span>
+          <span>
+            © {new Date().getFullYear()} {company.tradeName}
+          </span>
         </div>
       </div>
     </footer>

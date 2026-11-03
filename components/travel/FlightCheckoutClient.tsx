@@ -14,6 +14,7 @@ import {
   getCheckoutReturnHref,
 } from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
+import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -920,6 +921,9 @@ export function FlightCheckoutClient({
               </section>
             ))}
 
+            {/* A7: Allegato B prima di passare al pagamento (Continua con hotel). */}
+            <AllegatoBLinkedNotice />
+
             <Button
               type="button"
               disabled={verifying || submitting}
@@ -942,6 +946,7 @@ export function FlightCheckoutClient({
               <CheckoutBackLink label="Modifica passeggeri" onClick={() => setStep('details')} />
             }
           >
+            <AllegatoBLinkedNotice />
             {paymentReturnUrl ? (
               <LiteApiPaymentWidget
                 key={payment.secretKey}
@@ -992,6 +997,7 @@ export function FlightCheckoutClient({
             </p>
           </div>
           <BookingComplianceNote showMerchantOfRecord />
+          <AllegatoBLinkedNotice compact />
         </aside>
       ) : null}
     </div>

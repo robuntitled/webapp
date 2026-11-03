@@ -19,6 +19,9 @@ export type HotelOfferDraft = {
   totalAmount: number;
   currency: string;
   freeCancellation: boolean;
+  refundable?: boolean;
+  taxesAndFees?: import('@/lib/liteapi/hotel-rate-disclosures').HotelTaxFee[] | null;
+  freeCancellationUntil?: string | null;
   checkin: string;
   checkout: string;
   adults: number;

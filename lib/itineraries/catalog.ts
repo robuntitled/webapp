@@ -127,9 +127,30 @@ export function assertTemplateShape(t: ItineraryTemplate): string[] {
   return issues;
 }
 
-/** Date ufficiali di lancio (seed manuale, niente admin). */
+/**
+ * Date ufficiali di lancio (seed manuale, niente admin).
+ * A4: senza tourOperatorId → «In arrivo», non iscrivibili (modello B).
+ */
 export const OFFICIAL_EDITION_SEEDS: OfficialEditionSeed[] = [
-  { template_id: 'thailandia-10d', date_from: '2026-11-12', date_to: '2026-11-21', min_confirmed: 4 },
-  { template_id: 'thailandia-14d', date_from: '2026-12-05', date_to: '2026-12-18', min_confirmed: 4 },
-  { template_id: 'thailandia-21d', date_from: '2027-01-08', date_to: '2027-01-28', min_confirmed: 6 },
+  {
+    template_id: 'thailandia-10d',
+    date_from: '2026-11-12',
+    date_to: '2026-11-21',
+    min_confirmed: 4,
+    tourOperatorId: null,
+  },
+  {
+    template_id: 'thailandia-14d',
+    date_from: '2026-12-05',
+    date_to: '2026-12-18',
+    min_confirmed: 4,
+    tourOperatorId: null,
+  },
+  {
+    template_id: 'thailandia-21d',
+    date_from: '2027-01-08',
+    date_to: '2027-01-28',
+    min_confirmed: 6,
+    tourOperatorId: null,
+  },
 ];

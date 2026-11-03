@@ -46,13 +46,9 @@ function DestinationStateCard({
         <div className="text-left" aria-disabled="true">
           <DestinationCardMedia dest={dest} cover={cover} published={false} />
           <div className="border-t border-slate-100 px-3 py-3">
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-500"
-            >
-              Avvisami (presto)
-            </button>
+            <p className="text-center text-sm font-medium text-slate-500">
+              In arrivo. Per ora puoi partire per la Thailandia.
+            </p>
           </div>
         </div>
       )}

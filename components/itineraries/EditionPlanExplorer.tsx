@@ -17,6 +17,7 @@ import { ItineraryWorldMap } from '@/components/itineraries/ItineraryWorldMap';
 import { ItineraryMapInset } from '@/components/itineraries/ItineraryMapInset';
 import { ShareTripLink } from '@/components/itineraries/ShareTripLink';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
+import { areaSegmentDisplayLabel } from '@/lib/itineraries/dates';
 import type { ItineraryDay, ItineraryTemplate } from '@/lib/itineraries/types';
 import { cn } from '@/lib/utils';
 
@@ -105,7 +106,7 @@ export function EditionPlanExplorer({
     if (!active) return [];
     const items: { label: string; Icon: LucideIcon }[] = [
       { label: active.description, Icon: iconForDay(active) },
-      { label: active.area_segment, Icon: MapPin },
+      { label: areaSegmentDisplayLabel(active.area_segment), Icon: MapPin },
     ];
     for (const poi of active.pois) {
       items.push({ label: poi.name, Icon: iconForPoi(poi.name, active) });
@@ -134,7 +135,7 @@ export function EditionPlanExplorer({
               {format(parseISO(dateFrom), 'dd/MM/yyyy')} – {format(parseISO(dateTo), 'dd/MM/yyyy')}
             </p>
             <p className="text-xs leading-relaxed text-slate-600">
-              Stesso piano. Date già fissate. Volo necessario.
+              Stesso piano. Date e itinerario pronti.
             </p>
           </div>
 

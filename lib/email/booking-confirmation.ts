@@ -79,7 +79,7 @@ export async function sendBookingConfirmationEmail(input: {
     '',
     `Recap nel tuo viaggio: ${praticaUrl}`,
     '',
-    `Ogni servizio è prenotato col rispettivo fornitore. ${BRAND_NAME} non è un tour operator.`,
+    `Ogni servizio è prenotato separatamente con il rispettivo fornitore. Per modifiche e cancellazioni valgono le sue condizioni.`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -95,7 +95,7 @@ export async function sendBookingConfirmationEmail(input: {
       <p style="margin-top:24px">
         <a href="${praticaUrl}" style="display:inline-block;padding:12px 20px;background:#232A6B;color:#fff;border-radius:999px;text-decoration:none;font-weight:600">Vedi il recap</a>
       </p>
-      <p style="color:#666;font-size:13px;margin-top:24px">Ogni servizio è prenotato col rispettivo fornitore. ${BRAND_NAME} non organizza pacchetti turistici.</p>
+      <p style="color:#666;font-size:13px;margin-top:24px">Ogni servizio è prenotato separatamente con il rispettivo fornitore. Per modifiche e cancellazioni valgono le sue condizioni.</p>
     </div>
   `;
 

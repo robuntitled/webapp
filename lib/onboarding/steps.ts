@@ -38,9 +38,9 @@ export function onboardingStepIndex(step: OnboardingStepId): number {
   return ONBOARDING_STEPS.indexOf(step) + 1;
 }
 
-/** Dopo onboarding: ramifica. Login successivi: itinerari. */
-export function afterOnboardingPath(intent: TravelIntent): string {
-  return intent === 'book' ? '/partenze' : '/destinazioni';
+/** Dopo onboarding: callback salvato ha priorità; altrimenti Organizza. */
+export function afterOnboardingPath(_intent: TravelIntent): string {
+  return '/organizza';
 }
 
 export function postLoginPath(opts: {
@@ -48,5 +48,5 @@ export function postLoginPath(opts: {
   travelIntent?: TravelIntent | null;
 }): string {
   if (!opts.onboardingCompleted) return '/onboarding';
-  return '/destinazioni';
+  return '/organizza';
 }
