@@ -17,16 +17,21 @@ export default async function ProssimoPassoPage({ params }: PageProps) {
   const practice = await getPractice(id, session.user.id);
   if (!practice) notFound();
   const template = findItineraryTemplate(practice.template_id);
-  if (!template) notFound();
   const edition = practice.edition_id ? await getEdition(practice.edition_id) : null;
 
   const inviteToken = edition?.invite_token ?? null;
   const inviteUrl = inviteToken ? `${getSiteUrl()}/invito/${inviteToken}` : null;
+  const { practiceDestinationLabel } = await import('@/lib/itineraries/free-trip');
 
   return (
     <ProssimoPasso
       practiceId={practice.id}
-      destinationName={template.destination_name}
+      destinationName={practiceDestinationLabel({
+        templateName: template?.destination_name,
+        destinationLabel: practice.destination_label,
+        destinationIata: practice.destination_iata,
+        templateId: practice.template_id,
+      })}
       tripTitle={edition?.title ?? null}
       dateFrom={String(practice.date_from).slice(0, 10)}
       dateTo={String(practice.date_to).slice(0, 10)}

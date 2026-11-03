@@ -16,6 +16,19 @@ import {
 
 export { FLIGHT_ALREADY_BOOKED_ERROR, isSamePracticeFlightBooking };
 import { datesForDuration } from '@/lib/itineraries/dates';
+import {
+  FREE_TRIP_TEMPLATE_ID,
+  isFreeTripTemplateId,
+  type PlannedLeg,
+} from '@/lib/itineraries/free-trip';
+import {
+  buildTripDraftFromFlight,
+  buildTripDraftFromHotel,
+  templateIdForInsert,
+  type FlightSearchSeed,
+  type HotelSearchSeed,
+} from '@/lib/itineraries/from-search';
+import { prepareFlightBookingPatch } from '@/lib/itineraries/practice-flights';
 import type { PracticeRow, PracticeStatus, TravelMode } from '@/lib/itineraries/types';
 
 export type { EditionPeerFlight, PracticeRow };
@@ -106,37 +119,112 @@ export async function createOrReuseDraftPractice(input: {
 
 export async function createPractice(input: {
   userId: string;
-  templateId: string;
+  templateId: string | null;
   mode: TravelMode;
   dateFrom: string;
   dateTo?: string;
   editionId?: string | null;
+  destinationLabel?: string | null;
+  destinationIata?: string | null;
+  plannedLegs?: PlannedLeg[] | null;
 }): Promise<{ practice: PracticeRow } | { error: string }> {
-  const template = findItineraryTemplate(input.templateId);
-  if (!template) return { error: 'Template non trovato.' };
+  const free = isFreeTripTemplateId(input.templateId);
+  const template = free ? undefined : findItineraryTemplate(input.templateId);
+  if (!free && !template) return { error: 'Template non trovato.' };
+
   const dates = input.dateTo
     ? { date_from: input.dateFrom.slice(0, 10), date_to: input.dateTo.slice(0, 10) }
-    : datesForDuration(input.dateFrom, template.duration_days);
+    : datesForDuration(input.dateFrom, template?.duration_days ?? 10);
 
-  const { data, error } = await supabaseAdmin
+  const templateId =
+    free || !input.templateId ? FREE_TRIP_TEMPLATE_ID : input.templateId;
+
+  const baseRow: Record<string, unknown> = {
+    user_id: input.userId,
+    template_id: templateId,
+    edition_id: input.editionId ?? null,
+    mode: input.mode,
+    date_from: dates.date_from,
+    date_to: dates.date_to,
+    status: 'draft',
+  };
+
+  // M2 columns (optional until migration applied).
+  const withM2: Record<string, unknown> = {
+    ...baseRow,
+    ...(input.destinationLabel ? { destination_label: input.destinationLabel } : {}),
+    ...(input.destinationIata ? { destination_iata: input.destinationIata } : {}),
+    ...(input.plannedLegs?.length ? { planned_legs: input.plannedLegs } : {}),
+  };
+
+  let { data, error } = await supabaseAdmin
     .from('practices')
-    .insert({
-      user_id: input.userId,
-      template_id: input.templateId,
-      edition_id: input.editionId ?? null,
-      mode: input.mode,
-      date_from: dates.date_from,
-      date_to: dates.date_to,
-      status: 'draft',
-    })
+    .insert(withM2)
     .select('*')
     .single();
+
+  // Schema senza M2: riprova senza colonne nuove.
+  if (error && (error.code === '42703' || /destination_label|planned_legs|destination_iata/i.test(error.message ?? ''))) {
+    ({ data, error } = await supabaseAdmin
+      .from('practices')
+      .insert(baseRow)
+      .select('*')
+      .single());
+  }
+
+  // Schema con template_id NULL (M2): se vogliamo null al posto del sentinel.
+  if (
+    !error &&
+    data &&
+    free &&
+    input.templateId === null
+  ) {
+    // Already inserted as viaggio-libero; fine until null is preferred post-M2.
+  }
 
   if (error || !data) {
     if (missing(error)) return { error: 'Catalogo pratiche non ancora applicato sul database.' };
     return { error: error?.message ?? 'Impossibile creare la pratica.' };
   }
   return { practice: data as PracticeRow };
+}
+
+/** Crea un viaggio in bozza da un risultato ricerca voli (Fase 1). */
+export async function createPracticeFromFlightSearch(input: {
+  userId: string;
+  seed: FlightSearchSeed;
+  mode?: TravelMode;
+}): Promise<{ practice: PracticeRow } | { error: string }> {
+  const draft = buildTripDraftFromFlight(input.seed);
+  return createPractice({
+    userId: input.userId,
+    templateId: templateIdForInsert(draft),
+    mode: input.mode ?? 'solo',
+    dateFrom: draft.dateFrom,
+    dateTo: draft.dateTo,
+    destinationLabel: draft.destinationLabel,
+    destinationIata: draft.destinationIata,
+    plannedLegs: draft.plannedLegs,
+  });
+}
+
+/** Crea un viaggio in bozza da un risultato ricerca hotel (Fase 1). */
+export async function createPracticeFromHotelSearch(input: {
+  userId: string;
+  seed: HotelSearchSeed;
+  mode?: TravelMode;
+}): Promise<{ practice: PracticeRow } | { error: string }> {
+  const draft = buildTripDraftFromHotel(input.seed);
+  return createPractice({
+    userId: input.userId,
+    templateId: templateIdForInsert(draft),
+    mode: input.mode ?? 'solo',
+    dateFrom: draft.dateFrom,
+    dateTo: draft.dateTo,
+    destinationLabel: draft.destinationLabel,
+    destinationIata: draft.destinationIata,
+    plannedLegs: draft.plannedLegs,
+  });
 }
 
 export async function getPractice(id: string, userId: string): Promise<PracticeRow | null> {
@@ -252,44 +340,56 @@ export async function savePracticeFlightBooking(input: {
   const current = await getPractice(input.practiceId, input.userId);
   if (!current) return { error: 'Pratica non trovata.' };
 
-  // A1: non sovrascrivere un volo già salvato con uno diverso (stesso booking = sync ok).
-  if (
-    current.flight_booking &&
-    !isSamePracticeFlightBooking(current.flight_booking, input.recap)
-  ) {
-    return { error: FLIGHT_ALREADY_BOOKED_ERROR };
-  }
-
   const kind = parseFlightStatus(input.recap.status);
   // Solo lo stato provider "confirmed" conferma pratica/posto gruppo.
   // Pending / failed / cancelled / unknown: salva il recap senza promuovere a confirmed.
   const isConfirmed = flightStatusConfirmsSeat(input.recap.status);
 
-  const patch: Record<string, unknown> = {
-    flight_booking: input.recap,
-  };
-  if (isConfirmed) {
-    patch.status = 'confirmed';
-    patch.flight_confirmed_at = input.recap.bookedAt;
-  } else if (kind === 'failed' || kind === 'cancelled') {
-    // Volo fallito/annullato: togli conferma e riporta a draft anche da preparing/ready.
-    patch.flight_confirmed_at = null;
-    if (
-      current.status === 'confirmed' ||
-      current.status === 'preparing' ||
-      current.status === 'ready'
-    ) {
-      patch.status = 'draft';
-    }
-  }
+  // Prova prima con M1 (flight_bookings[]). Se la colonna manca, fallback legacy + blocco A1.
+  const trySave = async (multiFlightSupported: boolean) => {
+    const prepared = prepareFlightBookingPatch(
+      current,
+      input.recap,
+      multiFlightSupported
+    );
+    if (!prepared.ok) return prepared;
 
-  const { data, error } = await supabaseAdmin
-    .from('practices')
-    .update(patch)
-    .eq('id', input.practiceId)
-    .eq('user_id', input.userId)
-    .select('*')
-    .single();
+    const patch: Record<string, unknown> = { ...prepared.patch };
+    if (isConfirmed) {
+      patch.status = 'confirmed';
+      patch.flight_confirmed_at = input.recap.bookedAt;
+    } else if (kind === 'failed' || kind === 'cancelled') {
+      patch.flight_confirmed_at = null;
+      if (
+        current.status === 'confirmed' ||
+        current.status === 'preparing' ||
+        current.status === 'ready'
+      ) {
+        patch.status = 'draft';
+      }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('practices')
+      .update(patch)
+      .eq('id', input.practiceId)
+      .eq('user_id', input.userId)
+      .select('*')
+      .single();
+    return { ok: true as const, data, error };
+  };
+
+  let result = await trySave(true);
+  if (
+    result.ok &&
+    result.error &&
+    (result.error.code === '42703' || /flight_bookings/i.test(result.error.message ?? ''))
+  ) {
+    result = await trySave(false);
+  }
+  if (!result.ok) return { error: result.error };
+
+  const { data, error } = result;
   if (error || !data) {
     if (missing(error)) {
       // Schema legacy senza flight_booking: conferma solo se provider confirmed.

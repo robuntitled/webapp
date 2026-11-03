@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { addDays, format, parseISO } from 'date-fns';
 import {
   ArrowDownWideNarrow,
@@ -19,6 +20,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createTripFromHotelAction } from '@/actions/practices';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { FlightDateField } from '@/components/travel/FlightDateField';
 import { GuestsPicker } from '@/components/travel/GuestsPicker';
@@ -29,11 +31,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { accediHref } from '@/lib/auth/callback-url';
 import {
   resolvePlaceExact,
   type PlaceSuggestion,
 } from '@/lib/travel/airport-catalog';
-import { saveHotelOfferDraft } from '@/lib/travel/hotel-offer-draft';
+import {
+  saveHotelOfferDraft,
+  type HotelOfferDraft,
+} from '@/lib/travel/hotel-offer-draft';
 import { formatEuroExact } from '@/lib/format/euro';
 import {
   isRefundableTagRfn,
@@ -44,6 +50,7 @@ import {
   saveSearchFormCache,
   type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
+import { saveTripFromSearchDraft } from '@/lib/travel/trip-from-search-draft';
 import { cn } from '@/lib/utils';
 
 const HotelsResultsMap = dynamic(
@@ -232,6 +239,8 @@ export function LiteApiHotelSearch({
   practiceId,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
+  const [creatingTrip, startCreateTrip] = useTransition();
   const hotelDefaults = defaultHotelDates();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
   const [cityName, setCityName] = useState(defaultCity);
@@ -361,8 +370,9 @@ export function LiteApiHotelSearch({
 
   const bookHotel = (hotelId: string) => {
     const h = hotels?.find((x) => x.hotelId === hotelId);
-    if (!h) return;
-    saveHotelOfferDraft({
+    if (!h || creatingTrip || authStatus === 'loading') return;
+
+    const checkoutDraftBase = {
       hotelId: h.hotelId,
       name: h.name,
       address: h.address,
@@ -383,10 +393,52 @@ export function LiteApiHotelSearch({
       checkout,
       adults,
       childrenAges: childAges.slice(0, childrenCount),
-      practiceId,
-      savedAt: Date.now(),
+    };
+
+    if (practiceId) {
+      saveHotelOfferDraft({
+        ...checkoutDraftBase,
+        practiceId,
+        savedAt: Date.now(),
+      });
+      router.push('/prenota/hotel/checkout');
+      return;
+    }
+
+    const seed = {
+      city: h.city ?? cityName ?? h.name,
+      checkin,
+      checkout,
+    };
+
+    if (!session?.user?.id) {
+      const savedAt = Date.now();
+      const draft: HotelOfferDraft = { ...checkoutDraftBase, savedAt };
+      saveHotelOfferDraft(draft);
+      saveTripFromSearchDraft({
+        kind: 'hotel',
+        seed,
+        checkout: draft,
+        createdAt: savedAt,
+      });
+      toast.message('Per salvare il viaggio ti chiederemo di creare un account.');
+      router.push(accediHref('/prenota/hotel/checkout', 'register'));
+      return;
+    }
+
+    startCreateTrip(async () => {
+      const result = await createTripFromHotelAction({ seed });
+      if ('error' in result) {
+        toast.error(result.error);
+        return;
+      }
+      saveHotelOfferDraft({
+        ...checkoutDraftBase,
+        practiceId: result.practiceId,
+        savedAt: Date.now(),
+      });
+      router.push('/prenota/hotel/checkout');
     });
-    router.push('/prenota/hotel/checkout');
   };
 
   const sortLabel =
@@ -744,10 +796,18 @@ export function LiteApiHotelSearch({
                         </div>
                         <Button
                           type="button"
-                          className="rounded-xl font-semibold"
+                          className={cn(
+                            'rounded-xl font-semibold',
+                            !practiceId &&
+                              'bg-[var(--color-cta)] text-white hover:bg-[#A93720]'
+                          )}
+                          disabled={creatingTrip || authStatus === 'loading'}
                           onClick={() => bookHotel(h.hotelId)}
                         >
-                          Prenota
+                          {creatingTrip ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          {practiceId ? 'Prenota' : 'Crea il viaggio con questo hotel'}
                         </Button>
                       </div>
                     </div>

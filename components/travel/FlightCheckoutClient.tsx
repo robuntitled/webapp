@@ -33,6 +33,7 @@ import {
   type FlightCheckoutDraft,
   type FlightLegDraft,
 } from '@/lib/travel/flight-checkout-draft';
+import { ensureFlightPracticeOnCheckout } from '@/lib/travel/ensure-trip-for-checkout';
 import { cn } from '@/lib/utils';
 
 type Step = 'details' | 'payment' | 'done';
@@ -326,6 +327,7 @@ export function FlightCheckoutClient({
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
+          practiceId?: string;
           reconciliationPending?: boolean;
           message?: string;
         };
@@ -338,7 +340,7 @@ export function FlightCheckoutClient({
           bookingRef: data.bookingRef ?? null,
           status: data.status ?? null,
           amountEur,
-          practiceId: draft?.practiceId,
+          practiceId: data.practiceId ?? draft?.practiceId,
           reconciliationPending: Boolean(data.reconciliationPending),
           reconciliationMessage: data.message,
         });
@@ -372,52 +374,67 @@ export function FlightCheckoutClient({
   );
 
   useEffect(() => {
-    const d = loadFlightCheckoutDraft();
-    if (d) {
-      setDraft(d);
-      setPassengers(
-        Array.from({ length: Math.max(1, d.adults) }, () => emptyPassenger())
-      );
-    } else {
-      setDraft(null);
-      setVerifying(false);
-    }
+    let cancelled = false;
 
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const paid = params.get('paid') === '1';
-      const tid = params.get('tid');
-      const pid = params.get('pid');
-      const pending = loadFlightPaymentPending();
-
-      const redirected =
-        params.get('redirect_status') === 'succeeded' || Boolean(params.get('payment_intent'));
-      if ((paid && tid && pid) || (redirected && pending)) {
-        setStep('payment');
-        setVerifying(false);
-        void finalizeBooking(
-          pid || pending?.prebookId || '',
-          tid || pending?.transactionId || ''
+    async function boot() {
+      // Fase 1: dopo login, crea/aggancia il viaggio prima del checkout.
+      const practiceId = await ensureFlightPracticeOnCheckout().catch(() => null);
+      const d = loadFlightCheckoutDraft();
+      if (cancelled) return;
+      if (d) {
+        setDraft(
+          practiceId && !d.practiceId ? { ...d, practiceId } : d
         );
-        return;
-      }
-      if (pending?.paymentMode === 'stripe_elements') {
-        clearFlightPaymentPending();
-      } else if (pending) {
-        setPayment({
-          prebookId: pending.prebookId,
-          transactionId: pending.transactionId,
-          secretKey: pending.secretKey,
-          publishableKey: pending.publishableKey,
-          paymentEnv: pending.paymentEnv,
-          paymentMode: pending.paymentMode,
-          price: pending.price,
-          currency: pending.currency,
-        });
-        setStep('payment');
+        setPassengers(
+          Array.from({ length: Math.max(1, d.adults) }, () => emptyPassenger())
+        );
+      } else {
+        setDraft(null);
         setVerifying(false);
       }
+
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const paid = params.get('paid') === '1';
+        const tid = params.get('tid');
+        const pid = params.get('pid');
+        const pending = loadFlightPaymentPending();
+
+        const redirected =
+          params.get('redirect_status') === 'succeeded' ||
+          Boolean(params.get('payment_intent'));
+        if ((paid && tid && pid) || (redirected && pending)) {
+          setStep('payment');
+          setVerifying(false);
+          void finalizeBooking(
+            pid || pending?.prebookId || '',
+            tid || pending?.transactionId || ''
+          );
+          return;
+        }
+        if (pending?.paymentMode === 'stripe_elements') {
+          clearFlightPaymentPending();
+        } else if (pending) {
+          setPayment({
+            prebookId: pending.prebookId,
+            transactionId: pending.transactionId,
+            secretKey: pending.secretKey,
+            publishableKey: pending.publishableKey,
+            paymentEnv: pending.paymentEnv,
+            paymentMode: pending.paymentMode,
+            price: pending.price,
+            currency: pending.currency,
+          });
+          setStep('payment');
+          setVerifying(false);
+        }
+      }
     }
+
+    void boot();
+    return () => {
+      cancelled = true;
+    };
   }, [finalizeBooking]);
 
   const runVerify = useCallback(
@@ -521,6 +538,17 @@ export function FlightCheckoutClient({
     if (!contactPayload.firstName || !contactPayload.lastName) {
       toast.error('Completa nome e cognome di contatto');
       return;
+    }
+
+    // Checkout bloccato senza viaggio (Fase 1): crea/aggancia prima del pagamento.
+    const practiceId =
+      draft.practiceId ?? (await ensureFlightPracticeOnCheckout().catch(() => null));
+    if (!practiceId) {
+      toast.error('Crea prima il viaggio da questo volo, poi paga.');
+      return;
+    }
+    if (!draft.practiceId) {
+      setDraft({ ...draft, practiceId });
     }
 
     setSubmitting(true);

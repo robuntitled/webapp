@@ -32,7 +32,10 @@ import type { ItineraryTemplate, PracticeRow } from '@/lib/itineraries/types';
 import { cn } from '@/lib/utils';
 
 type TripWorkspaceProps = {
-  template: ItineraryTemplate;
+  /** Null = viaggio libero senza itinerario template (Fase 1 / M2). */
+  template: ItineraryTemplate | null;
+  destinationName?: string;
+  destinationSlug?: string;
   dateFrom: string;
   dateTo: string;
   practice?: PracticeRow | null;
@@ -54,6 +57,8 @@ type TripWorkspaceProps = {
 
 export function TripWorkspace({
   template,
+  destinationName,
+  destinationSlug,
   dateFrom,
   dateTo,
   practice = null,
@@ -78,7 +83,17 @@ export function TripWorkspace({
   const [pendingRename, startRename] = useTransition();
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(tripTitle ?? '');
-  const displayName = tripTitle?.trim() || template.destination_name;
+  const resolvedDestinationName =
+    destinationName?.trim() ||
+    template?.destination_name ||
+    practice?.destination_label ||
+    'Il tuo viaggio';
+  const resolvedDestinationSlug =
+    destinationSlug?.trim() ||
+    template?.destination_slug ||
+    practice?.destination_iata ||
+    'viaggio';
+  const displayName = tripTitle?.trim() || resolvedDestinationName;
 
   // Difesa UI: dedup per userId (allineato a listEditionMembers in lettura)
   const uniqueMembers = useMemo(() => {
@@ -94,9 +109,16 @@ export function TripWorkspace({
   }, [members]);
   const groupSize = uniqueMembers.length;
 
-  const flightBooked = Boolean(practice?.flight_booking || practice?.flight_confirmed_at);
+  const flightBooked = Boolean(
+    practice?.flight_confirmed_at ||
+      practice?.flight_booking ||
+      (Array.isArray(practice?.flight_bookings) && practice.flight_bookings.length > 0)
+  );
   const hotels = practice?.hotel_bookings ?? [];
-  const stays = useMemo(() => staysFromTemplate(template, dateFrom), [template, dateFrom]);
+  const stays = useMemo(
+    () => (template ? staysFromTemplate(template, dateFrom) : []),
+    [template, dateFrom]
+  );
   const stayProgress = useMemo(
     () => getStayBookingProgress(stays, hotels),
     [stays, hotels]
@@ -109,7 +131,10 @@ export function TripWorkspace({
   const stay = stays[stayIdx] ?? stays[0];
   const hotelCount = hotels.length;
   const canBookFlights = Boolean(practice?.id) && isMember;
-  const canBookHotels = canBookFlights && flightBooked;
+  // Gruppi: hotel dopo volo. Solo/libero (Fase 1 da hotel): hotel subito, un servizio alla volta.
+  const canBookHotels =
+    canBookFlights &&
+    (flightBooked || practice?.mode === 'solo' || (!practice?.edition_id && Boolean(practice?.id)));
 
   const selectTab = useCallback(
     (next: WorkspaceTab) => {
@@ -178,10 +203,12 @@ export function TripWorkspace({
     <div className="ws-surface min-h-[calc(100vh-var(--nl-nav-height))]">
       <div className="nl-page w-full space-y-5 py-5 sm:space-y-6 sm:py-6">
         <WorkspaceHero
-          destinationSlug={template.destination_slug}
+          destinationSlug={resolvedDestinationSlug}
           destinationName={displayName}
           eyebrow={editionLabel}
-          meta={`${formatItDate(dateFrom)} – ${formatItDate(dateTo)} · ${template.duration_days} giorni`}
+          meta={`${formatItDate(dateFrom)} – ${formatItDate(dateTo)}${
+            template ? ` · ${template.duration_days} giorni` : ''
+          }`}
           backHref={backHref}
           backLabel={backLabel}
           action={joinButton}
@@ -192,10 +219,16 @@ export function TripWorkspace({
                   {groupSize === 1 ? 'Solo tu' : `${groupSize} nel gruppo`}
                 </WorkspaceMetaChip>
               ) : null}
-              <WorkspaceMetaChip icon={Wallet}>
-                ~{template.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € ·{' '}
-                {COMPLIANCE_COPY.budgetLabel.toLowerCase()}
-              </WorkspaceMetaChip>
+              {template ? (
+                <WorkspaceMetaChip icon={Wallet}>
+                  ~{template.budget_orientative_eur.total_hint.toLocaleString('it-IT')} € ·{' '}
+                  {COMPLIANCE_COPY.budgetLabel.toLowerCase()}
+                </WorkspaceMetaChip>
+              ) : (
+                <WorkspaceMetaChip icon={Wallet}>
+                  {COMPLIANCE_COPY.budgetLabel} · somma di servizi separati
+                </WorkspaceMetaChip>
+              )}
             </>
           }
         />
@@ -207,7 +240,7 @@ export function TripWorkspace({
                 <Input
                   value={nameDraft}
                   onChange={(e) => setNameDraft(e.target.value.slice(0, 80))}
-                  placeholder={template.destination_name}
+                  placeholder={resolvedDestinationName}
                   className="h-11 max-w-sm flex-1 rounded-xl"
                   maxLength={80}
                   autoFocus
@@ -279,7 +312,19 @@ export function TripWorkspace({
         {tab === 'itinerario' ? (
           <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-start lg:gap-6">
             <div className="h-[min(78vh,44rem)] min-h-[28rem] lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
-              <ItineraryExplorerWidget template={template} />
+              {template ? (
+                <ItineraryExplorerWidget template={template} />
+              ) : (
+                <div className="flex h-full flex-col justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center">
+                  <p className="font-display text-xl font-semibold text-slate-900">
+                    Viaggio senza itinerario fisso
+                  </p>
+                  <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
+                    Hai creato questo viaggio da un volo o un hotel. Aggiungi i servizi uno alla
+                    volta: prima paghi, poi scegli il prossimo. Nessun totale combinato.
+                  </p>
+                </div>
+              )}
             </div>
             <aside className="flex flex-col gap-4 lg:sticky lg:top-[calc(var(--nl-nav-height)+1rem)]">
               <WorkspaceStatusCard
@@ -398,9 +443,14 @@ export function TripWorkspace({
               <BookingRecap practice={practice} section="flight" />
             ) : practice ? (
               <FlightSearchPanel
-                hideSearchForm
+                hideSearchForm={Boolean(template)}
                 defaultOrigin="FCO"
-                defaultDestination={template.destination_name}
+                defaultDestination={
+                  practice.destination_iata ||
+                  template?.hub_iata ||
+                  template?.destination_name ||
+                  resolvedDestinationName
+                }
                 defaultStartDate={dateFrom}
                 defaultEndDate={dateTo}
                 defaultTripType="roundtrip"
@@ -486,7 +536,19 @@ export function TripWorkspace({
                     practiceId={practice.id}
                   />
                 ) : (
-                  <p className="text-sm text-slate-500">Nessuna tappa hotel su questo piano.</p>
+                  <LiteApiHotelSearch
+                    defaultCity={
+                      practice.destination_label ||
+                      resolvedDestinationName
+                    }
+                    defaultCheckin={dateFrom}
+                    defaultCheckout={dateTo}
+                    defaultAdults={1}
+                    autoSearch={Boolean(practice.destination_label || resolvedDestinationName)}
+                    cacheKey={null}
+                    className="rounded-2xl border border-slate-100 bg-white p-3"
+                    practiceId={practice.id}
+                  />
                 )}
               </div>
             ) : null}

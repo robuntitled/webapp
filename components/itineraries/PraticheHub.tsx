@@ -255,7 +255,10 @@ function PracticeGrid({
             >
               <div className="relative h-52">
                 <Image
-                  src={uniqueCover(tpl?.destination_slug ?? p.template_id, i)}
+                  src={uniqueCover(
+                    tpl?.destination_slug ?? p.destination_label ?? p.template_id ?? 'viaggio',
+                    i
+                  )}
                   alt=""
                   fill
                   className="object-cover"
