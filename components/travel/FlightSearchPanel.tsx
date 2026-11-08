@@ -461,9 +461,11 @@ export function FlightSearchPanel({
       if (!res.ok) {
         const err =
           data.error ??
-          (data.code === 'upstream_error'
-            ? 'Servizio voli temporaneamente non disponibile. Riprova.'
-            : 'Ricerca voli fallita');
+          (data.code === 'provider_timeout'
+            ? 'Timeout del provider voli. Riprova manualmente — l’errore non è nascosto.'
+            : data.code === 'upstream_error'
+              ? 'Servizio voli temporaneamente non disponibile. Riprova.'
+              : 'Ricerca voli fallita');
         toast.error(err, { duration: 7000 });
         setOffers(null);
         setMessage(err);

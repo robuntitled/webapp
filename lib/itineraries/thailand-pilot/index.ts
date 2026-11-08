@@ -11,3 +11,4 @@ export {
   provenanceForAreaSegment,
   provenanceForPoiName,
 } from '@/lib/itineraries/thailand-pilot/provenance';
+export { buildThailandPilotPlan } from '@/lib/itineraries/thailand-pilot/ui-plan';
