@@ -34,25 +34,28 @@ const PIN_FILL = '#0F766E';
 const PIN_ACTIVE = '#F97316';
 const ROUTE_COLOR = '#0F766E';
 
-const MAP_TILES = getLeafletTileLayer();
+/** Basemap stilizzata senza label locali (zoom + route invariati). */
+const MAP_TILES = getLeafletTileLayer('stylized');
 
 function isStopPin(pin: MapPin): boolean {
   return pin.id !== 'destination' && Boolean(pin.blockId);
 }
 
-/** Pin discreto a goccia, senza bolle colorate. */
-function makeIcon(highlighted: boolean) {
+/** Pin numerato (giorno/tappa) — essenziale per leggere il percorso. */
+function makeIcon(highlighted: boolean, stopNumber?: number) {
   const fill = highlighted ? PIN_ACTIVE : PIN_FILL;
-  const size = highlighted ? 26 : 22;
+  const size = highlighted ? 28 : 26;
+  const label =
+    stopNumber != null && stopNumber > 0
+      ? String(stopNumber)
+      : '';
+  const fontSize = label.length > 1 ? 10 : 11;
   return L.divIcon({
     className: 'rl-trip-pin',
-    html: `<svg width="${size}" height="${size}" viewBox="0 0 24 32" style="display:block;filter:drop-shadow(0 1px 2px rgba(15,23,42,.28))">
-      <path d="M12 0C6.5 0 2 4.5 2 10c0 7.2 10 20 10 20s10-12.8 10-20C22 4.5 17.5 0 12 0z" fill="${fill}"/>
-      <circle cx="12" cy="10" r="3.2" fill="#fff"/>
-    </svg>`,
+    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${fill};color:#fff;font:700 ${fontSize}px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.35);border:2px solid #fff">${label}</div>`,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size + 4],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2 + 2],
   });
 }
 
@@ -72,14 +75,15 @@ function FitBounds({
     if (pins.length === 0) return;
     const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng] as [number, number]));
     if (pins.length === 1) {
-      if (animate) map.flyTo(pins[0], 12, { duration: 0.75 });
-      else map.setView([pins[0].lat, pins[0].lng], 12);
+      // Zoom moderato: basemap stilizzata resta leggibile senza griglia densissima
+      if (animate) map.flyTo(pins[0], 11, { duration: 0.75 });
+      else map.setView([pins[0].lat, pins[0].lng], 11);
       return;
     }
     if (animate) {
-      map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 12, duration: 0.85 });
+      map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 11, duration: 0.85 });
     } else {
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 11 });
     }
   }, [map, pins, animate, highlightedPinId]);
 
@@ -155,7 +159,7 @@ export function ReactLeafletTripMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={11}
-        className="h-full w-full z-0 grayscale-[20%] contrast-[1.05] [&_.leaflet-control-attribution]:!hidden"
+        className="h-full w-full z-0 saturate-[0.85] contrast-[1.02]"
         scrollWheelZoom={interactive}
         dragging={interactive}
         doubleClickZoom={interactive}
@@ -163,9 +167,14 @@ export function ReactLeafletTripMap({
         boxZoom={interactive}
         keyboard={interactive}
         zoomControl={false}
-        attributionControl={false}
+        attributionControl
       >
-        <TileLayer url={MAP_TILES.url} attribution={MAP_TILES.attribution} maxZoom={19} />
+        <TileLayer
+          url={MAP_TILES.url}
+          attribution={MAP_TILES.attribution}
+          maxZoom={MAP_TILES.maxZoom}
+          {...(MAP_TILES.subdomains ? { subdomains: MAP_TILES.subdomains } : {})}
+        />
         <FitBounds pins={fitPins} animate={interactive} highlightedPinId={highlightedPinId} />
         <HighlightFlyTo pins={pins} highlightedPinId={highlightedPinId} />
         {interactive ? <MapClickHandler onMapClick={onMapClick} /> : null}
@@ -183,14 +192,20 @@ export function ReactLeafletTripMap({
           />
         )}
 
-        {pins.map((pin) => {
+        {pins.map((pin, index) => {
           const highlighted =
             highlightedPinId === pin.id || highlightedPinId === pin.blockId;
+          const stopNumber =
+            isStopPin(pin) && pin.dayIndex > 0
+              ? pin.dayIndex
+              : isStopPin(pin)
+                ? index + 1
+                : undefined;
           return (
             <Marker
               key={pin.id}
               position={[pin.lat, pin.lng]}
-              icon={makeIcon(highlighted)}
+              icon={makeIcon(highlighted, stopNumber)}
               interactive={interactive}
               eventHandlers={
                 interactive && onPinClick
