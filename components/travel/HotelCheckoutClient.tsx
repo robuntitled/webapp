@@ -277,7 +277,9 @@ export function HotelCheckoutClient({
         toast.error(data.error ?? 'Impossibile riservare l’hotel');
         if (data.code === 'offer_expired') {
           clearHotelOfferDraft();
-          router.push('/pratiche');
+          router.push(
+            getCheckoutReturnHref(undefined, 'hotel', 'offer_unavailable')
+          );
         }
         return;
       }

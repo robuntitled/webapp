@@ -3,13 +3,18 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  getSearchReturnHref,
+  type SearchReturnReason,
+  type SearchReturnTab,
+} from '@/lib/travel/search-return';
 
 export function getCheckoutReturnHref(
   practiceId: string | undefined,
-  tab: 'voli' | 'hotel'
+  tab: SearchReturnTab,
+  reason?: SearchReturnReason
 ): string {
-  if (practiceId) return `/pratica/${practiceId}?tab=${tab}`;
-  return tab === 'hotel' ? '/prenota/hotel' : '/prenota/voli';
+  return getSearchReturnHref(tab, { practiceId, reason });
 }
 
 export function CheckoutBackLink({

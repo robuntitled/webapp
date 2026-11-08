@@ -72,3 +72,37 @@ export async function guardPaidApi(
 
   return authResult;
 }
+
+/**
+ * Ricerca pubblica (voli/hotel): nessun login obbligatorio.
+ * Rate limit per IP sempre; se loggato, anche per utente.
+ * Non espone dati di sessione/credenziali nella risposta.
+ */
+export async function guardSearchApi(
+  request: Request,
+  bucket: string,
+  limits: { perUser: number; perIp: number; windowMs?: number }
+): Promise<{ userId: string | null } | { error: NextResponse }> {
+  const windowMs = limits.windowMs ?? 60_000;
+  const ip = clientIp(request);
+
+  const ipBlock = await rateLimitJson(
+    `${bucket}:ip:${ip}`,
+    { limit: limits.perIp, windowMs },
+    'Troppe richieste da questo indirizzo'
+  );
+  if (ipBlock) return { error: ipBlock };
+
+  const session = await auth();
+  const userId = session?.user?.id ?? null;
+  if (userId) {
+    const userBlock = await rateLimitJson(
+      `${bucket}:user:${userId}`,
+      { limit: limits.perUser, windowMs },
+      'Troppe richieste, riprova tra un minuto'
+    );
+    if (userBlock) return { error: userBlock };
+  }
+
+  return { userId };
+}

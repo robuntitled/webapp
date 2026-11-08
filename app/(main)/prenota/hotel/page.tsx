@@ -1,18 +1,11 @@
-import { auth } from '@/auth';
 import { PrenotaPageShell } from '@/components/travel/PrenotaPageShell';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
-import { redirect } from 'next/navigation';
 
-export default async function PrenotaHotelPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect('/accedi?callbackUrl=/prenota/hotel');
-  }
-
+export default function PrenotaHotelPage() {
   return (
     <PrenotaPageShell
       title="Hotel"
-      subtitle="Notti giuste, prezzo vero. Confronta e prenota."
+      subtitle="Cerca e confronta senza account. Accedi solo quando salvi il viaggio o prenoti."
       badge="Prenotabile"
     >
       <LiteApiHotelSearch defaultAdults={1} cacheKey="hotels" />

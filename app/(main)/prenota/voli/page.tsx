@@ -1,18 +1,11 @@
-import { auth } from '@/auth';
 import { PrenotaPageShell } from '@/components/travel/PrenotaPageShell';
 import { PrenotaFlightsClient } from '@/components/travel/PrenotaFlightsClient';
-import { redirect } from 'next/navigation';
 
-export default async function PrenotaVoliPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect('/accedi?callbackUrl=/prenota/voli');
-  }
-
+export default function PrenotaVoliPage() {
   return (
     <PrenotaPageShell
       title="Voli"
-      subtitle="Cerca, confronta, conferma. Poi il gruppo parte insieme."
+      subtitle="Cerca e confronta senza account. Accedi solo quando salvi il viaggio o prenoti."
       badge="Prenotabile"
     >
       <PrenotaFlightsClient />

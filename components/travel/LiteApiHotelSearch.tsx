@@ -1,9 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { addDays, format, parseISO } from 'date-fns';
 import {
@@ -50,6 +58,10 @@ import {
   saveSearchFormCache,
   type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
+import {
+  parseSearchReturnReason,
+  searchReturnBannerCopy,
+} from '@/lib/travel/search-return';
 import { saveTripFromSearchDraft } from '@/lib/travel/trip-from-search-draft';
 import { cn } from '@/lib/utils';
 
@@ -225,7 +237,7 @@ function sortHotels(list: HotelOffer[], sort: HotelSort): HotelOffer[] {
   return copy;
 }
 
-export function LiteApiHotelSearch({
+function LiteApiHotelSearchInner({
   defaultCity = '',
   defaultCheckin = '',
   defaultCheckout = '',
@@ -239,6 +251,10 @@ export function LiteApiHotelSearch({
   practiceId,
 }: LiteApiHotelSearchProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnBanner = searchReturnBannerCopy(
+    parseSearchReturnReason(searchParams.get('reason'))
+  );
   const { data: session, status: authStatus } = useSession();
   const [creatingTrip, startCreateTrip] = useTransition();
   const hotelDefaults = defaultHotelDates();
@@ -495,6 +511,12 @@ export function LiteApiHotelSearch({
         error?: string;
         count?: number;
       };
+      if (res.status === 429) {
+        toast.error(data.error ?? 'Troppe ricerche. Attendi e riprova.', {
+          duration: 8000,
+        });
+        return;
+      }
       if (!res.ok) {
         toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
         return;
@@ -522,6 +544,17 @@ export function LiteApiHotelSearch({
 
   return (
     <div className={cn('space-y-4', className)}>
+      {returnBanner && !hideSearchForm ? (
+        <div
+          role="status"
+          className="rounded-[14px] border border-amber-200/90 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+        >
+          <p>{returnBanner}</p>
+          <p className="mt-1 text-xs text-amber-900/80">
+            Disponibilità e prezzi hotel si aggiornano solo con una nuova ricerca.
+          </p>
+        </div>
+      ) : null}
       {!hideSearchForm ? (
       <div
         className={cn(
@@ -836,5 +869,19 @@ export function LiteApiHotelSearch({
         </div>
       ) : null}
     </div>
+  );
+}
+
+export function LiteApiHotelSearch(props: LiteApiHotelSearchProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-2xl border border-slate-200/90 bg-white px-4 py-10 text-center text-sm text-slate-600">
+          Caricamento ricerca hotel…
+        </div>
+      }
+    >
+      <LiteApiHotelSearchInner {...props} />
+    </Suspense>
   );
 }

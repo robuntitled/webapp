@@ -32,7 +32,13 @@ export function Footer({ company }: FooterProps) {
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <div className="mb-4">
-              <BrandLogo size={40} />
+              <Link
+                href="/"
+                className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                aria-label="Noivia — home"
+              >
+                <BrandLogo size={40} />
+              </Link>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Viaggi nel mondo, da solo, con amici o in gruppo.

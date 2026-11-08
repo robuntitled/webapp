@@ -42,6 +42,7 @@ import {
   saveSearchFormCache,
   type SearchCacheKey,
 } from '@/lib/travel/search-form-cache';
+import { searchReturnBannerCopy, type SearchReturnReason } from '@/lib/travel/search-return';
 import { saveTripFromSearchDraft } from '@/lib/travel/trip-from-search-draft';
 import { FlightOfferCard } from '@/components/travel/FlightOfferCard';
 import { cn } from '@/lib/utils';
@@ -165,6 +166,8 @@ type FlightSearchPanelProps = {
   selectedOfferId?: string | null;
   selectLabel?: string;
   practiceId?: string;
+  /** Motivo di ritorno dalla checkout (offerta scaduta, ecc.) */
+  returnReason?: SearchReturnReason | null;
 };
 
 type FlightFormCache = {
@@ -225,8 +228,10 @@ export function FlightSearchPanel({
   selectedOfferId,
   selectLabel,
   practiceId,
+  returnReason = null,
 }: FlightSearchPanelProps) {
   const router = useRouter();
+  const returnBanner = searchReturnBannerCopy(returnReason);
   const { data: session, status: authStatus } = useSession();
   const [creatingTrip, startCreateTrip] = useTransition();
   const [cacheReady, setCacheReady] = useState(cacheKey == null);
@@ -440,8 +445,17 @@ export function FlightSearchPanel({
       };
 
       if (res.status === 401) {
-        toast.error('Accedi per cercare voli');
+        // Search is public; 401 here means session/cookie anomaly, not a gate.
+        toast.error('Sessione non valida. Ricarica la pagina e riprova.');
         setOffers(null);
+        setMessage('Sessione non valida. Ricarica e riprova la ricerca.');
+        return;
+      }
+      if (res.status === 429) {
+        const err = data.error ?? 'Troppe ricerche. Attendi un momento e riprova.';
+        toast.error(err, { duration: 7000 });
+        setOffers(null);
+        setMessage(err);
         return;
       }
       if (!res.ok) {
@@ -557,6 +571,18 @@ export function FlightSearchPanel({
         className
       )}
     >
+      {returnBanner && !hideSearchForm ? (
+        <div
+          role="status"
+          className="rounded-[14px] border border-amber-200/90 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+        >
+          <p>{returnBanner}</p>
+          <p className="mt-1 text-xs text-amber-900/80">
+            I prezzi e la disponibilità si aggiornano solo quando cerchi di nuovo —
+            non mostriamo freschezza se non abbiamo appena interrogato il fornitore.
+          </p>
+        </div>
+      ) : null}
       {!hideSearchForm ? (
       <div
         className={cn(
