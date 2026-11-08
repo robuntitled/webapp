@@ -455,7 +455,9 @@ export function FlightCheckoutClient({
           toast.error(data.error ?? 'Verifica fallita');
           if (data.code === 'offer_expired') {
             clearFlightCheckoutDraft();
-            router.push('/prenota/voli');
+            router.push(
+              getCheckoutReturnHref(undefined, 'voli', 'offer_unavailable')
+            );
           }
           return;
         }
@@ -578,7 +580,9 @@ export function FlightCheckoutClient({
         toast.error(data.error ?? 'Impossibile riservare il volo');
         if (data.code === 'offer_expired') {
           clearFlightCheckoutDraft();
-          router.push('/prenota/voli');
+          router.push(
+            getCheckoutReturnHref(undefined, 'voli', 'offer_unavailable')
+          );
         }
         return;
       }

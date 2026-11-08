@@ -11,6 +11,7 @@ import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
 import { BRAND_IMAGES } from '@/lib/brand/images';
+import { PRIMARY_NAV } from '@/lib/brand/nav';
 import { formatEuro } from '@/lib/format/euro';
 
 export type LandingDestination = {
@@ -90,12 +91,18 @@ export function PublicLanding({
         />
 
         <header className="relative z-20 flex flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-3 sm:px-8 sm:py-4">
-          <BrandLogo
-            size={34}
-            priority
-            variant="white"
-            className="drop-shadow-[0_1px_6px_rgba(0,0,0,0.3)]"
-          />
+          <Link
+            href="/"
+            className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            aria-label={`${BRAND_NAME} — home`}
+          >
+            <BrandLogo
+              size={34}
+              priority
+              variant="white"
+              className="drop-shadow-[0_1px_6px_rgba(0,0,0,0.3)]"
+            />
+          </Link>
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:order-last sm:ml-0 sm:gap-2">
             <Button
               asChild
@@ -118,26 +125,17 @@ export function PublicLanding({
             className="flex w-full items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-center"
             aria-label="Navigazione principale"
           >
-            <Link
-              href="/organizza"
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
-            >
-              Organizza
-            </Link>
-            <Link
-              href="/gruppi"
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
-            >
-              Gruppi
-            </Link>
-            {isLoggedIn ? (
+            {PRIMARY_NAV.filter(
+              (link) => !('auth' in link && link.auth) || Boolean(isLoggedIn)
+            ).map((link) => (
               <Link
-                href="/pratiche"
+                key={link.href}
+                href={link.href}
                 className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
               >
-                I miei viaggi
+                {link.label}
               </Link>
-            ) : null}
+            ))}
           </nav>
         </header>
 
