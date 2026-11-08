@@ -13,6 +13,12 @@ import {
   setCachedFlightRates,
   withFlightRatesInflight,
 } from '@/lib/liteapi/flight-cache';
+import {
+  flightSearchTimeoutMs,
+  isLiteApiTimeoutError,
+} from '@/lib/liteapi/flight-search-timeout';
+
+export { flightSearchTimeoutMs, isLiteApiTimeoutError } from '@/lib/liteapi/flight-search-timeout';
 
 export type LiteApiFlightOffer = {
   offerId: string;
@@ -696,19 +702,39 @@ async function searchOneOrigin(params: {
     });
   }
 
-  const raw = await liteApiFetch<unknown>('/flights/rates', {
-    method: 'POST',
-    body: JSON.stringify({
-      legs,
-      adults: params.adults,
-      children: 0,
-      infants: 0,
-      currency: params.currency,
-      country: 'IT',
-      cabinClass: 'ECONOMY',
-    }),
-    timeoutMs: 8_000,
+  const timeoutMs = flightSearchTimeoutMs(params.destinationIata);
+  const body = JSON.stringify({
+    legs,
+    adults: params.adults,
+    children: 0,
+    infants: 0,
+    currency: params.currency,
+    country: 'IT',
+    cabinClass: 'ECONOMY',
   });
+
+  const fetchRates = () =>
+    liteApiFetch<unknown>('/flights/rates', {
+      method: 'POST',
+      body,
+      timeoutMs,
+    });
+
+  let raw: unknown;
+  try {
+    raw = await fetchRates();
+  } catch (err) {
+    // One controlled retry on provider timeout only — no loops, no silent success.
+    if (!isLiteApiTimeoutError(err)) throw err;
+    console.warn(
+      '[flights] provider timeout, single retry',
+      params.originIata,
+      '→',
+      params.destinationIata,
+      `budget=${timeoutMs}ms`
+    );
+    raw = await fetchRates();
+  }
 
   const contexts = collectOfferContexts(raw);
   return contexts
@@ -756,6 +782,8 @@ export async function searchFlightRates(params: {
   destinationIata: string;
   originsSearched: string[];
   originsFailed: string[];
+  /** True when every searched origin failed with a provider timeout. */
+  allTimedOut?: boolean;
 }> {
   const destinationIata = resolveIataFlexible(params.destination);
   if (!destinationIata) {
@@ -809,11 +837,13 @@ export async function searchFlightRates(params: {
 
   const offers: LiteApiFlightOffer[] = [];
   const originsFailed: string[] = [];
+  let timeoutFails = 0;
   results.forEach((r, i) => {
     const origin = batch[i]!;
     if (r.status === 'fulfilled') offers.push(...r.value);
     else {
       originsFailed.push(origin);
+      if (isLiteApiTimeoutError(r.reason)) timeoutFails += 1;
       console.warn('[flights] origin search failed', origin, r.reason);
     }
   });
@@ -833,6 +863,11 @@ export async function searchFlightRates(params: {
     destinationIata,
     originsSearched: batch,
     originsFailed,
+    allTimedOut:
+      originsFailed.length > 0 &&
+      originsFailed.length >= batch.length &&
+      unique.length === 0 &&
+      timeoutFails >= originsFailed.length,
   };
 }
 

@@ -25,6 +25,9 @@ export type OrganizzaDraft = {
   company: OrganizzaCompanyChoice | null;
   tripName: string;
   vibe: string | null;
+  /** Hub arrivo/partenza (IATA) — vincoli pilot Thailandia; opzionali. */
+  arrivalIata: string | null;
+  departureIata: string | null;
 };
 
 export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
@@ -35,6 +38,8 @@ export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
   company: null,
   tripName: '',
   vibe: null,
+  arrivalIata: null,
+  departureIata: null,
 };
 
 export function organizzaStepIndex(id: OrganizzaStepId): number {

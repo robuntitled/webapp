@@ -28,6 +28,7 @@ import {
   TripWhenPicker,
   type TripWhenSelection,
 } from '@/components/itineraries/TripWhenPicker';
+import { ThailandPilotPlanPanel } from '@/components/itineraries/ThailandPilotPlanPanel';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import {
   findItineraryBySlug,
@@ -48,6 +49,7 @@ import {
   patchOrganizzaDraft,
   prevOrganizzaStep,
 } from '@/lib/itineraries/organizza-steps';
+import { THAILAND_DESTINATION_SLUG } from '@/lib/itineraries/thailand-pilot';
 import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
 import { formatEuro } from '@/lib/format/euro';
@@ -69,7 +71,10 @@ function loadOrganizzaStorage(): StoredOrganizza | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredOrganizza;
     if (!parsed?.draft || typeof parsed.draft !== 'object') return null;
-    return parsed;
+    return {
+      ...parsed,
+      draft: patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, parsed.draft),
+    };
   } catch {
     return null;
   }
@@ -603,6 +608,69 @@ export function OrganizzaWizard({
                   showVibe
                   defaultExpanded
                 />
+                {template.destination_slug === THAILAND_DESTINATION_SLUG ? (
+                  <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-tint)]/40 p-4">
+                    <p className="text-sm font-bold text-[var(--color-text)]">
+                      Hub aeroportuali (opzionale)
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)]">
+                      Vincoli del pilot: se l&apos;IATA non è tra quelli curati Thailandia, compare un
+                      avviso — senza inventare collegamenti.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="arrival-iata" className="text-xs font-semibold">
+                          Arrivo (IATA)
+                        </Label>
+                        <Input
+                          id="arrival-iata"
+                          value={draft.arrivalIata ?? ''}
+                          onChange={(e) =>
+                            update({
+                              arrivalIata: e.target.value.trim().toUpperCase().slice(0, 3) || null,
+                            })
+                          }
+                          placeholder="BKK"
+                          className="mt-1.5 h-11 rounded-[10px] uppercase"
+                          maxLength={3}
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="departure-iata" className="text-xs font-semibold">
+                          Partenza (IATA)
+                        </Label>
+                        <Input
+                          id="departure-iata"
+                          value={draft.departureIata ?? ''}
+                          onChange={(e) =>
+                            update({
+                              departureIata: e.target.value.trim().toUpperCase().slice(0, 3) || null,
+                            })
+                          }
+                          placeholder="BKK"
+                          className="mt-1.5 h-11 rounded-[10px] uppercase"
+                          maxLength={3}
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {draft.durationDays && draft.slug === THAILAND_DESTINATION_SLUG ? (
+                  <ThailandPilotPlanPanel
+                    destinationSlug={draft.slug}
+                    tripDays={draft.durationDays}
+                    vibe={draft.vibe}
+                    travelMonth={
+                      draft.dateFrom
+                        ? Number(draft.dateFrom.slice(5, 7)) || null
+                        : null
+                    }
+                    arrivalIata={draft.arrivalIata}
+                    departureIata={draft.departureIata}
+                  />
+                ) : null}
               </div>
             ) : null}
 
@@ -732,7 +800,9 @@ export function OrganizzaWizard({
                         }`}
                     </h2>
                     <p className="text-sm text-[var(--color-text-secondary)]">
-                      Itinerario ufficiale {BRAND_NAME}
+                      {draft.slug === THAILAND_DESTINATION_SLUG
+                        ? `Template curato ${BRAND_NAME} · piano pilot (non bookability live)`
+                        : `Itinerario curato ${BRAND_NAME}`}
                     </p>
                   </div>
                 </div>
@@ -832,6 +902,22 @@ export function OrganizzaWizard({
                     </li>
                   </ol>
                 </div>
+
+                {draft.slug === THAILAND_DESTINATION_SLUG && draft.durationDays ? (
+                  <ThailandPilotPlanPanel
+                    destinationSlug={draft.slug}
+                    tripDays={draft.durationDays}
+                    vibe={draft.vibe}
+                    travelMonth={
+                      draft.dateFrom
+                        ? Number(draft.dateFrom.slice(5, 7)) || null
+                        : null
+                    }
+                    arrivalIata={draft.arrivalIata}
+                    departureIata={draft.departureIata}
+                    showLegalDraft
+                  />
+                ) : null}
               </div>
             ) : null}
 

@@ -85,7 +85,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { offers, destinationIata, originsSearched, originsFailed } =
+    const { offers, destinationIata, originsSearched, originsFailed, allTimedOut } =
       await searchFlightRates({
         destination: destIata,
         departureDate: parsed.data.startDate,
@@ -104,6 +104,10 @@ export async function GET(request: Request) {
       offers.length === 0;
 
     if (allOriginsFailed) {
+      const code = allTimedOut ? 'provider_timeout' : 'upstream_error';
+      const error = allTimedOut
+        ? `Timeout del provider voli da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata}. L’errore non è nascosto: riprova manualmente (un tentativo automatico è già stato fatto).`
+        : `Ricerca voli non riuscita da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata} (errore provider). Riprova tra poco.`;
       return NextResponse.json(
         {
           configured: true,
@@ -115,8 +119,8 @@ export async function GET(request: Request) {
           originsSearched,
           originsFailed,
           tripType: parsed.data.tripType,
-          error: `Ricerca voli non riuscita da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata} (timeout o errore provider). Riprova tra poco.`,
-          code: 'upstream_error',
+          error,
+          code,
         },
         { status: 502 }
       );
