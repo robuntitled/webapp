@@ -47,15 +47,15 @@ type Props = {
 };
 
 const ORGANIZZA_POINTS = [
-  'Da solo, oppure con amici tramite un link privato',
-  'Itinerario già pronto, da adattare alle tue date',
-  'Riepilogo chiaro prima di creare il viaggio',
+  'Cerca voli e hotel quando vuoi, anche senza account',
+  'Esplora gli itinerari pronti e adattali alle tue date',
+  'Organizza da solo o con amici: paghi un servizio alla volta',
 ] as const;
 
 const GRUPPI_POINTS = [
-  'Date, itinerario e budget orientativo in un colpo d\'occhio',
-  'Vedi quanti sono già iscritti',
-  'Chat di gruppo per conoscersi prima di partire (si apre con il primo volo confermato)',
+  'Partenze di gruppo già in formazione (non è un pacchetto tour operator)',
+  'Vedi date, itinerario e quanti sono già iscritti',
+  'Chat di gruppo si apre con il primo volo confermato',
 ] as const;
 
 /** Hero home: Thailandia (Unsplash) — docs/IMAGE-LICENSES.md */
@@ -148,71 +148,45 @@ export function PublicLanding({
               Il viaggio fai da te, senza fare tutto da solo.
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-[clamp(0.95rem,1.4vw,1.15rem)] leading-relaxed text-white/92">
-              Parti dal volo, oppure lasciati ispirare da un itinerario pronto. Ogni servizio lo
-              scegli e lo paghi tu, uno dopo l&apos;altro.
+              Due strade chiare: organizzi tu il viaggio, oppure scopri una partenza di gruppo.
+              Nessun tour operator in mezzo — ogni servizio lo scegli e lo paghi tu, uno dopo
+              l&apos;altro.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Button
                 asChild
                 size="lg"
-                className="h-12 min-w-[12rem] rounded-[10px] bg-[var(--color-cta)] px-6 font-semibold text-white hover:bg-[#A93720]"
+                className="h-12 min-w-[12rem] rounded-[10px] border border-white/40 bg-white/15 px-6 font-semibold text-white hover:bg-white/25"
               >
-                <Link href="/prenota/voli">Cerca voli</Link>
+                <Link href="/organizza">Organizza il tuo viaggio</Link>
               </Button>
               <Button
                 asChild
                 size="lg"
-                variant="outline"
-                className="h-12 min-w-[12rem] rounded-[10px] border-white/40 bg-white/10 px-6 font-semibold text-white hover:bg-white/20"
+                className="h-12 min-w-[12rem] rounded-[10px] border border-white/40 bg-white/15 px-6 font-semibold text-white hover:bg-white/25"
               >
-                <Link href="/organizza">Lasciati ispirare</Link>
+                <Link href="/gruppi">
+                  {groupCount > 0 ? 'Parti con un gruppo' : 'Scopri le partenze'}
+                </Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Box ricerca: scheda Cerca hotel + seconda via Organizza / Gruppi */}
+      {/* Due ingressi pari peso: Organizza vs Gruppi */}
       <section className="nl-page relative z-20 -mt-24 w-full pb-4 sm:-mt-28">
-        <div className="rounded-[18px] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-7">
-          <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-3">
-            <Link
-              href="/prenota/voli"
-              className="rounded-full bg-[var(--color-tint)] px-3.5 py-2 text-sm font-semibold text-primary"
-            >
-              Cerca voli
-            </Link>
-            <Link
-              href="/prenota/hotel"
-              className="rounded-full px-3.5 py-2 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-tint)] hover:text-primary"
-            >
-              Cerca hotel
-            </Link>
-          </div>
-          <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
-            Hai già meta e date? Cerca il volo (o l&apos;hotel), poi crea il viaggio da quel
-            risultato. Paghi un servizio alla volta.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button asChild className="rounded-[10px] bg-[var(--color-cta)] font-semibold text-white hover:bg-[#A93720]">
-              <Link href="/prenota/voli">Cerca voli</Link>
-            </Button>
-            <Button asChild variant="outline" className="rounded-[10px]">
-              <Link href="/prenota/hotel">Cerca hotel</Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-5 md:grid-cols-2 md:gap-6">
+        <div className="grid gap-5 md:grid-cols-2 md:gap-6">
           <article className="flex flex-col gap-3.5 rounded-[18px] border border-[var(--color-border)] bg-white p-7 shadow-[var(--shadow-soft)]">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
               <Compass className="h-6 w-6" />
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight">
-              Lasciati ispirare
+              Organizza il tuo viaggio
             </h2>
             <p className="text-[var(--color-text-secondary)]">
-              Parti da un itinerario pronto, adatta le date e organizza con chi vuoi.
+              Viaggio autonomo: voli, hotel e itinerari. Tu scegli l&apos;ordine e paghi un
+              servizio alla volta.
             </p>
             <ul className="space-y-2.5">
               {ORGANIZZA_POINTS.map((t) => (
@@ -222,8 +196,19 @@ export function PublicLanding({
                 </li>
               ))}
             </ul>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Button asChild variant="outline" className="rounded-[10px]">
+                <Link href="/prenota/voli">Cerca voli</Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-[10px]">
+                <Link href="/prenota/hotel">Cerca hotel</Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-[10px]">
+                <Link href="/organizza">Esplora gli itinerari</Link>
+              </Button>
+            </div>
             <Button asChild size="lg" className={pathBtnClass}>
-              <Link href="/organizza">Lasciati ispirare →</Link>
+              <Link href="/organizza">Vai a Organizza →</Link>
             </Button>
           </article>
 
@@ -232,11 +217,11 @@ export function PublicLanding({
               <Users className="h-6 w-6" />
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight">
-              Unisciti a un gruppo
+              Parti con un gruppo
             </h2>
             <p className="text-[var(--color-text-secondary)]">
-              Scegli una partenza di gruppo, conosci gli altri viaggiatori e organizzate il viaggio
-              insieme.
+              Partenze collettive in formazione. Non è un pacchetto: resti tu a prenotare i
+              servizi, insieme agli altri.
             </p>
             <ul className="space-y-2.5">
               {GRUPPI_POINTS.map((t) => (
@@ -247,7 +232,13 @@ export function PublicLanding({
               ))}
             </ul>
             <Button asChild size="lg" className={pathBtnClass}>
-              <Link href="/gruppi">Unisciti a un gruppo →</Link>
+              <Link href="/gruppi">
+                {groupCount > 0
+                  ? groupCount === 1
+                    ? 'Scopri 1 partenza →'
+                    : `Scopri ${groupCount} partenze →`
+                  : 'Scopri le partenze →'}
+              </Link>
             </Button>
           </article>
         </div>
@@ -272,7 +263,7 @@ export function PublicLanding({
                 priority
               />
               <span className="absolute left-4 top-4 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[var(--color-success)]">
-                Prenotabile
+                Itinerario disponibile
               </span>
             </div>
             <div className="flex flex-col justify-center gap-3.5 p-6 sm:p-9">
@@ -310,11 +301,11 @@ export function PublicLanding({
                 </Button>
                 <Button asChild variant="outline" className="rounded-[10px]">
                   <Link href="/gruppi">
-                    {groupCount === 1
-                      ? 'Vedi 1 gruppo in partenza'
-                      : groupCount > 1
-                        ? `Vedi ${groupCount} gruppi in partenza`
-                        : 'Vedi i gruppi'}
+                    {groupCount > 0
+                      ? groupCount === 1
+                        ? 'Scopri 1 partenza di gruppo'
+                        : `Scopri ${groupCount} partenze di gruppo`
+                      : 'Scopri le partenze'}
                   </Link>
                 </Button>
               </div>

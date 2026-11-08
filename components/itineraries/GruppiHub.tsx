@@ -22,8 +22,8 @@ const HOW = [
   },
   {
     n: 2,
-    title: 'Unisciti e conosci il gruppo',
-    body: 'Vedi chi si è iscritto. La chat del gruppo si apre con il primo volo confermato.',
+    title: 'Iscriviti se la partenza è aperta',
+    body: 'Se è ancora «In arrivo», puoi solo scoprirla. La chat si apre con il primo volo confermato.',
   },
 ] as const;
 
@@ -48,10 +48,11 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
       <div className="nl-page w-full space-y-8 pt-8 sm:pt-10">
         <header className="max-w-2xl">
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-4xl">
-            Unisciti a un gruppo
+            Scopri le partenze
           </h1>
           <p className="mt-2 text-base text-[var(--color-text-secondary)] sm:text-lg">
-            Partenze di gruppo per la Thailandia: guarda le date e unisciti al gruppo.
+            Partenze di gruppo in formazione (non un pacchetto tour operator). Guarda date e
+            itinerario; iscriviti solo quando la partenza è aperta.
           </p>
         </header>
 
