@@ -29,6 +29,7 @@ import {
   type TripWhenSelection,
 } from '@/components/itineraries/TripWhenPicker';
 import { DeterministicPlanPanel } from '@/components/itineraries/DeterministicPlanPanel';
+import { BudgetBreakdownCard } from '@/components/itineraries/BudgetBreakdownCard';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import {
@@ -38,7 +39,6 @@ import {
 } from '@/lib/itineraries/catalog';
 import { skeletonAsTemplate } from '@/lib/itineraries/deterministic-planner/skeleton';
 import { planFromMaster } from '@/lib/itineraries/masters';
-import type { RemapVibe } from '@/lib/itineraries/masters/remap';
 import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
 import {
   EMPTY_ORGANIZZA_DRAFT,
@@ -898,40 +898,25 @@ export function OrganizzaWizard({
                   ))}
                 </ul>
 
-                <div className="rounded-2xl bg-[var(--color-tint)] px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      {COMPLIANCE_COPY.budgetLabel}
-                    </p>
-                    <p className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
-                      {formatEuro(
-                        (draft.durationDays
-                          ? planFromMaster(
-                              template.destination_slug,
-                              draft.durationDays,
-                              (draft.vibe as RemapVibe | null) ?? null
-                            )?.template.budget_orientative_eur.total_hint
-                          : null) ??
-                          template.budget_orientative_eur.total_hint,
-                        { approx: false }
-                      )}{' '}
-                      <span className="text-sm font-semibold">a persona</span>
-                      {draft.durationDays ? (
-                        <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
-                          {' '}
-                          · {tripDurationLabelIt(draft.durationDays)}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                      Budget orientativo unico (stima) — stesso totale dell’itinerario sotto
-                    </p>
-                  </div>
-                  <p className="mt-2 max-w-xs text-xs text-[var(--color-text-secondary)] sm:mt-0 sm:text-right">
-                    Stima di voli e hotel, non un prezzo finale. Ognuno sceglie e paga i propri
-                    servizi.
-                  </p>
-                </div>
+                {draft.durationDays ? (
+                  <BudgetBreakdownCard
+                    destinationSlug={template.destination_slug}
+                    tripDays={draft.durationDays}
+                    vibe={draft.vibe}
+                    company={draft.company}
+                    days={
+                      planFromMaster(
+                        template.destination_slug,
+                        draft.durationDays,
+                        draft.vibe === 'relax' ||
+                          draft.vibe === 'divertimento' ||
+                          draft.vibe === 'avventura'
+                          ? draft.vibe
+                          : null
+                      )?.template.days
+                    }
+                  />
+                ) : null}
 
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-tint)]/50 p-4">
                   <p className="text-sm font-bold text-[var(--color-text)]">Cosa succede dopo</p>
@@ -962,6 +947,7 @@ export function OrganizzaWizard({
                     }
                     arrivalIata={draft.arrivalIata}
                     departureIata={draft.departureIata}
+                    company={draft.company}
                     showLegalDraft
                     hideBudget
                   />

@@ -11,6 +11,34 @@ import type {
   StopPriority,
   TransferMode,
 } from '@/lib/itineraries/masters/types';
+import {
+  budgetHintsFromBreakdown,
+  computeItineraryBudget,
+} from '@/lib/itineraries/budget/compute';
+
+function buildBudgetHintsForRemap(
+  master: DestinationMaster,
+  days: ItineraryDay[],
+  vibe: RemapVibe
+) {
+  const breakdown = computeItineraryBudget({
+    destinationSlug: master.slug,
+    tripDays: days.length,
+    vibe,
+    company: 'solo',
+    days,
+  });
+  if (breakdown && breakdown.totalEur != null) {
+    return budgetHintsFromBreakdown(breakdown);
+  }
+  return {
+    flights_hint: master.budgetOrientativeEur.flights_hint,
+    hotel_hint: master.budgetOrientativeEur.hotel_hint,
+    activities_hint: master.budgetOrientativeEur.activities_hint,
+    food_hint: master.budgetOrientativeEur.food_hint,
+    total_hint: master.budgetOrientativeEur.total_hint,
+  };
+}
 
 export type RemapVibe = 'relax' | 'divertimento' | 'avventura';
 
@@ -421,18 +449,12 @@ export function remapMasterToTemplate(
     notes: 'Ognuno prenota la propria camera.',
   }));
 
-  // Scale orientative budget gently with duration vs ideal (never invent fares).
-  const scale = Math.max(0.7, Math.min(1.35, days.length / Math.max(1, master.idealTripDays)));
-  const b = master.budgetOrientativeEur;
-  const budget_orientative_eur = {
-    flights_hint: Math.round(b.flights_hint),
-    hotel_hint: Math.round(b.hotel_hint * scale),
-    activities_hint: Math.round(b.activities_hint * scale),
-    food_hint: Math.round(b.food_hint * scale),
-    total_hint: Math.round(
-      b.flights_hint + (b.hotel_hint + b.activities_hint + b.food_hint) * scale
-    ),
-  };
+  // Budget from remapped days + sourced cost tables (not clamped ideal×scale).
+  const budget_orientative_eur = buildBudgetHintsForRemap(
+    master,
+    days,
+    vibe ?? master.styleDefault
+  );
 
   const template: ItineraryTemplate = {
     // Stable ids for catalog/editions (thailandia-10d, vietnam-14d, …)
