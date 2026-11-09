@@ -835,8 +835,8 @@ export function OrganizzaWizard({
                     </h2>
                     <p className="text-sm text-[var(--color-text-secondary)]">
                       {hasCuratedTemplate
-                        ? `Itinerario curato ${BRAND_NAME} · non bookability live`
-                        : `Schema orientativo ${BRAND_NAME} · lacune da verificare`}
+                        ? `Itinerario curato ${BRAND_NAME} · disponibilità e prezzi da verificare`
+                        : `Schema orientativo ${BRAND_NAME} · disponibilità e prezzi da verificare`}
                     </p>
                   </div>
                 </div>

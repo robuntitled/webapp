@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:nav": "playwright test e2e/nav-logic.spec.ts",
     "db:security": "node scripts/apply-security.mjs",
     "db:verify-security": "node scripts/verify-security.mjs",
     "db:gdpr": "node scripts/apply-gdpr.mjs",
@@ -87,6 +89,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/google.maps": "^3.65.2",
     "@types/leaflet": "^1.9.21",

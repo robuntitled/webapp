@@ -36,7 +36,7 @@ export { buildThailandPilotPlan };
 
 /**
  * Piano Thailandia deterministico: percorso giorno per giorno, fonti e incertezze.
- * Non è bookability live né fattibilità garantita.
+ * Disponibilità e prezzi da verificare; non è fattibilità garantita.
  */
 export function ThailandPilotPlanPanel({
   destinationSlug,
@@ -113,9 +113,9 @@ export function ThailandPilotPlanPanel({
         </h3>
         <p className="text-sm text-[var(--color-text-secondary)]">{plan.summary}</p>
         <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-          Output di pianificazione da template curati + vincoli (date, ritmo, hub).{' '}
-          <strong className="font-semibold">Non</strong> è bookability live, né fattibilità di
-          voli/traghetti garantita. Prenotazioni restano servizi separati a mercato.
+          Output di pianificazione da template curati + vincoli (date, ritmo, hub). Disponibilità
+          e prezzi da verificare; non è una fattibilità garantita di voli o traghetti. Prenotazioni
+          restano servizi separati a mercato.
         </p>
       </header>
 

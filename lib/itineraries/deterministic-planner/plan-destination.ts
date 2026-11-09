@@ -143,7 +143,7 @@ function presentMasterPlan(
     budgetTotalHint: master.budgetOrientativeEur.total_hint,
     logisticsNotes: master.logisticsNotesIt,
     disclaimer:
-      'Itinerario da master curato, rimodulato su giorni e stile. Non è bookability live né fattibilità garantita di voli/traghetti. Ognuno prenota i propri servizi.',
+      'Itinerario da master curato, rimodulato su giorni e stile. Disponibilità e prezzi da verificare; non è una fattibilità garantita di voli o traghetti. Ognuno prenota i propri servizi.',
   };
 }
 
@@ -203,7 +203,7 @@ function presentSkeleton(
     budgetTotalHint: null,
     logisticsNotes: 'Master curato in arrivo. Nessun pacchetto combinato.',
     disclaimer:
-      'Schema temporaneo da catalogo. Non copia itinerari protetti e non garantisce bookability.',
+      'Schema temporaneo da catalogo. Non copia itinerari protetti; disponibilità e prezzi da verificare.',
   };
 }
 

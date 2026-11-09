@@ -176,7 +176,7 @@ export function skeletonAsTemplate(
     destination_name: dest.name,
     duration_days: days.length,
     title: `${dest.name} · ${days.length} giorni`,
-    summary: `Schema orientativo per ${dest.name}. Non è un pacchetto né bookability live.`,
+    summary: `Schema orientativo per ${dest.name}. Non è un pacchetto; disponibilità e prezzi da verificare.`,
     budget_orientative_eur: {
       flights_hint: 0,
       hotel_hint: 0,

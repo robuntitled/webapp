@@ -32,4 +32,10 @@ describe('PublicLanding home entrances', () => {
       /min-w-\[12rem\][\s\S]{0,120}bg-\[var\(--color-cta\)\][\s\S]{0,80}Cerca voli/
     );
   });
+
+  it('shows I miei viaggi instead of Accedi when logged in', () => {
+    expect(src).toContain('USER_AREA_HREF');
+    expect(src).toContain('isLoggedIn');
+    expect(src).toContain('home-user-area');
+  });
 });
