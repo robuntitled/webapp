@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { HOME_HREF, USER_AREA_HREF } from '@/lib/nav/home';
 import { getInitialsFromFullName } from '@/lib/utils/user';
 
 type User = Session['user'];
@@ -52,7 +53,10 @@ export function UserNav({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/pratiche">I miei viaggi</Link>
+            <Link href={HOME_HREF}>Home</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={USER_AREA_HREF}>I miei viaggi</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/profilo">Modifica profilo</Link>
@@ -68,7 +72,7 @@ export function UserNav({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => signOut({ callbackUrl: '/' })}>
-          Logout
+          Esci
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

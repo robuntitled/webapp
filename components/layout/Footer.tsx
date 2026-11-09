@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { CompanyProfile } from '@/lib/privacy/company';
+import { HOME_HREF } from '@/lib/nav/home';
 import { isPlaceholder } from '@/lib/privacy/is-placeholder';
 
 function hideSiteFooter(pathname: string | null): boolean {
@@ -33,9 +34,10 @@ export function Footer({ company }: FooterProps) {
           <div className="max-w-sm">
             <div className="mb-4">
               <Link
-                href="/"
+                href={HOME_HREF}
                 className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 aria-label="Noivia — home"
+                data-testid="footer-logo-home"
               >
                 <BrandLogo size={40} />
               </Link>

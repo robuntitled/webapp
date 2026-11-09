@@ -1,5 +1,7 @@
 /** Navigazione principale Noivia: Organizza / Gruppi / I miei viaggi */
 
+export { HOME_HREF, USER_AREA_HREF, USER_AREA_LABEL, brandHomeHref } from '@/lib/nav/home';
+
 export const PRIMARY_NAV = [
   {
     href: '/organizza',

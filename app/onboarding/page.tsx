@@ -5,6 +5,7 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 import { HeroBackground } from '@/components/brand/HeroBackground';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { HOME_HREF } from '@/lib/nav/home';
 
 export const metadata = {
   title: 'Inizio',
@@ -31,7 +32,12 @@ export default async function OnboardingPage() {
         overlay="gradient"
       />
       <header className="relative z-10 px-4 py-5">
-        <Link href="/" className="inline-block" aria-label="Noivia — home">
+        <Link
+          href={HOME_HREF}
+          className="inline-block"
+          aria-label="Noivia — home"
+          data-testid="brand-logo-home"
+        >
           <BrandLogo size={52} />
         </Link>
       </header>

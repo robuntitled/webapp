@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { HOME_HREF } from '@/lib/nav/home';
 
 export function LegalPageShell({ children }: { children: React.ReactNode }) {
   return (
@@ -12,18 +13,20 @@ export function LegalPageShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
         <div className="nl-page flex h-[var(--nl-nav-height)] items-center justify-between gap-4">
           <Link
-            href="/organizza"
+            href={HOME_HREF}
             className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            aria-label="Noivia — home"
+            data-testid="brand-logo-home"
           >
             <BrandLogo size={28} />
           </Link>
           <Link
-            href="/organizza"
+            href={HOME_HREF}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-primary/25 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-            <span className="hidden sm:inline">Torna all&apos;app</span>
-            <span className="sm:hidden">Indietro</span>
+            <span className="hidden sm:inline">Torna alla home</span>
+            <span className="sm:hidden">Home</span>
           </Link>
         </div>
       </header>

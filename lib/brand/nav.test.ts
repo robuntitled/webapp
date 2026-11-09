@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRIMARY_NAV } from '@/lib/brand/nav';
+import { HOME_HREF, PRIMARY_NAV, USER_AREA_HREF } from '@/lib/brand/nav';
 
 describe('PRIMARY_NAV', () => {
   it('espone Organizza, Gruppi e I miei viaggi (auth)', () => {
@@ -15,6 +15,12 @@ describe('PRIMARY_NAV', () => {
     ]);
     const mine = PRIMARY_NAV.find((i) => i.href === '/pratiche');
     expect(mine && 'auth' in mine && mine.auth).toBe(true);
+  });
+
+  it('keeps home and user area distinct', () => {
+    expect(HOME_HREF).toBe('/');
+    expect(USER_AREA_HREF).toBe('/pratiche');
+    expect(HOME_HREF).not.toBe(USER_AREA_HREF);
   });
 
   it('match pathname coerenti', () => {

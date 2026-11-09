@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { authConfig } from '@/auth.config';
 import { GDPR_PUBLIC_PATHS, ONBOARDING_PATH } from '@/lib/auth-session';
 import { postLoginPath } from '@/lib/onboarding/steps';
+import { shouldBounceLoggedInFrom } from '@/lib/nav/home';
 import {
   absoluteUrlOnRequest,
   rewriteAuthResponseToRequestHost,
@@ -76,7 +77,9 @@ const authMiddleware = auth((req) => {
     return redirectOnRequest(req, '/organizza');
   }
 
-  if ((pathname === '/' || pathname === '/accedi') && userId && privacyOk) {
+  // Logo → `/` must reach the real home (Organizza/Gruppi entrances) also when logged in.
+  // Only bounce auth surfaces like `/accedi` to the post-login area.
+  if (shouldBounceLoggedInFrom(pathname, { userId: Boolean(userId), privacyOk })) {
     return redirectOnRequest(
       req,
       postLoginPath({ onboardingCompleted: onboardingDone })

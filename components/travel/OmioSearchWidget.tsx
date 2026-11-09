@@ -203,7 +203,7 @@ function OmioSetupBanner() {
             Imposta{' '}
             <code className="text-xs">NEXT_PUBLIC_OMIO_PARTNER_ID</code> e{' '}
             <code className="text-xs">NEXT_PUBLIC_OMIO_REDIRECT_URL</code> (codice Impact /
-            Search Widget).
+            widget di ricerca Omio).
           </p>
         </div>
       </div>

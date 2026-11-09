@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PRIMARY_NAV } from '@/lib/brand/nav';
+import { HOME_HREF } from '@/lib/nav/home';
 import { cn } from '@/lib/utils';
 
 const EXTRA_AUTH_LINKS = [
@@ -64,6 +65,15 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
             aria-label="Navigazione mobile"
           >
             <div className="nl-page flex w-full flex-col gap-0.5">
+              <Link
+                href={HOME_HREF}
+                onClick={() => setOpen(false)}
+                className={mobileLinkClass(pathname === HOME_HREF)}
+                aria-current={pathname === HOME_HREF ? 'page' : undefined}
+                data-testid="mobile-nav-home"
+              >
+                Home
+              </Link>
               {PRIMARY_NAV.filter((l) => !('auth' in l && l.auth) || isLoggedIn).map((link) => (
                 <Link
                   key={link.href}

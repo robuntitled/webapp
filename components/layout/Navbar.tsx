@@ -8,6 +8,7 @@ import { NotificationBell } from '@/components/layout/NotificationBell';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { isAdminEmail } from '@/lib/admin';
+import { HOME_HREF } from '@/lib/nav/home';
 import { cn } from '@/lib/utils';
 
 export async function Navbar() {
@@ -18,9 +19,10 @@ export async function Navbar() {
     <AppHeader>
       <div className="nl-page nl-nav-inner grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 md:gap-4">
         <Link
-          href="/"
-          className="justify-self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+          href={HOME_HREF}
+          className="relative z-[60] justify-self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
           aria-label="Noivia — home"
+          data-testid="brand-logo-home"
         >
           <BrandLogo responsive priority />
         </Link>

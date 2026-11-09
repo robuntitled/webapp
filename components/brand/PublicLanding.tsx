@@ -13,6 +13,7 @@ import { BRAND_NAME } from '@/lib/brand';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 import { PRIMARY_NAV } from '@/lib/brand/nav';
 import { formatEuro } from '@/lib/format/euro';
+import { HOME_HREF, USER_AREA_HREF, USER_AREA_LABEL } from '@/lib/nav/home';
 
 export type LandingDestination = {
   slug: string;
@@ -92,9 +93,10 @@ export function PublicLanding({
 
         <header className="relative z-20 flex flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-3 sm:px-8 sm:py-4">
           <Link
-            href="/"
+            href={HOME_HREF}
             className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             aria-label={`${BRAND_NAME} — home`}
+            data-testid="brand-logo-home"
           >
             <BrandLogo
               size={34}
@@ -104,22 +106,37 @@ export function PublicLanding({
             />
           </Link>
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:order-last sm:ml-0 sm:gap-2">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-11 min-h-11 rounded-[10px] px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
-            >
-              <Link href={accediHref()}>Accedi</Link>
-            </Button>
-            {/* Unico coral della home — stile esplicito (owner: non cambiare aspetto) */}
-            <Button
-              asChild
-              size="sm"
-              className="h-11 min-h-11 rounded-[10px] bg-[var(--color-cta)] px-3 font-semibold text-white hover:bg-[#A93720] sm:px-3.5"
-            >
-              <Link href={accediHref(undefined, 'register')}>Registrati</Link>
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-11 min-h-11 rounded-[10px] px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
+              >
+                <Link href={USER_AREA_HREF} data-testid="home-user-area">
+                  {USER_AREA_LABEL}
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="h-11 min-h-11 rounded-[10px] px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
+                >
+                  <Link href={accediHref()}>Accedi</Link>
+                </Button>
+                {/* Unico coral della home — stile esplicito (owner: non cambiare aspetto) */}
+                <Button
+                  asChild
+                  size="sm"
+                  className="h-11 min-h-11 rounded-[10px] bg-[var(--color-cta)] px-3 font-semibold text-white hover:bg-[#A93720] sm:px-3.5"
+                >
+                  <Link href={accediHref(undefined, 'register')}>Registrati</Link>
+                </Button>
+              </>
+            )}
           </div>
           <nav
             className="flex w-full items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-center"

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Button } from '@/components/ui/button';
+import { HOME_HREF } from '@/lib/nav/home';
 
 export default function Error({
   error,
@@ -18,7 +19,9 @@ export default function Error({
 
   return (
     <main className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-16 text-center">
-      <BrandLogo size={40} />
+      <Link href={HOME_HREF} aria-label="Noivia — home" data-testid="brand-logo-home">
+        <BrandLogo size={40} />
+      </Link>
       <h1 className="mt-6 font-display text-3xl font-semibold tracking-tight text-stone-900">
         Qualcosa non ha funzionato
       </h1>
@@ -33,7 +36,7 @@ export default function Error({
           Riprova
         </Button>
         <Button asChild variant="outline">
-          <Link href="/">Home</Link>
+          <Link href={HOME_HREF}>Torna alla home</Link>
         </Button>
       </div>
     </main>
