@@ -20,7 +20,7 @@ export async function GET(request: Request, context: RouteContext) {
   const allowed = await canAccessTripChat(tripId, session.user.id);
   if (!allowed) {
     return NextResponse.json(
-      { error: 'La chat si apre dopo il primo volo confermato nel gruppo' },
+      { error: 'Iscriviti alla partenza per aprire la chat di gruppo' },
       { status: 403 }
     );
   }

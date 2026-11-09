@@ -45,7 +45,7 @@ export function getAllegatoBLinkedDraftCopy(opts?: {
       // (b) LTA + insolvenza
       `Tuttavia, se prenoti servizi turistici aggiuntivi durante la stessa visita al sito di ${trade} oppure entro 24 ore dalla conferma della prenotazione del primo servizio turistico, tali servizi costituiranno un servizio turistico collegato. In tal caso ${trade} dispone, come prescritto dal diritto dell’Unione, di una protezione per rimborsare i pagamenti che riceve per servizi non eseguiti a causa della propria insolvenza. Nota: questa protezione non costituisce una restituzione in caso di insolvenza del pertinente prestatore di servizi.`,
       // Contatti / dati — solo placeholder LEGAL_* (nessun dato inventato)
-      `Ulteriori informazioni sulla protezione in caso di insolvenza (BOZZA, da revisione avvocato): ${LEGAL_PLACEHOLDERS.supportEmail}. Facilitatore indicato: ${company} · P.IVA ${LEGAL_PLACEHOLDERS.vatId} · sede ${LEGAL_PLACEHOLDERS.addressLine}, ${LEGAL_PLACEHOLDERS.postalCode} ${LEGAL_PLACEHOLDERS.city} (${LEGAL_PLACEHOLDERS.country}).`,
+      `Ulteriori informazioni sulla protezione in caso di insolvenza (BOZZA, da revisione avvocato): contatto in definizione (email legale non ancora pubblicata). Facilitatore indicato: ${company} · P.IVA ${LEGAL_PLACEHOLDERS.vatId} · sede ${LEGAL_PLACEHOLDERS.addressLine}, ${LEGAL_PLACEHOLDERS.postalCode} ${LEGAL_PLACEHOLDERS.city} (${LEGAL_PLACEHOLDERS.country}).`,
       // Chiarimento operativo allineato a G1/G3 del Legale
       'Ogni servizio (volo, hotel, altro) è un contratto separato con il rispettivo fornitore. Non esiste un prezzo totale del viaggio né un unico checkout. Conserva le condizioni di ciascun fornitore.',
     ],

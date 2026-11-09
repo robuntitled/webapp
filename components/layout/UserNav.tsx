@@ -59,13 +59,16 @@ export function UserNav({
             <Link href={USER_AREA_HREF}>I miei viaggi</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
+            <Link href="/bacheca">Bacheca</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link href="/dashboard/profilo">Modifica profilo</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/impostazioni">Impostazioni</Link>
           </DropdownMenuItem>
           {showCostsDashboard ? (
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild data-testid="admin-costi-link">
               <Link href="/dashboard/costi">Costi API</Link>
             </DropdownMenuItem>
           ) : null}

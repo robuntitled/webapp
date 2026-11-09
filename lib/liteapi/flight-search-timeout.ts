@@ -8,14 +8,23 @@ const SHORT_HAUL_DEST_HINT =
   /^(AMS|ATH|BCN|BER|BRU|BUD|CDG|CPH|DUB|DUS|FCO|FRA|GVA|HAM|IST|LGW|LHR|LIS|LTN|LYS|MAD|MAN|MUC|MXP|NAP|NCE|ORY|OSL|OTP|PRG|PSA|RIX|SOF|STN|STR|TIA|TLL|VCE|VIE|VNO|WAW|ZRH)$/i;
 
 /**
- * Long-haul (e.g. MXP→BKK) often exceeds the previous 8s short-haul budget —
- * preview evidence: EU routes ~6–8s OK; BKK aborted ~9s with 8s client timeout.
+ * Long-haul (e.g. MXP→NRT/BKK) often needs ~20–40s; with one timeout retry
+ * the UI can approach ~45–60s. Short-haul stays tighter.
  */
 export function flightSearchTimeoutMs(destinationIata: string): number {
   const dest = destinationIata.trim().toUpperCase();
-  if (!dest) return 10_000;
-  if (SHORT_HAUL_DEST_HINT.test(dest)) return 10_000;
-  return 18_000;
+  if (!dest) return 12_000;
+  if (SHORT_HAUL_DEST_HINT.test(dest)) return 12_000;
+  return 28_000;
+}
+
+/** Honest UI expectation for search duration (no provider names). */
+export function flightSearchExpectationCopyIt(destinationIata?: string | null): string {
+  const dest = (destinationIata ?? '').trim().toUpperCase();
+  if (dest && !SHORT_HAUL_DEST_HINT.test(dest)) {
+    return 'Tratte lunghe: di solito 20–45 secondi. Se serve, riproviamo una volta in automatico.';
+  }
+  return 'Di solito entro 15 secondi. Se serve, riproviamo una volta in automatico.';
 }
 
 export function isLiteApiTimeoutError(err: unknown): boolean {

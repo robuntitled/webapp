@@ -20,6 +20,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { SettingsSection, settingsFieldClass } from '@/components/settings/SettingsSection';
+import { isPlaceholder, legalContactLabelIt } from '@/lib/privacy/is-placeholder';
 import { toast } from 'sonner';
 
 export function SettingsPrivacySection({ privacyEmail }: { privacyEmail: string }) {
@@ -140,10 +141,23 @@ export function SettingsPrivacySection({ privacyEmail }: { privacyEmail: string 
       </SettingsSection>
 
       <p className="text-xs text-muted-foreground leading-relaxed pt-2 border-t border-border/50">
-        Per altre richieste (accesso, rettifica, opposizione, limitazione) scrivi a{' '}
-        <a href={`mailto:${privacyEmail}`} className="text-primary hover:underline font-medium">
-          {privacyEmail}
-        </a>
+        Per altre richieste (accesso, rettifica, opposizione, limitazione){' '}
+        {isPlaceholder(privacyEmail) ? (
+          <span className="font-medium text-foreground">
+            {legalContactLabelIt(privacyEmail).toLowerCase()}
+          </span>
+        ) : (
+          <>
+            scrivi a{' '}
+            <a
+              href={`mailto:${privacyEmail}`}
+              className="text-primary hover:underline font-medium"
+            >
+              {privacyEmail}
+            </a>
+          </>
+        )}
+        .
       </p>
     </div>
   );

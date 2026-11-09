@@ -10,7 +10,6 @@ import { HOME_HREF } from '@/lib/nav/home';
 import { cn } from '@/lib/utils';
 
 const EXTRA_AUTH_LINKS = [
-  { href: '/dashboard/bacheca', label: 'Bacheca' },
   { href: '/dashboard/preferiti', label: 'Preferiti' },
 ] as const;
 

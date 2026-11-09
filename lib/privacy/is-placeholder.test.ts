@@ -9,6 +9,7 @@ describe('isPlaceholder', () => {
     expect(isPlaceholder('[TODO LEGAL_EMAIL_PRIVACY — privacy@ da definire]')).toBe(
       true
     );
+    expect(isPlaceholder('Contatto in definizione')).toBe(true);
     expect(isPlaceholder('privacy@example.com')).toBe(false);
     expect(isPlaceholder('Noivia')).toBe(false);
   });

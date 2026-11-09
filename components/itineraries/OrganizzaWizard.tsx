@@ -37,6 +37,9 @@ import {
   templatesForDestination,
 } from '@/lib/itineraries/catalog';
 import { skeletonAsTemplate } from '@/lib/itineraries/deterministic-planner/skeleton';
+import { planFromMaster } from '@/lib/itineraries/masters';
+import type { RemapVibe } from '@/lib/itineraries/masters/remap';
+import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
 import {
   EMPTY_ORGANIZZA_DRAFT,
   ORGANIZZA_STEPS,
@@ -268,7 +271,7 @@ function SummarySidebar({
               <dt className="text-[var(--color-text-secondary)]">Durata</dt>
               <dd className="font-semibold text-[var(--color-text)]">
                 {draft.durationDays
-                  ? `${draft.durationDays} giorni`
+                  ? tripDurationLabelIt(draft.durationDays)
                   : '—'}
               </dd>
             </div>
@@ -854,7 +857,11 @@ export function OrganizzaWizard({
                         label: 'Date',
                         value:
                           draft.dateFrom && draft.dateTo
-                            ? `${formatPeriod(draft.dateFrom, draft.dateTo)} · ${draft.durationDays ?? '—'} giorni`
+                            ? `${formatPeriod(draft.dateFrom, draft.dateTo)} · ${
+                                draft.durationDays
+                                  ? tripDurationLabelIt(draft.durationDays)
+                                  : '—'
+                              }`
                             : '—',
                       },
                       {
@@ -898,21 +905,27 @@ export function OrganizzaWizard({
                     </p>
                     <p className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
                       {formatEuro(
-                        orientativeBudgetHint(
-                          template.destination_slug,
-                          draft.durationDays ?? template.duration_days
-                        ) ?? template.budget_orientative_eur.total_hint,
+                        (draft.durationDays
+                          ? planFromMaster(
+                              template.destination_slug,
+                              draft.durationDays,
+                              (draft.vibe as RemapVibe | null) ?? null
+                            )?.template.budget_orientative_eur.total_hint
+                          : null) ??
+                          template.budget_orientative_eur.total_hint,
                         { approx: false }
                       )}{' '}
                       <span className="text-sm font-semibold">a persona</span>
                       {draft.durationDays ? (
                         <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
                           {' '}
-                          · {draft.durationDays} giorni
+                          · {tripDurationLabelIt(draft.durationDays)}
                         </span>
                       ) : null}
                     </p>
-                    <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">stima</p>
+                    <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                      Budget orientativo unico (stima) — stesso totale dell’itinerario sotto
+                    </p>
                   </div>
                   <p className="mt-2 max-w-xs text-xs text-[var(--color-text-secondary)] sm:mt-0 sm:text-right">
                     Stima di voli e hotel, non un prezzo finale. Ognuno sceglie e paga i propri
@@ -950,6 +963,7 @@ export function OrganizzaWizard({
                     arrivalIata={draft.arrivalIata}
                     departureIata={draft.departureIata}
                     showLegalDraft
+                    hideBudget
                   />
                 ) : null}
               </div>

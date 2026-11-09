@@ -1,20 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import {
+  flightSearchExpectationCopyIt,
   flightSearchTimeoutMs,
   isLiteApiTimeoutError,
 } from '@/lib/liteapi/flight-search-timeout';
 
 describe('flightSearchTimeoutMs', () => {
   it('keeps short budget for EU hubs', () => {
-    expect(flightSearchTimeoutMs('FCO')).toBe(10_000);
-    expect(flightSearchTimeoutMs('LHR')).toBe(10_000);
-    expect(flightSearchTimeoutMs('BCN')).toBe(10_000);
+    expect(flightSearchTimeoutMs('FCO')).toBe(12_000);
+    expect(flightSearchTimeoutMs('LHR')).toBe(12_000);
+    expect(flightSearchTimeoutMs('BCN')).toBe(12_000);
   });
 
-  it('extends budget for long-haul destinations like BKK', () => {
-    expect(flightSearchTimeoutMs('BKK')).toBe(18_000);
-    expect(flightSearchTimeoutMs('HKT')).toBe(18_000);
-    expect(flightSearchTimeoutMs('NRT')).toBe(18_000);
+  it('extends budget for long-haul destinations like BKK/NRT', () => {
+    expect(flightSearchTimeoutMs('BKK')).toBe(28_000);
+    expect(flightSearchTimeoutMs('HKT')).toBe(28_000);
+    expect(flightSearchTimeoutMs('NRT')).toBe(28_000);
+  });
+
+  it('honest expectation copy has no provider names', () => {
+    expect(flightSearchExpectationCopyIt('NRT')).toMatch(/20–45/);
+    expect(flightSearchExpectationCopyIt('NRT').toLowerCase()).not.toMatch(/provider|liteapi/);
+    expect(flightSearchExpectationCopyIt('FCO')).toMatch(/15/);
   });
 });
 

@@ -31,6 +31,7 @@ import {
   type TripVibe,
 } from '@/lib/itineraries/fit';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
+import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
 import { cn } from '@/lib/utils';
 
 export const TRIP_VIBES: {
@@ -203,7 +204,7 @@ export function TripWhenPicker({
   };
 
   const summary = value
-    ? `${format(value.dateFrom, 'd MMM', { locale: it })} → ${format(value.dateTo, 'd MMM yyyy', { locale: it })} · ${value.tripDays} giorni`
+    ? `${format(value.dateFrom, 'd MMM', { locale: it })} → ${format(value.dateTo, 'd MMM yyyy', { locale: it })} · ${tripDurationLabelIt(value.tripDays)}`
     : null;
 
   return (
@@ -341,7 +342,8 @@ export function TripWhenPicker({
                     {format(value.dateTo, 'EEEE d MMMM yyyy', { locale: it })}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Piano adattato · {value.tripDays} giorni · vibe {value.vibe}
+                    Piano adattato · {tripDurationLabelIt(value.tripDays)} · vibe{' '}
+                    {value.vibe}
                   </p>
                 </div>
               </div>
@@ -439,10 +441,13 @@ export function TripWhenPicker({
                 classNames={calendarClassNames}
               />
             )}
-            {value && value.tripDays !== value.template.duration_days ? (
+            {value ? (
               <p className="mt-3 text-center text-xs text-slate-500">
-                Abbiamo rimodulato il piano da {value.template.duration_days} a {value.tripDays}{' '}
-                giorni (tolti buffer e tappe secondarie).
+                {tripDurationLabelIt(value.tripDays)}
+                {value.tripDays !== value.template.duration_days
+                  ? ` · itinerario adattato sul master (riferimento catalogo ${value.template.duration_days} giorni)`
+                  : null}
+                . Arrivo e partenza contano come giorni interi del viaggio.
               </p>
             ) : null}
           </div>

@@ -58,15 +58,15 @@ export async function countConfirmedEditionMembers(editionId: string): Promise<n
 
 /**
  * Chat sbloccata per l’edizione.
- * Default (A5 flag OFF): almeno un partecipante ha confermato il volo.
- * Con CHAT_OPEN_AT_SIGNUP / isChatOpenAtSignup(): aperta all’iscrizione (membro attivo).
+ * Default (owner 2026-11-03): aperta all’iscrizione (isChatOpenAtSignup).
+ * Se CHAT_OPEN_AT_SIGNUP=false: richiede almeno un volo confermato nel gruppo.
  */
 export async function isEditionChatUnlocked(editionId: string): Promise<boolean> {
   if (isChatOpenAtSignup()) return true;
   return (await countConfirmedEditionMembers(editionId)) >= 1;
 }
 
-/** Membro attivo + chat sbloccata (default: primo volo pagato nel gruppo). */
+/** Membro attivo + chat sbloccata (default: aperta all’iscrizione). */
 export async function canAccessTripChat(editionId: string, userId: string): Promise<boolean> {
   const member = await isTripMember(editionId, userId);
   if (!member) return false;
@@ -172,7 +172,7 @@ export async function postTripMessage(
   if (!trimmed) throw new Error('Messaggio vuoto');
 
   const allowed = await canAccessTripChat(editionId, userId);
-  if (!allowed) throw new Error('La chat si apre dopo il primo volo confermato nel gruppo');
+  if (!allowed) throw new Error('Iscriviti alla partenza per aprire la chat di gruppo');
 
   await supabaseAdmin
     .from('edition_chat_hides')
@@ -428,7 +428,7 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
           ? null
           : participantCount < 2
             ? 'Solo tu per ora — invita qualcuno'
-            : 'Chat in attesa del primo volo confermato',
+            : 'Chat pronta — scrivi al gruppo',
       chatUnlocked,
     });
   }

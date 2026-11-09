@@ -56,7 +56,7 @@ const ORGANIZZA_POINTS = [
 const GRUPPI_POINTS = [
   'Partenze di gruppo già in formazione (non è un pacchetto tour operator)',
   'Vedi date, itinerario e quanti sono già iscritti',
-  'Chat di gruppo si apre con il primo volo confermato',
+  'Chat di gruppo aperta appena ti iscrivi alla partenza',
 ] as const;
 
 /** Hero home: Thailandia (Unsplash) — docs/IMAGE-LICENSES.md */

@@ -30,12 +30,11 @@ export function isApiMetricsEnabled(): boolean {
 }
 
 /**
- * A5: chat gruppo aperta all’iscrizione (membro attivo), invece che al primo volo.
- * Default OFF = comportamento attuale (sblocco al primo volo confermato).
- * Costante indipendente dall’env; override opzionale via CHAT_OPEN_AT_SIGNUP senza
- * richiedere modifiche alle env di produzione.
+ * A5: chat gruppo aperta all’iscrizione (membro attivo).
+ * Owner 2026-11-03: apre subito all’iscrizione, non al primo volo.
+ * Override opzionale via CHAT_OPEN_AT_SIGNUP=false per ripristinare il vecchio gate.
  */
-export const CHAT_OPEN_AT_SIGNUP_DEFAULT = false;
+export const CHAT_OPEN_AT_SIGNUP_DEFAULT = true;
 
 export function isChatOpenAtSignup(): boolean {
   return envFlag('CHAT_OPEN_AT_SIGNUP', CHAT_OPEN_AT_SIGNUP_DEFAULT);

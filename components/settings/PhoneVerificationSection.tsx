@@ -67,7 +67,7 @@ export function PhoneVerificationSection({
     <SettingsSection
       icon={Phone}
       title="Verifica telefono"
-      description="Spunta blu con cellulare (quando la verifica sarà obbligatoria). In sviluppo puoi pubblicare senza: l’obbligo si attiva solo con PHONE_VERIFY_REQUIRED=true e canale WhatsApp/SMS."
+      description="Spunta blu con cellulare quando la verifica è attiva. Finché non è obbligatoria puoi continuare senza: se serve, ti chiediamo un codice WhatsApp o SMS dal flusso di creazione o iscrizione."
     >
       <div className="space-y-5">
         {verified ? (

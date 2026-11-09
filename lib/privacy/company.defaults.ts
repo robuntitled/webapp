@@ -11,11 +11,11 @@ export const LEGAL_PLACEHOLDERS = {
   postalCode: '[CAP da definire]',
   country: 'Italia',
   /**
-   * Nessuna mailbox Noivia configurata finché LEGAL_EMAIL_PRIVACY non è in env.
-   * Non inventare un indirizzo reale: placeholder esplicito legato a LEGAL_*.
+   * Nessuna mailbox Noivia configurata finché LEGAL_EMAIL_* non è in env.
+   * Non inventare un indirizzo: copy neutrale per UI (isPlaceholder resta true).
    */
-  privacyEmail: '[TODO LEGAL_EMAIL_PRIVACY — privacy@ da definire]',
-  supportEmail: '[TODO LEGAL_EMAIL_SUPPORT — supporto@ da definire]',
+  privacyEmail: 'Contatto in definizione',
+  supportEmail: 'Contatto in definizione',
   dpoEmail: '[Email DPO / referente privacy da definire]',
   pec: '[PEC da definire]',
   phone: '[Telefono da definire]',

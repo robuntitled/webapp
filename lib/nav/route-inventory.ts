@@ -93,8 +93,15 @@ export const AUTH_APP_ROUTES: RouteExpectation[] = [
     logoShouldReachHome: true,
   },
   {
-    path: '/dashboard/bacheca',
+    path: '/bacheca',
     labelIt: 'Bacheca',
+    guestOk: false,
+    guestRedirectIncludes: '/accedi',
+    logoShouldReachHome: true,
+  },
+  {
+    path: '/dashboard/bacheca',
+    labelIt: 'Bacheca (canonical)',
     guestOk: false,
     guestRedirectIncludes: '/accedi',
     logoShouldReachHome: true,

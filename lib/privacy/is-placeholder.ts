@@ -6,5 +6,12 @@ export function isPlaceholder(value: string | null | undefined): boolean {
   if (v.startsWith('[')) return true;
   if (/TODO/i.test(v)) return true;
   if (/da definire/i.test(v)) return true;
+  if (/contatto in definizione/i.test(v)) return true;
   return false;
+}
+
+/** UI label when a legal email is not configured yet (never invent an address). */
+export function legalContactLabelIt(value: string | null | undefined): string {
+  if (isPlaceholder(value)) return 'Contatto in definizione';
+  return value!.trim();
 }
