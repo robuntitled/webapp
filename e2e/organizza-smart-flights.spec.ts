@@ -6,14 +6,17 @@ import { test, expect } from '@playwright/test';
  */
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('consent-v1', 'accepted');
+    } catch {
+      /* ignore */
+    }
+    document.cookie = 'consent-v1=accepted; path=/; max-age=31536000; SameSite=Lax';
+  });
   const share = process.env.PLAYWRIGHT_VERCEL_SHARE;
   if (share) {
     await page.goto(`/?_vercel_share=${share}`, { waitUntil: 'domcontentloaded' });
-  }
-  // Cookie bar sits above the sticky Continua CTA on mobile.
-  const cookie = page.getByRole('dialog', { name: /Consenso cookie/i });
-  if (await cookie.isVisible().catch(() => false)) {
-    await cookie.getByRole('button', { name: /^Ok$/i }).click();
   }
 });
 
