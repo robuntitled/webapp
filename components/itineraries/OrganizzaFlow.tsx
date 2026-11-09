@@ -375,7 +375,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
       : null);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/40 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/40 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
       <div className="nl-page w-full space-y-6 pt-6 sm:pt-8">
         <header>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-3xl">
@@ -841,8 +841,11 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
         </div>
 
         <div
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-border)] bg-white/95 backdrop-blur-md"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          className="fixed inset-x-0 z-30 border-t border-[var(--color-border)] bg-white/95 backdrop-blur-md"
+          style={{
+            bottom: 'var(--cookie-banner-pad, 0px)',
+            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
+          }}
         >
           <div className="nl-page flex flex-wrap items-center justify-between gap-3 py-3">
             <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-success)]">

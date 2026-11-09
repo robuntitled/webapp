@@ -10,6 +10,11 @@ test.beforeEach(async ({ page }) => {
   if (share) {
     await page.goto(`/?_vercel_share=${share}`, { waitUntil: 'domcontentloaded' });
   }
+  // Cookie bar sits above the sticky Continua CTA on mobile.
+  const cookie = page.getByRole('dialog', { name: /Consenso cookie/i });
+  if (await cookie.isVisible().catch(() => false)) {
+    await cookie.getByRole('button', { name: /^Ok$/i }).click();
+  }
 });
 
 test.describe('organizza smart flights (mobile)', () => {
