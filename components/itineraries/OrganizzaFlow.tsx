@@ -65,6 +65,13 @@ import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'nl-organizza-draft-v3';
 
+/** Display ISO yyyy-mm-dd as Italian gg/mm/aaaa. */
+function formatDateIt(iso: string | null | undefined): string | null {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 type DestCard = {
   slug: string;
   name: string;
@@ -544,19 +551,31 @@ export function OrganizzaFlow({
           </p>
         </header>
 
-        <ol className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Progresso">
+        <ol
+          className="flex items-stretch gap-1 sm:gap-1.5"
+          aria-label="Progresso"
+          data-testid="organizza-stepper"
+        >
           {ORGANIZZA_STEPS.map((s, i) => {
             const current = s.id === step;
             const complete = done.has(s.id) && !current;
             const clickable = canNavigateToOrganizzaStep(draft, s.id, step);
             return (
-              <li key={s.id} className="min-w-[4.5rem] flex-1">
+              <li
+                key={s.id}
+                className={cn(
+                  'min-w-0',
+                  current ? 'flex-[1.6] sm:flex-1' : 'flex-none sm:flex-1'
+                )}
+              >
                 <button
                   type="button"
                   disabled={!clickable}
+                  aria-current={current ? 'step' : undefined}
+                  aria-label={`${i + 1}. ${s.label}${complete ? ' (completato)' : ''}`}
                   onClick={() => clickable && setStep(s.id)}
                   className={cn(
-                    'flex w-full min-h-11 items-center gap-1.5 rounded-2xl border px-2 py-2 text-left text-xs font-semibold sm:text-sm',
+                    'flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border px-1.5 text-left text-xs font-semibold sm:justify-start sm:px-2.5 sm:text-sm',
                     current && 'border-primary bg-white',
                     complete && 'border-[var(--color-border)] bg-white',
                     !current &&
@@ -564,10 +583,23 @@ export function OrganizzaFlow({
                       'border-[var(--color-border)] bg-[var(--color-tint)]/60'
                   )}
                 >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] text-white">
-                    {complete ? <Check className="h-3 w-3" /> : i + 1}
+                  <span
+                    className={cn(
+                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] text-white',
+                      current || complete ? 'bg-primary' : 'bg-slate-400'
+                    )}
+                  >
+                    {complete ? <Check className="h-3 w-3" aria-hidden /> : i + 1}
                   </span>
-                  <span className="truncate">{s.label}</span>
+                  {/* Mobile: full label only on current step — avoids D…/Q…/C… ellipsis */}
+                  <span
+                    className={cn(
+                      'whitespace-nowrap',
+                      current ? 'inline' : 'hidden sm:inline'
+                    )}
+                  >
+                    {s.label}
+                  </span>
                 </button>
               </li>
             );
@@ -776,11 +808,12 @@ export function OrganizzaFlow({
                   Scegli andata e ritorno. Controlliamo anche i giorni vicini.
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2" lang="it-IT">
                 <label className="text-xs font-semibold">
                   Partenza
                   <input
                     type="date"
+                    lang="it-IT"
                     className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                     value={draft.dateFrom ?? ''}
                     min={minBookableDateIso()}
@@ -791,11 +824,22 @@ export function OrganizzaFlow({
                       setDates(from, to);
                     }}
                   />
+                  {formatDateIt(draft.dateFrom) ? (
+                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                      {formatDateIt(draft.dateFrom)}
+                      <span className="font-normal"> · gg/mm/aaaa</span>
+                    </span>
+                  ) : (
+                    <span className="mt-1 block text-[11px] font-normal text-[var(--color-text-secondary)]">
+                      Formato gg/mm/aaaa
+                    </span>
+                  )}
                 </label>
                 <label className="text-xs font-semibold">
                   Rientro
                   <input
                     type="date"
+                    lang="it-IT"
                     className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                     value={draft.dateTo ?? ''}
                     min={draft.dateFrom ?? minBookableDateIso()}
@@ -804,6 +848,16 @@ export function OrganizzaFlow({
                       setDates(draft.dateFrom, e.target.value);
                     }}
                   />
+                  {formatDateIt(draft.dateTo) ? (
+                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                      {formatDateIt(draft.dateTo)}
+                      <span className="font-normal"> · gg/mm/aaaa</span>
+                    </span>
+                  ) : (
+                    <span className="mt-1 block text-[11px] font-normal text-[var(--color-text-secondary)]">
+                      Formato gg/mm/aaaa
+                    </span>
+                  )}
                 </label>
               </div>
               {draft.durationDays ? (

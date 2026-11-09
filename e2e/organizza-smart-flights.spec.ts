@@ -22,6 +22,17 @@ test.beforeEach(async ({ page }) => {
 test.describe('organizza redesigned flow (mobile)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
+  test('stepper shows full current label without ellipsis on mobile', async ({ page }) => {
+    await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('organizza-stepper')).toBeVisible({ timeout: 20_000 });
+    const stepper = page.getByTestId('organizza-stepper');
+    await expect(stepper.getByText('Dove', { exact: true })).toBeVisible();
+    await expect(stepper.locator('li')).toHaveCount(5);
+    // Inactive steps are number-only on mobile — no truncated "D…" labels
+    await expect(stepper).not.toContainText('D...');
+    await expect(stepper).not.toContainText('Q...');
+  });
+
   test('Dove search + sticky Continua + Quando + Con chi (no Gruppo)', async ({ page }) => {
     await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
     await expect(
@@ -40,7 +51,9 @@ test.describe('organizza redesigned flow (mobile)', () => {
     await continua.click();
 
     await expect(page.getByRole('heading', { name: /Quando vuoi partire/i })).toBeVisible();
+    await expect(page.getByTestId('organizza-stepper').getByText('Quando', { exact: true })).toBeVisible();
     await expect(page.getByText(/Date libere/i)).toHaveCount(0);
+    await expect(page.getByText(/gg\/mm\/aaaa/i).first()).toBeVisible();
 
     const from = page.locator('input[type="date"]').first();
     const to = page.locator('input[type="date"]').nth(1);
