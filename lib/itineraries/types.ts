@@ -10,7 +10,7 @@ export type ItineraryDay = {
   description: string;
   area_segment: string;
   pois: ItineraryPoi[];
-  transfer?: 'internal_flight' | 'ferry' | 'bus' | 'none';
+  transfer?: 'internal_flight' | 'ferry' | 'bus' | 'train' | 'none';
   is_arrival: boolean;
   is_departure: boolean;
   /** WGS84 — posizione tappa sulla mappa locale. */

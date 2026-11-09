@@ -7,6 +7,7 @@ const TRANSFER_IT: Record<string, string> = {
   internal_flight: 'volo interno',
   ferry: 'traghetto',
   bus: 'bus / strada',
+  train: 'treno',
 };
 
 /** Placeholder / English / stub POI → natural Italian for itinerary lines. */

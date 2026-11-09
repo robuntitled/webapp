@@ -18,20 +18,27 @@ export type OrganizzaStepId = (typeof ORGANIZZA_STEPS)[number]['id'];
 export type OrganizzaCompanyChoice = 'solo' | 'amici' | 'gruppo';
 
 export type OrganizzaDraft = {
+  /** Primary destination (single-country default). */
   slug: string | null;
+  /**
+   * Multi-country selection (curated pairs only). When length === 2,
+   * planner combines masters; `slug` stays the first/canonical arrival country.
+   */
+  slugs: string[] | null;
   durationDays: number | null;
   dateFrom: string | null;
   dateTo: string | null;
   company: OrganizzaCompanyChoice | null;
   tripName: string;
   vibe: string | null;
-  /** Hub arrivo/partenza (IATA) — vincoli pilot Thailandia; opzionali. */
+  /** Hub arrivo/partenza (IATA) — open-jaw when multi-country. */
   arrivalIata: string | null;
   departureIata: string | null;
 };
 
 export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
   slug: null,
+  slugs: null,
   durationDays: null,
   dateFrom: null,
   dateTo: null,
@@ -41,6 +48,10 @@ export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
   arrivalIata: null,
   departureIata: null,
 };
+
+export function isMultiCountryDraft(draft: OrganizzaDraft): boolean {
+  return Array.isArray(draft.slugs) && draft.slugs.length >= 2;
+}
 
 export function organizzaStepIndex(id: OrganizzaStepId): number {
   return ORGANIZZA_STEPS.find((s) => s.id === id)?.index ?? 0;
