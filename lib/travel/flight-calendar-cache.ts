@@ -8,6 +8,8 @@ export type CalendarProbeResult = {
   minStops: number | null;
   minDurationMinutes: number | null;
   offerCount: number;
+  /** ok | empty | error — never cache raw provider errors as success. */
+  status: 'ok' | 'empty' | 'error';
   fetchedAt: number;
 };
 
@@ -37,10 +39,19 @@ export function readCalendarCache(key: string): CalendarProbeResult | null {
     memory.delete(key);
     return null;
   }
+  // Never reuse hard errors — allow retry.
+  if (hit.status === 'error') {
+    memory.delete(key);
+    return null;
+  }
   return hit;
 }
 
-export function writeCalendarCache(key: string, value: Omit<CalendarProbeResult, 'fetchedAt'> & { fetchedAt?: number }) {
+export function writeCalendarCache(
+  key: string,
+  value: Omit<CalendarProbeResult, 'fetchedAt'> & { fetchedAt?: number }
+) {
+  if (value.status === 'error') return null;
   const row: CalendarProbeResult = {
     ...value,
     fetchedAt: value.fetchedAt ?? Date.now(),
@@ -49,14 +60,22 @@ export function writeCalendarCache(key: string, value: Omit<CalendarProbeResult,
   return row;
 }
 
-/** Documented API budget for one date-focus probe window. */
+/**
+ * API budget for one date-focus probe window.
+ * ±2 (5 days) is more reliable on long-haul than ±3 (7): each probe is 20–45s
+ * and full offer payloads were starving the queue on mobile.
+ */
 export const FLIGHT_CALENDAR_API_BUDGET = {
-  radiusDays: 3,
-  probesPerFocus: 7,
-  /** Outbound + return focus = 14 probes; ×2 if country fans out to 2 hubs. */
-  maxProbesPerFullSelection: 28,
+  radiusDays: 2,
+  probesPerFocus: 5,
+  /** Outbound + return focus. */
+  maxProbesPerFullSelection: 10,
   cacheTtlHours: 3,
+  /** Shared across both calendars on the page. */
   concurrency: 2,
-  noteIt:
-    'Calendario: fino a 7 ricerche per la partenza (±3 giorni) e 7 per il ritorno. Cache 3 ore. Concorrenza 2. Tratte lunghe 20–45 s a chiamata.',
+  friendlyNoteIt:
+    'Ti mostriamo anche i giorni vicini se conviene partire un giorno prima o dopo.',
+  /** Honest ops note (not shown in UI). */
+  opsNoteIt:
+    'Calendario: fino a 5 ricerche per focus (±2). Cache 3 ore. Concorrenza 2 condivisa. Long-haul 20–45 s/chiamata; summary JSON only.',
 } as const;

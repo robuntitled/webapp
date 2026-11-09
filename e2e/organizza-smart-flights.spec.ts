@@ -31,12 +31,15 @@ test.describe('organizza smart flights (mobile)', () => {
 
     const from = page.locator('input[type="date"]').first();
     const to = page.locator('input[type="date"]').nth(1);
-    await from.fill('2026-08-10');
-    await to.fill('2026-08-23');
+    await from.fill('2026-12-10');
+    await to.fill('2026-12-23');
     await expect(page.getByText(/14 giorni/i)).toBeVisible();
 
-    // Smart calendar mounts after a date is set
+    // Smart calendar mounts after a date is set — no developer ops copy, no n/d
     await expect(page.getByTestId('smart-flight-calendar').first()).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(/Concorrenza 2/i);
+    await expect(page.locator('body')).not.toContainText(/\bn\/d\b/i);
+    await expect(page.getByText(/giorni vicini se conviene/i).first()).toBeVisible();
 
     await page.getByRole('button', { name: /^Continua$/i }).click();
     await expect(page.getByRole('heading', { name: /Voli consigliati/i })).toBeVisible({

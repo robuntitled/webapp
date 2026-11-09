@@ -79,15 +79,13 @@ describe('flight-score', () => {
     expect(tip!.reasonIt).toMatch(/diretto|12 ore/i);
   });
 
-  it('builds ±3 day window', () => {
-    expect(nearbyDateWindow('2026-08-10', 3)).toEqual([
-      '2026-08-07',
+  it('builds ±2 day window helper', () => {
+    expect(nearbyDateWindow('2026-08-10', 2)).toEqual([
       '2026-08-08',
       '2026-08-09',
       '2026-08-10',
       '2026-08-11',
       '2026-08-12',
-      '2026-08-13',
     ]);
   });
 });

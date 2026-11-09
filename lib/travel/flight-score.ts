@@ -139,7 +139,10 @@ export type DayBadgeStats = {
   minStops: number | null;
   minDurationMinutes: number | null;
   loading?: boolean;
+  /** Present when the probe failed (retryable). Never shown as raw "n/d". */
   error?: string | null;
+  /** empty = provider answered with zero flights. */
+  status?: 'loading' | 'ok' | 'empty' | 'error';
 };
 
 export type NearbyDaySuggestion = {

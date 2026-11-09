@@ -50,6 +50,7 @@ import {
 import { FREE_TRIP_TEMPLATE_ID } from '@/lib/itineraries/free-trip';
 import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
 import { pickRecommendedFlights, type ScoredFlightInput } from '@/lib/travel/flight-score';
+import { minBookableDateIso } from '@/lib/travel/flight-calendar-dates';
 import { accediHref } from '@/lib/auth/callback-url';
 import { formatEuro } from '@/lib/format/euro';
 import { cn } from '@/lib/utils';
@@ -217,10 +218,13 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
   }
 
   function setDates(from: string, to: string) {
-    const days = durationDaysFromRange(from, to);
+    const min = minBookableDateIso();
+    const safeFrom = from < min ? min : from;
+    const safeTo = to < safeFrom ? safeFrom : to;
+    const days = durationDaysFromRange(safeFrom, safeTo);
     update({
-      dateFrom: from,
-      dateTo: to,
+      dateFrom: safeFrom,
+      dateTo: safeTo,
       durationDays: days > 0 ? days : null,
       selectedFlight: null,
     });
@@ -371,7 +375,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
       : null);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/40 pb-16">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/40 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))]">
       <div className="nl-page w-full space-y-6 pt-6 sm:pt-8">
         <header>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-3xl">
@@ -517,6 +521,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                       type="date"
                       className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                       value={draft.dateFrom ?? ''}
+                      min={minBookableDateIso()}
                       onChange={(e) => {
                         const from = e.target.value;
                         const to = draft.dateTo && draft.dateTo >= from ? draft.dateTo : from;
@@ -530,7 +535,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                       type="date"
                       className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                       value={draft.dateTo ?? ''}
-                      min={draft.dateFrom ?? undefined}
+                      min={draft.dateFrom ?? minBookableDateIso()}
                       onChange={(e) => {
                         if (!draft.dateFrom) return;
                         setDates(draft.dateFrom, e.target.value);
@@ -549,7 +554,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
 
                 {draft.dateFrom ? (
                   <SmartFlightCalendar
-                    labelIt="Partenza · prezzi nei ±3 giorni"
+                    labelIt="Partenza · giorni vicini"
                     originIata={draft.originIata ?? 'MXP'}
                     destinationIata={destIata}
                     value={draft.dateFrom}
@@ -567,13 +572,14 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                   <SmartFlightCalendar
                     labelIt={
                       isMultiCountryDraft(draft)
-                        ? `Rientro da ${returnOriginIata} · ±3 giorni`
-                        : 'Rientro · prezzi nei ±3 giorni'
+                        ? `Rientro da ${returnOriginIata} · giorni vicini`
+                        : 'Rientro · giorni vicini'
                     }
                     originIata={returnOriginIata}
                     destinationIata={draft.originIata ?? 'MXP'}
                     value={draft.dateTo}
                     tripType="oneway"
+                    minDate={draft.dateFrom}
                     onChange={(iso) => {
                       if (!draft.dateFrom || iso < draft.dateFrom) return;
                       setDates(draft.dateFrom, iso);
@@ -832,7 +838,13 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
             </div>
           ) : null}
 
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-5">
+        </div>
+
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-border)] bg-white/95 backdrop-blur-md"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="nl-page flex flex-wrap items-center justify-between gap-3 py-3">
             <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-success)]">
               <Check className="h-3.5 w-3.5" />
               Scelte salvate su questo dispositivo
