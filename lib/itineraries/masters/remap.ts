@@ -80,7 +80,7 @@ export function allocateStops(
   const bias = vibeBias(vibe);
   const targetNights = Math.max(1, tripDays - 1); // night of arrival through night before departure
 
-  let pool = [...master.stops];
+  const pool = [...master.stops];
 
   // Drop optional first, then extend, never drop last remaining core if possible
   const dropOrder: StopPriority[] = bias.preferFewerStops
@@ -98,7 +98,7 @@ export function allocateStops(
     }));
   }
 
-  let allocated = withIdeal(pool);
+  const allocated = withIdeal(pool);
 
   // Drop stops until ideal/min fit
   while (nightsSum(allocated) > targetNights && allocated.length > 1) {
