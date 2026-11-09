@@ -76,7 +76,19 @@ export function FlightLegsPanel({ plan, onChange, onEditLeg, className }: Props)
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-sm font-bold">{leg.labelIt}</p>
+                  <p className="text-sm font-bold">
+                    {leg.kind === 'intercountry' ? (
+                      <span className="mr-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
+                        Tra paesi
+                      </span>
+                    ) : null}
+                    {leg.kind === 'domestic' || leg.kind === 'internal' ? (
+                      <span className="mr-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-600">
+                        Domestico
+                      </span>
+                    ) : null}
+                    {leg.labelIt}
+                  </p>
                   <p className="text-xs text-[var(--color-text-secondary)]">
                     {formatDateIt(leg.date)} · {leg.passengers} pax ·{' '}
                     {leg.originIata} → {leg.destinationIata}

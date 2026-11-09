@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { EMPTY_ORGANIZZA_DRAFT, patchOrganizzaDraft } from '@/lib/itineraries/organizza-steps';
 import { combineMultiCountryPlan } from '@/lib/itineraries/multi-country';
 import {
-  buildFlightPlanForDraft,
+  buildDomesticPlanForDraft,
+  buildMainFlightPlanForDraft,
   flightPlanAllowsContinue,
-  internalLegsFromMultiPlan,
+  intercountryLegsFromMultiPlan,
+  proposeDomesticLegsFromItinerary,
 } from '@/lib/travel/organizza-flight-plan';
+import { selectOfferOnLeg } from '@/lib/travel/trip-flight-legs';
 
-describe('organizza-flight-plan', () => {
-  it('builds closed roundtrip by default', () => {
+describe('organizza-flight-plan (intercountry vs domestic)', () => {
+  it('builds closed roundtrip without domestic on stage 2', () => {
     const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
       slug: 'thailandia',
       originIata: 'MXP',
@@ -20,9 +23,9 @@ describe('organizza-flight-plan', () => {
       returnHome: true,
       travelers: 1,
     });
-    const plan = buildFlightPlanForDraft(draft, null);
+    const plan = buildMainFlightPlanForDraft(draft, null);
     expect(plan.shape).toBe('roundtrip');
-    expect(plan.legs).toHaveLength(2);
+    expect(plan.legs.map((l) => l.kind)).toEqual(['outbound', 'return']);
   });
 
   it('omits return when returnHome false', () => {
@@ -35,7 +38,7 @@ describe('organizza-flight-plan', () => {
       dateTo: '2026-12-24',
       returnHome: false,
     });
-    const plan = buildFlightPlanForDraft(draft, null);
+    const plan = buildMainFlightPlanForDraft(draft, null);
     expect(plan.shape).toBe('oneway');
     expect(plan.legs).toHaveLength(1);
   });
@@ -51,22 +54,23 @@ describe('organizza-flight-plan', () => {
       dateTo: '2026-12-24',
       returnHome: true,
     });
-    const plan = buildFlightPlanForDraft(draft, null);
+    const plan = buildMainFlightPlanForDraft(draft, null);
     expect(plan.shape).toBe('openjaw');
     expect(plan.legs[1]?.destinationIata).toBe('FCO');
     expect(plan.legs[1]?.originIata).toBe('HKT');
   });
 
-  it('adds internal SGN→REP for Vietnam+Cambodia', () => {
+  it('VN+KH: intercountry SGN→REP on main plan, NOT as domestic', () => {
     const multi = combineMultiCountryPlan({
       slugs: ['vietnam', 'cambogia'],
       tripDays: 14,
     });
     expect(multi.ok).toBe(true);
     if (!multi.ok) return;
-    const internals = internalLegsFromMultiPlan(multi, '2026-12-10', '2026-12-24');
-    expect(internals[0]?.originIata).toBe('SGN');
-    expect(internals[0]?.destinationIata).toBe('REP');
+    const inter = intercountryLegsFromMultiPlan(multi, '2026-12-10', '2026-12-24');
+    expect(inter[0]?.originIata).toBe('SGN');
+    expect(inter[0]?.destinationIata).toBe('REP');
+    expect(inter[0]?.labelIt).toMatch(/Tra paesi|SGN/i);
 
     const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
       slug: 'vietnam',
@@ -78,12 +82,62 @@ describe('organizza-flight-plan', () => {
       returnHome: true,
       originIata: 'MXP',
     });
-    const plan = buildFlightPlanForDraft(draft, multi);
-    expect(plan.legs.map((l) => l.kind)).toEqual([
+    const main = buildMainFlightPlanForDraft(draft, multi);
+    expect(main.legs.map((l) => l.kind)).toEqual([
       'outbound',
-      'internal',
+      'intercountry',
       'openjaw_return',
     ]);
-    expect(flightPlanAllowsContinue(plan)).toBe(false);
+    expect(main.legs.find((l) => l.kind === 'intercountry')?.labelIt).not.toMatch(
+      /Domestico/i
+    );
+    expect(flightPlanAllowsContinue(main)).toBe(false);
+  });
+
+  it('proposes domestic HAN→…→SGN only at itinerary after outbound selected', () => {
+    const multi = combineMultiCountryPlan({
+      slugs: ['vietnam', 'cambogia'],
+      tripDays: 14,
+    });
+    if (!multi.ok) return;
+    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
+      slug: 'vietnam',
+      slugs: ['vietnam', 'cambogia'],
+      arrivalIata: multi.arrivalIata,
+      departureIata: multi.departureIata,
+      dateFrom: '2026-12-10',
+      dateTo: '2026-12-24',
+      returnHome: true,
+      originIata: 'MXP',
+      travelers: 1,
+    });
+    let main = buildMainFlightPlanForDraft(draft, multi);
+    const outId = main.legs.find((l) => l.kind === 'outbound')!.id;
+    main = selectOfferOnLeg(main, outId, {
+      offerId: 'ow1',
+      price: 400,
+      currency: 'EUR',
+      originIata: 'MXP',
+      destinationIata: 'HAN',
+      departureAt: '2026-12-10T10:00:00',
+      arrivalAt: '2026-12-10T22:00:00',
+      stops: 1,
+      durationMinutes: 700,
+      capturedAt: Date.now(),
+    });
+
+    const domestic = proposeDomesticLegsFromItinerary({
+      draft,
+      multi,
+      mainPlan: main,
+    });
+    expect(domestic.length).toBeGreaterThan(0);
+    expect(domestic.some((d) => d.originIata === 'HAN' || d.destinationIata === 'SGN')).toBe(
+      true
+    );
+    expect(domestic.every((d) => d.labelIt.startsWith('Domestico'))).toBe(true);
+
+    const domPlan = buildDomesticPlanForDraft(draft, multi, main);
+    expect(domPlan.legs.every((l) => l.kind === 'domestic')).toBe(true);
   });
 });

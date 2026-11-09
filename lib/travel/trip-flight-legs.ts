@@ -9,6 +9,9 @@ export type TripFlightShape = 'roundtrip' | 'oneway' | 'openjaw' | 'multi_oneway
 export type TripFlightLegKind =
   | 'outbound'
   | 'return'
+  | 'intercountry'
+  | 'domestic'
+  /** @deprecated use domestic — kept for older drafts */
   | 'internal'
   | 'openjaw_return'
   | 'custom';
@@ -72,7 +75,29 @@ export type BuildLegsInput = {
   /** Prefer roundtrip when single hub and returnHome. */
   multiCountry: boolean;
   returnHome?: boolean;
-  /** Internal hops from itinerary (only when master marks internal_flight). */
+  /**
+   * Inter-country hops (e.g. SGN→REP VN→KH) — selected in main flights stage.
+   * These are international between countries, not domestic.
+   */
+  intercountryLegs?: Array<{
+    originIata: string;
+    destinationIata: string;
+    date: string;
+    labelIt: string;
+    notesIt?: string;
+  }>;
+  /**
+   * Domestic hops inside one country — proposed only after itinerary knows
+   * arrival/departure airports (e.g. HAN→SGN).
+   */
+  domesticLegs?: Array<{
+    originIata: string;
+    destinationIata: string;
+    date: string;
+    labelIt: string;
+    notesIt?: string;
+  }>;
+  /** @deprecated use intercountryLegs / domesticLegs */
   internalLegs?: Array<{
     originIata: string;
     destinationIata: string;
@@ -116,10 +141,11 @@ export function buildDefaultTripFlightPlan(input: BuildLegsInput): TripFlightPla
     labelIt: `Andata ${homeOrigin} → ${arrival}`,
   });
 
-  for (const [i, hop] of (input.internalLegs ?? []).entries()) {
+  // Travel order: outbound → domestic (in-country) → intercountry → return
+  for (const [i, hop] of (input.domesticLegs ?? input.internalLegs ?? []).entries()) {
     legs.push({
-      id: legId('int', i),
-      kind: 'internal',
+      id: legId('dom', i),
+      kind: 'domestic',
       originIata: hop.originIata.toUpperCase(),
       destinationIata: hop.destinationIata.toUpperCase(),
       date: hop.date,
@@ -129,7 +155,24 @@ export function buildDefaultTripFlightPlan(input: BuildLegsInput): TripFlightPla
       labelIt: hop.labelIt,
       notesIt:
         hop.notesIt ??
-        'Volo interno suggerito dall’itinerario — verifica disponibilità e orari.',
+        'Volo domestico suggerito dall’itinerario — verifica disponibilità e orari.',
+    });
+  }
+
+  for (const [i, hop] of (input.intercountryLegs ?? []).entries()) {
+    legs.push({
+      id: legId('intl', i),
+      kind: 'intercountry',
+      originIata: hop.originIata.toUpperCase(),
+      destinationIata: hop.destinationIata.toUpperCase(),
+      date: hop.date,
+      passengers: pax,
+      offer: null,
+      status: 'empty',
+      labelIt: hop.labelIt,
+      notesIt:
+        hop.notesIt ??
+        'Tratta internazionale tra paesi — biglietto separato dall’andata.',
     });
   }
 

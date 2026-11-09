@@ -6,6 +6,7 @@ import {
   companyShowsInviteAfterCreate,
   defaultTravelersForCompany,
   durationDaysFromRange,
+  isImpostaComplete,
   nextOrganizzaStep,
   normalizeOrganizzaCompany,
   normalizeOrganizzaStep,
@@ -14,25 +15,26 @@ import {
   prevOrganizzaStep,
 } from '@/lib/itineraries/organizza-steps';
 
-describe('organizza stepper (Dove → Quando → Con chi → Voli → Riepilogo)', () => {
+describe('organizza stepper (Imposta → Voli → Itinerario)', () => {
   it('starts empty', () => {
     expect(organizzaCompletedSteps(EMPTY_ORGANIZZA_DRAFT).size).toBe(0);
   });
 
-  it('advances through the five steps', () => {
-    let draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, { slug: 'thailandia' });
-    expect([...organizzaCompletedSteps(draft)]).toEqual(['dove']);
-    expect(nextOrganizzaStep('dove', draft)).toBe('quando');
-
-    draft = patchOrganizzaDraft(draft, {
+  it('advances through the three stages', () => {
+    let draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
+      slug: 'thailandia',
+      originIata: 'MXP',
+      homeReturnIata: 'MXP',
       dateFrom: '2026-12-11',
       dateTo: '2026-12-24',
       durationDays: 14,
+      company: 'amici',
+      travelers: 4,
+      returnHome: true,
     });
-    expect(nextOrganizzaStep('quando', draft)).toBe('con-chi');
-
-    draft = patchOrganizzaDraft(draft, { company: 'amici', travelers: 4 });
-    expect(nextOrganizzaStep('con-chi', draft)).toBe('voli');
+    expect(isImpostaComplete(draft)).toBe(true);
+    expect([...organizzaCompletedSteps(draft)]).toEqual(['imposta']);
+    expect(nextOrganizzaStep('imposta', draft)).toBe('voli');
 
     draft = patchOrganizzaDraft(draft, {
       selectedFlight: {
@@ -49,8 +51,8 @@ describe('organizza stepper (Dove → Quando → Con chi → Voli → Riepilogo)
         pickKind: 'balanced',
       },
     });
-    expect(nextOrganizzaStep('voli', draft)).toBe('riepilogo');
-    expect(prevOrganizzaStep('riepilogo')).toBe('voli');
+    expect(nextOrganizzaStep('voli', draft)).toBe('itinerario');
+    expect(prevOrganizzaStep('itinerario')).toBe('voli');
   });
 
   it('maps company choices without Gruppo', () => {
@@ -61,12 +63,13 @@ describe('organizza stepper (Dove → Quando → Con chi → Voli → Riepilogo)
     expect(companyShowsInviteAfterCreate('solo')).toBe(false);
     expect(defaultTravelersForCompany('coppia')).toBe(2);
     expect(normalizeOrganizzaCompany('gruppo')).toBe('amici');
-    expect(normalizeOrganizzaStep('dove-quando')).toBe('dove');
+    expect(normalizeOrganizzaStep('dove-quando')).toBe('imposta');
+    expect(normalizeOrganizzaStep('riepilogo')).toBe('itinerario');
   });
 
   it('blocks skipping ahead', () => {
     const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, { slug: 'vietnam' });
-    expect(canNavigateToOrganizzaStep(draft, 'voli', 'dove')).toBe(false);
+    expect(canNavigateToOrganizzaStep(draft, 'voli', 'imposta')).toBe(false);
   });
 
   it('duration from free calendar range', () => {
