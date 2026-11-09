@@ -6,6 +6,13 @@ import { PUBLIC_APP_ROUTES } from '../lib/nav/route-inventory';
  * Logged-in flows need a real session cookie — not covered here without secrets.
  */
 
+test.beforeEach(async ({ page }) => {
+  const share = process.env.PLAYWRIGHT_VERCEL_SHARE;
+  if (share) {
+    await page.goto(`/?_vercel_share=${share}`, { waitUntil: 'domcontentloaded' });
+  }
+});
+
 test.describe('guest navigation logic', () => {
   for (const route of PUBLIC_APP_ROUTES) {
     test(`guest can open ${route.path} (${route.labelIt})`, async ({ page }) => {
