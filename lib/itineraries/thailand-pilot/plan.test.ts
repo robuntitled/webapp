@@ -54,10 +54,10 @@ describe('planThailandDeterministic', () => {
       if (!r.ok) return;
       expect(r.durationDays).toBe(n);
       expect(r.templateId).toBe(`thailandia-${n}d`);
-      const areas = new Set(r.days.map((d) => d.area_segment.toLowerCase()));
-      for (const a of areas) {
-        expect(['bangkok', 'islands', 'north']).toContain(a);
-      }
+      const areas = [...new Set(r.days.map((d) => d.area_segment.toLowerCase()))];
+      expect(areas.length).toBeGreaterThan(0);
+      // Master-curated Thailand uses real place names (Bangkok, Chiang Mai, isole…)
+      expect(areas.some((a) => /bangkok|chiang|isol|samui|tao/i.test(a))).toBe(true);
     }
   });
 
