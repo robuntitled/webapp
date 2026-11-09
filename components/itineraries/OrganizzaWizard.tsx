@@ -30,6 +30,7 @@ import {
 } from '@/components/itineraries/TripWhenPicker';
 import { DeterministicPlanPanel } from '@/components/itineraries/DeterministicPlanPanel';
 import { BudgetBreakdownCard } from '@/components/itineraries/BudgetBreakdownCard';
+import { MultiCountryBudgetCard } from '@/components/itineraries/MultiCountryBudgetCard';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
 import {
@@ -38,8 +39,13 @@ import {
   templatesForDestination,
 } from '@/lib/itineraries/catalog';
 import { skeletonAsTemplate } from '@/lib/itineraries/deterministic-planner/skeleton';
-import { planFromMaster } from '@/lib/itineraries/masters';
+import { planFromMaster, getMaster } from '@/lib/itineraries/masters';
 import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
+import {
+  combineMultiCountryPlan,
+  listCuratedMultiCountryPairs,
+} from '@/lib/itineraries/multi-country';
+import type { CuratedMultiCountryPair } from '@/lib/itineraries/multi-country';
 import {
   EMPTY_ORGANIZZA_DRAFT,
   ORGANIZZA_STEPS,
@@ -49,6 +55,7 @@ import {
   canNavigateToOrganizzaStep,
   companyChoiceToTravelMode,
   companyCreatesPrivateTrip,
+  isMultiCountryDraft,
   nextOrganizzaStep,
   organizzaCompletedSteps,
   patchOrganizzaDraft,
@@ -123,10 +130,22 @@ function StepperBar({
   onJump: (id: OrganizzaStepId) => void;
 }) {
   const done = organizzaCompletedSteps(draft);
-  const destName =
-    draft.slug != null
-      ? findItineraryBySlug(draft.slug, draft.durationDays ?? undefined)?.destination_name
-      : null;
+  const destName = (() => {
+    if (isMultiCountryDraft(draft) && draft.slugs) {
+      const names = draft.slugs.map(
+        (s) => getMaster(s)?.nameIt ?? findCatalogDestination(s)?.name ?? s
+      );
+      return names.join(' + ');
+    }
+    if (draft.slug != null) {
+      return (
+        findItineraryBySlug(draft.slug, draft.durationDays ?? undefined)?.destination_name ??
+        getMaster(draft.slug)?.nameIt ??
+        null
+      );
+    }
+    return null;
+  })();
 
   const summaries: Record<OrganizzaStepId, string> = {
     meta: destName ?? 'Scegli',
@@ -408,6 +427,7 @@ export function OrganizzaWizard({
     }
     update({
       slug: dest.slug,
+      slugs: null,
       durationDays: duration,
       dateFrom: null,
       dateTo: null,
@@ -423,6 +443,48 @@ export function OrganizzaWizard({
       );
     }
   }
+
+  function selectMultiPair(pair: CuratedMultiCountryPair) {
+    update({
+      slug: pair.slugs[0],
+      slugs: [...pair.slugs],
+      durationDays: 14,
+      dateFrom: null,
+      dateTo: null,
+      company: null,
+      arrivalIata: pair.arrivalHubIata,
+      departureIata: pair.departureHubIata,
+    });
+    setWhenSelection(null);
+    setStep('date');
+    toast.message('Combinazione curata: volo open-jaw e trasferimento tra paesi incluso.');
+  }
+
+  const multiPlan = useMemo(() => {
+    if (!isMultiCountryDraft(draft) || !draft.slugs || !draft.durationDays) return null;
+    const plan = combineMultiCountryPlan({
+      slugs: draft.slugs,
+      tripDays: draft.durationDays,
+      vibe: draft.vibe,
+      company: draft.company,
+    });
+    return plan.ok ? plan : null;
+  }, [draft.slugs, draft.durationDays, draft.vibe, draft.company]);
+
+  useEffect(() => {
+    if (!multiPlan) return;
+    if (
+      draft.arrivalIata === multiPlan.arrivalIata &&
+      draft.departureIata === multiPlan.departureIata
+    ) {
+      return;
+    }
+    update({
+      arrivalIata: multiPlan.arrivalIata,
+      departureIata: multiPlan.departureIata,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync hubs from plan only
+  }, [multiPlan?.arrivalIata, multiPlan?.departureIata]);
 
   function onDatesChange(next: TripWhenSelection | null) {
     setWhenSelection(next);
@@ -514,14 +576,68 @@ export function OrganizzaWizard({
                     Dove vuoi andare?
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                    Parti da un itinerario ufficiale. Le mete non ancora prenotabili sono in
-                    arrivo.
+                    Una meta (default) oppure una combinazione classica di due paesi già
+                    verificata. Coppie non in elenco non sono proposte: meglio non inventare
+                    collegamenti.
                   </p>
                 </div>
+
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                    Combinazioni multi-paese (curate)
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {listCuratedMultiCountryPairs().map((pair) => {
+                      const active =
+                        isMultiCountryDraft(draft) &&
+                        draft.slugs?.[0] === pair.slugs[0] &&
+                        draft.slugs?.[1] === pair.slugs[1];
+                      return (
+                        <button
+                          key={pair.id}
+                          type="button"
+                          onClick={() => selectMultiPair(pair)}
+                          className={cn(
+                            'rounded-2xl border px-4 py-3 text-left transition',
+                            active
+                              ? 'border-primary ring-2 ring-primary/20 bg-[var(--color-tint)]'
+                              : 'border-[var(--color-border)] hover:border-primary/40'
+                          )}
+                          data-testid={`multi-pair-${pair.id}`}
+                        >
+                          <p className="font-semibold text-[var(--color-text)]">{pair.titleIt}</p>
+                          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                            {pair.blurbIt}
+                          </p>
+                          <p className="mt-2 text-[11px] font-medium text-primary">
+                            Open-jaw {pair.arrivalHubIata} → {pair.departureHubIata} ·{' '}
+                            {pair.transfer.verified ? 'collegamento verificato' : 'da verificare'}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                    Controlla visti e documenti per ogni paese su{' '}
+                    <a
+                      href="https://www.viaggiaresicuri.it/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-primary underline-offset-2 hover:underline"
+                    >
+                      Viaggiare Sicuri
+                    </a>
+                    .
+                  </p>
+                </div>
+
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+                  Una sola meta
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {published.map((dest, destIndex) => {
                     const budget = orientativeBudgetHint(dest.slug);
-                    const active = draft.slug === dest.slug;
+                    const active = !isMultiCountryDraft(draft) && draft.slug === dest.slug;
                     return (
                       <button
                         key={dest.slug}
@@ -611,9 +727,13 @@ export function OrganizzaWizard({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {(templatesForDestination(template.destination_slug).length
-                    ? templatesForDestination(template.destination_slug).map((t) => t.duration_days)
-                    : catalogDest?.allowedDurations ?? [draft.durationDays ?? 10]
+                  {(isMultiCountryDraft(draft)
+                    ? [10, 14, 21]
+                    : templatesForDestination(template.destination_slug).length
+                      ? templatesForDestination(template.destination_slug).map(
+                          (t) => t.duration_days
+                        )
+                      : catalogDest?.allowedDurations ?? [draft.durationDays ?? 10]
                   ).map((days) => (
                     <button
                       key={days}
@@ -633,8 +753,18 @@ export function OrganizzaWizard({
                     </button>
                   ))}
                 </div>
+                {isMultiCountryDraft(draft) && multiPlan ? (
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Ripartizione: {multiPlan.shares.map((s) => `${s.nameIt} ${s.days}g`).join(' · ')}{' '}
+                    + 1 giorno trasferimento ({multiPlan.transfer.mode}
+                    {multiPlan.transfer.durationHours != null
+                      ? ` · ~${multiPlan.transfer.durationHours} h`
+                      : ''}
+                    ). Hub open-jaw {multiPlan.arrivalIata} → {multiPlan.departureIata}.
+                  </p>
+                ) : null}
                 <TripWhenPicker
-                  key={`${template.template_id}-${draft.durationDays}`}
+                  key={`${template.template_id}-${draft.durationDays}-${draft.slugs?.join('+') ?? 'single'}`}
                   destinationSlug={template.destination_slug}
                   baseTemplate={
                     findItineraryBySlug(template.destination_slug, draft.durationDays ?? undefined) ??
@@ -694,7 +824,12 @@ export function OrganizzaWizard({
                     </div>
                   </div>
                 ) : null}
-                {draft.durationDays && draft.slug ? (
+                {isMultiCountryDraft(draft) && multiPlan ? (
+                  <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-tint)]/40 px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+                    Anteprima multi-paese nel riepilogo. Qui basta fissare le date (
+                    {multiPlan.shares.map((s) => `${s.nameIt} ${s.days}g`).join(' + ')} + trasferimento).
+                  </p>
+                ) : draft.durationDays && draft.slug ? (
                   <DeterministicPlanPanel
                     destinationSlug={draft.slug}
                     tripDays={draft.durationDays}
@@ -898,7 +1033,9 @@ export function OrganizzaWizard({
                   ))}
                 </ul>
 
-                {draft.durationDays ? (
+                {draft.durationDays && multiPlan ? (
+                  <MultiCountryBudgetCard plan={multiPlan} />
+                ) : draft.durationDays ? (
                   <BudgetBreakdownCard
                     destinationSlug={template.destination_slug}
                     tripDays={draft.durationDays}
@@ -935,7 +1072,51 @@ export function OrganizzaWizard({
                   </ol>
                 </div>
 
-                {draft.slug && draft.durationDays ? (
+                {multiPlan ? (
+                  <section
+                    className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-white p-4"
+                    data-testid="multi-country-plan"
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                      Itinerario multi-paese
+                    </p>
+                    <h3 className="font-display text-lg font-extrabold text-[var(--color-text)]">
+                      {multiPlan.titleIt} · {tripDurationLabelIt(multiPlan.tripDays)}
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-secondary)]">
+                      Ordine: {multiPlan.orderedSlugs.map((s) => getMaster(s)?.nameIt ?? s).join(' → ')}.
+                      Trasferimento: {multiPlan.transfer.notesIt}
+                      {multiPlan.transferNeedsCheck ? ' · da verificare' : ''}.
+                    </p>
+                    <ol className="space-y-2">
+                      {multiPlan.days.map((d) => (
+                        <li
+                          key={d.day_number}
+                          className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                        >
+                          <p className="font-bold text-[var(--color-text)]">
+                            Giorno {d.day_number}: {d.title}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-secondary)]">
+                            {d.area_segment}
+                            {d.transfer && d.transfer !== 'none' ? ` · ${d.transfer}` : ''}
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="text-[11px] text-[var(--color-text-secondary)]">
+                      {multiPlan.visaNoticeIt}{' '}
+                      <a
+                        href={multiPlan.visaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-primary underline-offset-2 hover:underline"
+                      >
+                        viaggiaresicuri.it
+                      </a>
+                    </p>
+                  </section>
+                ) : draft.slug && draft.durationDays ? (
                   <DeterministicPlanPanel
                     destinationSlug={draft.slug}
                     tripDays={draft.durationDays}
