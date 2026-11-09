@@ -24,15 +24,16 @@ test.describe('organizza smart flights (mobile)', () => {
     ).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole('button', { name: /Aggiungi un paese/i }).click();
-    await expect(page.getByText(/Vietnam \+ Cambogia/i)).toBeVisible();
-    await expect(page.getByText(/Arrivo HAN/i)).toBeVisible();
-    await page.getByRole('button', { name: /Vietnam \+ Cambogia/i }).click();
+    const vnKh = page.getByRole('button', { name: /Vietnam \+ Cambogia/i });
+    await expect(vnKh).toBeVisible();
+    await expect(vnKh.getByText(/Arrivo HAN · rientro da REP/i)).toBeVisible();
+    await vnKh.click();
 
     const from = page.locator('input[type="date"]').first();
     const to = page.locator('input[type="date"]').nth(1);
     await from.fill('2026-08-10');
-    await to.fill('2026-08-24');
-    await expect(page.getByText(/14 giorni|15 giorni/i)).toBeVisible();
+    await to.fill('2026-08-23');
+    await expect(page.getByText(/14 giorni/i)).toBeVisible();
 
     // Smart calendar mounts after a date is set
     await expect(page.getByTestId('smart-flight-calendar').first()).toBeVisible();
@@ -45,23 +46,34 @@ test.describe('organizza smart flights (mobile)', () => {
     await expect(page.locator('body')).not.toContainText(/Could not find/i);
     await expect(page.locator('body')).not.toContainText(/liteapi/i);
 
-    // Empty offers → soft continue; otherwise pick first recommendation
+    // Wait for search to settle, then pick a recommendation or soft-skip
+    await expect(page.getByText(/Cerchiamo le tariffe/i)).toHaveCount(0, {
+      timeout: 90_000,
+    });
     const skip = page.getByRole('button', { name: /Continua senza tariffa ora/i });
-    const pick = page.getByRole('button', { name: /Più conveniente|Più veloce|Equilibrato/i }).first();
-    if (await skip.isVisible({ timeout: 45_000 }).catch(() => false)) {
+    const pick = page
+      .getByRole('button', { name: /Più conveniente|Più veloce|Equilibrato/i })
+      .first();
+    if (await skip.isVisible().catch(() => false)) {
       await skip.click();
-    } else if (await pick.isVisible().catch(() => false)) {
+    } else {
+      await expect(pick).toBeVisible({ timeout: 10_000 });
       await pick.click();
     }
 
-    await page.getByRole('button', { name: /^Continua$/i }).click();
+    const continua = page.getByRole('button', { name: /^Continua$/i });
+    await expect(continua).toBeEnabled({ timeout: 10_000 });
+    await continua.click();
     await expect(page.getByRole('heading', { name: /^Riepilogo$/i })).toBeVisible();
 
     await page.getByRole('button', { name: /Informazioni importanti/i }).click();
-    await expect(page.getByText(/BOZZA|Allegato B/i)).toBeVisible();
+    await expect(page.getByText(/BOZZA, da revisione avvocato/i).first()).toBeVisible();
+    await expect(page.getByText(/Ho letto le informazioni importanti/i)).toBeVisible();
 
     await page.getByRole('button', { name: /Itinerario \(tappe\)/i }).click();
-    await expect(page.getByText(/Trasferimento|Vietnam|Cambogia|SGN|HAN|REP/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/Trasferimento|Vietnam|Cambogia|SGN|HAN|REP/i).first()
+    ).toBeVisible();
 
     // No raw technical toasts on the surface
     await expect(page.locator('body')).not.toContainText(/PGRST/i);
