@@ -6,7 +6,7 @@ function totalFor(
   slug: string,
   days: number,
   vibe: 'relax' | 'divertimento' | 'avventura' = 'divertimento',
-  company: 'solo' | 'amici' | 'gruppo' = 'solo'
+  company: 'solo' | 'coppia' | 'amici' = 'solo'
 ) {
   const planned = planFromMaster(slug, days, vibe)!;
   const b = computeItineraryBudget({

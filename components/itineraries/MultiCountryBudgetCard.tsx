@@ -37,6 +37,11 @@ export function MultiCountryBudgetCard({
           Arrivo {plan.arrivalIata} · rientro da {plan.departureIata}.{' '}
           {COMPLIANCE_COPY.priceIsSumOfServices}
         </p>
+        {plan.unverifiedCombination && plan.unverifiedNoticeIt ? (
+          <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            {plan.unverifiedNoticeIt}
+          </p>
+        ) : null}
       </header>
 
       <ul className="space-y-2 border-t border-[var(--color-border)]/70 pt-3 text-sm">
@@ -44,11 +49,15 @@ export function MultiCountryBudgetCard({
           <span>
             Voli open-jaw{' '}
             <span className="text-[11px] uppercase tracking-wide text-[var(--color-text-secondary)]">
-              {kindLabelIt(plan.openJawFlightKind)}
+              {plan.openJawFlightKind === 'unknown'
+                ? 'da verificare'
+                : kindLabelIt(plan.openJawFlightKind)}
             </span>
           </span>
           <span className="font-semibold tabular-nums">
-            {formatEuro(plan.openJawFlightEurPerPerson, { approx: false })}
+            {plan.openJawFlightEurPerPerson != null
+              ? formatEuro(plan.openJawFlightEurPerPerson, { approx: false })
+              : 'da verificare'}
           </span>
         </li>
         <li className="text-[11px] text-[var(--color-text-secondary)] -mt-1">

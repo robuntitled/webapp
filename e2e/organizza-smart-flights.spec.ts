@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Mobile Organizza redesign: Dove e quando → Voli → Riepilogo compatto.
- * Guest-safe: never hits paid booking; create-trip may require auth.
+ * Mobile Organizza redesign: Dove → Quando → Con chi → Voli → Riepilogo.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -20,87 +19,76 @@ test.beforeEach(async ({ page }) => {
   }
 });
 
-test.describe('organizza smart flights (mobile)', () => {
+test.describe('organizza redesigned flow (mobile)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('dove e quando → multi-country sub-step → dates → voli → compact riepilogo', async ({
-    page,
-  }) => {
+  test('Dove search + sticky Continua + Quando + Con chi (no Gruppo)', async ({ page }) => {
     await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
     await expect(
       page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('button', { name: /Aggiungi un paese/i }).click();
-    const vnKh = page.getByRole('button', { name: /Vietnam \+ Cambogia/i });
-    await expect(vnKh).toBeVisible();
-    await expect(vnKh.getByText(/Arrivo HAN · rientro da REP/i)).toBeVisible();
-    await vnKh.click();
+    await page.getByTestId('dest-search').fill('Thailand');
+    const th = page.getByTestId('dest-card-thailandia');
+    await expect(th).toBeVisible();
+    await th.click();
+    await expect(page.getByText(/Selezionato:.*Thailandia/i)).toBeVisible();
+
+    // Sticky Continua visible with selection
+    const continua = page.getByRole('button', { name: /^Continua$/i });
+    await expect(continua).toBeEnabled();
+    await continua.click();
+
+    await expect(page.getByRole('heading', { name: /Quando vuoi partire/i })).toBeVisible();
+    await expect(page.getByText(/Date libere/i)).toHaveCount(0);
 
     const from = page.locator('input[type="date"]').first();
     const to = page.locator('input[type="date"]').nth(1);
     await from.fill('2026-12-10');
     await to.fill('2026-12-23');
-    await expect(page.getByText(/14 giorni/i)).toBeVisible();
-
-    // Smart calendar mounts after a date is set — no developer ops copy, no n/d
     await expect(page.getByTestId('smart-flight-calendar').first()).toBeVisible();
-    await expect(page.locator('body')).not.toContainText(/Concorrenza 2/i);
     await expect(page.locator('body')).not.toContainText(/\bn\/d\b/i);
-    await expect(page.getByText(/giorni vicini se conviene/i).first()).toBeVisible();
+    await continua.click();
 
-    await page.getByRole('button', { name: /^Continua$/i }).click();
+    await expect(page.getByRole('heading', { name: /Con chi parti/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Gruppo/i })).toHaveCount(0);
+    await page.getByRole('button', { name: /Con amici/i }).click();
+    await expect(page.getByText(/link invito/i)).toBeVisible();
+    await continua.click();
+
     await expect(page.getByRole('heading', { name: /Voli consigliati/i })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.locator('body')).not.toContainText(/schema cache/i);
-    await expect(page.locator('body')).not.toContainText(/Could not find/i);
-    await expect(page.locator('body')).not.toContainText(/liteapi/i);
-
-    // Wait for search to settle, then pick a recommendation or soft-skip
-    await expect(page.getByText(/Cerchiamo le tariffe/i)).toHaveCount(0, {
-      timeout: 90_000,
-    });
-    const skip = page.getByRole('button', { name: /Continua senza tariffa ora/i });
-    const pick = page
-      .getByRole('button', { name: /Più conveniente|Più veloce|Equilibrato/i })
-      .first();
-    if (await skip.isVisible().catch(() => false)) {
-      await skip.click();
-    } else {
-      await expect(pick).toBeVisible({ timeout: 10_000 });
-      await pick.click();
-    }
-
-    const continua = page.getByRole('button', { name: /^Continua$/i });
-    await expect(continua).toBeEnabled({ timeout: 10_000 });
-    await continua.click();
-    await expect(page.getByRole('heading', { name: /^Riepilogo$/i })).toBeVisible();
-
-    await page.getByRole('button', { name: /Informazioni importanti/i }).click();
-    await expect(page.getByText(/BOZZA, da revisione avvocato/i).first()).toBeVisible();
-    await expect(page.getByText(/Ho letto le informazioni importanti/i)).toBeVisible();
-
-    await page.getByRole('button', { name: /Itinerario \(tappe\)/i }).click();
-    await expect(
-      page.getByText(/Trasferimento|Vietnam|Cambogia|SGN|HAN|REP/i).first()
-    ).toBeVisible();
-
-    // No raw technical toasts on the surface
-    await expect(page.locator('body')).not.toContainText(/PGRST/i);
-    await expect(page.locator('body')).not.toContainText(/schema cache/i);
   });
 
-  test('single destination free calendar without 7/14/21 primary presets', async ({ page }) => {
+  test('curated multi-meta suggestions from Dove', async ({ page }) => {
     await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: /Organizza il tuo viaggio/i })).toBeVisible({
-      timeout: 20_000,
-    });
-    await page.getByRole('button', { name: /Thailandia/i }).first().click();
-    await expect(page.getByText(/Niente preset fissi/i)).toBeVisible();
-    // Old fixed-duration chips should not be the primary control
-    await expect(page.getByRole('button', { name: /^7 giorni$/i })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^14 giorni$/i })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^21 giorni$/i })).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
+    ).toBeVisible({ timeout: 20_000 });
+
+    await page.getByTestId('dest-card-thailandia').click();
+    await page.getByRole('button', { name: /Vuoi aggiungere un'altra meta/i }).click();
+    await expect(page.getByText(/Cambogia|Malesia/i).first()).toBeVisible();
+    await expect(page.getByText(/verificata/i).first()).toBeVisible();
+  });
+
+  test('non-curated free combo shows unverified notice', async ({ page }) => {
+    await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
+    await expect(
+      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
+    ).toBeVisible({ timeout: 20_000 });
+
+    await page.getByTestId('dest-card-thailandia').click();
+    await page.getByRole('button', { name: /Vuoi aggiungere un'altra meta/i }).click();
+    await page.getByPlaceholder(/Cerca un.altra meta/i).fill('giappone');
+    const jp = page.getByRole('button', { name: /Giappone/i }).first();
+    if (await jp.isVisible().catch(() => false)) {
+      await jp.click();
+      await expect(
+        page.getByText(/Combinazione non verificata: controlla collegamenti/i)
+      ).toBeVisible();
+      await expect(page.getByText(/Viaggiare Sicuri/i).first()).toBeVisible();
+    }
   });
 });

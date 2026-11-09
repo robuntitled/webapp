@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format, parseISO } from 'date-fns';
@@ -13,6 +14,9 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Search,
+  Users,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { startPracticeAction } from '@/actions/practices';
@@ -27,9 +31,9 @@ import { findItineraryBySlug } from '@/lib/itineraries/catalog';
 import { planFromMaster, getMaster } from '@/lib/itineraries/masters';
 import {
   combineMultiCountryPlan,
-  listCuratedMultiCountryPairs,
+  isCuratedMultiSelection,
+  suggestPartnersFor,
 } from '@/lib/itineraries/multi-country';
-import type { CuratedMultiCountryPair } from '@/lib/itineraries/multi-country';
 import {
   EMPTY_ORGANIZZA_DRAFT,
   ORGANIZZA_STEPS,
@@ -40,9 +44,13 @@ import {
   canNavigateToOrganizzaStep,
   companyChoiceToTravelMode,
   companyCreatesPrivateTrip,
+  companyShowsInviteAfterCreate,
+  defaultTravelersForCompany,
   durationDaysFromRange,
   isMultiCountryDraft,
   nextOrganizzaStep,
+  normalizeOrganizzaCompany,
+  normalizeOrganizzaStep,
   organizzaCompletedSteps,
   patchOrganizzaDraft,
   prevOrganizzaStep,
@@ -55,7 +63,7 @@ import { accediHref } from '@/lib/auth/callback-url';
 import { formatEuro } from '@/lib/format/euro';
 import { cn } from '@/lib/utils';
 
-const STORAGE_KEY = 'nl-organizza-draft-v2';
+const STORAGE_KEY = 'nl-organizza-draft-v3';
 
 type DestCard = {
   slug: string;
@@ -64,6 +72,7 @@ type DestCard = {
   emoji: string;
   allowedDurations: number[];
   published?: boolean;
+  continent?: string;
 };
 
 type OfferRow = {
@@ -83,28 +92,96 @@ type OfferRow = {
 function loadDraft(): { draft: OrganizzaDraft; step: OrganizzaStepId } | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw =
+      sessionStorage.getItem(STORAGE_KEY) ??
+      sessionStorage.getItem('nl-organizza-draft-v2');
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { draft: OrganizzaDraft; step: OrganizzaStepId };
+    const parsed = JSON.parse(raw) as {
+      draft: OrganizzaDraft & { company?: string | null };
+      step: string;
+    };
     if (!parsed?.draft) return null;
+    const company = normalizeOrganizzaCompany(parsed.draft.company);
     return {
-      draft: patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, parsed.draft),
-      step: parsed.step ?? 'dove-quando',
+      draft: patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
+        ...parsed.draft,
+        company,
+        travelers:
+          parsed.draft.travelers ??
+          (company ? defaultTravelersForCompany(company) : 1),
+      }),
+      step: normalizeOrganizzaStep(parsed.step),
     };
   } catch {
     return null;
   }
 }
 
-export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
+function DestPickCard({
+  dest,
+  selected,
+  onSelect,
+}: {
+  dest: DestCard;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'group overflow-hidden rounded-xl border text-left transition',
+        selected
+          ? 'border-primary ring-2 ring-primary/25'
+          : 'border-slate-200/90 hover:border-primary/35 hover:shadow-sm'
+      )}
+      data-testid={`dest-card-${dest.slug}`}
+    >
+      <div className="relative aspect-[4/3] w-full">
+        <Image
+          src={coverForDestination(dest.slug)}
+          alt={dest.name}
+          fill
+          className="object-cover transition duration-200 group-hover:scale-[1.03]"
+          sizes="(max-width: 640px) 50vw, 33vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+        {selected ? (
+          <span className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow">
+            <Check className="h-4 w-4" />
+          </span>
+        ) : null}
+        <div className="absolute bottom-3 left-3 right-3">
+          <p className="font-display text-base font-semibold leading-tight text-white drop-shadow sm:text-lg">
+            {dest.emoji ? `${dest.emoji} ` : ''}
+            {dest.name}
+          </p>
+          <p className="mt-0.5 line-clamp-1 text-xs text-white/90">{dest.vibe}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+export function OrganizzaFlow({
+  destinations,
+  groupEditionCountBySlug = {},
+}: {
+  destinations: DestCard[];
+  /** Official open editions count per destination slug (read-only hint). */
+  groupEditionCountBySlug?: Record<string, number>;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [pending, startTransition] = useTransition();
   const [hydrated, setHydrated] = useState(false);
-  const [step, setStep] = useState<OrganizzaStepId>('dove-quando');
+  const [step, setStep] = useState<OrganizzaStepId>('dove');
   const [draft, setDraft] = useState<OrganizzaDraft>(EMPTY_ORGANIZZA_DRAFT);
-  const [multiMode, setMultiMode] = useState(false);
+  const [destQuery, setDestQuery] = useState('');
+  const [addMetaOpen, setAddMetaOpen] = useState(false);
+  const [partnerQuery, setPartnerQuery] = useState('');
   const [stopsOpen, setStopsOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
@@ -116,8 +193,22 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
     const resume = searchParams.get('ripresa') === '1';
     if (stored) {
       setDraft(stored.draft);
-      setMultiMode(isMultiCountryDraft(stored.draft));
-      setStep(resume && stored.draft.selectedFlight ? 'riepilogo' : stored.step);
+      setAddMetaOpen(isMultiCountryDraft(stored.draft));
+      setStep(
+        resume && stored.draft.selectedFlight
+          ? 'riepilogo'
+          : stored.step
+      );
+    }
+    const slugQ = searchParams.get('slug');
+    if (slugQ && !stored?.draft.slug) {
+      setDraft((d) =>
+        patchOrganizzaDraft(d, {
+          slug: slugQ,
+          arrivalIata: getMaster(slugQ)?.hubs[0] ?? null,
+          departureIata: getMaster(slugQ)?.hubs[0] ?? null,
+        })
+      );
     }
     setHydrated(true);
   }, [searchParams]);
@@ -139,6 +230,36 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
     () => destinations.filter((d) => d.published !== false),
     [destinations]
   );
+
+  const filteredDests = useMemo(() => {
+    const q = destQuery.trim().toLowerCase();
+    if (!q) return published;
+    return published.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.slug.includes(q) ||
+        d.vibe.toLowerCase().includes(q) ||
+        (d.continent ?? '').toLowerCase().includes(q)
+    );
+  }, [published, destQuery]);
+
+  const partnerSuggestions = useMemo(() => {
+    if (!draft.slug) return [];
+    return suggestPartnersFor(draft.slug, published);
+  }, [draft.slug, published]);
+
+  const partnerSearchHits = useMemo(() => {
+    const q = partnerQuery.trim().toLowerCase();
+    if (!q || !draft.slug) return [];
+    return published.filter(
+      (d) =>
+        d.slug !== draft.slug &&
+        !(draft.slugs ?? []).includes(d.slug) &&
+        (d.name.toLowerCase().includes(q) ||
+          d.slug.includes(q) ||
+          d.vibe.toLowerCase().includes(q))
+    );
+  }, [partnerQuery, published, draft.slug, draft.slugs]);
 
   const multiPlan = useMemo(() => {
     if (!isMultiCountryDraft(draft) || !draft.slugs || !draft.durationDays) return null;
@@ -185,35 +306,54 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
     return pickRecommendedFlights(scored);
   }, [offers]);
 
-  function selectSingle(dest: DestCard) {
-    setMultiMode(false);
+  const groupHintCount = useMemo(() => {
+    const slugs = isMultiCountryDraft(draft) ? draft.slugs ?? [] : draft.slug ? [draft.slug] : [];
+    return slugs.reduce((n, s) => n + (groupEditionCountBySlug[s] ?? 0), 0);
+  }, [draft.slug, draft.slugs, groupEditionCountBySlug]);
+
+  function selectPrimary(dest: DestCard) {
     update({
       slug: dest.slug,
       slugs: null,
       arrivalIata: getMaster(dest.slug)?.hubs[0] ?? null,
       departureIata: getMaster(dest.slug)?.hubs[0] ?? null,
       selectedFlight: null,
-      dateFrom: draft.dateFrom,
-      dateTo: draft.dateTo,
-      durationDays:
-        draft.dateFrom && draft.dateTo
-          ? durationDaysFromRange(draft.dateFrom, draft.dateTo)
-          : dest.allowedDurations[1] ?? dest.allowedDurations[0] ?? 10,
     });
+    setAddMetaOpen(false);
+    setPartnerQuery('');
   }
 
-  function selectPair(pair: CuratedMultiCountryPair) {
-    setMultiMode(true);
+  function addPartner(slug: string) {
+    if (!draft.slug || slug === draft.slug) return;
+    const slugs = [draft.slug, slug];
+    const curated = isCuratedMultiSelection(slugs);
+    const pairHubs = curated
+      ? combineMultiCountryPlan({ slugs, tripDays: Math.max(draft.durationDays ?? 14, 10) })
+      : null;
     update({
-      slug: pair.slugs[0],
-      slugs: [...pair.slugs],
-      arrivalIata: pair.arrivalHubIata,
-      departureIata: pair.departureHubIata,
+      slugs,
+      slug: slugs[0],
       selectedFlight: null,
-      durationDays:
-        draft.dateFrom && draft.dateTo
-          ? durationDaysFromRange(draft.dateFrom, draft.dateTo)
-          : 14,
+      arrivalIata:
+        pairHubs && pairHubs.ok
+          ? pairHubs.arrivalIata
+          : getMaster(slugs[0])?.hubs[0] ?? null,
+      departureIata:
+        pairHubs && pairHubs.ok
+          ? pairHubs.departureIata
+          : getMaster(slugs[1])?.hubs[0] ?? null,
+    });
+    setAddMetaOpen(true);
+    setPartnerQuery('');
+  }
+
+  function clearPartner() {
+    if (!draft.slug) return;
+    update({
+      slugs: null,
+      arrivalIata: getMaster(draft.slug)?.hubs[0] ?? null,
+      departureIata: getMaster(draft.slug)?.hubs[0] ?? null,
+      selectedFlight: null,
     });
   }
 
@@ -230,6 +370,13 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
     });
   }
 
+  function setCompany(c: OrganizzaCompanyChoice) {
+    update({
+      company: c,
+      travelers: c === 'amici' ? Math.max(draft.travelers, 3) : defaultTravelersForCompany(c),
+    });
+  }
+
   async function loadRecommendedOffers() {
     if (!draft.dateFrom || !draft.originIata || !destIata) return;
     setOffersLoading(true);
@@ -240,13 +387,12 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
         draft.arrivalIata &&
         draft.departureIata &&
         draft.arrivalIata !== draft.departureIata;
-      // Outbound search (oneway to arrival hub); full roundtrip when single country.
       const params = new URLSearchParams({
         originIata: draft.originIata,
         destination: isOpenJaw ? draft.arrivalIata! : destIata,
         startDate: draft.dateFrom,
         tripType: isOpenJaw ? 'oneway' : 'roundtrip',
-        adults: '1',
+        adults: String(Math.min(9, Math.max(1, draft.travelers))),
         currency: 'EUR',
       });
       if (!isOpenJaw && draft.dateTo) params.set('endDate', draft.dateTo);
@@ -275,7 +421,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
       void loadRecommendedOffers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, draft.dateFrom, draft.dateTo, draft.arrivalIata, draft.originIata]);
+  }, [step, draft.dateFrom, draft.dateTo, draft.arrivalIata, draft.originIata, draft.travelers]);
 
   function pickFlight(kind: OrganizzaSelectedFlight['pickKind'], offerId: string) {
     const offer = offers.find((o) => o.id === offerId);
@@ -305,7 +451,6 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
         durationMinutes: offer.durationMinutes,
         pickKind: kind,
       },
-      // Itinerary follows the real flight airports (open-jaw order for multi).
       arrivalIata: offer.destination ?? destIata,
       departureIata: returnOriginIata,
     });
@@ -322,16 +467,16 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
       return;
     }
     if (!companyCreatesPrivateTrip(draft.company)) {
-      router.push('/gruppi');
+      toast.error('Scelta non valida.');
       return;
     }
     const mode = companyChoiceToTravelMode(draft.company);
-    if (mode === 'redirect-gruppi') {
-      router.push('/gruppi');
-      return;
-    }
     if (!session?.user) {
-      toast.message("Crea l'account per salvare il tuo viaggio.");
+      toast.message(
+        companyShowsInviteAfterCreate(draft.company)
+          ? "Crea l'account per salvare il viaggio e ottenere il link invito."
+          : "Crea l'account per salvare il tuo viaggio."
+      );
       router.push(accediHref('/organizza?ripresa=1', 'register'));
       return;
     }
@@ -348,7 +493,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
           isMultiCountryDraft(draft) && draft.slugs
             ? draft.slugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')
             : findCatalogDestination(draft.slug!)?.name ?? draft.slug,
-        allowFreeTrip: !curated,
+        allowFreeTrip: !curated || isMultiCountryDraft(draft),
       });
       if (result?.error) {
         const err = result.error;
@@ -361,6 +506,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
       }
       try {
         sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem('nl-organizza-draft-v2');
       } catch {
         /* ignore */
       }
@@ -368,11 +514,23 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
   }
 
   const done = organizzaCompletedSteps(draft);
-  const planDays = multiPlan?.days
-    ?? (draft.slug && draft.durationDays
-      ? planFromMaster(draft.slug, draft.durationDays, (draft.vibe as 'relax' | null) ?? null)
-          ?.template.days
+  const planDays =
+    multiPlan?.days ??
+    (draft.slug && draft.durationDays
+      ? planFromMaster(
+          draft.slug,
+          draft.durationDays,
+          (draft.vibe as 'relax' | null) ?? null
+        )?.template.days
       : null);
+
+  const canContinue =
+    (step === 'dove' && Boolean(draft.slug)) ||
+    (step === 'quando' &&
+      Boolean(draft.dateFrom && draft.dateTo && draft.durationDays)) ||
+    (step === 'con-chi' && Boolean(draft.company)) ||
+    (step === 'voli' && Boolean(draft.selectedFlight)) ||
+    step === 'riepilogo';
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/40 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
@@ -382,30 +540,32 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
             Organizza il tuo viaggio
           </h1>
           <p className="mt-1 text-[var(--color-text-secondary)]">
-            Destinazione e date, poi i voli migliori, poi un riepilogo chiaro.
+            Dove, quando, con chi — poi i voli e un riepilogo chiaro.
           </p>
         </header>
 
-        <ol className="flex gap-2" aria-label="Progresso">
+        <ol className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Progresso">
           {ORGANIZZA_STEPS.map((s, i) => {
             const current = s.id === step;
             const complete = done.has(s.id) && !current;
             const clickable = canNavigateToOrganizzaStep(draft, s.id, step);
             return (
-              <li key={s.id} className="min-w-0 flex-1">
+              <li key={s.id} className="min-w-[4.5rem] flex-1">
                 <button
                   type="button"
                   disabled={!clickable}
                   onClick={() => clickable && setStep(s.id)}
                   className={cn(
-                    'flex w-full min-h-12 items-center gap-2 rounded-2xl border px-3 py-2 text-left text-sm font-semibold',
+                    'flex w-full min-h-11 items-center gap-1.5 rounded-2xl border px-2 py-2 text-left text-xs font-semibold sm:text-sm',
                     current && 'border-primary bg-white',
                     complete && 'border-[var(--color-border)] bg-white',
-                    !current && !complete && 'border-[var(--color-border)] bg-[var(--color-tint)]/60'
+                    !current &&
+                      !complete &&
+                      'border-[var(--color-border)] bg-[var(--color-tint)]/60'
                   )}
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs text-white">
-                    {complete ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+                    {complete ? <Check className="h-3 w-3" /> : i + 1}
                   </span>
                   <span className="truncate">{s.label}</span>
                 </button>
@@ -415,190 +575,364 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
         </ol>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-7">
-          {step === 'dove-quando' ? (
-            <div className="space-y-6">
+          {step === 'dove' ? (
+            <div className="space-y-5">
               <div>
-                <h2 className="font-display text-xl font-extrabold">Dove e quando</h2>
+                <h2 className="font-display text-xl font-extrabold">Dove vuoi andare?</h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  Scegli una meta. Per due paesi usa «Aggiungi un paese» (solo combinazioni
-                  verificate).
+                  Cerca o scegli una meta. Poi, se vuoi, aggiungi un altro paese.
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMultiMode(false)}
-                  className={cn(
-                    'rounded-full px-3 py-1.5 text-xs font-semibold',
-                    !multiMode ? 'bg-primary text-white' : 'border border-[var(--color-border)]'
-                  )}
-                >
-                  Una meta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMultiMode(true)}
-                  className={cn(
-                    'rounded-full px-3 py-1.5 text-xs font-semibold',
-                    multiMode ? 'bg-primary text-white' : 'border border-[var(--color-border)]'
-                  )}
-                >
-                  Aggiungi un paese
-                </button>
-              </div>
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={destQuery}
+                  onChange={(e) => setDestQuery(e.target.value)}
+                  placeholder="Cerca destinazione…"
+                  className="w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
+                  data-testid="dest-search"
+                />
+              </label>
 
-              {multiMode ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {listCuratedMultiCountryPairs().map((pair) => {
-                    const active =
-                      draft.slugs?.[0] === pair.slugs[0] && draft.slugs?.[1] === pair.slugs[1];
-                    return (
-                      <button
-                        key={pair.id}
-                        type="button"
-                        onClick={() => selectPair(pair)}
-                        className={cn(
-                          'rounded-2xl border px-4 py-3 text-left',
-                          active ? 'border-primary ring-2 ring-primary/20' : 'border-[var(--color-border)]'
-                        )}
-                      >
-                        <p className="font-semibold">{pair.titleIt}</p>
-                        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                          {pair.blurbIt}
-                        </p>
-                        <p className="mt-2 text-[11px] font-medium text-primary">
-                          Arrivo {pair.arrivalHubIata} · rientro da {pair.departureHubIata}
-                        </p>
-                      </button>
-                    );
-                  })}
+              {draft.slug ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--color-tint)] px-3 py-2 text-sm">
+                  <span className="font-semibold">
+                    Selezionato:{' '}
+                    {isMultiCountryDraft(draft) && draft.slugs
+                      ? draft.slugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')
+                      : getMaster(draft.slug)?.nameIt ?? draft.slug}
+                  </span>
+                  <button
+                    type="button"
+                    className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                    onClick={() => {
+                      update({
+                        slug: null,
+                        slugs: null,
+                        arrivalIata: null,
+                        departureIata: null,
+                        selectedFlight: null,
+                      });
+                      setAddMetaOpen(false);
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" /> Cambia
+                  </button>
                 </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {published.map((dest) => {
-                    const active = !isMultiCountryDraft(draft) && draft.slug === dest.slug;
-                    return (
-                      <button
-                        key={dest.slug}
-                        type="button"
-                        onClick={() => selectSingle(dest)}
-                        className={cn(
-                          'overflow-hidden rounded-2xl border text-left',
-                          active ? 'border-primary ring-2 ring-primary/20' : 'border-[var(--color-border)]'
-                        )}
-                      >
-                        <div className="relative h-24 w-full">
-                          <Image
-                            src={coverForDestination(dest.slug)}
-                            alt={dest.name}
-                            fill
-                            className="object-cover"
-                            sizes="40vw"
-                          />
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {filteredDests.map((dest) => {
+                  const selected =
+                    !isMultiCountryDraft(draft) && draft.slug === dest.slug;
+                  return (
+                    <DestPickCard
+                      key={dest.slug}
+                      dest={dest}
+                      selected={selected}
+                      onSelect={() => selectPrimary(dest)}
+                    />
+                  );
+                })}
+              </div>
+              {filteredDests.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  Nessuna destinazione per «{destQuery}».
+                </p>
+              ) : null}
+
+              {draft.slug ? (
+                <div className="space-y-3 rounded-2xl border border-[var(--color-border)] p-4">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between text-left text-sm font-bold"
+                    onClick={() => setAddMetaOpen((v) => !v)}
+                  >
+                    Vuoi aggiungere un&apos;altra meta?
+                    {addMetaOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  {addMetaOpen ? (
+                    <div className="space-y-3">
+                      {isMultiCountryDraft(draft) ? (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="rounded-full bg-primary/10 px-2 py-1 font-semibold text-primary">
+                            {draft.slugs?.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')}
+                          </span>
+                          <button
+                            type="button"
+                            className="font-semibold text-primary underline-offset-2 hover:underline"
+                            onClick={clearPartner}
+                          >
+                            Rimuovi seconda meta
+                          </button>
                         </div>
-                        <div className="p-3">
-                          <p className="font-semibold">
-                            {dest.emoji} {dest.name}
+                      ) : null}
+
+                      {partnerSuggestions.length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                            Suggerite per {getMaster(draft.slug)?.nameIt}
                           </p>
-                          <p className="text-xs text-[var(--color-text-secondary)]">{dest.vibe}</p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {partnerSuggestions.map((p) => (
+                              <button
+                                key={p.slug}
+                                type="button"
+                                onClick={() => addPartner(p.slug)}
+                                className={cn(
+                                  'rounded-xl border px-3 py-2.5 text-left',
+                                  draft.slugs?.[1] === p.slug
+                                    ? 'border-primary ring-2 ring-primary/20'
+                                    : 'border-[var(--color-border)]'
+                                )}
+                              >
+                                <p className="text-sm font-semibold">
+                                  {p.emoji} {p.name}
+                                  {p.kind === 'curated' ? (
+                                    <span className="ml-1 text-[10px] font-bold uppercase text-emerald-700">
+                                      verificata
+                                    </span>
+                                  ) : (
+                                    <span className="ml-1 text-[10px] font-bold uppercase text-amber-700">
+                                      da verificare
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                                  {p.blurbIt}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                      ) : null}
 
-              <div className="space-y-3 rounded-2xl border border-[var(--color-border)] p-4">
-                <p className="text-sm font-bold">Date libere</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Niente preset fissi: l’itinerario si adatta alla lunghezza che scegli.
+                      <label className="relative block">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="search"
+                          value={partnerQuery}
+                          onChange={(e) => setPartnerQuery(e.target.value)}
+                          placeholder="Cerca un’altra meta nel catalogo…"
+                          className="w-full rounded-xl border border-[var(--color-border)] py-2 pl-10 pr-3 text-sm"
+                        />
+                      </label>
+                      {partnerSearchHits.length > 0 ? (
+                        <ul className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-[var(--color-border)] p-2">
+                          {partnerSearchHits.slice(0, 12).map((d) => (
+                            <li key={d.slug}>
+                              <button
+                                type="button"
+                                className="w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-[var(--color-tint)]"
+                                onClick={() => addPartner(d.slug)}
+                              >
+                                {d.emoji} {d.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      {isMultiCountryDraft(draft) &&
+                      !isCuratedMultiSelection(draft.slugs) ? (
+                        <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                          <p className="font-semibold">
+                            Combinazione non verificata: controlla collegamenti e tempi di
+                            spostamento tra i paesi
+                          </p>
+                          {(draft.slugs ?? []).map((s) => (
+                            <p key={s}>
+                              {getMaster(s)?.nameIt ?? s}:{' '}
+                              <a
+                                href="https://www.viaggiaresicuri.it/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-semibold text-primary underline-offset-2 hover:underline"
+                              >
+                                Viaggiare Sicuri
+                              </a>
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {step === 'quando' ? (
+            <div className="space-y-5">
+              <div>
+                <h2 className="font-display text-xl font-extrabold">Quando vuoi partire?</h2>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  Scegli andata e ritorno. Controlliamo anche i giorni vicini.
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="text-xs font-semibold">
-                    Partenza
-                    <input
-                      type="date"
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-                      value={draft.dateFrom ?? ''}
-                      min={minBookableDateIso()}
-                      onChange={(e) => {
-                        const from = e.target.value;
-                        const to = draft.dateTo && draft.dateTo >= from ? draft.dateTo : from;
-                        setDates(from, to);
-                      }}
-                    />
-                  </label>
-                  <label className="text-xs font-semibold">
-                    Rientro
-                    <input
-                      type="date"
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-                      value={draft.dateTo ?? ''}
-                      min={draft.dateFrom ?? minBookableDateIso()}
-                      onChange={(e) => {
-                        if (!draft.dateFrom) return;
-                        setDates(draft.dateFrom, e.target.value);
-                      }}
-                    />
-                  </label>
-                </div>
-                {draft.durationDays ? (
-                  <p className="text-xs text-primary font-semibold">
-                    {tripDurationLabelIt(draft.durationDays)}
-                    {multiPlan
-                      ? ` · ${multiPlan.shares.map((s) => `${s.nameIt} ${s.days}g`).join(' + ')} + trasferimento`
-                      : ''}
-                  </p>
-                ) : null}
-
-                {draft.dateFrom ? (
-                  <SmartFlightCalendar
-                    labelIt="Partenza · giorni vicini"
-                    originIata={draft.originIata ?? 'MXP'}
-                    destinationIata={destIata}
-                    value={draft.dateFrom}
-                    tripType="oneway"
-                    onChange={(iso) => {
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold">
+                  Partenza
+                  <input
+                    type="date"
+                    className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                    value={draft.dateFrom ?? ''}
+                    min={minBookableDateIso()}
+                    onChange={(e) => {
+                      const from = e.target.value;
                       const to =
-                        draft.dateTo && draft.dateTo >= iso
-                          ? draft.dateTo
-                          : iso;
-                      setDates(iso, to);
+                        draft.dateTo && draft.dateTo >= from ? draft.dateTo : from;
+                      setDates(from, to);
                     }}
                   />
-                ) : null}
-                {draft.dateTo ? (
-                  <SmartFlightCalendar
-                    labelIt={
-                      isMultiCountryDraft(draft)
-                        ? `Rientro da ${returnOriginIata} · giorni vicini`
-                        : 'Rientro · giorni vicini'
+                </label>
+                <label className="text-xs font-semibold">
+                  Rientro
+                  <input
+                    type="date"
+                    className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                    value={draft.dateTo ?? ''}
+                    min={draft.dateFrom ?? minBookableDateIso()}
+                    onChange={(e) => {
+                      if (!draft.dateFrom) return;
+                      setDates(draft.dateFrom, e.target.value);
+                    }}
+                  />
+                </label>
+              </div>
+              {draft.durationDays ? (
+                <p className="text-xs font-semibold text-primary">
+                  {tripDurationLabelIt(draft.durationDays)}
+                  {multiPlan
+                    ? ` · ${multiPlan.shares.map((s) => `${s.nameIt} ${s.days}g`).join(' + ')} + trasferimento`
+                    : ''}
+                </p>
+              ) : null}
+              {draft.dateFrom ? (
+                <SmartFlightCalendar
+                  labelIt="Partenza · giorni vicini"
+                  originIata={draft.originIata ?? 'MXP'}
+                  destinationIata={destIata}
+                  value={draft.dateFrom}
+                  tripType="oneway"
+                  onChange={(iso) => {
+                    const to =
+                      draft.dateTo && draft.dateTo >= iso ? draft.dateTo : iso;
+                    setDates(iso, to);
+                  }}
+                />
+              ) : null}
+              {draft.dateTo ? (
+                <SmartFlightCalendar
+                  labelIt={
+                    isMultiCountryDraft(draft)
+                      ? `Rientro da ${returnOriginIata} · giorni vicini`
+                      : 'Rientro · giorni vicini'
+                  }
+                  originIata={returnOriginIata}
+                  destinationIata={draft.originIata ?? 'MXP'}
+                  value={draft.dateTo}
+                  tripType="oneway"
+                  minDate={draft.dateFrom}
+                  onChange={(iso) => {
+                    if (!draft.dateFrom || iso < draft.dateFrom) return;
+                    setDates(draft.dateFrom, iso);
+                  }}
+                />
+              ) : null}
+              <p className="text-[11px] text-[var(--color-text-secondary)]">
+                Controlla visti e documenti su{' '}
+                <a
+                  href="https://www.viaggiaresicuri.it/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  Viaggiare Sicuri
+                </a>
+                .
+              </p>
+            </div>
+          ) : null}
+
+          {step === 'con-chi' ? (
+            <div className="space-y-5">
+              <div>
+                <h2 className="font-display text-xl font-extrabold">Con chi parti?</h2>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  Serve per budget e, se parti con amici, per il link invito.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(
+                  [
+                    { id: 'solo', label: 'Da solo', hint: '1 persona' },
+                    { id: 'coppia', label: 'In coppia', hint: '2 persone' },
+                    { id: 'amici', label: 'Con amici', hint: 'Scegli quante' },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setCompany(opt.id)}
+                    className={cn(
+                      'rounded-2xl border px-4 py-4 text-left',
+                      draft.company === opt.id
+                        ? 'border-primary ring-2 ring-primary/20'
+                        : 'border-[var(--color-border)]'
+                    )}
+                  >
+                    <p className="font-bold">{opt.label}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                      {opt.hint}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              {draft.company === 'amici' ? (
+                <label className="block text-sm font-semibold">
+                  Quante persone?
+                  <input
+                    type="number"
+                    min={2}
+                    max={12}
+                    className="mt-1 w-28 rounded-xl border border-[var(--color-border)] px-3 py-2"
+                    value={draft.travelers}
+                    onChange={(e) =>
+                      update({
+                        travelers: Math.min(
+                          12,
+                          Math.max(2, Number(e.target.value) || 2)
+                        ),
+                      })
                     }
-                    originIata={returnOriginIata}
-                    destinationIata={draft.originIata ?? 'MXP'}
-                    value={draft.dateTo}
-                    tripType="oneway"
-                    minDate={draft.dateFrom}
-                    onChange={(iso) => {
-                      if (!draft.dateFrom || iso < draft.dateFrom) return;
-                      setDates(draft.dateFrom, iso);
-                    }}
                   />
-                ) : null}
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
-                  Controlla visti e documenti per ogni paese su{' '}
-                  <a
-                    href="https://www.viaggiaresicuri.it/"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                </label>
+              ) : null}
+              {draft.company === 'amici' ? (
+                <p className="inline-flex items-start gap-2 rounded-xl bg-[var(--color-tint)] px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+                  <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  Dopo la creazione vedrai il link invito da condividere (nessun messaggio
+                  inviato da noi).
+                </p>
+              ) : null}
+              {groupHintCount > 0 ? (
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Ci sono partenze di gruppo per questa meta.{' '}
+                  <Link
+                    href="/gruppi"
                     className="font-semibold text-primary underline-offset-2 hover:underline"
                   >
-                    Viaggiare Sicuri
-                  </a>
-                  .
+                    Vedi Gruppi
+                  </Link>
                 </p>
-              </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -607,8 +941,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
               <div>
                 <h2 className="font-display text-xl font-extrabold">Voli consigliati</h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  Due o tre opzioni calcolate su prezzo, scali, durata e fattibilità. Nessuna
-                  prenotazione automatica.
+                  Due o tre opzioni. Nessuna prenotazione automatica.
                   {isMultiCountryDraft(draft)
                     ? ` Arrivo ${draft.arrivalIata}, rientro da ${draft.departureIata}.`
                     : ''}
@@ -631,7 +964,9 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                       onClick={() => pickFlight(r.kind, offer.id)}
                       className={cn(
                         'w-full rounded-2xl border px-4 py-3 text-left',
-                        active ? 'border-primary ring-2 ring-primary/20' : 'border-[var(--color-border)]'
+                        active
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-[var(--color-border)]'
                       )}
                     >
                       <p className="text-xs font-bold uppercase tracking-wide text-primary">
@@ -650,8 +985,8 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                 {!offersLoading && recommended.length === 0 ? (
                   <div className="space-y-3">
                     <p className="text-sm text-[var(--color-text-secondary)]">
-                      Nessuna tariffa per queste date. Torna indietro e prova un giorno vicino,
-                      oppure continua: l&apos;itinerario userà hub e orari orientativi.
+                      Nessuna tariffa per queste date. Torna indietro oppure continua con
+                      orari orientativi.
                     </p>
                     <Button
                       type="button"
@@ -676,8 +1011,6 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                             durationMinutes: 0,
                             pickKind: 'manual',
                           },
-                          arrivalIata: destIata,
-                          departureIata: returnOriginIata,
                         });
                       }}
                     >
@@ -697,7 +1030,6 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                   Compatto: espandi solo ciò che ti serve.
                 </p>
               </div>
-
               <div className="rounded-2xl bg-[var(--color-tint)] px-4 py-3 text-sm">
                 <p className="font-bold">
                   {isMultiCountryDraft(draft) && draft.slugs
@@ -709,17 +1041,42 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                     ? `${format(parseISO(draft.dateFrom), 'd MMM', { locale: it })} → ${format(parseISO(draft.dateTo), 'd MMM yyyy', { locale: it })}`
                     : null}
                   {draft.durationDays ? ` · ${tripDurationLabelIt(draft.durationDays)}` : ''}
+                  {draft.company
+                    ? ` · ${
+                        draft.company === 'solo'
+                          ? 'Da solo'
+                          : draft.company === 'coppia'
+                            ? 'In coppia'
+                            : `Con amici (${draft.travelers})`
+                      }`
+                    : ''}
                 </p>
                 {draft.selectedFlight ? (
                   <p className="mt-1 text-xs">
                     Volo {draft.selectedFlight.labelIt}:{' '}
-                    {formatEuro(draft.selectedFlight.price, { approx: false })} ·{' '}
-                    {draft.selectedFlight.stops === 0
-                      ? 'diretto'
-                      : `${draft.selectedFlight.stops} scali`}
+                    {formatEuro(draft.selectedFlight.price, { approx: false })}
                   </p>
                 ) : null}
               </div>
+
+              {multiPlan?.unverifiedCombination ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                  <p className="font-semibold">{multiPlan.unverifiedNoticeIt}</p>
+                  {(draft.slugs ?? []).map((s) => (
+                    <p key={s} className="mt-1">
+                      {getMaster(s)?.nameIt ?? s} →{' '}
+                      <a
+                        href="https://www.viaggiaresicuri.it/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-primary underline-offset-2 hover:underline"
+                      >
+                        Viaggiare Sicuri
+                      </a>
+                    </p>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="rounded-2xl border border-[var(--color-border)]">
                 <button
@@ -732,26 +1089,14 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                 </button>
                 {stopsOpen && planDays ? (
                   <ul className="space-y-1 border-t border-[var(--color-border)] px-4 py-3 text-sm">
-                    {planDays.map((d) => {
-                      const arrivalHint =
-                        d.day_number === 1 && draft.selectedFlight?.arrivalAt
-                          ? ` · arrivo ${draft.selectedFlight.destinationIata} ${draft.selectedFlight.arrivalAt.slice(11, 16)}`
-                          : '';
-                      const departHint =
-                        d.is_departure && draft.selectedFlight?.returnDepartureAt
-                          ? ` · partenza ${draft.selectedFlight.returnOriginIata ?? draft.selectedFlight.destinationIata}`
-                          : '';
-                      return (
-                        <li key={d.day_number} className="flex justify-between gap-2">
-                          <span className="text-[var(--color-text-secondary)]">G{d.day_number}</span>
-                          <span className="flex-1 font-medium">
-                            {d.title}
-                            {arrivalHint}
-                            {departHint}
-                          </span>
-                        </li>
-                      );
-                    })}
+                    {planDays.map((d) => (
+                      <li key={d.day_number} className="flex justify-between gap-2">
+                        <span className="text-[var(--color-text-secondary)]">
+                          G{d.day_number}
+                        </span>
+                        <span className="flex-1 font-medium">{d.title}</span>
+                      </li>
+                    ))}
                   </ul>
                 ) : null}
               </div>
@@ -766,9 +1111,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                     Budget orientativo
                     {multiPlan?.totalPerPersonEur != null
                       ? ` · ${formatEuro(multiPlan.totalPerPersonEur, { approx: false })}/persona`
-                      : draft.durationDays && draft.slug
-                        ? ''
-                        : ''}
+                      : ''}
                   </span>
                   {budgetOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
@@ -790,24 +1133,6 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                     ) : null}
                   </div>
                 ) : null}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {(['solo', 'amici', 'gruppo'] as OrganizzaCompanyChoice[]).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => update({ company: c })}
-                    className={cn(
-                      'rounded-full px-3 py-1.5 text-xs font-semibold',
-                      draft.company === c
-                        ? 'bg-primary text-white'
-                        : 'border border-[var(--color-border)]'
-                    )}
-                  >
-                    {c === 'solo' ? 'Da solo' : c === 'amici' ? 'Con amici' : 'Gruppo'}
-                  </button>
-                ))}
               </div>
 
               <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50">
@@ -837,7 +1162,6 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
               </div>
             </div>
           ) : null}
-
         </div>
 
         <div
@@ -853,7 +1177,7 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
               Scelte salvate su questo dispositivo
             </p>
             <div className="flex flex-wrap gap-2">
-              {step !== 'dove-quando' ? (
+              {step !== 'dove' ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -885,17 +1209,9 @@ export function OrganizzaFlow({ destinations }: { destinations: DestCard[] }) {
                   variant="cta"
                   size="lg"
                   className="min-h-11 rounded-[10px]"
-                  disabled={
-                    (step === 'dove-quando' &&
-                      !(draft.slug && draft.dateFrom && draft.dateTo && draft.durationDays)) ||
-                    (step === 'voli' && !draft.selectedFlight)
-                  }
+                  disabled={!canContinue}
                   onClick={() => {
                     const next = nextOrganizzaStep(step, draft);
-                    if (next === 'gruppi') {
-                      router.push('/gruppi');
-                      return;
-                    }
                     if (next) setStep(next);
                   }}
                 >

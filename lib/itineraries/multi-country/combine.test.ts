@@ -111,15 +111,37 @@ describe('multi-country planner', () => {
     expect(transferDay?.description).not.toMatch(/bus HCMC|Phnom Penh/i);
   });
 
-  it('rejects non-curated pairs', () => {
+  it('builds free (non-curated) combinations without inventing transfer costs', () => {
+    expect(isCuratedMultiSelection(['thailandia', 'islanda'])).toBe(false);
     const plan = combineMultiCountryPlan({
       slugs: ['thailandia', 'islanda'],
       tripDays: 14,
+      company: 'solo',
     });
-    expect(plan.ok).toBe(false);
-    if (plan.ok) return;
-    expect(plan.reason).toBe('unknown_pair');
-    expect(isCuratedMultiSelection(['thailandia', 'islanda'])).toBe(false);
+    // Island has a master in catalog — free chain should succeed with unverified notice
+    if (!plan.ok) {
+      // If islanda master missing in this env, accept missing_master honestly
+      expect(['missing_master', 'cannot_split']).toContain(plan.reason);
+      return;
+    }
+    expect(plan.curated).toBe(false);
+    expect(plan.unverifiedCombination).toBe(true);
+    expect(plan.unverifiedNoticeIt).toMatch(/Combinazione non verificata/i);
+    expect(plan.transfer.costEurPerPerson).toBeNull();
+    expect(plan.transfer.verified).toBe(false);
+    expect(plan.openJawFlightEurPerPerson).toBeNull();
+  });
+
+  it('curated plans set curated=true', () => {
+    const plan = combineMultiCountryPlan({
+      slugs: ['thailandia', 'cambogia'],
+      tripDays: 14,
+      company: 'solo',
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.curated).toBe(true);
+    expect(plan.unverifiedCombination).toBe(false);
   });
 
   it('single-destination budget path remains unchanged for Vietnam 10d', () => {

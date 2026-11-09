@@ -47,13 +47,18 @@ export type CountryDayShare = {
 export type MultiCountryPlan = {
   ok: true;
   pairId: string;
-  orderedSlugs: [string, string];
+  /** False for free (non-curated) user combinations. */
+  curated: boolean;
+  orderedSlugs: string[];
   titleIt: string;
   tripDays: number;
   shares: CountryDayShare[];
   transfer: InterCountryTransfer;
   /** True when transfer is curated but unverified / cost unknown. */
   transferNeedsCheck: boolean;
+  /** Free combo: user must check links/times between countries. */
+  unverifiedCombination: boolean;
+  unverifiedNoticeIt: string | null;
   arrivalIata: string;
   departureIata: string;
   days: ItineraryDay[];
@@ -63,8 +68,8 @@ export type MultiCountryPlan = {
   transferCostEur: number | null;
   transferCostKind: 'estimate' | 'unknown';
   /** International open-jaw flight (party total uses travelers later). */
-  openJawFlightEurPerPerson: number;
-  openJawFlightKind: 'estimate';
+  openJawFlightEurPerPerson: number | null;
+  openJawFlightKind: 'estimate' | 'unknown';
   openJawFlightDetailIt: string;
   /** Combined per-person total (solo baseline). */
   totalPerPersonEur: number | null;
@@ -78,3 +83,7 @@ export type MultiCountryPlanFail = {
   reason: 'unknown_pair' | 'missing_master' | 'too_short' | 'cannot_split';
   message: string;
 };
+
+export const UNVERIFIED_COMBO_NOTICE_IT =
+  'Combinazione non verificata: controlla collegamenti e tempi di spostamento tra i paesi';
+
