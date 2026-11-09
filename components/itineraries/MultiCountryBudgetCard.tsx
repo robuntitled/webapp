@@ -34,7 +34,7 @@ export function MultiCountryBudgetCard({
           </span>
         </p>
         <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-          Open-jaw {plan.arrivalIata} → partenza {plan.departureIata}.{' '}
+          Arrivo {plan.arrivalIata} · rientro da {plan.departureIata}.{' '}
           {COMPLIANCE_COPY.priceIsSumOfServices}
         </p>
       </header>
