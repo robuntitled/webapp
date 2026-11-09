@@ -12,7 +12,12 @@ import {
   planFromMaster,
   getMaster,
 } from '@/lib/itineraries/masters';
+import {
+  computeItineraryBudget,
+} from '@/lib/itineraries/budget/compute';
+import type { BudgetBreakdown } from '@/lib/itineraries/budget/types';
 import type { TripVibe } from '@/lib/itineraries/fit';
+import type { OrganizzaCompanyChoice } from '@/lib/itineraries/organizza-steps';
 import {
   groupGaps,
   humanizeArea,
@@ -60,6 +65,7 @@ export type PresentedPlan =
         retrievedOn: string;
       }>;
       budgetTotalHint: number | null;
+      budgetBreakdown: BudgetBreakdown | null;
       logisticsNotes?: string;
       disclaimer: string;
     }
@@ -76,6 +82,7 @@ export type PlanDestinationInput = {
   travelMonth?: number | null;
   arrivalIata?: string | null;
   departureIata?: string | null;
+  company?: OrganizzaCompanyChoice | null;
 };
 
 function asTripVibe(vibe: string | null | undefined): TripVibe | null {
@@ -88,7 +95,8 @@ function presentMasterPlan(
   tripDays: number,
   vibe: TripVibe | null,
   arrivalIata?: string | null,
-  departureIata?: string | null
+  departureIata?: string | null,
+  company?: OrganizzaCompanyChoice | null
 ): PresentedPlan | null {
   const planned = planFromMaster(slug, tripDays, vibe);
   const master = getMaster(slug);
@@ -112,6 +120,14 @@ function presentMasterPlan(
       text: `Hub partenza ${departureIata.toUpperCase()} fuori dai collegamenti curati: verifica i voli in autonomia.`,
     });
   }
+
+  const budgetBreakdown = computeItineraryBudget({
+    destinationSlug: master.slug,
+    tripDays: planned.template.duration_days,
+    vibe,
+    company: company ?? 'solo',
+    days: planned.template.days,
+  });
 
   return {
     ok: true,
@@ -140,8 +156,10 @@ function presentMasterPlan(
       sourceUrl: a.sourceUrl,
       retrievedOn: a.retrievedOn,
     })),
-    // Same scaled orientative total as catalog templates / Organizza riepilogo.
-    budgetTotalHint: planned.template.budget_orientative_eur.total_hint,
+    budgetTotalHint:
+      budgetBreakdown?.perPersonEur ??
+      planned.template.budget_orientative_eur.total_hint,
+    budgetBreakdown,
     logisticsNotes: master.logisticsNotesIt,
     disclaimer:
       'Itinerario da master curato, rimodulato su giorni e stile. Disponibilità e prezzi da verificare; non è una fattibilità garantita di voli o traghetti. Ognuno prenota i propri servizi.',
@@ -202,6 +220,7 @@ function presentSkeleton(
     gaps: groupGaps(gapItems),
     attributions,
     budgetTotalHint: null,
+    budgetBreakdown: null,
     logisticsNotes: 'Master curato in arrivo. Nessun pacchetto combinato.',
     disclaimer:
       'Schema temporaneo da catalogo. Non copia itinerari protetti; disponibilità e prezzi da verificare.',
@@ -236,7 +255,8 @@ export function planDestination(input: PlanDestinationInput): PresentedPlan {
       input.tripDays,
       asTripVibe(input.vibe),
       input.arrivalIata,
-      input.departureIata
+      input.departureIata,
+      input.company
     );
     if (presented) return presented;
   }

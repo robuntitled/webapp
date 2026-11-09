@@ -5,10 +5,11 @@ import dynamic from 'next/dynamic';
 import { AlertTriangle, BookOpen, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { planDestination } from '@/lib/itineraries/deterministic-planner/plan-destination';
 import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
-import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
-import { formatEuro } from '@/lib/format/euro';
+import { BudgetBreakdownCard } from '@/components/itineraries/BudgetBreakdownCard';
 import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
+import type { OrganizzaCompanyChoice } from '@/lib/itineraries/organizza-steps';
 import { cn } from '@/lib/utils';
+import { planFromMaster } from '@/lib/itineraries/masters';
 
 const ReactLeafletTripMap = dynamic(
   () => import('@/components/maps/ReactLeafletTripMap').then((m) => m.ReactLeafletTripMap),
@@ -25,6 +26,7 @@ export type DeterministicPlanPanelProps = {
   showLegalDraft?: boolean;
   /** Hide budget block when parent already shows the same orientative total. */
   hideBudget?: boolean;
+  company?: OrganizzaCompanyChoice | null;
   className?: string;
 };
 
@@ -37,6 +39,7 @@ export function DeterministicPlanPanel({
   departureIata,
   showLegalDraft = false,
   hideBudget = false,
+  company = 'solo',
   className,
 }: DeterministicPlanPanelProps) {
   const [fontiOpen, setFontiOpen] = useState(false);
@@ -49,8 +52,9 @@ export function DeterministicPlanPanel({
         travelMonth,
         arrivalIata,
         departureIata,
+        company,
       }),
-    [destinationSlug, tripDays, vibe, travelMonth, arrivalIata, departureIata]
+    [destinationSlug, tripDays, vibe, travelMonth, arrivalIata, departureIata, company]
   );
 
   if (!plan.ok) {
@@ -128,25 +132,29 @@ export function DeterministicPlanPanel({
         </div>
       ) : null}
 
-      {!hideBudget && plan.budgetTotalHint != null && plan.budgetTotalHint > 0 ? (
-        <div className="rounded-xl bg-[var(--color-tint)]/60 px-3 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-primary">
-            {COMPLIANCE_COPY.budgetLabel}
+      {!hideBudget ? (
+        plan.budgetBreakdown ? (
+          <BudgetBreakdownCard
+            destinationSlug={destinationSlug}
+            tripDays={tripDays}
+            vibe={vibe}
+            company={company}
+            breakdown={plan.budgetBreakdown}
+            days={
+              planFromMaster(
+                destinationSlug,
+                tripDays,
+                vibe === 'relax' || vibe === 'divertimento' || vibe === 'avventura'
+                  ? vibe
+                  : null
+              )?.template.days
+            }
+          />
+        ) : (
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Budget: stimalo con la ricerca voli e hotel — qui non inventiamo un totale.
           </p>
-          <p className="mt-1 text-base font-extrabold text-[var(--color-text)]">
-            {formatEuro(plan.budgetTotalHint, { approx: false })}{' '}
-            <span className="text-sm font-semibold">a persona · stima</span>
-            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
-              {' '}
-              · {tripDurationLabelIt(plan.durationDays)}
-            </span>
-          </p>
-        </div>
-      ) : null}
-      {!hideBudget && !(plan.budgetTotalHint != null && plan.budgetTotalHint > 0) ? (
-        <p className="text-xs text-[var(--color-text-secondary)]">
-          Budget: stimalo con la ricerca voli e hotel — qui non inventiamo un totale.
-        </p>
+        )
       ) : null}
 
       {gapLines.length > 0 ? (
