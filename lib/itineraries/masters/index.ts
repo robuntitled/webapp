@@ -1,4 +1,5 @@
 import { ACTIVE_MASTERS, getActiveMaster } from '@/lib/itineraries/masters/active-batch';
+import { BATCH2_MASTERS, getBatch2Master } from '@/lib/itineraries/masters/batch2';
 import { remapMasterToTemplate } from '@/lib/itineraries/masters/remap';
 import type { DestinationMaster } from '@/lib/itineraries/masters/types';
 import type { ItineraryTemplate } from '@/lib/itineraries/types';
@@ -6,13 +7,20 @@ import { findCatalogDestination } from '@/lib/catalog/destinations';
 import type { RemapVibe } from '@/lib/itineraries/masters/remap';
 
 export { ACTIVE_MASTERS, getActiveMaster, ACTIVE_MASTER_SLUGS } from '@/lib/itineraries/masters/active-batch';
+export { BATCH2_MASTERS } from '@/lib/itineraries/masters/batch2';
 export { remapMasterToTemplate, remapMasterToDays } from '@/lib/itineraries/masters/remap';
 export type { DestinationMaster } from '@/lib/itineraries/masters/types';
 
-const MASTER_BY_SLUG = new Map(ACTIVE_MASTERS.map((m) => [m.slug, m]));
+const ALL_MASTERS: DestinationMaster[] = [...ACTIVE_MASTERS, ...BATCH2_MASTERS];
+const MASTER_BY_SLUG = new Map(ALL_MASTERS.map((m) => [m.slug, m]));
 
 export function getMaster(slug: string): DestinationMaster | undefined {
-  return MASTER_BY_SLUG.get(slug.trim().toLowerCase()) ?? getActiveMaster(slug);
+  const key = slug.trim().toLowerCase();
+  return MASTER_BY_SLUG.get(key) ?? getActiveMaster(key) ?? getBatch2Master(key);
+}
+
+export function allMasters(): DestinationMaster[] {
+  return ALL_MASTERS;
 }
 
 export function hasCuratedMaster(slug: string): boolean {
@@ -22,7 +30,7 @@ export function hasCuratedMaster(slug: string): boolean {
 /** Published duration templates derived from each master (catalog durations). */
 export function templatesFromMasters(): ItineraryTemplate[] {
   const out: ItineraryTemplate[] = [];
-  for (const master of ACTIVE_MASTERS) {
+  for (const master of ALL_MASTERS) {
     const dest = findCatalogDestination(master.slug);
     const durations = dest?.allowedDurations?.length
       ? dest.allowedDurations

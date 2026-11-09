@@ -10,7 +10,7 @@ import {
   PUBLISHED_TEMPLATES,
 } from '@/lib/itineraries/catalog';
 import { datesForDuration } from '@/lib/itineraries/dates';
-import { ACTIVE_MASTER_SLUGS } from '@/lib/itineraries/masters';
+import { ACTIVE_MASTER_SLUGS, allMasters } from '@/lib/itineraries/masters';
 
 describe('itinerary catalog (masters)', () => {
   it('publishes three different Thailandia templates', () => {
@@ -31,8 +31,9 @@ describe('itinerary catalog (masters)', () => {
 
   it('exposes published destinations for every master', () => {
     const dests = publishedDestinations();
-    expect(dests.length).toBe(ACTIVE_MASTER_SLUGS.length);
-    expect(dests.map((d) => d.slug).sort()).toEqual([...ACTIVE_MASTER_SLUGS].sort());
+    const masterSlugs = allMasters().map((m) => m.slug).sort();
+    expect(dests.length).toBe(masterSlugs.length);
+    expect(dests.map((d) => d.slug).sort()).toEqual(masterSlugs);
   });
 
   it('switches duration on the same slug', () => {

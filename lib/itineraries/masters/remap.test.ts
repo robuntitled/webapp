@@ -59,10 +59,11 @@ describe('master remap', () => {
     expect(plan.days.some((d) => /Hanoi|Hoi An|Ho Chi Minh|Ha Long/i.test(d.area))).toBe(true);
   });
 
-  it('coverage: 12 active curated, rest skeleton', () => {
+  it('coverage: all active curated; batch2 also curated; some skeleton remain', () => {
     const rows = plannerCoverageReport();
     const curatedActive = rows.filter((r) => r.active && r.quality === 'curated');
     expect(curatedActive.length).toBe(12);
-    expect(rows.filter((r) => r.quality === 'skeleton').length).toBeGreaterThan(40);
+    expect(rows.filter((r) => r.quality === 'curated').length).toBeGreaterThanOrEqual(25);
+    expect(rows.filter((r) => r.quality === 'skeleton').length).toBeGreaterThan(20);
   });
 });

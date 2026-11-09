@@ -32,15 +32,16 @@ describe('planDestination', () => {
   });
 
   it('falls back to skeleton for destinations without master yet', () => {
-    const plan = planDestination({ destinationSlug: 'australia', tripDays: 10 });
+    const plan = planDestination({ destinationSlug: 'fiji', tripDays: 10 });
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
     expect(plan.quality).toBe('skeleton');
   });
 
-  it('coverage report: 12 active curated', () => {
+  it('coverage report: 12 active curated + batch2', () => {
     const rows = plannerCoverageReport();
     expect(rows.filter((r) => r.active && r.quality === 'curated')).toHaveLength(12);
+    expect(rows.filter((r) => r.quality === 'curated').length).toBeGreaterThanOrEqual(25);
   });
 });
 
