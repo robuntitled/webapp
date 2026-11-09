@@ -15,14 +15,13 @@ describe('DeterministicPlanPanel source contracts', () => {
     expect(src).not.toContain('fonte non verificata in pilot');
   });
 
-  it('OrganizzaWizard mounts DeterministicPlanPanel for any destination', () => {
-    const wiz = readFileSync(
-      new URL('./OrganizzaWizard.tsx', import.meta.url),
+  it('Organizza flow keeps plan/budget surfaces for riepilogo', () => {
+    const flow = readFileSync(
+      new URL('./OrganizzaFlow.tsx', import.meta.url),
       'utf8'
     );
-    expect(wiz).toContain('DeterministicPlanPanel');
-    expect(wiz).toContain('otherDestinations');
-    expect(wiz).toContain('FREE_TRIP_TEMPLATE_ID');
-    expect(wiz).toContain('showLegalDraft');
+    expect(flow).toMatch(/BudgetBreakdownCard|MultiCountryBudgetCard|planFromMaster/);
+    expect(flow).toContain('FREE_TRIP_TEMPLATE_ID');
+    expect(flow).toMatch(/Informazioni importanti|legalAck/);
   });
 });

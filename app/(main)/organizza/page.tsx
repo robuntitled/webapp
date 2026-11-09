@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { OrganizzaWizard } from '@/components/itineraries/OrganizzaWizard';
+import { OrganizzaFlow } from '@/components/itineraries/OrganizzaFlow';
 import { wizardDestinationCards } from '@/lib/itineraries/catalog';
+import { listJoinableEditions } from '@/lib/data/editions';
+import { editionDestinationSlug } from '@/lib/itineraries/public-destinations';
 import { pageOpenGraph } from '@/lib/brand/seo';
 
 export const dynamic = 'force-dynamic';
@@ -9,35 +11,42 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Organizza',
   description:
-    'Organizza il tuo viaggio in pochi passi: meta, date e con chi. Privato da solo o con amici.',
+    'Organizza il viaggio: destinazione, date, compagnia, voli consigliati e riepilogo.',
   alternates: { canonical: '/organizza' },
   openGraph: pageOpenGraph(
     '/organizza',
     'Organizza',
-    'Scegli meta, date e con chi partire. Itinerario pronto da adattare, riepilogo chiaro prima di creare il viaggio.'
+    'Dove, quando, con chi — poi voli e un riepilogo chiaro.'
   ),
 };
 
-type PageProps = {
-  searchParams: Promise<{ slug?: string; d?: string }>;
-};
-
-export default async function OrganizzaPage({ searchParams }: PageProps) {
-  const params = await searchParams;
+export default async function OrganizzaPage() {
   const destinations = wizardDestinationCards();
-  const initialDuration = params.d ? Number(params.d) : undefined;
+  let groupEditionCountBySlug: Record<string, number> = {};
+  try {
+    const editions = await listJoinableEditions();
+    for (const ed of editions) {
+      const slug = editionDestinationSlug({
+        ...ed,
+        confirmed_count: ed.confirmed_count ?? 0,
+        interested_count: ed.interested_count ?? 0,
+      });
+      if (!slug) continue;
+      groupEditionCountBySlug[slug] = (groupEditionCountBySlug[slug] ?? 0) + 1;
+    }
+  } catch {
+    groupEditionCountBySlug = {};
+  }
+
   return (
     <Suspense
       fallback={
         <div className="min-h-[80vh] w-full bg-[var(--color-tint)]/30" aria-busy="true" />
       }
     >
-      <OrganizzaWizard
+      <OrganizzaFlow
         destinations={destinations}
-        initialSlug={params.slug}
-        initialDuration={
-          initialDuration && Number.isFinite(initialDuration) ? initialDuration : undefined
-        }
+        groupEditionCountBySlug={groupEditionCountBySlug}
       />
     </Suspense>
   );

@@ -286,22 +286,14 @@ async function loadMembershipEditions(userId: string): Promise<MembershipEdition
   if (!ids.length) return [];
 
   // Nessun filtro status in query: se sei membro, la chat deve elencarla.
-  // title può mancare (migration 041 non applicata).
+  // Non selezionare `title` (migration 041 può mancare → PGRST204 schema cache).
   let editions: Record<string, unknown>[] = [];
   {
-    const withTitle = await supabaseAdmin
+    const res = await supabaseAdmin
       .from('editions')
-      .select('id, template_id, date_from, date_to, status, title')
+      .select('id, template_id, date_from, date_to, status')
       .in('id', ids);
-    if (withTitle.error) {
-      const fallback = await supabaseAdmin
-        .from('editions')
-        .select('id, template_id, date_from, date_to, status')
-        .in('id', ids);
-      editions = (fallback.data as Record<string, unknown>[] | null) ?? [];
-    } else {
-      editions = (withTitle.data as Record<string, unknown>[] | null) ?? [];
-    }
+    editions = (res.data as Record<string, unknown>[] | null) ?? [];
   }
   if (!editions.length) return [];
 

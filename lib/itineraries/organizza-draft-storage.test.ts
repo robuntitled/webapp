@@ -16,7 +16,7 @@ function deserialize(raw: string): { draft: OrganizzaDraft; step: string } | nul
     if (!parsed?.draft || typeof parsed.draft !== 'object') return null;
     return {
       draft: patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, parsed.draft),
-      step: parsed.step ?? 'meta',
+      step: parsed.step ?? 'dove',
     };
   } catch {
     return null;

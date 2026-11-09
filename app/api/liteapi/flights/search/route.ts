@@ -8,7 +8,8 @@ import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
 
 export const runtime = 'nodejs';
-export const maxDuration = 20;
+/** Long-haul probes (calendar ±3) often need 20–45s; keep under Vercel hobby/pro caps. */
+export const maxDuration = 60;
 
 const schema = z.object({
   destination: z.string().trim().min(2).max(120),
@@ -19,6 +20,10 @@ const schema = z.object({
   tripType: z.enum(['oneway', 'roundtrip']).optional().default('roundtrip'),
   adults: z.coerce.number().int().min(1).max(9).optional(),
   currency: z.string().trim().length(3).optional(),
+  /** Compact badge payload for Organizza calendar (no offer list). */
+  summary: z
+    .union([z.literal('1'), z.literal('true'), z.literal('0'), z.literal('false')])
+    .optional(),
 });
 
 export async function GET(request: Request) {
@@ -52,6 +57,7 @@ export async function GET(request: Request) {
     tripType: searchParams.get('tripType') ?? undefined,
     adults: searchParams.get('adults') ?? undefined,
     currency: searchParams.get('currency') ?? undefined,
+    summary: searchParams.get('summary') ?? undefined,
   });
 
   if (!parsed.success) {
@@ -63,6 +69,46 @@ export async function GET(request: Request) {
 
   const dest = parsed.data.destination.trim();
   const destIata = resolveFlightDestinationIata(dest);
+  const summaryOnly =
+    parsed.data.summary === '1' || parsed.data.summary === 'true';
+
+  // Past departures are rejected upstream; fail fast with empty for calendar badges.
+  {
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Rome',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    if (parsed.data.startDate < today) {
+      if (summaryOnly) {
+        return NextResponse.json({
+          configured: true,
+          summary: true,
+          date: parsed.data.startDate,
+          found: false,
+          status: 'empty',
+          cheapestPrice: null,
+          minStops: null,
+          minDurationMinutes: null,
+          offerCount: 0,
+          code: 'past_date',
+        });
+      }
+      return NextResponse.json(
+        {
+          configured: true,
+          found: false,
+          count: 0,
+          quote: null,
+          offers: [],
+          error: 'Scegli una data di partenza da oggi in poi.',
+          code: 'past_date',
+        },
+        { status: 400 }
+      );
+    }
+  }
 
   if (!destIata) {
     return NextResponse.json({
@@ -108,6 +154,25 @@ export async function GET(request: Request) {
       const error = allTimedOut
         ? `La ricerca voli da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata} ha impiegato troppo. L’errore non è nascosto: riprova manualmente (un tentativo automatico è già stato fatto).`
         : `Ricerca voli non riuscita da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata}. Riprova tra poco.`;
+      if (summaryOnly) {
+        return NextResponse.json(
+          {
+            configured: true,
+            summary: true,
+            date: parsed.data.startDate,
+            found: false,
+            status: 'error',
+            cheapestPrice: null,
+            minStops: null,
+            minDurationMinutes: null,
+            offerCount: 0,
+            destinationIata,
+            code,
+            error,
+          },
+          { status: 502 }
+        );
+      }
       return NextResponse.json(
         {
           configured: true,
@@ -124,6 +189,27 @@ export async function GET(request: Request) {
         },
         { status: 502 }
       );
+    }
+
+    if (summaryOnly) {
+      const prices = offers.map((o) => o.price).filter((n) => Number.isFinite(n));
+      const stops = offers.map((o) => o.stops);
+      const durs = offers
+        .map((o) => o.durationMinutes)
+        .filter((n): n is number => n != null && Number.isFinite(n));
+      return NextResponse.json({
+        configured: true,
+        summary: true,
+        date: parsed.data.startDate,
+        found: offers.length > 0,
+        status: offers.length > 0 ? 'ok' : 'empty',
+        cheapestPrice: prices.length ? Math.min(...prices) : null,
+        minStops: stops.length ? Math.min(...stops) : null,
+        minDurationMinutes: durs.length ? Math.min(...durs) : null,
+        offerCount: offers.length,
+        destinationIata,
+        tripType: parsed.data.tripType,
+      });
     }
 
     return NextResponse.json({

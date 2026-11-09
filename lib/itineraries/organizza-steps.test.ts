@@ -3,98 +3,73 @@ import {
   EMPTY_ORGANIZZA_DRAFT,
   canNavigateToOrganizzaStep,
   companyChoiceToTravelMode,
-  companyCreatesPrivateTrip,
-  companyCreatesPublicGroup,
+  companyShowsInviteAfterCreate,
+  defaultTravelersForCompany,
+  durationDaysFromRange,
   nextOrganizzaStep,
+  normalizeOrganizzaCompany,
+  normalizeOrganizzaStep,
   organizzaCompletedSteps,
   patchOrganizzaDraft,
   prevOrganizzaStep,
 } from '@/lib/itineraries/organizza-steps';
-import { canReusePrivateEditionForUser } from '@/lib/itineraries/private-edition';
 
-describe('organizza stepper state', () => {
-  it('starts with no completed steps', () => {
+describe('organizza stepper (Dove → Quando → Con chi → Voli → Riepilogo)', () => {
+  it('starts empty', () => {
     expect(organizzaCompletedSteps(EMPTY_ORGANIZZA_DRAFT).size).toBe(0);
   });
 
-  it('marks meta complete when slug + duration set', () => {
-    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
-      slug: 'thailandia',
-      durationDays: 14,
-    });
-    expect([...organizzaCompletedSteps(draft)]).toEqual(['meta']);
-  });
+  it('advances through the five steps', () => {
+    let draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, { slug: 'thailandia' });
+    expect([...organizzaCompletedSteps(draft)]).toEqual(['dove']);
+    expect(nextOrganizzaStep('dove', draft)).toBe('quando');
 
-  it('allows back navigation without clearing selections', () => {
-    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
-      slug: 'thailandia',
-      durationDays: 10,
-      dateFrom: '2026-12-11',
-      dateTo: '2026-12-20',
-      company: 'amici',
-    });
-    expect(canNavigateToOrganizzaStep(draft, 'meta', 'riepilogo')).toBe(true);
-    expect(prevOrganizzaStep('riepilogo')).toBe('con-chi');
-    expect(prevOrganizzaStep('con-chi')).toBe('date');
-    expect(draft.slug).toBe('thailandia');
-    expect(draft.company).toBe('amici');
-  });
-
-  it('blocks forward skip until prior steps complete', () => {
-    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
-      slug: 'thailandia',
-      durationDays: 10,
-    });
-    expect(canNavigateToOrganizzaStep(draft, 'con-chi', 'meta')).toBe(false);
-    expect(canNavigateToOrganizzaStep(draft, 'date', 'meta')).toBe(true);
-  });
-
-  it('advances linearly meta → date → con-chi → riepilogo', () => {
-    let draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
-      slug: 'thailandia',
-      durationDays: 10,
-    });
-    expect(nextOrganizzaStep('meta', draft)).toBe('date');
     draft = patchOrganizzaDraft(draft, {
       dateFrom: '2026-12-11',
-      dateTo: '2026-12-20',
-    });
-    expect(nextOrganizzaStep('date', draft)).toBe('con-chi');
-    draft = patchOrganizzaDraft(draft, { company: 'solo' });
-    expect(nextOrganizzaStep('con-chi', draft)).toBe('riepilogo');
-  });
-});
-
-describe('organizza private vs group routing', () => {
-  it('solo and amici map to private travel modes', () => {
-    expect(companyChoiceToTravelMode('solo')).toBe('solo');
-    expect(companyChoiceToTravelMode('amici')).toBe('friends');
-    expect(companyCreatesPrivateTrip('solo')).toBe(true);
-    expect(companyCreatesPrivateTrip('amici')).toBe(true);
-    expect(companyCreatesPublicGroup('solo')).toBe(false);
-    expect(companyCreatesPublicGroup('amici')).toBe(false);
-  });
-
-  it('gruppo redirects to public gruppi path, never private attach', () => {
-    expect(companyChoiceToTravelMode('gruppo')).toBe('redirect-gruppi');
-    expect(companyCreatesPublicGroup('gruppo')).toBe(true);
-    expect(companyCreatesPrivateTrip('gruppo')).toBe(false);
-    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
-      slug: 'thailandia',
+      dateTo: '2026-12-24',
       durationDays: 14,
-      dateFrom: '2026-12-05',
-      dateTo: '2026-12-18',
-      company: 'gruppo',
     });
-    expect(nextOrganizzaStep('con-chi', draft)).toBe('gruppi');
+    expect(nextOrganizzaStep('quando', draft)).toBe('con-chi');
+
+    draft = patchOrganizzaDraft(draft, { company: 'amici', travelers: 4 });
+    expect(nextOrganizzaStep('con-chi', draft)).toBe('voli');
+
+    draft = patchOrganizzaDraft(draft, {
+      selectedFlight: {
+        offerId: 'x',
+        labelIt: 'Equilibrato',
+        price: 500,
+        currency: 'EUR',
+        originIata: 'MXP',
+        destinationIata: 'BKK',
+        departureAt: '2026-12-11T10:00:00',
+        arrivalAt: '2026-12-11T22:00:00',
+        stops: 0,
+        durationMinutes: 600,
+        pickKind: 'balanced',
+      },
+    });
+    expect(nextOrganizzaStep('voli', draft)).toBe('riepilogo');
+    expect(prevOrganizzaStep('riepilogo')).toBe('voli');
   });
 
-  it('private create never reuses another user edition (privacy invariant)', () => {
-    const foreign = {
-      edition_type: 'private',
-      created_by: 'user-a',
-    };
-    expect(canReusePrivateEditionForUser(foreign, 'user-b')).toBe(false);
-    expect(companyCreatesPrivateTrip('amici')).toBe(true);
+  it('maps company choices without Gruppo', () => {
+    expect(companyChoiceToTravelMode('solo')).toBe('solo');
+    expect(companyChoiceToTravelMode('coppia')).toBe('friends');
+    expect(companyChoiceToTravelMode('amici')).toBe('friends');
+    expect(companyShowsInviteAfterCreate('amici')).toBe(true);
+    expect(companyShowsInviteAfterCreate('solo')).toBe(false);
+    expect(defaultTravelersForCompany('coppia')).toBe(2);
+    expect(normalizeOrganizzaCompany('gruppo')).toBe('amici');
+    expect(normalizeOrganizzaStep('dove-quando')).toBe('dove');
+  });
+
+  it('blocks skipping ahead', () => {
+    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, { slug: 'vietnam' });
+    expect(canNavigateToOrganizzaStep(draft, 'voli', 'dove')).toBe(false);
+  });
+
+  it('duration from free calendar range', () => {
+    expect(durationDaysFromRange('2026-11-10', '2026-11-20')).toBe(11);
   });
 });

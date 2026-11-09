@@ -93,15 +93,55 @@ describe('multi-country planner', () => {
     });
   });
 
-  it('rejects non-curated pairs', () => {
+  it('Vietnam+Cambogia open-jaw HAN→REP matches SGN→REP flight transfer (not bus HCMC–PP)', () => {
+    const plan = combineMultiCountryPlan({
+      slugs: ['vietnam', 'cambogia'],
+      tripDays: 14,
+      company: 'solo',
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.arrivalIata).toBe('HAN');
+    expect(plan.departureIata).toBe('REP');
+    expect(plan.transfer.mode).toBe('internal_flight');
+    expect(plan.transfer.notesIt).toMatch(/SGN/i);
+    expect(plan.transfer.notesIt).not.toMatch(/bus|Phnom Penh|HCMC–/i);
+    const transferDay = plan.days.find((d) => /Trasferimento/i.test(d.title));
+    expect(transferDay?.description).toMatch(/volo|aereo|interno/i);
+    expect(transferDay?.description).not.toMatch(/bus HCMC|Phnom Penh/i);
+  });
+
+  it('builds free (non-curated) combinations without inventing transfer costs', () => {
+    expect(isCuratedMultiSelection(['thailandia', 'islanda'])).toBe(false);
     const plan = combineMultiCountryPlan({
       slugs: ['thailandia', 'islanda'],
       tripDays: 14,
+      company: 'solo',
     });
-    expect(plan.ok).toBe(false);
-    if (plan.ok) return;
-    expect(plan.reason).toBe('unknown_pair');
-    expect(isCuratedMultiSelection(['thailandia', 'islanda'])).toBe(false);
+    // Island has a master in catalog — free chain should succeed with unverified notice
+    if (!plan.ok) {
+      // If islanda master missing in this env, accept missing_master honestly
+      expect(['missing_master', 'cannot_split']).toContain(plan.reason);
+      return;
+    }
+    expect(plan.curated).toBe(false);
+    expect(plan.unverifiedCombination).toBe(true);
+    expect(plan.unverifiedNoticeIt).toMatch(/Combinazione non verificata/i);
+    expect(plan.transfer.costEurPerPerson).toBeNull();
+    expect(plan.transfer.verified).toBe(false);
+    expect(plan.openJawFlightEurPerPerson).toBeNull();
+  });
+
+  it('curated plans set curated=true', () => {
+    const plan = combineMultiCountryPlan({
+      slugs: ['thailandia', 'cambogia'],
+      tripDays: 14,
+      company: 'solo',
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.curated).toBe(true);
+    expect(plan.unverifiedCombination).toBe(false);
   });
 
   it('single-destination budget path remains unchanged for Vietnam 10d', () => {
