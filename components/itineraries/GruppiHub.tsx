@@ -17,13 +17,13 @@ import { cn } from '@/lib/utils';
 const HOW = [
   {
     n: 1,
-    title: 'Scegli una partenza',
-    body: 'Guarda date, itinerario giorno per giorno e budget orientativo.',
+    title: 'Scopri le partenze aperte',
+    body: 'Quando una partenza è iscrivibile, apri la scheda: date, itinerario giorno per giorno e budget orientativo.',
   },
   {
     n: 2,
-    title: 'Iscriviti se la partenza è aperta',
-    body: 'Se è ancora «In arrivo», puoi solo scoprirla. La chat si apre con il primo volo confermato.',
+    title: '«In arrivo» non è ancora iscrivibile',
+    body: 'Le card «In arrivo» sono solo anteprima: niente tap per iscriversi. La chat di gruppo si apre appena ti iscrivi a una partenza aperta.',
   },
 ] as const;
 
@@ -51,8 +51,8 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
             Scopri le partenze
           </h1>
           <p className="mt-2 text-base text-[var(--color-text-secondary)] sm:text-lg">
-            Partenze di gruppo in formazione (non un pacchetto tour operator). Guarda date e
-            itinerario; iscriviti solo quando la partenza è aperta.
+            Partenze di gruppo in formazione (non un pacchetto tour operator). Iscriviti solo
+            quando la partenza è aperta: le card «In arrivo» non sono ancora cliccabili.
           </p>
         </header>
 

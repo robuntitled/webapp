@@ -140,7 +140,8 @@ function presentMasterPlan(
       sourceUrl: a.sourceUrl,
       retrievedOn: a.retrievedOn,
     })),
-    budgetTotalHint: master.budgetOrientativeEur.total_hint,
+    // Same scaled orientative total as catalog templates / Organizza riepilogo.
+    budgetTotalHint: planned.template.budget_orientative_eur.total_hint,
     logisticsNotes: master.logisticsNotesIt,
     disclaimer:
       'Itinerario da master curato, rimodulato su giorni e stile. Disponibilità e prezzi da verificare; non è una fattibilità garantita di voli o traghetti. Ognuno prenota i propri servizi.',

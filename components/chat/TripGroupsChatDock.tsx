@@ -253,7 +253,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                   lockReason={
                     activeGroup.chatUnlocked
                       ? undefined
-                      : 'La chat si apre dopo il primo volo confermato nel gruppo.'
+                      : 'Iscriviti alla partenza per aprire la chat di gruppo.'
                   }
                   dockMode
                 />

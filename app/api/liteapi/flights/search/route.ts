@@ -106,8 +106,8 @@ export async function GET(request: Request) {
     if (allOriginsFailed) {
       const code = allTimedOut ? 'provider_timeout' : 'upstream_error';
       const error = allTimedOut
-        ? `Timeout del provider voli da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata}. L’errore non è nascosto: riprova manualmente (un tentativo automatico è già stato fatto).`
-        : `Ricerca voli non riuscita da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata} (errore provider). Riprova tra poco.`;
+        ? `La ricerca voli da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata} ha impiegato troppo. L’errore non è nascosto: riprova manualmente (un tentativo automatico è già stato fatto).`
+        : `Ricerca voli non riuscita da ${originsFailed.slice(0, 4).join(', ')} verso ${destinationIata}. Riprova tra poco.`;
       return NextResponse.json(
         {
           configured: true,

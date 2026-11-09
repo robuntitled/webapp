@@ -6,6 +6,11 @@ const STAY_CITY: Record<string, string> = {
   Bangkok: 'Bangkok',
   Islands: 'Koh Samui',
   North: 'Chiang Mai',
+  // Master remapper Italian labels
+  'Isole del Golfo (Samui / zona)': 'Koh Samui',
+  'Isole del Golfo': 'Koh Samui',
+  'Chiang Mai': 'Chiang Mai',
+  'Seconda isola (opzionale)': 'Koh Tao',
 };
 
 /** Etichetta UI per segmenti itinerario (chiavi invariate). */

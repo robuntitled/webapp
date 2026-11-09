@@ -20,6 +20,15 @@ export const PRIMARY_NAV = [
       pathname.startsWith('/partenze'),
   },
   {
+    href: '/bacheca',
+    label: 'Bacheca',
+    auth: true as const,
+    match: (pathname: string) =>
+      pathname === '/bacheca' ||
+      pathname.startsWith('/bacheca/') ||
+      pathname.startsWith('/dashboard/bacheca'),
+  },
+  {
     href: '/pratiche',
     label: 'I miei viaggi',
     auth: true as const,

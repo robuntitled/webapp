@@ -7,6 +7,7 @@ import { planDestination } from '@/lib/itineraries/deterministic-planner/plan-de
 import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { formatEuro } from '@/lib/format/euro';
+import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
 import { cn } from '@/lib/utils';
 
 const ReactLeafletTripMap = dynamic(
@@ -22,6 +23,8 @@ export type DeterministicPlanPanelProps = {
   arrivalIata?: string | null;
   departureIata?: string | null;
   showLegalDraft?: boolean;
+  /** Hide budget block when parent already shows the same orientative total. */
+  hideBudget?: boolean;
   className?: string;
 };
 
@@ -33,6 +36,7 @@ export function DeterministicPlanPanel({
   arrivalIata,
   departureIata,
   showLegalDraft = false,
+  hideBudget = false,
   className,
 }: DeterministicPlanPanelProps) {
   const [fontiOpen, setFontiOpen] = useState(false);
@@ -99,7 +103,7 @@ export function DeterministicPlanPanel({
           {plan.quality === 'curated' ? 'Itinerario curato' : 'Schema orientativo'}
         </p>
         <h3 className="font-display text-lg font-extrabold text-[var(--color-text)]">
-          {plan.destinationName} · {plan.durationDays} giorni
+          {plan.destinationName} · {tripDurationLabelIt(plan.durationDays)}
         </h3>
         <p className="text-sm text-[var(--color-text-secondary)]">{plan.summary}</p>
         <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-700">
@@ -124,7 +128,7 @@ export function DeterministicPlanPanel({
         </div>
       ) : null}
 
-      {plan.budgetTotalHint != null && plan.budgetTotalHint > 0 ? (
+      {!hideBudget && plan.budgetTotalHint != null && plan.budgetTotalHint > 0 ? (
         <div className="rounded-xl bg-[var(--color-tint)]/60 px-3 py-3">
           <p className="text-[11px] font-bold uppercase tracking-wide text-primary">
             {COMPLIANCE_COPY.budgetLabel}
@@ -132,13 +136,18 @@ export function DeterministicPlanPanel({
           <p className="mt-1 text-base font-extrabold text-[var(--color-text)]">
             {formatEuro(plan.budgetTotalHint, { approx: false })}{' '}
             <span className="text-sm font-semibold">a persona · stima</span>
+            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
+              {' '}
+              · {tripDurationLabelIt(plan.durationDays)}
+            </span>
           </p>
         </div>
-      ) : (
+      ) : null}
+      {!hideBudget && !(plan.budgetTotalHint != null && plan.budgetTotalHint > 0) ? (
         <p className="text-xs text-[var(--color-text-secondary)]">
           Budget: stimalo con la ricerca voli e hotel — qui non inventiamo un totale.
         </p>
-      )}
+      ) : null}
 
       {gapLines.length > 0 ? (
         <div className="rounded-2xl border border-amber-200/90 bg-amber-50/90 px-3.5 py-3">

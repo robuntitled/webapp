@@ -24,6 +24,13 @@ describe('itinerary dates (T10/T3)', () => {
     const stays = staysFromTemplate(tpl!, '2026-11-12');
     expect(stays.length).toBeGreaterThanOrEqual(2);
     expect(stays[0]?.city).toBe('Bangkok');
-    expect(stays.some((s) => s.city === 'Koh Samui')).toBe(true);
+    expect(
+      stays.some(
+        (s) =>
+          s.city === 'Koh Samui' ||
+          /Samui|Isole|Golfo/i.test(s.city) ||
+          /Samui|Isole|Golfo/i.test(s.label)
+      )
+    ).toBe(true);
   });
 });

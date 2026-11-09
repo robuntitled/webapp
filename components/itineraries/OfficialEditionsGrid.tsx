@@ -101,7 +101,7 @@ export function EditionCard({
   const cardClass = cn(
     'flex h-full w-full flex-col rounded-2xl border bg-white shadow-sm transition',
     comingSoon
-      ? 'cursor-default border-slate-200 opacity-95'
+      ? 'cursor-default border-slate-200 opacity-90 select-none'
       : 'cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
     !comingSoon && highlight
       ? 'border-accent/40 ring-1 ring-accent/20'
@@ -196,7 +196,7 @@ export function EditionCard({
 
         {comingSoon && !dense ? (
           <p className="text-[clamp(0.82rem,0.15vw+0.78rem,0.9rem)] leading-snug text-slate-600">
-            Iscrizioni chiuse finché non c’è un tour operator partner.
+            Anteprima: non iscrivibile e non cliccabile finché la partenza non è aperta.
           </p>
         ) : null}
 
@@ -225,7 +225,7 @@ export function EditionCard({
               comingSoon ? 'bg-slate-500' : 'bg-primary'
             )}
           >
-            {comingSoon ? 'In arrivo' : 'Scopri'}
+            {comingSoon ? 'In arrivo · non iscrivibile' : 'Scopri'}
           </span>
         ) : null}
       </div>
@@ -235,7 +235,13 @@ export function EditionCard({
   return (
     <div className="h-full">
       {comingSoon ? (
-        <div className={cardClass} aria-label={`${destination} — In arrivo`}>
+        <div
+          className={cardClass}
+          aria-label={`${destination} — In arrivo, non iscrivibile`}
+          aria-disabled="true"
+          data-testid="edition-coming-soon"
+          role="group"
+        >
           {inner}
         </div>
       ) : (

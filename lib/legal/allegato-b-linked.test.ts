@@ -14,6 +14,8 @@ describe('A7 Allegato B draft (nuovo-flusso-legale §L1.4)', () => {
     expect(body).toMatch(/NON beneficerai dei diritti applicabili ai pacchetti/i);
     expect(body).toMatch(/servizio turistico collegato/i);
     expect(body).toMatch(/insolvenza/i);
-    expect(body).toMatch(/LEGAL_|da definire|TODO LEGAL_/i);
+    expect(body).toMatch(/contatto in definizione|da definire/i);
+    expect(body).not.toMatch(/TODO LEGAL_EMAIL/i);
+    expect(body).not.toMatch(/privacy@|supporto@/i);
   });
 });

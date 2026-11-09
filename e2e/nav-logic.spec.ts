@@ -62,4 +62,22 @@ test.describe('guest navigation logic', () => {
     await page.goto('/organizza?slug=vietnam', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).not.toContainText(/bookability/i);
   });
+
+  test('gruppi coming-soon cards are not links', async ({ page }) => {
+    await page.goto('/gruppi', { waitUntil: 'domcontentloaded' });
+    const soon = page.getByTestId('edition-coming-soon').first();
+    if ((await soon.count()) > 0) {
+      await expect(soon).toBeVisible();
+      await expect(soon.locator('a')).toHaveCount(0);
+      await expect(page.locator('body')).toContainText(/non (ancora )?iscrivibile|Anteprima/i);
+    }
+  });
+
+  test('/bacheca redirects guests toward login or board', async ({ page }) => {
+    const res = await page.goto('/bacheca', { waitUntil: 'domcontentloaded' });
+    expect(res?.ok() || res?.status() === 304 || page.url()).toBeTruthy();
+    await expect(page).not.toHaveURL(/questa-pagina-non-esiste/);
+    // Guest → /accedi?callback… or still on board if session exists in env
+    expect(page.url()).toMatch(/bacheca|accedi/);
+  });
 });

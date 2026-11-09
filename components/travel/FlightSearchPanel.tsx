@@ -45,6 +45,7 @@ import {
 import { searchReturnBannerCopy, type SearchReturnReason } from '@/lib/travel/search-return';
 import { saveTripFromSearchDraft } from '@/lib/travel/trip-from-search-draft';
 import { FlightOfferCard } from '@/components/travel/FlightOfferCard';
+import { flightSearchExpectationCopyIt } from '@/lib/liteapi/flight-search-timeout';
 import { cn } from '@/lib/utils';
 
 type FlightSort = 'best' | 'cheapest' | 'fastest' | 'departure';
@@ -400,13 +401,17 @@ export function FlightSearchPanel({
     setDestinationQuery(placeDisplayValue(destination));
 
     setLoading(true);
-    setLoadingHint('Contattiamo il provider voli…');
+    setLoadingHint('Cerchiamo le tariffe…');
     setMessage(null);
     const hintTimers = [
-      window.setTimeout(() => setLoadingHint('Cerchiamo le migliori tariffe…'), 4_000),
+      window.setTimeout(() => setLoadingHint('Confronto in corso…'), 5_000),
       window.setTimeout(
-        () => setLoadingHint('Ancora un momento — la tratta è lunga…'),
-        9_000
+        () => setLoadingHint('Ancora un momento — le tratte lunghe richiedono più tempo…'),
+        15_000
+      ),
+      window.setTimeout(
+        () => setLoadingHint('Quasi fatto — se serve riproviamo una volta in automatico…'),
+        30_000
       ),
     ];
     try {
@@ -462,7 +467,7 @@ export function FlightSearchPanel({
         const err =
           data.error ??
           (data.code === 'provider_timeout'
-            ? 'Timeout del provider voli. Riprova manualmente — l’errore non è nascosto.'
+            ? 'La ricerca ha impiegato troppo. Riprova manualmente — l’errore non è nascosto.'
             : data.code === 'upstream_error'
               ? 'Servizio voli temporaneamente non disponibile. Riprova.'
               : 'Ricerca voli fallita');
@@ -843,7 +848,11 @@ export function FlightSearchPanel({
             {loadingHint ?? 'Cerchiamo i voli migliori…'}
           </div>
           <p className="max-w-xs text-center text-xs opacity-70">
-            Di solito meno di 10 secondi. Se impiega di più, spesso è il provider.
+            {flightSearchExpectationCopyIt(
+              resolveFlightDestinationIata(destinationPlace?.code ?? '') ??
+                resolveFlightDestinationIata(destinationPlace?.label ?? '') ??
+                destinationPlace?.code
+            )}
           </p>
         </div>
       )}
