@@ -31,17 +31,29 @@ describe('planDestination', () => {
     }
   });
 
-  it('falls back to skeleton for destinations without master yet', () => {
+  it('presents curated master for former skeleton destinations (batch3)', () => {
     const plan = planDestination({ destinationSlug: 'fiji', tripDays: 10 });
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
-    expect(plan.quality).toBe('skeleton');
+    expect(plan.quality).toBe('curated');
+    expect(plan.days.some((d) => /Nadi|Mamanuca|Yasawa|Fiji/i.test(d.area + d.title))).toBe(
+      true
+    );
   });
 
-  it('coverage report: 12 active curated + batch2', () => {
+  it('falls back to skeleton only for unknown slugs', () => {
+    const plan = planDestination({
+      destinationSlug: 'destinazione-inesistente-xyz',
+      tripDays: 7,
+    });
+    expect(plan.ok).toBe(false);
+  });
+
+  it('coverage report: all 59 destinations curated', () => {
     const rows = plannerCoverageReport();
     expect(rows.filter((r) => r.active && r.quality === 'curated')).toHaveLength(12);
-    expect(rows.filter((r) => r.quality === 'curated').length).toBeGreaterThanOrEqual(25);
+    expect(rows.filter((r) => r.quality === 'curated')).toHaveLength(59);
+    expect(rows.filter((r) => r.quality === 'skeleton')).toHaveLength(0);
   });
 });
 
