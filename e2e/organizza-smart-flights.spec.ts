@@ -44,6 +44,7 @@ test.describe('organizza redesigned flow (mobile)', () => {
     await expect(th).toBeVisible();
     await th.click();
     await expect(page.getByText(/Selezionato:.*Thailandia/i)).toBeVisible();
+    await expect(page.getByTestId('organizza-destination-map')).toBeVisible();
 
     // Sticky Continua visible with selection
     const continua = page.getByRole('button', { name: /^Continua$/i });
@@ -54,6 +55,7 @@ test.describe('organizza redesigned flow (mobile)', () => {
     await expect(page.getByTestId('organizza-stepper').getByText('Quando', { exact: true })).toBeVisible();
     await expect(page.getByText(/Date libere/i)).toHaveCount(0);
     await expect(page.getByText(/gg\/mm\/aaaa/i).first()).toBeVisible();
+    await expect(page.getByText(/Includi volo di rientro/i)).toBeVisible();
 
     const from = page.locator('input[type="date"]').first();
     const to = page.locator('input[type="date"]').nth(1);
@@ -71,9 +73,31 @@ test.describe('organizza redesigned flow (mobile)', () => {
     ).toBeVisible();
     await continua.click();
 
-    await expect(page.getByRole('heading', { name: /Voli consigliati/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /Voli del viaggio/i })).toBeVisible({
       timeout: 15_000,
     });
+    await expect(page.getByTestId('flight-legs-panel')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Modifica volo/i }).first()).toBeVisible();
+    await expect(page.getByText(/biglietto indipendente|Biglietti indipendenti|tratte separate/i).first()).toBeVisible();
+  });
+
+  test('one-way without return home still reaches Voli', async ({ page }) => {
+    await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
+    await expect(
+      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
+    ).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('dest-card-thailandia').click();
+    await page.getByRole('button', { name: /^Continua$/i }).click();
+    await page.locator('input[type="date"]').first().fill('2026-12-10');
+    await page.locator('input[type="date"]').nth(1).fill('2026-12-20');
+    await page.getByLabel(/Includi volo di rientro/i).uncheck();
+    await expect(page.getByText(/Solo andata/i)).toBeVisible();
+    await page.getByRole('button', { name: /^Continua$/i }).click();
+    await page.getByRole('button', { name: /Da solo/i }).click();
+    await page.getByRole('button', { name: /^Continua$/i }).click();
+    await expect(page.getByTestId('flight-legs-panel')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Andata/i).first()).toBeVisible();
+    await expect(page.getByText(/Rientro/i)).toHaveCount(0);
   });
 
   test('curated multi-meta suggestions from Dove', async ({ page }) => {
