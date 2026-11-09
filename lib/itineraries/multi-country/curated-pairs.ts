@@ -44,19 +44,21 @@ export const CURATED_MULTI_COUNTRY_PAIRS: CuratedMultiCountryPair[] = [
     id: 'vietnam-cambogia',
     slugs: ['vietnam', 'cambogia'],
     titleIt: 'Vietnam + Cambogia',
-    blurbIt: 'Nord→sud Vietnam, poi Phnom Penh / Siem Reap. Open-jaw HAN/SGN→REP/PNH.',
+    blurbIt:
+      'Nord→sud Vietnam (arrivo HAN), poi volo SGN→REP per Angkor; rientro da Siem Reap.',
     arrivalHubIata: 'HAN',
     departureHubIata: 'REP',
     transfer: {
       fromSlug: 'vietnam',
       toSlug: 'cambogia',
-      mode: 'bus',
-      durationHours: 6,
+      mode: 'internal_flight',
+      durationHours: 1.2,
       verified: true,
-      costEurPerPerson: 25,
-      notesIt: 'Bus/strada Ho Chi Minh ↔ Phnom Penh (tempi tipici ~6 h — conferma orario).',
-      sourceLabelIt: 'Wikivoyage Phnom Penh — Get in',
-      sourceUrl: `${WV}/Phnom_Penh#Get_in`,
+      costEurPerPerson: 65,
+      notesIt:
+        'Volo regionale Ho Chi Minh (SGN) → Siem Reap (REP), allineato all’open-jaw HAN→REP.',
+      sourceLabelIt: 'Wikivoyage Siem Reap — Get in',
+      sourceUrl: `${WV}/Siem_Reap#Get_in`,
       retrievedOn: ON,
     },
     openJawFlightEur: {

@@ -18,6 +18,7 @@ import {
   EDITION_COMING_SOON_JOIN_ERROR,
   isEditionComingSoon,
 } from '@/lib/itineraries/edition-joinability';
+import { friendlyDbErrorIt, isMissingSchemaError } from '@/lib/data/db-errors';
 
 export type { EditionMemberCard };
 
@@ -50,8 +51,12 @@ export type EditionHost = {
 };
 
 function missing(error: { code?: string; message?: string } | null) {
-  return error?.code === '42P01' || error?.code === '42703';
+  return isMissingSchemaError(error);
 }
+
+/** Columns that exist without migration 041 (editions.title). */
+const EDITION_SELECT_BASE =
+  'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by';
 
 /** Solo partenze con inizio oggi o futuro (ISO yyyy-mm-dd). */
 function isUpcomingEdition(dateFrom: string): boolean {
@@ -143,48 +148,14 @@ export async function getEdition(id: string): Promise<EditionRow | null> {
   if (id.startsWith('seed-')) {
     return fallbackOfficial().find((e) => e.id === id) ?? null;
   }
+  // Never select `title` here: migration 041 may be absent; PostgREST returns PGRST204.
   const { data, error } = await supabaseAdmin
     .from('editions')
-    .select(
-      'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by, title'
-    )
+    .select(EDITION_SELECT_BASE)
     .eq('id', id)
     .maybeSingle();
   if (error) {
-    // title column may be missing pre-041
-    if (missing(error)) {
-      const fallback = await supabaseAdmin
-        .from('editions')
-        .select(
-          'id, template_id, date_from, date_to, edition_type, min_confirmed, status, invite_token, created_by'
-        )
-        .eq('id', id)
-        .maybeSingle();
-      if (fallback.error || !fallback.data) return null;
-      const [{ count: confirmed }, { count: interested }] = await Promise.all([
-        supabaseAdmin
-          .from('edition_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('edition_id', id)
-          .eq('status', 'confirmed'),
-        supabaseAdmin
-          .from('edition_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('edition_id', id)
-          .eq('status', 'interested'),
-      ]);
-      const fb = fallback.data as EditionRow;
-      return {
-        ...fb,
-        confirmed_count: confirmed ?? 0,
-        interested_count: interested ?? 0,
-        coming_soon: isEditionComingSoon({
-          template_id: fb.template_id,
-          date_from: String(fb.date_from),
-          edition_type: fb.edition_type,
-        }),
-      };
-    }
+    console.warn('[editions] getEdition', error.code, error.message);
     return null;
   }
   if (!data) return null;
@@ -270,10 +241,9 @@ export async function createPrivateEdition(input: {
   const dates = input.dateTo
     ? { date_from: input.dateFrom.slice(0, 10), date_to: input.dateTo.slice(0, 10) }
     : datesForDuration(input.dateFrom, template.duration_days);
-  const title =
-    input.title?.trim() && input.title.trim() !== template.destination_name
-      ? input.title.trim().slice(0, 80)
-      : null;
+  // Ignore optional title until migration 041 is applied in the target DB.
+  // Writing `title` triggers PostgREST PGRST204 ("schema cache") and was shown raw in UI.
+  void input.title;
 
   const existingDraft = await findDraftPractice({
     userId: input.userId,
@@ -293,14 +263,18 @@ export async function createPrivateEdition(input: {
         dateTo: dates.date_to,
         editionId: candidate.id,
       });
-      if ('error' in reused) return reused;
-      const patch: Record<string, string | null> = {};
+      if ('error' in reused) {
+        return {
+          error: friendlyDbErrorIt(
+            { message: reused.error },
+            'Impossibile aggiornare il viaggio. Riprova.'
+          ),
+        };
+      }
+      const patch: Record<string, string> = {};
       if (candidate.date_from !== dates.date_from || candidate.date_to !== dates.date_to) {
         patch.date_from = dates.date_from;
         patch.date_to = dates.date_to;
-      }
-      if (title !== undefined && title !== (candidate.title ?? null)) {
-        patch.title = title;
       }
       if (Object.keys(patch).length) {
         const { error: patchErr } = await supabaseAdmin
@@ -309,7 +283,7 @@ export async function createPrivateEdition(input: {
           .eq('id', candidate.id)
           .eq('created_by', input.userId);
         if (patchErr && !missing(patchErr)) {
-          console.warn('[editions] patch private', patchErr.message);
+          console.warn('[editions] patch private', patchErr.code, patchErr.message);
         }
       }
       await supabaseAdmin.from('edition_members').upsert(
@@ -325,7 +299,6 @@ export async function createPrivateEdition(input: {
           ...candidate,
           date_from: dates.date_from,
           date_to: dates.date_to,
-          title: title ?? candidate.title ?? null,
         },
         practice: reused.practice,
         invitePath: candidate.invite_token ? `/invito/${candidate.invite_token}` : null,
@@ -348,29 +321,21 @@ export async function createPrivateEdition(input: {
 
   let edition: EditionRow | null = null;
   {
+    // Never insert `title` — column may be absent (migration 041 not applied).
     const first = await supabaseAdmin
       .from('editions')
-      .insert(title ? { ...baseInsert, title } : baseInsert)
-      .select('*')
+      .insert(baseInsert)
+      .select(EDITION_SELECT_BASE)
       .single();
     if (first.data) {
       edition = first.data as EditionRow;
-    } else if (title && missing(first.error)) {
-      // Migration 041 non applicata: crea senza title
-      const retry = await supabaseAdmin
-        .from('editions')
-        .insert(baseInsert)
-        .select('*')
-        .single();
-      if (retry.error || !retry.data) {
-        return {
-          error: retry.error?.message ?? 'Impossibile creare l’edizione privata.',
-        };
-      }
-      edition = retry.data as EditionRow;
     } else {
+      console.error('[editions] createPrivateEdition insert', first.error?.code, first.error?.message);
       return {
-        error: first.error?.message ?? 'Impossibile creare l’edizione privata.',
+        error: friendlyDbErrorIt(
+          first.error,
+          'Impossibile creare il viaggio. Riprova tra poco.'
+        ),
       };
     }
   }
@@ -439,13 +404,16 @@ export async function updateEditionTitle(input: {
     .update({ title: next })
     .eq('id', input.editionId);
   if (error) {
+    console.warn('[editions] updateEditionTitle', error.code, error.message);
     if (missing(error)) {
       return {
         error:
-          'Rinomina non disponibile finché non si applica la migration 041_edition_title.',
+          'Rinomina non disponibile al momento. Il viaggio resta salvato con il nome della destinazione.',
       };
     }
-    return { error: error.message };
+    return {
+      error: friendlyDbErrorIt(error, 'Impossibile rinominare il viaggio. Riprova.'),
+    };
   }
   return { ok: true, title: next };
 }

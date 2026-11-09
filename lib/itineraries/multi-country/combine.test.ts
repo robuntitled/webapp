@@ -93,6 +93,24 @@ describe('multi-country planner', () => {
     });
   });
 
+  it('Vietnam+Cambogia open-jaw HAN→REP matches SGN→REP flight transfer (not bus HCMC–PP)', () => {
+    const plan = combineMultiCountryPlan({
+      slugs: ['vietnam', 'cambogia'],
+      tripDays: 14,
+      company: 'solo',
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.arrivalIata).toBe('HAN');
+    expect(plan.departureIata).toBe('REP');
+    expect(plan.transfer.mode).toBe('internal_flight');
+    expect(plan.transfer.notesIt).toMatch(/SGN/i);
+    expect(plan.transfer.notesIt).not.toMatch(/bus|Phnom Penh|HCMC–/i);
+    const transferDay = plan.days.find((d) => /Trasferimento/i.test(d.title));
+    expect(transferDay?.description).toMatch(/volo|aereo|interno/i);
+    expect(transferDay?.description).not.toMatch(/bus HCMC|Phnom Penh/i);
+  });
+
   it('rejects non-curated pairs', () => {
     const plan = combineMultiCountryPlan({
       slugs: ['thailandia', 'islanda'],

@@ -1,29 +1,40 @@
 /**
- * Stepper lineare Organizza (meta → date → con chi → riepilogo).
- * Solo / amici → sempre privato (mai attach a edition altrui).
- * Gruppo → percorso pubblico (/gruppi) o creazione privata da rendere pubblica dopo.
+ * Organizza flow (owner redesign Nov 2026):
+ * Dove e quando → Voli consigliati → Riepilogo compatto
+ * Solo / amici → privato. Gruppo → /gruppi.
  */
 
 import type { TravelMode } from '@/lib/itineraries/types';
 
 export const ORGANIZZA_STEPS = [
-  { id: 'meta', label: 'Meta', index: 0 },
-  { id: 'date', label: 'Date', index: 1 },
-  { id: 'con-chi', label: 'Con chi', index: 2 },
-  { id: 'riepilogo', label: 'Riepilogo', index: 3 },
+  { id: 'dove-quando', label: 'Dove e quando', index: 0 },
+  { id: 'voli', label: 'Voli', index: 1 },
+  { id: 'riepilogo', label: 'Riepilogo', index: 2 },
 ] as const;
 
 export type OrganizzaStepId = (typeof ORGANIZZA_STEPS)[number]['id'];
 
 export type OrganizzaCompanyChoice = 'solo' | 'amici' | 'gruppo';
 
+export type OrganizzaSelectedFlight = {
+  offerId: string;
+  labelIt: string;
+  price: number;
+  currency: string;
+  originIata: string;
+  destinationIata: string;
+  returnOriginIata?: string | null;
+  departureAt: string;
+  arrivalAt: string;
+  returnDepartureAt?: string | null;
+  returnArrivalAt?: string | null;
+  stops: number;
+  durationMinutes: number;
+  pickKind: 'cheapest' | 'fastest' | 'balanced' | 'manual';
+};
+
 export type OrganizzaDraft = {
-  /** Primary destination (single-country default). */
   slug: string | null;
-  /**
-   * Multi-country selection (curated pairs only). When length === 2,
-   * planner combines masters; `slug` stays the first/canonical arrival country.
-   */
   slugs: string[] | null;
   durationDays: number | null;
   dateFrom: string | null;
@@ -31,9 +42,12 @@ export type OrganizzaDraft = {
   company: OrganizzaCompanyChoice | null;
   tripName: string;
   vibe: string | null;
-  /** Hub arrivo/partenza (IATA) — open-jaw when multi-country. */
   arrivalIata: string | null;
   departureIata: string | null;
+  /** Home / Italy side airport for search. */
+  originIata: string | null;
+  selectedFlight: OrganizzaSelectedFlight | null;
+  legalAck: boolean;
 };
 
 export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
@@ -42,11 +56,14 @@ export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
   durationDays: null,
   dateFrom: null,
   dateTo: null,
-  company: null,
+  company: 'solo',
   tripName: '',
   vibe: null,
   arrivalIata: null,
   departureIata: null,
+  originIata: 'MXP',
+  selectedFlight: null,
+  legalAck: false,
 };
 
 export function isMultiCountryDraft(draft: OrganizzaDraft): boolean {
@@ -62,29 +79,23 @@ export function organizzaStepByIndex(index: number): OrganizzaStepId {
   return ORGANIZZA_STEPS[clamped]!.id;
 }
 
-/** Passi completati: ogni step precedente ha i dati minimi. */
 export function organizzaCompletedSteps(draft: OrganizzaDraft): Set<OrganizzaStepId> {
   const done = new Set<OrganizzaStepId>();
-  if (draft.slug && draft.durationDays) done.add('meta');
-  if (draft.dateFrom && draft.dateTo) done.add('date');
-  if (draft.company === 'solo' || draft.company === 'amici' || draft.company === 'gruppo') {
-    done.add('con-chi');
+  if (draft.slug && draft.dateFrom && draft.dateTo && draft.durationDays) {
+    done.add('dove-quando');
+  }
+  if (done.has('dove-quando') && draft.selectedFlight) {
+    done.add('voli');
   }
   if (
-    done.has('meta') &&
-    done.has('date') &&
-    done.has('con-chi') &&
-    draft.company !== 'gruppo'
+    done.has('voli') &&
+    (draft.company === 'solo' || draft.company === 'amici' || draft.company === 'gruppo')
   ) {
     done.add('riepilogo');
   }
   return done;
 }
 
-/**
- * Può avanzare allo step target solo se tutti i precedenti sono completi
- * (o se torna indietro — back non cancella le selezioni).
- */
 export function canNavigateToOrganizzaStep(
   draft: OrganizzaDraft,
   target: OrganizzaStepId,
@@ -92,7 +103,7 @@ export function canNavigateToOrganizzaStep(
 ): boolean {
   const targetIdx = organizzaStepIndex(target);
   const currentIdx = organizzaStepIndex(current);
-  if (targetIdx <= currentIdx) return true; // indietro / stesso sempre ok
+  if (targetIdx <= currentIdx) return true;
   const done = organizzaCompletedSteps(draft);
   for (const step of ORGANIZZA_STEPS) {
     if (step.index >= targetIdx) break;
@@ -101,10 +112,6 @@ export function canNavigateToOrganizzaStep(
   return true;
 }
 
-/**
- * Solo e amici creano SEMPRE un viaggio privato (TravelMode solo|friends).
- * Gruppo non crea qui: porta a /gruppi (join) — o, se esplicito, mode group privato.
- */
 export function companyChoiceToTravelMode(
   company: OrganizzaCompanyChoice
 ): TravelMode | 'redirect-gruppi' {
@@ -113,7 +120,6 @@ export function companyChoiceToTravelMode(
   return 'redirect-gruppi';
 }
 
-/** Privacy: solo/amici → edition privata (o bozza solo). Mai official reuse. */
 export function companyCreatesPrivateTrip(company: OrganizzaCompanyChoice): boolean {
   return company === 'solo' || company === 'amici';
 }
@@ -126,7 +132,7 @@ export function nextOrganizzaStep(
   current: OrganizzaStepId,
   draft: OrganizzaDraft
 ): OrganizzaStepId | 'gruppi' | null {
-  if (current === 'con-chi' && draft.company === 'gruppo') return 'gruppi';
+  if (current === 'riepilogo' && draft.company === 'gruppo') return 'gruppi';
   const idx = organizzaStepIndex(current);
   if (idx >= ORGANIZZA_STEPS.length - 1) return null;
   const next = organizzaStepByIndex(idx + 1);
@@ -140,10 +146,17 @@ export function prevOrganizzaStep(current: OrganizzaStepId): OrganizzaStepId | n
   return organizzaStepByIndex(idx - 1);
 }
 
-/** Merge draft preservando le selezioni (back non le cancella). */
 export function patchOrganizzaDraft(
   draft: OrganizzaDraft,
   patch: Partial<OrganizzaDraft>
 ): OrganizzaDraft {
   return { ...draft, ...patch };
+}
+
+/** Inclusive calendar days between ISO dates. */
+export function durationDaysFromRange(dateFrom: string, dateTo: string): number {
+  const a = Date.parse(`${dateFrom}T12:00:00Z`);
+  const b = Date.parse(`${dateTo}T12:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 0;
+  return Math.round((b - a) / 86400000) + 1;
 }

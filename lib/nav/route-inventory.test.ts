@@ -37,7 +37,7 @@ describe('route inventory', () => {
 
 describe('Italian UI copy hygiene', () => {
   const surfaces = [
-    'components/itineraries/OrganizzaWizard.tsx',
+    'components/itineraries/OrganizzaFlow.tsx',
     'components/itineraries/ThailandPilotPlanPanel.tsx',
     'lib/itineraries/deterministic-planner/plan-destination.ts',
     'lib/itineraries/deterministic-planner/skeleton.ts',
@@ -55,10 +55,10 @@ describe('Italian UI copy hygiene', () => {
     }
   });
 
-  it('riepilogo uses the Italian availability phrasing', () => {
-    const src = read('components/itineraries/OrganizzaWizard.tsx');
-    expect(src).toMatch(/disponibilità e prezzi da verificare/i);
+  it('riepilogo uses Italian phrasing without English bookability', () => {
+    const src = read('components/itineraries/OrganizzaFlow.tsx');
     expect(src).not.toMatch(/bookability/i);
+    expect(src).toMatch(/Informazioni importanti|Budget orientativo|Viaggiare Sicuri/i);
   });
 
   it('home constant is single source', () => {

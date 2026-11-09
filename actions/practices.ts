@@ -83,7 +83,12 @@ export async function startPracticeAction(input: {
       title: input.title,
     });
     if ('error' in result) {
-      return { error: result.error ?? 'Impossibile creare il viaggio.' };
+      const raw = result.error ?? 'Impossibile creare il viaggio.';
+      if (/schema cache|Could not find|PGRST|column/i.test(raw)) {
+        console.error('[startPracticeAction] private edition', raw);
+        return { error: 'Impossibile creare il viaggio. Riprova tra poco.' };
+      }
+      return { error: raw };
     }
     revalidatePath('/pratiche');
     revalidatePath('/partenze');

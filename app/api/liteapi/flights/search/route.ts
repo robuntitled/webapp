@@ -8,7 +8,8 @@ import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
 
 export const runtime = 'nodejs';
-export const maxDuration = 20;
+/** Long-haul probes (calendar ±3) often need 20–45s; keep under Vercel hobby/pro caps. */
+export const maxDuration = 60;
 
 const schema = z.object({
   destination: z.string().trim().min(2).max(120),
