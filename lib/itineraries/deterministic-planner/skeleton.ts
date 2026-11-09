@@ -7,7 +7,7 @@ import type { CatalogDestination } from '@/lib/catalog/destinations';
 import type { ItineraryDay, ItineraryTemplate } from '@/lib/itineraries/types';
 import type { ProvenanceRecord } from '@/lib/itineraries/thailand-pilot/provenance';
 
-export type PlanQuality = 'curated' | 'skeleton';
+export type PlanQuality = 'curated' | 'skeleton'; // curated = master route; skeleton = thin fallback
 
 export type SkeletonPlanDay = {
   day_number: number;

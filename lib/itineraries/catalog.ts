@@ -1,16 +1,13 @@
-import { THAILANDIA_TEMPLATES } from '@/lib/itineraries/thailandia';
 import { findCatalogDestination, wizardCatalogDestinations } from '@/lib/catalog/destinations';
 import { withResolvedDayCoords } from '@/lib/itineraries/geo';
+import { templatesFromMasters } from '@/lib/itineraries/masters';
 import type { ItineraryTemplate, OfficialEditionSeed } from '@/lib/itineraries/types';
 
 /**
- * Solo itinerari published in app. Lancio: Thailandia 10/14/21.
- * Bundle Americas (99 template) è in DB `itinerary_templates` via
- * `npm run db:itineraries`. Non esposti ancora nel wizard finché non si attiva la destinazione.
+ * Itinerari published: master routes curati (batch active) rimappati sulle durate catalogo.
+ * Bundle Americas legacy resta in DB; qui esponiamo solo masters verificati.
  */
-export const PUBLISHED_TEMPLATES: ItineraryTemplate[] = THAILANDIA_TEMPLATES.filter(
-  (t) => t.status === 'published'
-).map((t) => ({
+export const PUBLISHED_TEMPLATES: ItineraryTemplate[] = templatesFromMasters().map((t) => ({
   ...t,
   days: withResolvedDayCoords(t.days, t.destination_slug),
 }));

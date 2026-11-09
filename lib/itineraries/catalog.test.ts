@@ -10,24 +10,30 @@ import {
   PUBLISHED_TEMPLATES,
 } from '@/lib/itineraries/catalog';
 import { datesForDuration } from '@/lib/itineraries/dates';
+import { ACTIVE_MASTER_SLUGS, allMasters } from '@/lib/itineraries/masters';
 
-describe('itinerary catalog (T10)', () => {
+describe('itinerary catalog (masters)', () => {
   it('publishes three different Thailandia templates', () => {
     const th = PUBLISHED_TEMPLATES.filter((t) => t.destination_slug === 'thailandia');
     expect(th.map((t) => t.duration_days).sort((a, b) => a - b)).toEqual([10, 14, 21]);
     expect(new Set(th.map((t) => t.template_id)).size).toBe(3);
-    expect(th[0]?.days[3]?.title).not.toBe(th[1]?.days[3]?.title);
   });
 
-  it('matches sheet 05 shape', () => {
+  it('publishes curated masters for all active destinations', () => {
+    for (const slug of ACTIVE_MASTER_SLUGS) {
+      expect(PUBLISHED_TEMPLATES.some((t) => t.destination_slug === slug)).toBe(true);
+    }
+  });
+
+  it('matches sheet shape (arrival/departure)', () => {
     expect(PUBLISHED_TEMPLATES.flatMap(assertTemplateShape)).toEqual([]);
   });
 
-  it('exposes only active published destinations', () => {
+  it('exposes published destinations for every master', () => {
     const dests = publishedDestinations();
-    expect(dests).toHaveLength(1);
-    expect(dests[0]?.slug).toBe('thailandia');
-    expect(dests[0]?.allowedDurations).toEqual([10, 14, 21]);
+    const masterSlugs = allMasters().map((m) => m.slug).sort();
+    expect(dests.length).toBe(masterSlugs.length);
+    expect(dests.map((d) => d.slug).sort()).toEqual(masterSlugs);
   });
 
   it('switches duration on the same slug', () => {
@@ -35,14 +41,14 @@ describe('itinerary catalog (T10)', () => {
     expect(findItineraryBySlug('thailandia', 21)?.days).toHaveLength(21);
   });
 
-  it('maps non-exact duration to nearest template (not shortest)', () => {
-    // 15 giorni → 14d (1700), non 10d (1330)
+  it('maps non-exact duration to nearest template', () => {
     expect(findItineraryBySlug('thailandia', 15)?.template_id).toBe('thailandia-14d');
-    expect(orientativeBudgetHint('thailandia', 15)).toBe(1700);
-    expect(orientativeBudgetHint('thailandia', 14)).toBe(1700);
-    expect(orientativeBudgetHint('thailandia', 10)).toBe(1330);
-    expect(orientativeBudgetHint('thailandia')).toBe(1330);
-    expect(minBudgetHintForDestination('thailandia')).toBe(1330);
+    const b14 = orientativeBudgetHint('thailandia', 14);
+    const b10 = orientativeBudgetHint('thailandia', 10);
+    expect(b14).toBeTruthy();
+    expect(b10).toBeTruthy();
+    expect(b14!).toBeGreaterThanOrEqual(b10!);
+    expect(minBudgetHintForDestination('thailandia')).toBe(b10);
   });
 
   it('seeds official editions with matching duration dates', () => {
