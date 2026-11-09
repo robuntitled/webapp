@@ -28,13 +28,15 @@ import {
   TripWhenPicker,
   type TripWhenSelection,
 } from '@/components/itineraries/TripWhenPicker';
-import { ThailandPilotPlanPanel } from '@/components/itineraries/ThailandPilotPlanPanel';
+import { DeterministicPlanPanel } from '@/components/itineraries/DeterministicPlanPanel';
 import { coverForDestination } from '@/lib/composer/destination-covers';
+import { findCatalogDestination } from '@/lib/catalog/destinations';
 import {
   findItineraryBySlug,
   orientativeBudgetHint,
   templatesForDestination,
 } from '@/lib/itineraries/catalog';
+import { skeletonAsTemplate } from '@/lib/itineraries/deterministic-planner/skeleton';
 import {
   EMPTY_ORGANIZZA_DRAFT,
   ORGANIZZA_STEPS,
@@ -49,6 +51,7 @@ import {
   patchOrganizzaDraft,
   prevOrganizzaStep,
 } from '@/lib/itineraries/organizza-steps';
+import { FREE_TRIP_TEMPLATE_ID } from '@/lib/itineraries/free-trip';
 import { THAILAND_DESTINATION_SLUG } from '@/lib/itineraries/thailand-pilot';
 import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
@@ -342,17 +345,30 @@ export function OrganizzaWizard({
     }
   }, [draft, step, whenSelection, hydrated]);
 
+  const catalogDest = useMemo(
+    () => (draft.slug ? findCatalogDestination(draft.slug) : undefined),
+    [draft.slug]
+  );
+
   const template = useMemo(() => {
     if (!draft.slug) return undefined;
-    return findItineraryBySlug(draft.slug, draft.durationDays ?? undefined);
+    const curated = findItineraryBySlug(draft.slug, draft.durationDays ?? undefined);
+    if (curated) return curated;
+    const dest = findCatalogDestination(draft.slug);
+    if (!dest) return undefined;
+    return skeletonAsTemplate(dest, draft.durationDays ?? dest.allowedDurations[0] ?? 10);
   }, [draft.slug, draft.durationDays]);
+
+  const hasCuratedTemplate = Boolean(
+    draft.slug && templatesForDestination(draft.slug).length > 0
+  );
 
   const published = useMemo(
     () => destinations.filter((d) => d.published !== false),
     [destinations]
   );
-  const comingSoon = useMemo(
-    () => destinations.filter((d) => d.published === false).slice(0, 6),
+  const otherDestinations = useMemo(
+    () => destinations.filter((d) => d.published === false),
     [destinations]
   );
 
@@ -380,10 +396,6 @@ export function OrganizzaWizard({
   }
 
   function selectDestination(dest: DestCard) {
-    if (dest.published === false) {
-      toast.message('In arrivo. Ora parti da Thailandia.');
-      return;
-    }
     const duration =
       dest.allowedDurations[Math.min(1, dest.allowedDurations.length - 1)] ??
       dest.allowedDurations[0];
@@ -397,9 +409,16 @@ export function OrganizzaWizard({
       dateFrom: null,
       dateTo: null,
       company: null,
+      arrivalIata: null,
+      departureIata: null,
     });
     setWhenSelection(null);
     setStep('date');
+    if (dest.published === false) {
+      toast.message(
+        'Schema orientativo: luoghi precisi e trasferimenti da verificare prima di prenotare.'
+      );
+    }
   }
 
   function onDatesChange(next: TripWhenSelection | null) {
@@ -438,20 +457,22 @@ export function OrganizzaWizard({
       router.push(accediHref('/organizza?ripresa=1', 'register'));
       return;
     }
-    const tpl =
-      whenSelection?.template ??
-      findItineraryBySlug(draft.slug, draft.durationDays ?? undefined);
-    if (!tpl) {
-      toast.error('Itinerario non trovato.');
-      return;
-    }
+    const curated = findItineraryBySlug(draft.slug, draft.durationDays ?? undefined);
+    const templateId = curated?.template_id ?? FREE_TRIP_TEMPLATE_ID;
+    const title =
+      draft.tripName.trim() ||
+      (curated
+        ? null
+        : `${catalogDest?.name ?? draft.slug} · schema orientativo`);
     startTransition(async () => {
       const result = await startPracticeAction({
-        templateId: tpl.template_id,
+        templateId,
         mode,
         dateFrom: draft.dateFrom!,
         dateTo: draft.dateTo!,
-        title: draft.tripName.trim() || null,
+        title,
+        destinationLabel: catalogDest?.name ?? draft.slug,
+        allowFreeTrip: !curated,
       });
       if (result?.error) {
         toast.error(result.error);
@@ -520,7 +541,7 @@ export function OrganizzaWizard({
                             sizes="(max-width:640px) 100vw, 40vw"
                           />
                           <span className="absolute left-2 top-2 rounded-full bg-emerald-700/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                            Prenotabile
+                            Itinerario disponibile
                           </span>
                         </div>
                         <div className="space-y-1 p-3">
@@ -541,25 +562,35 @@ export function OrganizzaWizard({
                     );
                   })}
                 </div>
-                {comingSoon.length > 0 ? (
+                {otherDestinations.length > 0 ? (
                   <div>
                     <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-                      In arrivo
+                      Altre mete · schema orientativo
                     </p>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {comingSoon.map((dest) => (
-                        <div
-                          key={dest.slug}
-                          className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-tint)]/50 px-3 py-3"
-                        >
-                          <p className="text-sm font-semibold text-[var(--color-text)]">
-                            {dest.emoji} {dest.name}
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                            In arrivo. Per ora puoi partire per la Thailandia.
-                          </p>
-                        </div>
-                      ))}
+                      {otherDestinations.map((dest) => {
+                        const active = draft.slug === dest.slug;
+                        return (
+                          <button
+                            key={dest.slug}
+                            type="button"
+                            onClick={() => selectDestination(dest)}
+                            className={cn(
+                              'rounded-xl border px-3 py-3 text-left transition',
+                              active
+                                ? 'border-primary bg-[var(--color-tint)] ring-2 ring-primary/15'
+                                : 'border-dashed border-[var(--color-border)] bg-[var(--color-tint)]/50 hover:border-primary/40'
+                            )}
+                          >
+                            <p className="text-sm font-semibold text-[var(--color-text)]">
+                              {dest.emoji} {dest.name}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                              Piano base con lacune da verificare — non un itinerario curato.
+                            </p>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : null}
@@ -577,22 +608,25 @@ export function OrganizzaWizard({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {templatesForDestination(template.destination_slug).map((t) => (
+                  {(templatesForDestination(template.destination_slug).length
+                    ? templatesForDestination(template.destination_slug).map((t) => t.duration_days)
+                    : catalogDest?.allowedDurations ?? [draft.durationDays ?? 10]
+                  ).map((days) => (
                     <button
-                      key={t.template_id}
+                      key={days}
                       type="button"
                       onClick={() => {
-                        update({ durationDays: t.duration_days });
+                        update({ durationDays: days });
                         setWhenSelection(null);
                       }}
                       className={cn(
                         'inline-flex min-h-11 items-center rounded-full px-3.5 text-xs font-semibold transition',
-                        t.duration_days === draft.durationDays
+                        days === draft.durationDays
                           ? 'bg-primary text-white'
                           : 'border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-primary/40'
                       )}
                     >
-                      {t.duration_days} giorni
+                      {days} giorni
                     </button>
                   ))}
                 </div>
@@ -614,8 +648,8 @@ export function OrganizzaWizard({
                       Hub aeroportuali (opzionale)
                     </p>
                     <p className="text-xs text-[var(--color-text-secondary)]">
-                      Vincoli del pilot: se l&apos;IATA non è tra quelli curati Thailandia, compare un
-                      avviso — senza inventare collegamenti.
+                      Se l&apos;aeroporto non è tra i hub curati Thailandia, compare un avviso — senza
+                      inventare collegamenti.
                     </p>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
@@ -657,8 +691,8 @@ export function OrganizzaWizard({
                     </div>
                   </div>
                 ) : null}
-                {draft.durationDays && draft.slug === THAILAND_DESTINATION_SLUG ? (
-                  <ThailandPilotPlanPanel
+                {draft.durationDays && draft.slug ? (
+                  <DeterministicPlanPanel
                     destinationSlug={draft.slug}
                     tripDays={draft.durationDays}
                     vibe={draft.vibe}
@@ -800,9 +834,9 @@ export function OrganizzaWizard({
                         }`}
                     </h2>
                     <p className="text-sm text-[var(--color-text-secondary)]">
-                      {draft.slug === THAILAND_DESTINATION_SLUG
-                        ? `Template curato ${BRAND_NAME} · piano pilot (non bookability live)`
-                        : `Itinerario curato ${BRAND_NAME}`}
+                      {hasCuratedTemplate
+                        ? `Itinerario curato ${BRAND_NAME} · non bookability live`
+                        : `Schema orientativo ${BRAND_NAME} · lacune da verificare`}
                     </p>
                   </div>
                 </div>
@@ -903,8 +937,8 @@ export function OrganizzaWizard({
                   </ol>
                 </div>
 
-                {draft.slug === THAILAND_DESTINATION_SLUG && draft.durationDays ? (
-                  <ThailandPilotPlanPanel
+                {draft.slug && draft.durationDays ? (
+                  <DeterministicPlanPanel
                     destinationSlug={draft.slug}
                     tripDays={draft.durationDays}
                     vibe={draft.vibe}
