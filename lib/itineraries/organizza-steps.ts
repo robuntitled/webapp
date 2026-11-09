@@ -5,6 +5,7 @@
  */
 
 import type { TravelMode } from '@/lib/itineraries/types';
+import type { TripFlightPlan } from '@/lib/travel/trip-flight-legs';
 
 export const ORGANIZZA_STEPS = [
   { id: 'dove', label: 'Dove', index: 0 },
@@ -50,6 +51,12 @@ export type OrganizzaDraft = {
   arrivalIata: string | null;
   departureIata: string | null;
   originIata: string | null;
+  /** Return-to airport (may differ from origin — open-jaw home). */
+  homeReturnIata: string | null;
+  /** When false, no return-home flight leg (trip end date still kept). */
+  returnHome: boolean;
+  /** Ordered flight legs (persisted in session draft). */
+  flightPlan: TripFlightPlan | null;
   selectedFlight: OrganizzaSelectedFlight | null;
   legalAck: boolean;
 };
@@ -67,6 +74,9 @@ export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
   arrivalIata: null,
   departureIata: null,
   originIata: 'MXP',
+  homeReturnIata: 'MXP',
+  returnHome: true,
+  flightPlan: null,
   selectedFlight: null,
   legalAck: false,
 };
@@ -97,7 +107,14 @@ export function organizzaCompletedSteps(draft: OrganizzaDraft): Set<OrganizzaSte
   ) {
     done.add('con-chi');
   }
-  if (done.has('con-chi') && draft.selectedFlight) {
+  const hasFlightSelection =
+    Boolean(draft.selectedFlight) ||
+    Boolean(
+      draft.flightPlan?.legs.some(
+        (l) => l.status === 'selected' || l.status === 'stale' || l.offer != null
+      )
+    );
+  if (done.has('con-chi') && hasFlightSelection) {
     done.add('voli');
   }
   if (done.has('voli') && draft.company) {
