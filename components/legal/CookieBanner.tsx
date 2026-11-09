@@ -15,7 +15,8 @@ export function CookieBanner() {
   useEffect(() => {
     const root = document.documentElement;
     if (visible) {
-      root.style.setProperty('--cookie-banner-pad', '3.25rem');
+      // Extra pad so itinerary content / FAB stay clear of the banner on mobile
+      root.style.setProperty('--cookie-banner-pad', '4.5rem');
       root.dataset.cookieBanner = '1';
     } else {
       root.style.removeProperty('--cookie-banner-pad');

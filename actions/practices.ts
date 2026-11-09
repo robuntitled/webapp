@@ -20,6 +20,10 @@ import {
   confirmPracticeActivity,
   confirmPracticeHotel,
 } from '@/lib/data/practices';
+import {
+  FREE_TRIP_TEMPLATE_ID,
+  isFreeTripTemplateId,
+} from '@/lib/itineraries/free-trip';
 import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
 import type { ActivityBookingRecap } from '@/lib/itineraries/bookings';
 import type { TravelMode } from '@/lib/itineraries/types';
@@ -38,9 +42,14 @@ export async function startPracticeAction(input: {
   dateFrom: string;
   dateTo?: string;
   title?: string | null;
+  destinationLabel?: string | null;
+  /** Schema orientativo senza template curato (viaggio-libero). */
+  allowFreeTrip?: boolean;
 }): Promise<{ error: string } | never> {
   const userId = await requireUser();
-  if (!findItineraryTemplate(input.templateId)) {
+  const free =
+    Boolean(input.allowFreeTrip) && isFreeTripTemplateId(input.templateId);
+  if (!free && !findItineraryTemplate(input.templateId)) {
     return { error: 'Template non trovato.' };
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateFrom)) {
@@ -48,6 +57,23 @@ export async function startPracticeAction(input: {
   }
 
   if (input.mode === 'friends' || input.mode === 'group') {
+    if (free) {
+      // Private edition path requires curated template_id in DB; use free solo draft instead.
+      const result = await createPractice({
+        userId,
+        templateId: FREE_TRIP_TEMPLATE_ID,
+        mode: input.mode === 'group' ? 'friends' : input.mode,
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        destinationLabel: input.destinationLabel ?? input.title ?? null,
+      });
+      if ('error' in result) {
+        return { error: result.error ?? 'Impossibile creare il viaggio.' };
+      }
+      revalidatePath('/pratiche');
+      revalidatePath('/organizza');
+      redirect(`/pratica/${result.practice.id}/prossimo`);
+    }
     const result = await createPrivateEdition({
       userId,
       templateId: input.templateId,
@@ -62,6 +88,23 @@ export async function startPracticeAction(input: {
     revalidatePath('/pratiche');
     revalidatePath('/partenze');
     revalidatePath('/gruppi');
+    revalidatePath('/organizza');
+    redirect(`/pratica/${result.practice.id}/prossimo`);
+  }
+
+  if (free) {
+    const result = await createPractice({
+      userId,
+      templateId: FREE_TRIP_TEMPLATE_ID,
+      mode: 'solo',
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
+      destinationLabel: input.destinationLabel ?? input.title ?? null,
+    });
+    if ('error' in result) {
+      return { error: result.error ?? 'Impossibile creare il viaggio.' };
+    }
+    revalidatePath('/pratiche');
     revalidatePath('/organizza');
     redirect(`/pratica/${result.practice.id}/prossimo`);
   }
