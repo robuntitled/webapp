@@ -53,7 +53,9 @@ test.describe('organizza redesigned flow (mobile)', () => {
     await expect(page.getByRole('heading', { name: /Con chi parti/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Gruppo/i })).toHaveCount(0);
     await page.getByRole('button', { name: /Con amici/i }).click();
-    await expect(page.getByText(/link invito/i)).toBeVisible();
+    await expect(
+      page.getByText(/Dopo la creazione vedrai il link invito/i)
+    ).toBeVisible();
     await continua.click();
 
     await expect(page.getByRole('heading', { name: /Voli consigliati/i })).toBeVisible({
@@ -81,14 +83,15 @@ test.describe('organizza redesigned flow (mobile)', () => {
 
     await page.getByTestId('dest-card-thailandia').click();
     await page.getByRole('button', { name: /Vuoi aggiungere un'altra meta/i }).click();
-    await page.getByPlaceholder(/Cerca un.altra meta/i).fill('giappone');
-    const jp = page.getByRole('button', { name: /Giappone/i }).first();
-    if (await jp.isVisible().catch(() => false)) {
-      await jp.click();
-      await expect(
-        page.getByText(/Combinazione non verificata: controlla collegamenti/i)
-      ).toBeVisible();
-      await expect(page.getByText(/Viaggiare Sicuri/i).first()).toBeVisible();
-    }
+    // Pick a same-continent neighbour that is not a curated pair (e.g. Giappone / Vietnam / Indonesia)
+    const neighbour = page
+      .getByRole('button', { name: /da verificare/i })
+      .first();
+    await expect(neighbour).toBeVisible({ timeout: 10_000 });
+    await neighbour.click();
+    await expect(
+      page.getByText(/Combinazione non verificata: controlla collegamenti/i)
+    ).toBeVisible();
+    await expect(page.getByText(/Viaggiare Sicuri/i).first()).toBeVisible();
   });
 });
