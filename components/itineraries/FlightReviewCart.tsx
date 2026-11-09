@@ -41,6 +41,12 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
   const selected = plan.legs.filter(
     (l) => (l.status === 'selected' || l.status === 'stale') && l.offer
   );
+  const closedRtBundle =
+    mode.canUseClosedRoundtrip &&
+    selected.length === 2 &&
+    selected[0]?.kind === 'outbound' &&
+    (selected[1]?.kind === 'return' || selected[1]?.kind === 'openjaw_return') &&
+    (selected[1]?.offer?.price ?? 0) === 0;
 
   return (
     <section
@@ -63,6 +69,56 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
           Nessuna tariffa reale selezionata. Le stime itinerario non sono offerte
           prenotabili.
         </p>
+      ) : closedRtBundle ? (
+        <ul className="space-y-2">
+          <li
+            className={cn(
+              'rounded-xl border px-3 py-2.5',
+              selected.some((l) => l.status === 'stale')
+                ? 'border-amber-300 bg-amber-50/70'
+                : 'border-[var(--color-border)]'
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-bold text-primary">
+                  Prenotazione unica A/R · {selected[0]!.offer!.originIata} ⇄{' '}
+                  {selected[0]!.offer!.destinationIata}
+                </p>
+                <p className="mt-0.5 text-sm font-semibold">
+                  Andata {selected[0]!.offer!.originIata} →{' '}
+                  {selected[0]!.offer!.destinationIata}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  Partenza {formatWhen(selected[0]!.offer!.departureAt)} · Arrivo{' '}
+                  {formatWhen(selected[0]!.offer!.arrivalAt)}
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  Rientro {selected[1]!.offer!.originIata} →{' '}
+                  {selected[1]!.offer!.destinationIata}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  Partenza {formatWhen(selected[1]!.offer!.departureAt)} · Arrivo{' '}
+                  {formatWhen(selected[1]!.offer!.arrivalAt)}
+                </p>
+                <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                  Offerta chiusa del fornitore (un biglietto A/R) ·{' '}
+                  {selected[0]!.passengers} pax
+                  {selected[0]!.offer!.airline ? ` · ${selected[0]!.offer!.airline}` : ''}
+                </p>
+              </div>
+              <p className="shrink-0 text-sm font-extrabold tabular-nums">
+                {formatEuroExact(selected[0]!.offer!.price, selected[0]!.offer!.currency) ??
+                  '—'}
+              </p>
+            </div>
+            {selected.some((l) => l.status === 'stale') ? (
+              <p className="mt-1 text-[11px] font-medium text-amber-900">
+                {STALE_OFFER_NOTICE_IT}
+              </p>
+            ) : null}
+          </li>
+        </ul>
       ) : (
         <ul className="space-y-2">
           {selected.map((leg, i) => (
