@@ -20,12 +20,15 @@ import {
 import { toast } from 'sonner';
 import { startPracticeAction } from '@/actions/practices';
 import { Button } from '@/components/ui/button';
-import { SmartFlightCalendar } from '@/components/itineraries/SmartFlightCalendar';
 import { BudgetBreakdownCard } from '@/components/itineraries/BudgetBreakdownCard';
 import { MultiCountryBudgetCard } from '@/components/itineraries/MultiCountryBudgetCard';
 import { OrganizzaDestinationMap } from '@/components/itineraries/OrganizzaDestinationMap';
-import { FlightLegsPanel } from '@/components/itineraries/FlightLegsPanel';
+import {
+  FlightLegsPanel,
+  SeparateTicketsNotice,
+} from '@/components/itineraries/FlightLegsPanel';
 import { FlightReviewCart } from '@/components/itineraries/FlightReviewCart';
+import { LegFlightStrip } from '@/components/itineraries/LegFlightStrip';
 import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { coverForDestination } from '@/lib/composer/destination-covers';
@@ -35,14 +38,13 @@ import { planFromMaster, getMaster } from '@/lib/itineraries/masters';
 import {
   combineMultiCountryPlan,
   isCuratedMultiSelection,
-  suggestPartnersFor,
 } from '@/lib/itineraries/multi-country';
+import { multiCountryGateHubs } from '@/lib/travel/intercountry-legs';
 import {
   EMPTY_ORGANIZZA_DRAFT,
   ORGANIZZA_STEPS,
   type OrganizzaCompanyChoice,
   type OrganizzaDraft,
-  type OrganizzaSelectedFlight,
   type OrganizzaStepId,
   type OrganizzaTripType,
   canNavigateToOrganizzaStep,
@@ -51,7 +53,6 @@ import {
   companyShowsInviteAfterCreate,
   defaultTravelersForCompany,
   durationDaysFromRange,
-  hasMainFlightSelection,
   isImpostaComplete,
   isMultiCountryDraft,
   nextOrganizzaStep,
@@ -64,16 +65,7 @@ import {
 } from '@/lib/itineraries/organizza-steps';
 import { FREE_TRIP_TEMPLATE_ID } from '@/lib/itineraries/free-trip';
 import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
-import { pickRecommendedFlights, type ScoredFlightInput } from '@/lib/travel/flight-score';
 import { minBookableDateIso } from '@/lib/travel/flight-calendar-dates';
-import {
-  flightOfferCacheKey,
-  getInflightOfferSearch,
-  readFlightOfferCache,
-  setInflightOfferSearch,
-  writeFlightOfferCache,
-  type CachedFlightOffer,
-} from '@/lib/travel/flight-offer-cache';
 import {
   buildDomesticPlanForDraft,
   buildMainFlightPlanForDraft,
@@ -82,10 +74,11 @@ import {
   mirrorSelectedFlightFromPlan,
 } from '@/lib/travel/organizza-flight-plan';
 import {
+  clearLegOffer,
   flagStaleLegs,
-  providerSearchModeForPlan,
   selectOfferOnLeg,
-  type TripFlightLeg,
+  updateLegFields,
+  type TripFlightOfferSnapshot,
   type TripFlightPlan,
 } from '@/lib/travel/trip-flight-legs';
 import {
@@ -121,8 +114,6 @@ type DestCard = {
   continent?: string;
 };
 
-type OfferRow = CachedFlightOffer;
-
 function loadDraft(): { draft: OrganizzaDraft; step: OrganizzaStepId } | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -144,7 +135,9 @@ function loadDraft(): { draft: OrganizzaDraft; step: OrganizzaStepId } | null {
         travelers:
           parsed.draft.travelers ??
           (company ? defaultTravelersForCompany(company) : 1),
-        tripType: parsed.draft.tripType ?? (parsed.draft.returnHome === false ? 'oneway' : 'roundtrip'),
+        tripType:
+          parsed.draft.tripType ??
+          (parsed.draft.returnHome === false ? 'oneway' : 'roundtrip'),
         domesticPlan: parsed.draft.domesticPlan ?? null,
       }),
       step: normalizeOrganizzaStep(parsed.step),
@@ -157,10 +150,12 @@ function loadDraft(): { draft: OrganizzaDraft; step: OrganizzaStepId } | null {
 function DestPickCard({
   dest,
   selected,
+  orderNumber,
   onSelect,
 }: {
   dest: DestCard;
   selected: boolean;
+  orderNumber?: number | null;
   onSelect: () => void;
 }) {
   return (
@@ -174,6 +169,7 @@ function DestPickCard({
           : 'border-[var(--color-border)] hover:border-primary/35 hover:shadow-sm'
       )}
       data-testid={`dest-card-${dest.slug}`}
+      aria-pressed={selected}
     >
       <div className="relative aspect-[4/3] w-full">
         <Image
@@ -184,9 +180,9 @@ function DestPickCard({
           sizes="(max-width: 640px) 50vw, 33vw"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-        {selected ? (
-          <span className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow">
-            <Check className="h-4 w-4" />
+        {selected && orderNumber != null ? (
+          <span className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white shadow">
+            {orderNumber}
           </span>
         ) : null}
         <div className="absolute bottom-3 left-3 right-3">
@@ -203,7 +199,6 @@ function DestPickCard({
 
 export function OrganizzaFlow({
   destinations,
-  groupEditionCountBySlug = {},
 }: {
   destinations: DestCard[];
   groupEditionCountBySlug?: Record<string, number>;
@@ -217,14 +212,9 @@ export function OrganizzaFlow({
   const [draft, setDraft] = useState<OrganizzaDraft>(EMPTY_ORGANIZZA_DRAFT);
   const [destQuery, setDestQuery] = useState('');
   const [destShowAll, setDestShowAll] = useState(false);
-  const [addMetaOpen, setAddMetaOpen] = useState(false);
-  const [partnerQuery, setPartnerQuery] = useState('');
   const [stopsOpen, setStopsOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
-  const [offers, setOffers] = useState<OfferRow[]>([]);
-  const [offersLoading, setOffersLoading] = useState(false);
-  const [editingLegId, setEditingLegId] = useState<string | null>(null);
   const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(() =>
     placeFromIata('MXP')
   );
@@ -233,18 +223,12 @@ export function OrganizzaFlow({
   );
   const [originText, setOriginText] = useState('Milano Malpensa (MXP)');
   const [returnText, setReturnText] = useState('Milano Malpensa (MXP)');
-  const [searchTimingMs, setSearchTimingMs] = useState<{
-    coldMs: number | null;
-    warmMs: number | null;
-    calls: number;
-  }>({ coldMs: null, warmMs: null, calls: 0 });
 
   useEffect(() => {
     const stored = loadDraft();
     const resume = searchParams.get('ripresa') === '1';
     if (stored) {
       setDraft(stored.draft);
-      setAddMetaOpen(isMultiCountryDraft(stored.draft));
       setStep(
         resume && stored.draft.selectedFlight ? 'itinerario' : stored.step
       );
@@ -313,23 +297,10 @@ export function OrganizzaFlow({
     ? filteredDests
     : filteredDests.slice(0, DEST_PREVIEW);
 
-  const partnerSuggestions = useMemo(() => {
-    if (!draft.slug) return [];
-    return suggestPartnersFor(draft.slug, published);
-  }, [draft.slug, published]);
-
-  const partnerSearchHits = useMemo(() => {
-    const q = partnerQuery.trim().toLowerCase();
-    if (!q || !draft.slug) return [];
-    return published.filter(
-      (d) =>
-        d.slug !== draft.slug &&
-        !(draft.slugs ?? []).includes(d.slug) &&
-        (d.name.toLowerCase().includes(q) ||
-          d.slug.includes(q) ||
-          d.vibe.toLowerCase().includes(q))
-    );
-  }, [partnerQuery, published, draft.slug, draft.slugs]);
+  const selectedSlugs = useMemo(() => {
+    if (draft.slugs && draft.slugs.length > 0) return draft.slugs;
+    return draft.slug ? [draft.slug] : [];
+  }, [draft.slug, draft.slugs]);
 
   const multiPlan = useMemo(() => {
     if (!isMultiCountryDraft(draft) || !draft.slugs || !draft.durationDays) return null;
@@ -366,16 +337,6 @@ export function OrganizzaFlow({
       ? draft.departureIata
       : destIata;
 
-  const recommended = useMemo(() => {
-    const scored: ScoredFlightInput[] = offers.map((o) => ({
-      id: o.id,
-      price: o.price,
-      stops: o.stops,
-      durationMinutes: o.durationMinutes,
-    }));
-    return pickRecommendedFlights(scored);
-  }, [offers]);
-
   const tripType = tripTypeFromDraft(draft);
 
   function setTripType(t: OrganizzaTripType) {
@@ -387,82 +348,77 @@ export function OrganizzaFlow({
         domesticPlan: null,
         selectedFlight: null,
       });
-    } else if (t === 'roundtrip') {
-      update({
-        tripType: 'roundtrip',
-        returnHome: true,
-        flightPlan: null,
-        domesticPlan: null,
-        selectedFlight: null,
-      });
     } else {
       update({
-        tripType: 'multi',
+        tripType: selectedSlugs.length >= 2 ? 'multi' : 'roundtrip',
         returnHome: true,
         flightPlan: null,
         domesticPlan: null,
         selectedFlight: null,
       });
-      setAddMetaOpen(true);
     }
   }
 
-  function selectPrimary(dest: DestCard) {
-    const hub = getMaster(dest.slug)?.hubs[0] ?? null;
+  function applyDestinationList(nextSlugs: string[]) {
+    if (nextSlugs.length === 0) {
+      update({
+        slug: null,
+        slugs: null,
+        arrivalIata: null,
+        departureIata: null,
+        tripType: draft.returnHome ? 'roundtrip' : 'oneway',
+        selectedFlight: null,
+        flightPlan: null,
+        domesticPlan: null,
+      });
+      return;
+    }
+    if (nextSlugs.length === 1) {
+      const slug = nextSlugs[0]!;
+      const hub = getMaster(slug)?.hubs[0] ?? null;
+      update({
+        slug,
+        slugs: null,
+        arrivalIata: hub,
+        departureIata: hub,
+        tripType: draft.returnHome ? 'roundtrip' : 'oneway',
+        originIata: draft.originIata ?? 'MXP',
+        homeReturnIata: draft.homeReturnIata ?? draft.originIata ?? 'MXP',
+        selectedFlight: null,
+        flightPlan: null,
+        domesticPlan: null,
+      });
+      return;
+    }
+    const hubs = multiCountryGateHubs(nextSlugs);
     update({
-      slug: dest.slug,
-      slugs: tripType === 'multi' ? draft.slugs : null,
-      arrivalIata: hub,
-      departureIata: hub,
+      slug: nextSlugs[0]!,
+      slugs: nextSlugs,
+      tripType: 'multi',
+      arrivalIata: hubs.arrivalIata,
+      departureIata: hubs.departureIata,
       originIata: draft.originIata ?? 'MXP',
       homeReturnIata: draft.homeReturnIata ?? draft.originIata ?? 'MXP',
       selectedFlight: null,
       flightPlan: null,
       domesticPlan: null,
     });
-    setPartnerQuery('');
-    setEditingLegId(null);
   }
 
-  function addPartner(slug: string) {
-    if (!draft.slug || slug === draft.slug) return;
-    const slugs = [draft.slug, slug];
-    const curated = isCuratedMultiSelection(slugs);
-    const pairHubs = curated
-      ? combineMultiCountryPlan({ slugs, tripDays: Math.max(draft.durationDays ?? 14, 10) })
-      : null;
-    update({
-      slugs,
-      slug: slugs[0],
-      tripType: 'multi',
-      selectedFlight: null,
-      flightPlan: null,
-      domesticPlan: null,
-      arrivalIata:
-        pairHubs && pairHubs.ok
-          ? pairHubs.arrivalIata
-          : getMaster(slugs[0])?.hubs[0] ?? null,
-      departureIata:
-        pairHubs && pairHubs.ok
-          ? pairHubs.departureIata
-          : getMaster(slugs[1])?.hubs[0] ?? null,
-    });
-    setAddMetaOpen(true);
-    setPartnerQuery('');
-    setEditingLegId(null);
+  function toggleDestination(dest: DestCard) {
+    const current = [...selectedSlugs];
+    const idx = current.indexOf(dest.slug);
+    const next =
+      idx >= 0 ? current.filter((s) => s !== dest.slug) : [...current, dest.slug];
+    applyDestinationList(next);
   }
 
-  function clearPartner() {
-    if (!draft.slug) return;
-    update({
-      slugs: null,
-      tripType: draft.returnHome ? 'roundtrip' : 'oneway',
-      arrivalIata: getMaster(draft.slug)?.hubs[0] ?? null,
-      departureIata: getMaster(draft.slug)?.hubs[0] ?? null,
-      selectedFlight: null,
-      flightPlan: null,
-      domesticPlan: null,
-    });
+  function moveSlug(from: number, to: number) {
+    if (to < 0 || to >= selectedSlugs.length) return;
+    const next = [...selectedSlugs];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item!);
+    applyDestinationList(next);
   }
 
   function setDates(from: string, to: string) {
@@ -507,132 +463,26 @@ export function OrganizzaFlow({
   function ensureMainPlan(base?: OrganizzaDraft): TripFlightPlan {
     const d = base ?? draft;
     if (d.flightPlan && d.flightPlan.legs.length > 0) {
-      // Strip accidental domestics from main plan
-      const mainOnly = {
+      return {
         ...d.flightPlan,
         legs: d.flightPlan.legs.filter(
           (l) => l.kind !== 'domestic' && l.kind !== 'internal'
         ),
       };
-      return mainOnly;
     }
     return buildMainFlightPlanForDraft(d, multiPlan);
-  }
-
-  async function fetchOffersForQuery(input: {
-    origin: string;
-    destination: string;
-    date: string;
-    tripType: 'oneway' | 'roundtrip';
-    returnDate?: string | null;
-    adults: number;
-    signal?: AbortSignal;
-  }): Promise<OfferRow[]> {
-    const key = flightOfferCacheKey(input);
-    const cached = readFlightOfferCache(key);
-    if (cached) {
-      setSearchTimingMs((t) => ({ ...t, warmMs: 0 }));
-      return cached.offers;
-    }
-    const existing = getInflightOfferSearch(key);
-    if (existing) return existing;
-
-    const started = performance.now();
-    const params = new URLSearchParams({
-      originIata: input.origin,
-      destination: input.destination,
-      startDate: input.date,
-      tripType: input.tripType,
-      adults: String(input.adults),
-      currency: 'EUR',
-    });
-    if (input.tripType === 'roundtrip' && input.returnDate) {
-      params.set('endDate', input.returnDate);
-    }
-
-    const promise = (async () => {
-      const res = await fetch(`/api/liteapi/flights/search?${params}`, {
-        credentials: 'same-origin',
-        signal: input.signal,
-      });
-      const data = (await res.json()) as { offers?: OfferRow[]; error?: string };
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Ricerca voli non riuscita.');
-      }
-      const list = data.offers ?? [];
-      writeFlightOfferCache(key, list);
-      const elapsed = Math.round(performance.now() - started);
-      setSearchTimingMs((t) => ({
-        coldMs: t.coldMs == null ? elapsed : t.coldMs,
-        warmMs: t.coldMs != null ? elapsed : t.warmMs,
-        calls: t.calls + 1,
-      }));
-      return list;
-    })();
-
-    setInflightOfferSearch(key, promise);
-    return promise;
-  }
-
-  async function loadOffersForLeg(leg: TripFlightLeg, plan: TripFlightPlan) {
-    setOffersLoading(true);
-    setOffers([]);
-    const adults = Math.min(9, Math.max(1, leg.passengers || draft.travelers));
-    const mode = providerSearchModeForPlan(plan);
-    try {
-      let list: OfferRow[] = [];
-      if (
-        mode.canUseClosedRoundtrip &&
-        (leg.kind === 'outbound' || leg.kind === 'return') &&
-        plan.legs.filter((l) => l.kind !== 'domestic' && l.kind !== 'internal').length === 2 &&
-        draft.dateTo
-      ) {
-        const main = plan.legs.filter(
-          (l) => l.kind !== 'domestic' && l.kind !== 'internal'
-        );
-        list = await fetchOffersForQuery({
-          origin: main[0]!.originIata,
-          destination: main[0]!.destinationIata,
-          date: main[0]!.date,
-          tripType: 'roundtrip',
-          returnDate: main[1]!.date,
-          adults,
-        });
-      } else {
-        list = await fetchOffersForQuery({
-          origin: leg.originIata,
-          destination: leg.destinationIata,
-          date: leg.date,
-          tripType: 'oneway',
-          adults,
-        });
-      }
-      setOffers(list);
-    } catch (err) {
-      if ((err as Error)?.name === 'AbortError') return;
-      toast.error(
-        /schema|column|PGRST/i.test(String((err as Error)?.message ?? ''))
-          ? 'Ricerca voli non riuscita. Riprova tra poco.'
-          : (err as Error)?.message ?? 'Ricerca voli non riuscita. Riprova.'
-      );
-    } finally {
-      setOffersLoading(false);
-    }
   }
 
   useEffect(() => {
     if (step !== 'voli' || !draft.dateFrom) return;
     const plan = ensureMainPlan();
-    if (!draft.flightPlan || draft.flightPlan.legs.some((l) => l.kind === 'domestic')) {
+    const needsRebuild =
+      !draft.flightPlan ||
+      draft.flightPlan.legs.some((l) => l.kind === 'domestic') ||
+      (isMultiCountryDraft(draft) &&
+        !draft.flightPlan.legs.some((l) => l.kind === 'intercountry'));
+    if (needsRebuild) {
       setFlightPlan(plan);
-    }
-    const target =
-      (editingLegId && plan.legs.find((l) => l.id === editingLegId)) ||
-      plan.legs.find((l) => l.status === 'empty' || l.status === 'stale') ||
-      plan.legs[0];
-    if (target) {
-      if (!editingLegId) setEditingLegId(target.id);
-      void loadOffersForLeg(target, plan);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -644,15 +494,14 @@ export function OrganizzaFlow({
     draft.originIata,
     draft.homeReturnIata,
     draft.returnHome,
+    draft.slugs,
     draft.travelers,
-    editingLegId,
   ]);
 
   useEffect(() => {
     if (step !== 'itinerario') return;
     const main = ensureMainPlan();
     const domestic = buildDomesticPlanForDraft(draft, multiPlan, main);
-    // Preserve prior domestic selections when hubs unchanged
     if (draft.domesticPlan?.legs.length) {
       const sameShape =
         draft.domesticPlan.legs.length === domestic.legs.length &&
@@ -667,138 +516,20 @@ export function OrganizzaFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, draft.flightPlan, draft.arrivalIata, draft.departureIata]);
 
-  function pickFlight(kind: OrganizzaSelectedFlight['pickKind'], offerId: string) {
-    const offer = offers.find((o) => o.id === offerId);
-    const plan = ensureMainPlan();
-    if (!offer || !editingLegId) return;
-    const leg = plan.legs.find((l) => l.id === editingLegId);
-    if (!leg) return;
-    const mode = providerSearchModeForPlan(plan);
-    const snapshot = {
-      offerId: offer.id,
-      price: offer.price,
-      currency: offer.currency ?? 'EUR',
-      originIata: offer.origin ?? leg.originIata,
-      destinationIata: offer.destination ?? leg.destinationIata,
-      departureAt: offer.departureAt ?? `${leg.date}T10:00:00`,
-      arrivalAt: offer.arrivalAt ?? `${leg.date}T22:00:00`,
-      stops: offer.stops,
-      durationMinutes: offer.durationMinutes,
-      airline: offer.airline ?? null,
-      capturedAt: Date.now(),
-    };
-
-    let next = selectOfferOnLeg(plan, editingLegId, snapshot);
-
-    if (
-      mode.canUseClosedRoundtrip &&
-      leg.kind === 'outbound' &&
-      offer.returnDepartureAt &&
-      next.legs.find((l) => l.kind === 'return' || l.kind === 'openjaw_return')
-    ) {
-      const ret = next.legs.find(
-        (l) => l.kind === 'return' || l.kind === 'openjaw_return'
-      )!;
-      next = selectOfferOnLeg(next, ret.id, {
-        offerId: `${offer.id}:return`,
-        price: 0,
-        currency: offer.currency ?? 'EUR',
-        originIata: ret.originIata,
-        destinationIata: ret.destinationIata,
-        departureAt: offer.returnDepartureAt,
-        arrivalAt: offer.returnArrivalAt ?? offer.returnDepartureAt,
-        stops: offer.stops,
-        durationMinutes: offer.durationMinutes,
-        airline: offer.airline ?? null,
-        capturedAt: Date.now(),
-      });
-      next = {
-        ...next,
-        legs: next.legs.map((l) =>
-          l.id === editingLegId
-            ? {
-                ...l,
-                offer: l.offer ? { ...l.offer, price: offer.price } : l.offer,
-                labelIt: `${l.labelIt} · ${
-                  kind === 'cheapest'
-                    ? 'Più conveniente'
-                    : kind === 'fastest'
-                      ? 'Più veloce'
-                      : kind === 'balanced'
-                        ? 'Equilibrato'
-                        : 'Scelta tua'
-                }`,
-              }
-            : l.kind === 'return' || l.kind === 'openjaw_return'
-              ? { ...l, labelIt: `${l.labelIt} · incluso nell’A/R` }
-              : l
-        ),
-      };
+  function applyLegDayOffer(
+    legId: string,
+    date: string,
+    offer: TripFlightOfferSnapshot | null
+  ) {
+    let plan = ensureMainPlan();
+    plan = updateLegFields(plan, legId, { date });
+    if (offer) {
+      plan = selectOfferOnLeg(plan, legId, offer);
+    } else {
+      plan = clearLegOffer(plan, legId);
     }
-
-    setFlightPlan(next);
+    setFlightPlan(plan);
     update({ domesticPlan: null });
-    const nextEmpty = next.legs.find(
-      (l) =>
-        l.id !== editingLegId &&
-        (l.status === 'empty' || l.status === 'stale')
-    );
-    if (nextEmpty) setEditingLegId(nextEmpty.id);
-  }
-
-  function skipFaresForNow() {
-    if (!draft.dateFrom) return;
-    const plan = ensureMainPlan();
-    let next = plan;
-    for (const leg of plan.legs) {
-      if (leg.status === 'empty' || leg.status === 'estimated') {
-        next = selectOfferOnLeg(next, leg.id, {
-          offerId: `manual-skip-${leg.id}`,
-          price: 0,
-          currency: 'EUR',
-          originIata: leg.originIata,
-          destinationIata: leg.destinationIata,
-          departureAt: `${leg.date}T10:00:00`,
-          arrivalAt: `${leg.date}T22:00:00`,
-          stops: 0,
-          durationMinutes: 0,
-          airline: null,
-          capturedAt: Date.now(),
-        });
-        next = {
-          ...next,
-          legs: next.legs.map((l) =>
-            l.id === leg.id
-              ? {
-                  ...l,
-                  status: 'estimated' as const,
-                  notesIt:
-                    'Tariffa da scegliere dopo — nessuna offerta fornitori selezionata.',
-                }
-              : l
-          ),
-        };
-      }
-    }
-    update({
-      flightPlan: next,
-      selectedFlight: {
-        offerId: 'manual-skip',
-        labelIt: 'Da scegliere dopo',
-        price: 0,
-        currency: 'EUR',
-        originIata: draft.originIata ?? 'MXP',
-        destinationIata: destIata,
-        returnOriginIata,
-        departureAt: `${draft.dateFrom}T10:00:00`,
-        arrivalAt: `${draft.dateFrom}T22:00:00`,
-        returnDepartureAt: draft.dateTo,
-        returnArrivalAt: null,
-        stops: 0,
-        durationMinutes: 0,
-        pickKind: 'manual',
-      },
-    });
   }
 
   function createTrip() {
@@ -871,20 +602,20 @@ export function OrganizzaFlow({
       : null);
 
   const reviewPlan = mergeMainAndDomestic(draft.flightPlan, draft.domesticPlan);
+  const mainLegs = (draft.flightPlan?.legs ?? []).filter(
+    (l) => l.kind !== 'domestic' && l.kind !== 'internal'
+  );
 
   const canContinue =
     (step === 'imposta' && isImpostaComplete(draft)) ||
-    (step === 'voli' &&
-      (hasMainFlightSelection(draft) ||
-        flightPlanAllowsContinue(draft.flightPlan))) ||
+    (step === 'voli' && flightPlanAllowsContinue(draft.flightPlan)) ||
     step === 'itinerario';
 
-  // Progressive reveal: dest → airports → dates → company (all after slug).
-  // originIata defaults to MXP — do not block dates on airport autocomplete state.
-  const showDestSection = true;
   const showOriginSection = Boolean(draft.slug);
   const showDatesSection = Boolean(draft.slug);
   const showCompanySection = Boolean(draft.slug && draft.dateFrom && draft.dateTo);
+  const unverifiedMulti =
+    isMultiCountryDraft(draft) && !isCuratedMultiSelection(draft.slugs);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
@@ -950,17 +681,15 @@ export function OrganizzaFlow({
                   Imposta il viaggio
                 </h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  Un solo schermo: destinazione, partenza, date e compagnia.
+                  Destinazioni, partenza, date e compagnia — un solo schermo.
                 </p>
               </div>
 
-              {/* Trip type — compact classic search control */}
               <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo di viaggio">
                 {(
                   [
                     { id: 'roundtrip' as const, label: 'Andata e ritorno' },
                     { id: 'oneway' as const, label: 'Solo andata' },
-                    { id: 'multi' as const, label: 'Più tratte' },
                   ] as const
                 ).map((opt) => (
                   <button
@@ -969,7 +698,7 @@ export function OrganizzaFlow({
                     onClick={() => setTripType(opt.id)}
                     className={cn(
                       'rounded-full border px-3.5 py-1.5 text-xs font-bold transition',
-                      tripType === opt.id
+                      (opt.id === 'oneway' ? !draft.returnHome : draft.returnHome)
                         ? 'border-primary bg-primary text-white'
                         : 'border-[var(--color-border)] bg-[var(--color-tint)]/60 text-[var(--color-text)]'
                     )}
@@ -980,173 +709,102 @@ export function OrganizzaFlow({
                 ))}
               </div>
 
-              {showDestSection ? (
-                <section className="space-y-3">
-                  <h3 className="text-sm font-bold text-[var(--color-text)]">
-                    Scegli la destinazione
-                  </h3>
-                  <label className="relative block">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="search"
-                      value={destQuery}
-                      onChange={(e) => {
-                        setDestQuery(e.target.value);
-                        setDestShowAll(false);
-                      }}
-                      placeholder="Cerca destinazione…"
-                      className="w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
-                      data-testid="dest-search"
-                    />
-                  </label>
+              <section className="space-y-3">
+                <h3 className="text-sm font-bold text-[var(--color-text)]">
+                  Scegli la destinazione
+                </h3>
+                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  Tocca più paesi per un viaggio multi-meta (ordine 1, 2, 3…). Tocca di
+                  nuovo per togliere.
+                </p>
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="search"
+                    value={destQuery}
+                    onChange={(e) => {
+                      setDestQuery(e.target.value);
+                      setDestShowAll(false);
+                    }}
+                    placeholder="Cerca destinazione…"
+                    className="w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
+                    data-testid="dest-search"
+                  />
+                </label>
 
-                  {draft.slug ? (
-                    <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--color-tint)] px-3 py-2 text-sm">
+                {selectedSlugs.length > 0 ? (
+                  <div className="space-y-2 rounded-xl bg-[var(--color-tint)] px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="font-semibold">
-                        {isMultiCountryDraft(draft) && draft.slugs
-                          ? draft.slugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')
-                          : getMaster(draft.slug)?.nameIt ?? draft.slug}
+                        {selectedSlugs
+                          .map((s) => getMaster(s)?.nameIt ?? s)
+                          .join(' → ')}
                       </span>
                       <button
                         type="button"
                         className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary"
-                        onClick={() => {
-                          update({
-                            slug: null,
-                            slugs: null,
-                            arrivalIata: null,
-                            departureIata: null,
-                            selectedFlight: null,
-                            flightPlan: null,
-                            domesticPlan: null,
-                          });
-                          setAddMetaOpen(false);
-                        }}
+                        onClick={() => applyDestinationList([])}
                       >
-                        <X className="h-3.5 w-3.5" /> Cambia
+                        <X className="h-3.5 w-3.5" /> Svuota
                       </button>
                     </div>
-                  ) : null}
-
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {visibleDests.map((dest) => {
-                      const selected =
-                        !isMultiCountryDraft(draft) && draft.slug === dest.slug;
-                      return (
-                        <DestPickCard
-                          key={dest.slug}
-                          dest={dest}
-                          selected={selected}
-                          onSelect={() => selectPrimary(dest)}
-                        />
-                      );
-                    })}
+                    {selectedSlugs.length >= 2 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedSlugs.map((s, i) => (
+                          <span
+                            key={s}
+                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white px-2 py-1 text-[11px] font-semibold"
+                          >
+                            {i + 1}. {getMaster(s)?.nameIt ?? s}
+                            <button
+                              type="button"
+                              className="text-slate-400 hover:text-primary"
+                              aria-label="Sposta avanti"
+                              disabled={i >= selectedSlugs.length - 1}
+                              onClick={() => moveSlug(i, i + 1)}
+                            >
+                              →
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {unverifiedMulti ? (
+                      <p
+                        className="text-[11px] text-amber-900"
+                        data-testid="unverified-combo-note"
+                      >
+                        Collegamenti da verificare tra i paesi selezionati.
+                      </p>
+                    ) : null}
                   </div>
-                  {!destShowAll && filteredDests.length > DEST_PREVIEW ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="min-h-10 w-full rounded-[10px]"
-                      onClick={() => setDestShowAll(true)}
-                    >
-                      Mostra di più ({filteredDests.length - DEST_PREVIEW})
-                    </Button>
-                  ) : null}
+                ) : null}
 
-                  {draft.slug && (tripType === 'multi' || addMetaOpen || isMultiCountryDraft(draft)) ? (
-                    <div className="space-y-3 rounded-xl border border-[var(--color-border)] p-3">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-bold"
-                        onClick={() => setAddMetaOpen((v) => !v)}
-                      >
-                        Aggiungi un&apos;altra meta
-                        {addMetaOpen ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </button>
-                      {addMetaOpen ? (
-                        <div className="space-y-3">
-                          {isMultiCountryDraft(draft) ? (
-                            <div className="flex flex-wrap items-center gap-2 text-xs">
-                              <span className="rounded-full bg-primary/10 px-2 py-1 font-semibold text-primary">
-                                {draft.slugs?.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')}
-                              </span>
-                              <button
-                                type="button"
-                                className="font-semibold text-primary underline-offset-2 hover:underline"
-                                onClick={clearPartner}
-                              >
-                                Rimuovi seconda meta
-                              </button>
-                            </div>
-                          ) : null}
-                          {partnerSuggestions.length > 0 ? (
-                            <div className="grid gap-2 sm:grid-cols-2">
-                              {partnerSuggestions.map((p) => (
-                                <button
-                                  key={p.slug}
-                                  type="button"
-                                  onClick={() => addPartner(p.slug)}
-                                  className={cn(
-                                    'rounded-xl border px-3 py-2.5 text-left',
-                                    draft.slugs?.[1] === p.slug
-                                      ? 'border-primary ring-2 ring-primary/20'
-                                      : 'border-[var(--color-border)]'
-                                  )}
-                                >
-                                  <p className="text-sm font-semibold">
-                                    {p.emoji} {p.name}
-                                    {p.kind === 'curated' ? (
-                                      <span className="ml-1 text-[10px] font-bold uppercase text-emerald-700">
-                                        verificata
-                                      </span>
-                                    ) : (
-                                      <span className="ml-1 text-[10px] font-bold uppercase text-amber-700">
-                                        da verificare
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
-                                    {p.blurbIt}
-                                  </p>
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-                          <label className="relative block">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="search"
-                              value={partnerQuery}
-                              onChange={(e) => setPartnerQuery(e.target.value)}
-                              placeholder="Cerca un’altra meta…"
-                              className="w-full rounded-xl border border-[var(--color-border)] py-2 pl-10 pr-3 text-sm"
-                            />
-                          </label>
-                          {partnerSearchHits.length > 0 ? (
-                            <ul className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-[var(--color-border)] p-2">
-                              {partnerSearchHits.slice(0, 8).map((d) => (
-                                <li key={d.slug}>
-                                  <button
-                                    type="button"
-                                    className="w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-[var(--color-tint)]"
-                                    onClick={() => addPartner(d.slug)}
-                                  >
-                                    {d.emoji} {d.name}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </section>
-              ) : null}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {visibleDests.map((dest) => {
+                    const orderIdx = selectedSlugs.indexOf(dest.slug);
+                    return (
+                      <DestPickCard
+                        key={dest.slug}
+                        dest={dest}
+                        selected={orderIdx >= 0}
+                        orderNumber={orderIdx >= 0 ? orderIdx + 1 : null}
+                        onSelect={() => toggleDestination(dest)}
+                      />
+                    );
+                  })}
+                </div>
+                {!destShowAll && filteredDests.length > DEST_PREVIEW ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-10 w-full rounded-[10px]"
+                    onClick={() => setDestShowAll(true)}
+                  >
+                    Mostra di più ({filteredDests.length - DEST_PREVIEW})
+                  </Button>
+                ) : null}
+              </section>
 
               {showOriginSection ? (
                 <section
@@ -1224,10 +882,6 @@ export function OrganizzaFlow({
                         kinds={['airport', 'city']}
                         placeholder="Stesso di partenza o diverso…"
                       />
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">
-                        Puoi rientrare in un altro aeroporto (es. MXP andata, FCO
-                        ritorno).
-                      </p>
                     </div>
                   ) : (
                     <p className="text-xs text-[var(--color-text-secondary)]">
@@ -1367,18 +1021,17 @@ export function OrganizzaFlow({
                   Scegli i voli principali
                 </h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  Andata
-                  {isMultiCountryDraft(draft) ? ', tratta tra paesi' : ''}
-                  {draft.returnHome ? ' e rientro' : ''}. Nessuna mappa qui — i
-                  domestici arrivano con l’itinerario.
+                  Una striscia per tratta: tocca un giorno per selezionare il volo.
+                  {isMultiCountryDraft(draft)
+                    ? ` ${selectedSlugs.length} paesi → ${mainLegs.length} tratte.`
+                    : ''}
                 </p>
               </div>
 
               <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-tint)]/50 px-3 py-2.5 text-xs">
                 <p className="font-bold text-[var(--color-text)]">
-                  {isMultiCountryDraft(draft) && draft.slugs
-                    ? draft.slugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')
-                    : getMaster(draft.slug ?? '')?.nameIt ?? draft.slug}
+                  {selectedSlugs.map((s) => getMaster(s)?.nameIt ?? s).join(' → ') ||
+                    draft.slug}
                 </p>
                 <p className="text-[var(--color-text-secondary)]">
                   {draft.originIata} → {destIata}
@@ -1392,139 +1045,31 @@ export function OrganizzaFlow({
                 </p>
               </div>
 
-              {draft.dateFrom ? (
-                <SmartFlightCalendar
-                  labelIt="Partenza · giorni vicini"
-                  originIata={draft.originIata ?? 'MXP'}
-                  destinationIata={destIata}
-                  value={draft.dateFrom}
-                  tripType="oneway"
-                  onChange={(iso) => {
-                    const to =
-                      draft.dateTo && draft.dateTo >= iso ? draft.dateTo : iso;
-                    setDates(iso, to);
-                  }}
-                />
-              ) : null}
-              {draft.dateTo && draft.returnHome ? (
-                <SmartFlightCalendar
-                  labelIt={`Rientro da ${returnOriginIata} · giorni vicini`}
-                  originIata={returnOriginIata}
-                  destinationIata={draft.homeReturnIata ?? draft.originIata ?? 'MXP'}
-                  value={draft.dateTo}
-                  tripType="oneway"
-                  minDate={draft.dateFrom}
-                  onChange={(iso) => {
-                    if (!draft.dateFrom || iso < draft.dateFrom) return;
-                    setDates(draft.dateFrom, iso);
-                  }}
-                />
-              ) : null}
-
-              {draft.flightPlan ? (
-                <FlightLegsPanel
-                  plan={draft.flightPlan}
-                  onChange={(plan) => {
-                    setFlightPlan(plan);
-                    update({ domesticPlan: null });
-                    const focus =
-                      plan.legs.find((l) => l.id === editingLegId) ??
-                      plan.legs.find((l) => l.status === 'empty' || l.status === 'stale') ??
-                      plan.legs[0];
-                    if (focus) setEditingLegId(focus.id);
-                  }}
-                  onEditLeg={(leg) => {
-                    setEditingLegId(leg.id);
-                    if (draft.flightPlan) void loadOffersForLeg(leg, draft.flightPlan);
-                  }}
-                />
-              ) : null}
-
-              <div className="space-y-3 rounded-2xl border border-[var(--color-border)] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-bold">
-                      Offerte ·{' '}
-                      {draft.flightPlan?.legs.find((l) => l.id === editingLegId)
-                        ?.labelIt ?? 'tratta'}
-                    </p>
-                    <p className="text-[11px] text-[var(--color-text-secondary)]">
-                      Date richieste prima · risultati progressivi
-                      {searchTimingMs.calls > 0
-                        ? ` · ${searchTimingMs.calls} chiamate` +
-                          (searchTimingMs.coldMs != null
-                            ? ` · cold ${searchTimingMs.coldMs}ms`
-                            : '') +
-                          (searchTimingMs.warmMs != null
-                            ? ` · warm ${searchTimingMs.warmMs}ms`
-                            : '')
-                        : ''}
-                    </p>
-                  </div>
-                  {offersLoading ? (
-                    <p className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Cerchiamo…
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-3">
-                  {recommended.map((r) => {
-                    const offer = offers.find((o) => o.id === r.offerId);
-                    if (!offer) return null;
-                    const activeLeg = draft.flightPlan?.legs.find(
-                      (l) => l.id === editingLegId
-                    );
-                    const active =
-                      activeLeg?.offer?.offerId === offer.id ||
-                      activeLeg?.offer?.offerId === `${offer.id}:return`;
-                    return (
-                      <button
-                        key={r.kind}
-                        type="button"
-                        onClick={() => pickFlight(r.kind, offer.id)}
-                        className={cn(
-                          'w-full rounded-2xl border px-4 py-3 text-left transition',
-                          active
-                            ? 'border-primary bg-primary/[0.03] ring-2 ring-primary/20'
-                            : 'border-[var(--color-border)] hover:border-primary/40'
-                        )}
-                        data-testid={`flight-offer-${r.kind}`}
-                      >
-                        <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                          {r.labelIt}
-                        </p>
-                        <p className="mt-1 text-lg font-extrabold">
-                          {formatEuro(offer.price, { approx: false }) ??
-                            `${offer.price} €`}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-secondary)]">
-                          {offer.stops === 0 ? 'Diretto' : `${offer.stops} scalo/i`} ·{' '}
-                          {Math.round(offer.durationMinutes / 60)} h
-                          {offer.origin && offer.destination
-                            ? ` · ${offer.origin}→${offer.destination}`
-                            : ''}
-                        </p>
-                      </button>
-                    );
-                  })}
-                  {!offersLoading && recommended.length === 0 ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-[var(--color-text-secondary)]">
-                        Nessuna tariffa per questa tratta. Modifica date/aeroporti oppure
-                        continua senza tariffa ora.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="min-h-11 rounded-[10px]"
-                        onClick={skipFaresForNow}
-                      >
-                        Continua senza tariffa ora
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
+              <div className="space-y-4" data-testid="leg-calendar-strips">
+                {mainLegs.map((leg, idx) => (
+                  <LegFlightStrip
+                    key={leg.id}
+                    leg={leg}
+                    adults={Math.min(9, Math.max(1, draft.travelers))}
+                    minDate={
+                      idx === 0
+                        ? draft.dateFrom
+                        : mainLegs[idx - 1]?.date ?? draft.dateFrom
+                    }
+                    onDateAndOffer={(date, offer) =>
+                      applyLegDayOffer(leg.id, date, offer)
+                    }
+                  />
+                ))}
               </div>
+
+              <SeparateTicketsNotice />
+
+              {!flightPlanAllowsContinue(draft.flightPlan) ? (
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  Continua si attiva quando ogni tratta ha un volo selezionato.
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -1536,16 +1081,14 @@ export function OrganizzaFlow({
                   Itinerario e mappa
                 </h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  Giorni utili dai voli scelti. Qui compaiono eventuali voli domestici
-                  e la mappa.
+                  Qui la mappa e gli eventuali voli domestici richiesti dall’itinerario.
                 </p>
               </div>
 
               <div className="rounded-2xl bg-[var(--color-tint)] px-4 py-3 text-sm">
                 <p className="font-bold">
-                  {isMultiCountryDraft(draft) && draft.slugs
-                    ? draft.slugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')
-                    : getMaster(draft.slug ?? '')?.nameIt ?? draft.slug}
+                  {selectedSlugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ') ||
+                    draft.slug}
                 </p>
                 <p className="text-[var(--color-text-secondary)]">
                   {draft.dateFrom && draft.dateTo
@@ -1579,18 +1122,13 @@ export function OrganizzaFlow({
                 <div className="space-y-2 rounded-2xl border border-[var(--color-border)] p-4">
                   <h3 className="text-sm font-bold">Voli domestici suggeriti</h3>
                   <p className="text-[11px] text-[var(--color-text-secondary)]">
-                    Solo se l’itinerario lo richiede (es. HAN→SGN). Non sono tratte tra
-                    paesi: quelle le hai già nei voli principali.
+                    Solo se l’itinerario lo richiede (es. HAN→SGN). Le tratte tra paesi
+                    sono già nei voli principali.
                   </p>
                   <FlightLegsPanel
+                    compact
                     plan={draft.domesticPlan}
                     onChange={(plan) => update({ domesticPlan: plan })}
-                    onEditLeg={(leg) => {
-                      // Load offers for domestic on demand
-                      setEditingLegId(leg.id);
-                      void loadOffersForLeg(leg, draft.domesticPlan!);
-                      toast.message('Scegli un’offerta sotto per questo volo domestico.');
-                    }}
                   />
                 </div>
               ) : (
@@ -1663,6 +1201,8 @@ export function OrganizzaFlow({
               {reviewPlan ? (
                 <FlightReviewCart plan={reviewPlan} travelers={draft.travelers} />
               ) : null}
+
+              <SeparateTicketsNotice />
 
               <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50">
                 <button
@@ -1748,23 +1288,15 @@ export function OrganizzaFlow({
                         );
                         return;
                       }
-                      // Build main plan when entering voli
                       const plan = buildMainFlightPlanForDraft(draft, multiPlan);
-                      update({
-                        flightPlan: plan,
-                        domesticPlan: null,
-                      });
-                      setEditingLegId(plan.legs[0]?.id ?? null);
+                      update({ flightPlan: plan, domesticPlan: null });
                       setStep('voli');
                       return;
                     }
                     if (step === 'voli') {
-                      if (
-                        !hasMainFlightSelection(draft) &&
-                        !flightPlanAllowsContinue(draft.flightPlan)
-                      ) {
+                      if (!flightPlanAllowsContinue(draft.flightPlan)) {
                         toast.error(
-                          'Seleziona almeno i voli principali oppure continua senza tariffa.'
+                          'Seleziona un volo per ogni tratta (tocca un giorno sulla striscia).'
                         );
                         return;
                       }

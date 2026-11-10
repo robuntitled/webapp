@@ -121,16 +121,17 @@ export function isImpostaComplete(draft: OrganizzaDraft): boolean {
 }
 
 export function hasMainFlightSelection(draft: OrganizzaDraft): boolean {
-  if (draft.selectedFlight) return true;
-  return Boolean(
-    draft.flightPlan?.legs.some(
-      (l) =>
-        (l.kind === 'outbound' ||
-          l.kind === 'return' ||
-          l.kind === 'openjaw_return' ||
-          l.kind === 'intercountry') &&
-        (l.status === 'selected' || l.status === 'stale' || l.offer != null)
-    )
+  const plan = draft.flightPlan;
+  if (!plan || plan.legs.length === 0) {
+    // Legacy single selectedFlight (pre multi-leg) — treat as complete only if set
+    return Boolean(draft.selectedFlight && draft.selectedFlight.offerId);
+  }
+  const required = plan.legs.filter(
+    (l) => l.kind !== 'domestic' && l.kind !== 'internal'
+  );
+  if (required.length === 0) return Boolean(draft.selectedFlight);
+  return required.every(
+    (l) => l.status === 'selected' || l.status === 'stale' || l.offer != null
   );
 }
 

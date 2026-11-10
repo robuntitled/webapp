@@ -19,6 +19,7 @@ import {
   type TripFlightLeg,
   type TripFlightPlan,
 } from '@/lib/travel/trip-flight-legs';
+import { buildIntercountryHops } from '@/lib/travel/intercountry-legs';
 
 function iatasFromNotes(notes: string): [string, string] | null {
   const matches = notes.match(/\b([A-Z]{3})\b/g);
@@ -40,7 +41,39 @@ function addDaysIso(iso: string, days: number): string {
   return new Date(t + days * 86400000).toISOString().slice(0, 10);
 }
 
-/** Inter-country hop(s) for multi-country — stage 2 main flights. */
+/** Inter-country hop(s) for multi-country — stage 2 main flights (N countries → N-1 hops). */
+export function intercountryLegsFromDraft(
+  draft: OrganizzaDraft,
+  multi: MultiCountryPlan | null
+): Array<{
+  originIata: string;
+  destinationIata: string;
+  date: string;
+  labelIt: string;
+  notesIt?: string;
+}> {
+  const slugs = draft.slugs?.length
+    ? draft.slugs
+    : multi?.ok
+      ? multi.orderedSlugs
+      : [];
+  if (!draft.dateFrom || !draft.dateTo || slugs.length < 2) return [];
+  const shareDays = multi?.ok ? multi.shares.map((s) => s.days) : undefined;
+  return buildIntercountryHops({
+    orderedSlugs: slugs,
+    dateFrom: draft.dateFrom,
+    dateTo: draft.dateTo,
+    shareDays,
+  }).map((h) => ({
+    originIata: h.originIata,
+    destinationIata: h.destinationIata,
+    date: h.date,
+    labelIt: h.labelIt,
+    notesIt: h.notesIt,
+  }));
+}
+
+/** @deprecated use intercountryLegsFromDraft */
 export function intercountryLegsFromMultiPlan(
   multi: MultiCountryPlan | null,
   dateFrom: string,
@@ -53,32 +86,18 @@ export function intercountryLegsFromMultiPlan(
   notesIt?: string;
 }> {
   if (!multi?.ok) return [];
-  // Only propose a flight leg when curated transfer is flight-like.
-  if (multi.transfer.mode !== 'internal_flight') return [];
-
-  const fromNotes = iatasFromNotes(multi.transfer.notesIt);
-  const fromMaster = getMaster(multi.transfer.fromSlug);
-  const toMaster = getMaster(multi.transfer.toSlug);
-  const origin =
-    fromNotes?.[0] ??
-    fromMaster?.hubs[fromMaster.hubs.length - 1] ??
-    multi.arrivalIata;
-  const destination =
-    fromNotes?.[1] ?? toMaster?.hubs[0] ?? multi.departureIata;
-
-  if (!origin || !destination || origin === destination) return [];
-
-  return [
-    {
-      originIata: origin,
-      destinationIata: destination,
-      date: midIso(dateFrom, dateTo),
-      labelIt: `Tra paesi ${origin} → ${destination}`,
-      notesIt:
-        multi.transfer.notesIt ||
-        'Tratta internazionale tra destinazioni — non è un volo domestico.',
-    },
-  ];
+  return buildIntercountryHops({
+    orderedSlugs: multi.orderedSlugs,
+    dateFrom,
+    dateTo,
+    shareDays: multi.shares.map((s) => s.days),
+  }).map((h) => ({
+    originIata: h.originIata,
+    destinationIata: h.destinationIata,
+    date: h.date,
+    labelIt: h.labelIt,
+    notesIt: h.notesIt,
+  }));
 }
 
 /** @deprecated alias — intercountry, not domestic */
@@ -232,9 +251,7 @@ export function buildMainFlightPlanForDraft(
   const returnHome = draft.returnHome !== false;
 
   const intercountry =
-    dateFrom && dateTo
-      ? intercountryLegsFromMultiPlan(multi, dateFrom, dateTo)
-      : [];
+    dateFrom && dateTo ? intercountryLegsFromDraft(draft, multi) : [];
 
   return buildDefaultTripFlightPlan({
     homeOriginIata: homeOrigin,

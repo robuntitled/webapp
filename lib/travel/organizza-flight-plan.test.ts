@@ -88,10 +88,51 @@ describe('organizza-flight-plan (intercountry vs domestic)', () => {
       'intercountry',
       'openjaw_return',
     ]);
+    expect(main.legs).toHaveLength(3);
     expect(main.legs.find((l) => l.kind === 'intercountry')?.labelIt).not.toMatch(
       /Domestico/i
     );
     expect(flightPlanAllowsContinue(main)).toBe(false);
+  });
+
+  it('3 countries → 4 main legs (outbound + 2 intercountry + return)', () => {
+    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
+      slug: 'vietnam',
+      slugs: ['vietnam', 'cambogia', 'thailandia'],
+      arrivalIata: 'HAN',
+      departureIata: 'BKK',
+      dateFrom: '2026-12-01',
+      dateTo: '2026-12-28',
+      returnHome: true,
+      originIata: 'MXP',
+      homeReturnIata: 'MXP',
+      travelers: 1,
+    });
+    const main = buildMainFlightPlanForDraft(draft, null);
+    expect(main.legs).toHaveLength(4);
+    expect(main.legs.map((l) => l.kind)).toEqual([
+      'outbound',
+      'intercountry',
+      'intercountry',
+      'openjaw_return',
+    ]);
+  });
+
+  it('2 countries no-return → 2 main legs (outbound + intercountry)', () => {
+    const draft = patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
+      slug: 'vietnam',
+      slugs: ['vietnam', 'cambogia'],
+      arrivalIata: 'HAN',
+      departureIata: 'REP',
+      dateFrom: '2026-12-10',
+      dateTo: '2026-12-24',
+      returnHome: false,
+      originIata: 'MXP',
+      travelers: 1,
+    });
+    const main = buildMainFlightPlanForDraft(draft, null);
+    expect(main.legs).toHaveLength(2);
+    expect(main.legs.map((l) => l.kind)).toEqual(['outbound', 'intercountry']);
   });
 
   it('proposes domestic HAN→…→SGN only at itinerary after outbound selected', () => {
