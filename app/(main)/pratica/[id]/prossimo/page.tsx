@@ -39,7 +39,7 @@ export default async function ProssimoPassoPage({ params }: PageProps) {
     : [];
 
   // Real flight/hotel flags per member practice when available.
-  let memberPracticeFlags = new Map<
+  const memberPracticeFlags = new Map<
     string,
     { flightsBought: boolean; hotelBooked: boolean }
   >();
