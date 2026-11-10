@@ -414,6 +414,8 @@ export function OrganizzaFlow({
       slugs: tripType === 'multi' ? draft.slugs : null,
       arrivalIata: hub,
       departureIata: hub,
+      originIata: draft.originIata ?? 'MXP',
+      homeReturnIata: draft.homeReturnIata ?? draft.originIata ?? 'MXP',
       selectedFlight: null,
       flightPlan: null,
       domesticPlan: null,
@@ -877,12 +879,12 @@ export function OrganizzaFlow({
         flightPlanAllowsContinue(draft.flightPlan))) ||
     step === 'itinerario';
 
+  // Progressive reveal: dest → airports → dates → company (all after slug).
+  // originIata defaults to MXP — do not block dates on airport autocomplete state.
   const showDestSection = true;
   const showOriginSection = Boolean(draft.slug);
-  const showDatesSection = Boolean(draft.slug && draft.originIata);
-  const showCompanySection = Boolean(
-    draft.slug && draft.originIata && draft.dateFrom && draft.dateTo
-  );
+  const showDatesSection = Boolean(draft.slug);
+  const showCompanySection = Boolean(draft.slug && draft.dateFrom && draft.dateTo);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
@@ -1147,7 +1149,10 @@ export function OrganizzaFlow({
               ) : null}
 
               {showOriginSection ? (
-                <section className="space-y-3 border-t border-[var(--color-border)] pt-4">
+                <section
+                  className="space-y-3 border-t border-[var(--color-border)] pt-4"
+                  data-testid="organizza-airports"
+                >
                   <h3 className="text-sm font-bold">Da dove parti?</h3>
                   <AirportPlaceInput
                     label="Aeroporto di partenza"
@@ -1234,7 +1239,10 @@ export function OrganizzaFlow({
               ) : null}
 
               {showDatesSection ? (
-                <section className="space-y-3 border-t border-[var(--color-border)] pt-4">
+                <section
+                  className="space-y-3 border-t border-[var(--color-border)] pt-4"
+                  data-testid="organizza-dates"
+                >
                   <h3 className="text-sm font-bold">Quando?</h3>
                   <div className="grid gap-3 sm:grid-cols-2" lang="it-IT">
                     <label className="text-xs font-semibold">
@@ -1288,7 +1296,10 @@ export function OrganizzaFlow({
               ) : null}
 
               {showCompanySection ? (
-                <section className="space-y-3 border-t border-[var(--color-border)] pt-4">
+                <section
+                  className="space-y-3 border-t border-[var(--color-border)] pt-4"
+                  data-testid="organizza-company"
+                >
                   <h3 className="text-sm font-bold">Con chi?</h3>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {(
