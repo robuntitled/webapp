@@ -90,7 +90,7 @@ export function parseSelectedFlightPlan(raw: unknown): SelectedFlightPlanSnapsho
   return o;
 }
 
-/** Display-only fallback when selected_flight_plan is missing (migration 047 not applied). */
+/** Display-only fallback when selected_flight_plan is empty (use planned_legs). */
 export function snapshotFromPlannedLegs(
   legs: PlannedLeg[] | null | undefined,
   travelers = 1

@@ -1,5 +1,7 @@
 -- Selected Organizza flight plan (offer snapshots per leg) on a practice.
--- File only: do NOT apply automatically. Owner review required.
+-- Renumbered from 047 → 048 to avoid clash with 047_rls_lockdown.sql.
+-- Owner applied this column on Supabase (2026-11-10); IF NOT EXISTS is safe.
+-- Do NOT re-apply automatically.
 --
 -- Stores the Voli-step selections so «Acquista i voli» can reopen checkout
 -- for the same legs without a new search. Not a paid booking.

@@ -71,12 +71,15 @@ export async function startPracticeAction(input: {
 
   async function attachFlights(practiceId: string) {
     if (!flightSnap) return;
-    await savePracticeSelectedFlightPlan({
+    const saved = await savePracticeSelectedFlightPlan({
       practiceId,
       userId,
       selectedFlightPlan: flightSnap,
       plannedLegs: planned,
     });
+    if ('error' in saved) {
+      console.error('[startPracticeAction] selected_flight_plan', saved.error);
+    }
   }
 
   if (input.mode === 'friends' || input.mode === 'group') {

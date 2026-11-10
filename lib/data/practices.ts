@@ -556,7 +556,7 @@ async function maybeFormEdition(editionId: string) {
   }
 }
 
-/** Persist Organizza Voli selections (migration 047 optional). */
+/** Persist Organizza Voli selections (migration 048 / selected_flight_plan). */
 export async function savePracticeSelectedFlightPlan(input: {
   practiceId: string;
   userId: string;
