@@ -1,5 +1,23 @@
-import type { SelectedFlightLegSnapshot } from '@/lib/itineraries/selected-flight-plan';
+import type {
+  SelectedFlightLegSnapshot,
+  SelectedFlightPlanSnapshot,
+} from '@/lib/itineraries/selected-flight-plan';
 import type { TripFlightLeg, TripFlightOfferSnapshot } from '@/lib/travel/trip-flight-legs';
+
+/** Sum of per-person leg prices for the saved plan (all legs). */
+export function sumSelectedPlanPerPerson(
+  plan: SelectedFlightPlanSnapshot | null | undefined
+): number | null {
+  if (!plan?.legs?.length) return null;
+  let total = 0;
+  let any = false;
+  for (const leg of plan.legs) {
+    if (leg.price == null || !Number.isFinite(leg.price)) continue;
+    total += leg.price;
+    any = true;
+  }
+  return any ? total : null;
+}
 
 export function formatStopsIt(stops: number | null | undefined): string {
   if (stops == null) return '—';

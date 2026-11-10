@@ -4,6 +4,7 @@ import {
   formatDurationIt,
   formatStopsIt,
   snapshotLegToTripLeg,
+  sumSelectedPlanPerPerson,
 } from '@/lib/itineraries/selected-flight-display';
 import type { SelectedFlightLegSnapshot } from '@/lib/itineraries/selected-flight-plan';
 
@@ -56,5 +57,20 @@ describe('selected-flight-display', () => {
     expect(next.price).toBe(199);
     expect(next.stops).toBe(1);
     expect(next.airline).toBe('SAS');
+  });
+
+  it('sums per-person prices across all selected legs', () => {
+    expect(
+      sumSelectedPlanPerPerson({
+        version: 1,
+        travelers: 1,
+        returnHome: true,
+        savedAt: 'x',
+        legs: [
+          { ...base, id: 'a', price: 220 },
+          { ...base, id: 'b', kind: 'return', price: 198 },
+        ],
+      })
+    ).toBe(418);
   });
 });

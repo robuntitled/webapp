@@ -18,6 +18,7 @@ import {
   formatDurationIt,
   formatLegDateIt,
   formatStopsIt,
+  sumSelectedPlanPerPerson,
 } from '@/lib/itineraries/selected-flight-display';
 import {
   loadPracticeFlightsLocal,
@@ -68,6 +69,7 @@ export function TripSelectedFlightsPanel({
   );
   const [editLegId, setEditLegId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [payOthersOpen, setPayOthersOpen] = useState(false);
   const [selectedPayIds, setSelectedPayIds] = useState<string[]>(() => [currentUserId]);
 
   const coverage = useMemo(
@@ -94,6 +96,15 @@ export function TripSelectedFlightsPanel({
     return m;
   }, [participants]);
 
+  const perPersonTotal = useMemo(() => sumSelectedPlanPerPerson(plan), [plan]);
+
+  function isLockedBeneficiary(userId: string): boolean {
+    const cov = coverageForUser(coverage, userId);
+    if (cov && (cov.status === 'booked' || cov.status === 'covered')) return true;
+    const p = participants.find((x) => x.userId === userId);
+    return Boolean(p?.flightsBought);
+  }
+
   function openEdit(legId?: string) {
     if (!plan) {
       const seeded = seedEmptyFlightPlan(practice);
@@ -105,25 +116,47 @@ export function TripSelectedFlightsPanel({
     setEditLegId(legId ?? plan.legs[0]?.id ?? null);
   }
 
-  function togglePay(userId: string) {
-    const cov = coverageForUser(coverage, userId);
-    if (cov && (cov.status === 'booked' || cov.status === 'covered')) return;
-    if (userId === currentUserId) return; // self always included when booking
-    setSelectedPayIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
+  function openPayOthers() {
+    // Default: me + other uncovered participants (me can be unticked later).
+    const defaults = participants
+      .filter((p) => !isLockedBeneficiary(p.userId))
+      .map((p) => p.userId);
+    const withSelf = defaults.includes(currentUserId)
+      ? defaults
+      : isLockedBeneficiary(currentUserId)
+        ? defaults
+        : [currentUserId, ...defaults];
+    setSelectedPayIds(withSelf.length ? withSelf : [currentUserId]);
+    setPayOthersOpen(true);
   }
 
-  function goCheckout() {
+  function togglePay(userId: string) {
+    if (isLockedBeneficiary(userId)) return;
+    setSelectedPayIds((prev) => {
+      if (prev.includes(userId)) {
+        const next = prev.filter((id) => id !== userId);
+        return next; // allow empty while selecting; CTA disabled if 0
+      }
+      return [...prev, userId];
+    });
+  }
+
+  function goCheckout(beneficiaryIds: string[]) {
+    const ids = beneficiaryIds.filter((id) => !isLockedBeneficiary(id));
+    if (!ids.length) {
+      toast.error('Seleziona almeno una persona da prenotare.');
+      return;
+    }
     const offer = primaryOfferFromSelected(plan);
     if (!offer?.offerId || offer.price == null) {
       toast.error('Seleziona i voli prima di prenotare.');
       return;
     }
-    const adults = Math.max(1, selectedPayIds.length);
+    const adults = Math.max(1, ids.length);
+    const unit = perPersonTotal ?? offer.price;
     saveFlightCheckoutDraft({
       offerId: offer.offerId,
-      price: offer.price * adults,
+      price: unit * adults,
       currency: offer.currency ?? 'EUR',
       adults,
       tripType: 'oneway',
@@ -146,7 +179,7 @@ export function TripSelectedFlightsPanel({
         `nl-flight-coverage-intent-${practice.id}`,
         JSON.stringify({
           bookerUserId: currentUserId,
-          beneficiaryIds: selectedPayIds,
+          beneficiaryIds: ids,
         })
       );
     } catch {
@@ -272,17 +305,17 @@ export function TripSelectedFlightsPanel({
         </Button>
       ) : null}
 
-      {participants.length > 0 ? (
-        <section className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-bold text-slate-900">Chi paga</h3>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            Prenota solo per te, oppure spunta altri partecipanti e paga i loro posti con gli
-            stessi voli in un unico checkout.
-          </p>
-          <ul className="space-y-2">
+      <section
+        className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+        data-testid="trip-chi-paga"
+      >
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-bold text-slate-900">Chi paga</h3>
+        </div>
+
+        {participants.length > 0 ? (
+          <ul className="space-y-1" data-testid="trip-chi-paga-status">
             {participants.map((p) => {
               const cov = coverageForUser(coverage, p.userId);
               const ui = participantFlightUiStatus({
@@ -293,72 +326,155 @@ export function TripSelectedFlightsPanel({
                   ? nameById.get(cov.coveredByUserId) ?? null
                   : null,
               });
-              const locked = ui.kind === 'booked' || ui.kind === 'covered';
-              const checked = selectedPayIds.includes(p.userId) || p.userId === currentUserId;
               return (
                 <li
                   key={p.userId}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl border bg-white px-3 py-2.5',
-                    locked ? 'border-emerald-200/80' : 'border-slate-200'
-                  )}
+                  className="flex items-center justify-between gap-2 px-0.5 py-0.5 text-[11px]"
                 >
-                  <button
-                    type="button"
-                    disabled={locked || p.userId === currentUserId}
-                    aria-pressed={checked}
-                    onClick={() => togglePay(p.userId)}
+                  <span className="truncate font-medium text-slate-700">
+                    {p.isSelf ? 'Io' : p.name}
+                    {p.isOwner ? (
+                      <span className="ml-1 font-normal text-slate-400">· creatore</span>
+                    ) : null}
+                  </span>
+                  <span
                     className={cn(
-                      'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
-                      checked
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-slate-300 bg-white',
-                      (locked || p.userId === currentUserId) && 'opacity-80'
+                      'shrink-0',
+                      ui.kind === 'booked' || ui.kind === 'covered'
+                        ? 'text-emerald-700'
+                        : 'text-slate-500'
                     )}
-                    data-testid={`trip-pay-toggle-${p.userId}`}
                   >
-                    {checked ? <Check className="h-3 w-3" /> : null}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">
-                      {p.isSelf ? 'Io' : p.name}
-                      {p.isOwner ? (
-                        <span className="ml-1 text-[10px] font-medium text-slate-400">
-                          · creatore
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      {ui.kind === 'covered'
-                        ? `Pagato da ${ui.byName}`
-                        : coverageStatusLabelIt(ui)}
-                    </p>
-                  </div>
+                    {ui.kind === 'covered'
+                      ? `Pagato da ${ui.byName}`
+                      : coverageStatusLabelIt(ui)}
+                  </span>
                 </li>
               );
             })}
           </ul>
-          <Button
-            type="button"
-            className="min-h-11 w-full rounded-full"
-            onClick={goCheckout}
-            data-testid="trip-voli-checkout"
-          >
-            {selectedPayIds.length <= 1
-              ? 'Prenota il mio posto'
-              : `Prenota per ${selectedPayIds.length} persone`}
-          </Button>
-        </section>
-      ) : (
-        <Button
-          type="button"
-          className="min-h-11 w-full rounded-full"
-          onClick={goCheckout}
-          data-testid="trip-voli-checkout"
-        >
-          Prenota i voli
-        </Button>
-      )}
+        ) : null}
+
+        {!payOthersOpen ? (
+          <div className="space-y-2" data-testid="trip-chi-paga-choices">
+            <Button
+              type="button"
+              className="min-h-11 w-full rounded-full"
+              onClick={() => goCheckout([currentUserId])}
+              disabled={isLockedBeneficiary(currentUserId)}
+              data-testid="trip-pago-per-me"
+            >
+              Pago per me
+              {perPersonTotal != null ? (
+                <span className="ml-1 font-semibold opacity-90">
+                  · {formatEuro(perPersonTotal)}
+                </span>
+              ) : null}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full rounded-full"
+              onClick={openPayOthers}
+              data-testid="trip-pago-per-altri"
+            >
+              Pago per altri
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3" data-testid="trip-pago-per-altri-panel">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-slate-500">
+                Spunta chi include nel checkout (puoi togliere te stesso).
+              </p>
+              <button
+                type="button"
+                className="text-[11px] font-semibold text-primary"
+                onClick={() => setPayOthersOpen(false)}
+                data-testid="trip-pago-per-altri-chiudi"
+              >
+                Chiudi
+              </button>
+            </div>
+            <ul className="space-y-1.5">
+              {participants.map((p) => {
+                const locked = isLockedBeneficiary(p.userId);
+                const cov = coverageForUser(coverage, p.userId);
+                const ui = participantFlightUiStatus({
+                  userId: p.userId,
+                  selfBooked: p.flightsBought,
+                  coverage: cov,
+                  coveredByName: cov
+                    ? nameById.get(cov.coveredByUserId) ?? null
+                    : null,
+                });
+                const checked = selectedPayIds.includes(p.userId);
+                return (
+                  <li
+                    key={p.userId}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl border bg-white px-3 py-2',
+                      locked ? 'border-emerald-200/70 opacity-80' : 'border-slate-200'
+                    )}
+                  >
+                    <button
+                      type="button"
+                      disabled={locked}
+                      aria-pressed={checked}
+                      onClick={() => togglePay(p.userId)}
+                      className={cn(
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
+                        checked
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-slate-300 bg-white',
+                        locked && 'cursor-not-allowed'
+                      )}
+                      data-testid={`trip-pay-toggle-${p.userId}`}
+                    >
+                      {checked && !locked ? <Check className="h-3 w-3" /> : null}
+                      {locked ? <Check className="h-3 w-3 opacity-40" /> : null}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {p.isSelf ? 'Io' : p.name}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {ui.kind === 'covered'
+                          ? `Pagato da ${ui.byName}`
+                          : coverageStatusLabelIt(ui)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="flex items-center justify-between gap-2 px-0.5 text-xs text-slate-600">
+              <span>
+                {selectedPayIds.length}{' '}
+                {selectedPayIds.length === 1 ? 'persona' : 'persone'}
+              </span>
+              <span className="font-bold tabular-nums text-slate-900">
+                {perPersonTotal != null
+                  ? formatEuro(perPersonTotal * Math.max(0, selectedPayIds.length))
+                  : '—'}
+              </span>
+            </div>
+            <Button
+              type="button"
+              className="min-h-11 w-full rounded-full"
+              disabled={selectedPayIds.length === 0}
+              onClick={() => goCheckout(selectedPayIds)}
+              data-testid="trip-voli-checkout-altri"
+            >
+              {selectedPayIds.length <= 1
+                ? selectedPayIds[0] === currentUserId
+                  ? 'Prenota il mio posto'
+                  : 'Prenota per 1 persona'
+                : `Prenota per ${selectedPayIds.length} persone`}
+            </Button>
+          </div>
+        )}
+      </section>
 
       {plan ? (
         <EditSelectedFlightLegModal
