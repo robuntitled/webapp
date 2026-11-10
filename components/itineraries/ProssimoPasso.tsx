@@ -236,29 +236,32 @@ export function ProssimoPasso({
                 </p>
 
                 {inviteUrl ? (
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <code className="min-h-10 flex-1 truncate rounded-[10px] border border-[var(--color-border)] bg-[var(--color-tint)]/60 px-2.5 py-2 text-[11px] text-[var(--color-text-secondary)]">
+                  <div className="mt-3 flex flex-row flex-wrap items-center gap-2">
+                    <code className="min-h-9 min-w-0 flex-1 truncate rounded-[10px] border border-[var(--color-border)] bg-[var(--color-tint)]/60 px-2 py-2 text-[10px] leading-tight text-[var(--color-text-secondary)]">
                       {inviteUrl}
                     </code>
-                    <div className="flex shrink-0 gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="min-h-9 shrink-0 rounded-[10px] bg-accent px-2.5 text-xs hover:bg-[var(--color-accent-hover)]"
+                      onClick={copyLink}
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      Copia
+                    </Button>
+                    {waHref ? (
                       <Button
-                        type="button"
+                        asChild
+                        variant="outline"
                         size="sm"
-                        className="min-h-10 rounded-[10px] bg-accent hover:bg-[var(--color-accent-hover)]"
-                        onClick={copyLink}
+                        className="min-h-9 shrink-0 rounded-[10px] px-2.5 text-xs"
                       >
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        Copia
+                        <a href={waHref} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="h-4 w-4" />
+                          WhatsApp
+                        </a>
                       </Button>
-                      {waHref ? (
-                        <Button asChild variant="outline" size="sm" className="min-h-10 rounded-[10px]">
-                          <a href={waHref} target="_blank" rel="noopener noreferrer">
-                            <MessageCircle className="h-4 w-4" />
-                            WhatsApp
-                          </a>
-                        </Button>
-                      ) : null}
-                    </div>
+                    ) : null}
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-amber-800">

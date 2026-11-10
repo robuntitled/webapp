@@ -8,9 +8,13 @@ import { getPractice } from '@/lib/data/practices';
 import { getEdition, listEditionMembers } from '@/lib/data/editions';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { getSiteUrl } from '@/lib/brand';
-import { parseSelectedFlightPlan } from '@/lib/itineraries/selected-flight-plan';
+import {
+  parseSelectedFlightPlan,
+  snapshotFromPlannedLegs,
+} from '@/lib/itineraries/selected-flight-plan';
 import { hasFlightBooked } from '@/lib/itineraries/practice-lifecycle';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import type { PlannedLeg } from '@/lib/itineraries/free-trip';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -30,9 +34,13 @@ export default async function ProssimoPassoPage({ params }: PageProps) {
   const inviteUrl = inviteToken ? `${getSiteUrl()}/invito/${inviteToken}` : null;
   const { practiceDestinationLabel } = await import('@/lib/itineraries/free-trip');
 
-  const selectedFlightPlan = parseSelectedFlightPlan(
-    (practice as { selected_flight_plan?: unknown }).selected_flight_plan
-  );
+  const selectedFlightPlan =
+    parseSelectedFlightPlan(
+      (practice as { selected_flight_plan?: unknown }).selected_flight_plan
+    ) ??
+    snapshotFromPlannedLegs(
+      (practice as { planned_legs?: PlannedLeg[] | null }).planned_legs
+    );
 
   const members = practice.edition_id
     ? await listEditionMembers(practice.edition_id)

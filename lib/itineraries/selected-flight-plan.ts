@@ -90,6 +90,36 @@ export function parseSelectedFlightPlan(raw: unknown): SelectedFlightPlanSnapsho
   return o;
 }
 
+/** Display-only fallback when selected_flight_plan is missing (migration 047 not applied). */
+export function snapshotFromPlannedLegs(
+  legs: PlannedLeg[] | null | undefined,
+  travelers = 1
+): SelectedFlightPlanSnapshot | null {
+  if (!legs?.length) return null;
+  return {
+    version: 1,
+    travelers: Math.max(1, travelers),
+    returnHome: legs.some((l) => l.kind === 'return'),
+    savedAt: new Date(0).toISOString(),
+    legs: legs.map((l, i) => ({
+      id: `planned-${i}-${l.origin}-${l.destination}`,
+      kind: l.kind ?? 'other',
+      originIata: l.origin,
+      destinationIata: l.destination,
+      date: l.date,
+      labelIt: `${l.origin} → ${l.destination}`,
+      offerId: null,
+      price: null,
+      currency: null,
+      stops: null,
+      durationMinutes: null,
+      airline: null,
+      departureAt: null,
+      arrivalAt: null,
+    })),
+  };
+}
+
 /** First purchasable offer (for checkout draft). */
 export function primaryOfferFromSelected(
   snap: SelectedFlightPlanSnapshot | null
