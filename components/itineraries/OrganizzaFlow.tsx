@@ -70,6 +70,7 @@ import {
   tripTypeFromDraft,
 } from '@/lib/itineraries/organizza-steps';
 import { FREE_TRIP_TEMPLATE_ID } from '@/lib/itineraries/free-trip';
+import { tripPlanToSelectedSnapshot } from '@/lib/itineraries/selected-flight-plan';
 import { tripDurationLabelIt } from '@/lib/itineraries/trip-duration';
 import { minBookableDateIso } from '@/lib/travel/flight-calendar-dates';
 import {
@@ -588,6 +589,10 @@ export function OrganizzaFlow({
     }
     const curated = findItineraryBySlug(draft.slug, draft.durationDays ?? undefined);
     const templateId = curated?.template_id ?? FREE_TRIP_TEMPLATE_ID;
+    const selectedFlightPlan = tripPlanToSelectedSnapshot(
+      draft.flightPlan,
+      draft.travelers
+    );
     startTransition(async () => {
       const result = await startPracticeAction({
         templateId,
@@ -600,6 +605,7 @@ export function OrganizzaFlow({
             ? draft.slugs.map((s) => getMaster(s)?.nameIt ?? s).join(' + ')
             : findCatalogDestination(draft.slug!)?.name ?? draft.slug,
         allowFreeTrip: !curated || isMultiCountryDraft(draft),
+        selectedFlightPlan,
       });
       if (result?.error) {
         const err = result.error;
@@ -611,6 +617,13 @@ export function OrganizzaFlow({
         return;
       }
       try {
+        // Pending stash if redirect path needs client fallback (id unknown until next page).
+        if (selectedFlightPlan) {
+          sessionStorage.setItem(
+            'nl-pending-selected-flights',
+            JSON.stringify(selectedFlightPlan)
+          );
+        }
         sessionStorage.removeItem(STORAGE_KEY);
         sessionStorage.removeItem('nl-organizza-draft-v3');
         sessionStorage.removeItem('nl-organizza-draft-v2');
