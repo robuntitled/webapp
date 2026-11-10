@@ -8,6 +8,7 @@ import L from 'leaflet';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
+import { MapCreditsControl } from '@/components/maps/MapCreditsControl';
 import type { CommunityPhotoPin } from '@/lib/data/community-map';
 import { cn } from '@/lib/utils';
 
@@ -183,7 +184,6 @@ export function CommunityMap({ photoPins, className }: CommunityMapProps) {
         className={cn(
           'relative min-h-0 w-full flex-1 bg-[#dce6ee]',
           '[&_.leaflet-container]:h-full [&_.leaflet-container]:w-full',
-          '[&_.leaflet-control-attribution]:!hidden',
           '[&_.leaflet-control-zoom]:border-0 [&_.leaflet-control-zoom]:overflow-hidden [&_.leaflet-control-zoom]:rounded-lg [&_.leaflet-control-zoom]:shadow-md',
           '[&_.leaflet-control-zoom-in]:!h-8 [&_.leaflet-control-zoom-in]:!w-8 [&_.leaflet-control-zoom-in]:!leading-8 [&_.leaflet-control-zoom-in]:!border-0 [&_.leaflet-control-zoom-in]:!bg-white/95',
           '[&_.leaflet-control-zoom-out]:!h-8 [&_.leaflet-control-zoom-out]:!w-8 [&_.leaflet-control-zoom-out]:!leading-8 [&_.leaflet-control-zoom-out]:!border-0 [&_.leaflet-control-zoom-out]:!bg-white/95',
@@ -211,7 +211,7 @@ export function CommunityMap({ photoPins, className }: CommunityMapProps) {
             className="h-full w-full"
             style={{ height: '100%', width: '100%' }}
             scrollWheelZoom
-            attributionControl
+            attributionControl={false}
             zoomControl
             preferCanvas
             worldCopyJump={false}
@@ -266,6 +266,7 @@ export function CommunityMap({ photoPins, className }: CommunityMapProps) {
             Caricamento mappa…
           </div>
         )}
+        {mounted ? <MapCreditsControl attribution={MAP_TILES.attribution} /> : null}
       </div>
     </section>
   );
