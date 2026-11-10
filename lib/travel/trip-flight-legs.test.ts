@@ -59,7 +59,7 @@ describe('trip-flight-legs', () => {
     expect(providerSearchModeForPlan(plan).canUseClosedRoundtrip).toBe(false);
   });
 
-  it('includes internal legs when provided by itinerary', () => {
+  it('includes intercountry and domestic legs distinctly', () => {
     const plan = buildDefaultTripFlightPlan({
       homeOriginIata: 'MXP',
       arrivalIata: 'HAN',
@@ -69,18 +69,27 @@ describe('trip-flight-legs', () => {
       passengers: 1,
       multiCountry: true,
       returnHome: true,
-      internalLegs: [
+      intercountryLegs: [
         {
           originIata: 'SGN',
           destinationIata: 'REP',
           date: '2026-12-18',
-          labelIt: 'Volo interno SGN → REP',
+          labelIt: 'Tra paesi SGN → REP',
+        },
+      ],
+      domesticLegs: [
+        {
+          originIata: 'HAN',
+          destinationIata: 'SGN',
+          date: '2026-12-16',
+          labelIt: 'Domestico HAN → SGN',
         },
       ],
     });
     expect(plan.legs.map((l) => l.kind)).toEqual([
       'outbound',
-      'internal',
+      'domestic',
+      'intercountry',
       'openjaw_return',
     ]);
   });

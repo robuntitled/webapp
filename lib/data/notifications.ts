@@ -14,7 +14,8 @@ export type NotificationType =
   | 'threshold_reached'
   | 'edition_member_joined'
   | 'edition_flight_confirmed'
-  | 'edition_reminder';
+  | 'edition_reminder'
+  | 'trip_invite_received';
 
 const HIDDEN_TYPES = new Set([
   'trip_join_request',

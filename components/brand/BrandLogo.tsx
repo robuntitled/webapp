@@ -3,7 +3,7 @@ import { BRAND_NAME } from '@/lib/brand';
 
 /**
  * Wordmark Noivia — SVG con path (Plus Jakarta ExtraBold convertito),
- * indipendente dal font runtime. Route coral/lilac sopra le ı.
+ * indipendente dal font runtime. Solo lettere (niente puntini né arco).
  */
 export const LOGO_RATIO = 3.3;
 

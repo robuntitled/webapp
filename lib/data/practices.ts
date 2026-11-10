@@ -127,6 +127,7 @@ export async function createPractice(input: {
   destinationLabel?: string | null;
   destinationIata?: string | null;
   plannedLegs?: PlannedLeg[] | null;
+  selectedFlightPlan?: import('@/lib/itineraries/selected-flight-plan').SelectedFlightPlanSnapshot | null;
 }): Promise<{ practice: PracticeRow } | { error: string }> {
   const free = isFreeTripTemplateId(input.templateId);
   const template = free ? undefined : findItineraryTemplate(input.templateId);
@@ -149,22 +150,45 @@ export async function createPractice(input: {
     status: 'draft',
   };
 
-  // M2 columns (optional until migration applied).
-  const withM2: Record<string, unknown> = {
+  // M2 / 047 columns (optional until migrations applied).
+  const withExtras: Record<string, unknown> = {
     ...baseRow,
     ...(input.destinationLabel ? { destination_label: input.destinationLabel } : {}),
     ...(input.destinationIata ? { destination_iata: input.destinationIata } : {}),
     ...(input.plannedLegs?.length ? { planned_legs: input.plannedLegs } : {}),
+    ...(input.selectedFlightPlan
+      ? { selected_flight_plan: input.selectedFlightPlan }
+      : {}),
   };
 
   let { data, error } = await supabaseAdmin
     .from('practices')
-    .insert(withM2)
+    .insert(withExtras)
     .select('*')
     .single();
 
+  // Schema senza selected_flight_plan: riprova senza quella colonna.
+  if (
+    error &&
+    (error.code === '42703' || /selected_flight_plan/i.test(error.message ?? ''))
+  ) {
+    const { selected_flight_plan: _drop, ...withoutPlan } = withExtras;
+    void _drop;
+    ({ data, error } = await supabaseAdmin
+      .from('practices')
+      .insert(withoutPlan)
+      .select('*')
+      .single());
+  }
+
   // Schema senza M2: riprova senza colonne nuove.
-  if (error && (error.code === '42703' || /destination_label|planned_legs|destination_iata/i.test(error.message ?? ''))) {
+  if (
+    error &&
+    (error.code === '42703' ||
+      /destination_label|planned_legs|destination_iata|selected_flight_plan/i.test(
+        error.message ?? ''
+      ))
+  ) {
     ({ data, error } = await supabaseAdmin
       .from('practices')
       .insert(baseRow)
@@ -530,6 +554,40 @@ async function maybeFormEdition(editionId: string) {
   } else if (confirmed < min && edition.status === 'formed') {
     await supabaseAdmin.from('editions').update({ status: 'open' }).eq('id', editionId);
   }
+}
+
+/** Persist Organizza Voli selections (migration 047 optional). */
+export async function savePracticeSelectedFlightPlan(input: {
+  practiceId: string;
+  userId: string;
+  selectedFlightPlan: import('@/lib/itineraries/selected-flight-plan').SelectedFlightPlanSnapshot;
+  plannedLegs?: PlannedLeg[] | null;
+}): Promise<{ ok: true } | { error: string }> {
+  const withPlan: Record<string, unknown> = {
+    selected_flight_plan: input.selectedFlightPlan,
+    ...(input.plannedLegs?.length ? { planned_legs: input.plannedLegs } : {}),
+  };
+  let { error } = await supabaseAdmin
+    .from('practices')
+    .update(withPlan)
+    .eq('id', input.practiceId)
+    .eq('user_id', input.userId);
+  if (error && (error.code === '42703' || /selected_flight_plan/i.test(error.message ?? ''))) {
+    if (input.plannedLegs?.length) {
+      ({ error } = await supabaseAdmin
+        .from('practices')
+        .update({ planned_legs: input.plannedLegs })
+        .eq('id', input.practiceId)
+        .eq('user_id', input.userId));
+    } else {
+      return { ok: true };
+    }
+  }
+  if (error) {
+    if (error.code === '42703') return { ok: true };
+    return { error: error.message };
+  }
+  return { ok: true };
 }
 
 /** Exported for unit tests (A8). */

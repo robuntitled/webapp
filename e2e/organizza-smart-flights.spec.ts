@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Mobile Organizza redesign: Dove → Quando → Con chi → Voli → Riepilogo.
+ * Organizza 4 fasi: Imposta → Partenza → Voli → Itinerario.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -19,116 +19,46 @@ test.beforeEach(async ({ page }) => {
   }
 });
 
-test.describe('organizza redesigned flow (mobile)', () => {
+test.describe('organizza 4 fasi (mobile)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('stepper shows full current label without ellipsis on mobile', async ({ page }) => {
+  test('stepper has four stages; mobile shows current label', async ({ page }) => {
     await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('organizza-stepper')).toBeVisible({ timeout: 20_000 });
     const stepper = page.getByTestId('organizza-stepper');
-    await expect(stepper.getByText('Dove', { exact: true })).toBeVisible();
-    await expect(stepper.locator('li')).toHaveCount(5);
-    // Inactive steps are number-only on mobile — no truncated "D…" labels
-    await expect(stepper).not.toContainText('D...');
-    await expect(stepper).not.toContainText('Q...');
+    await expect(stepper.locator('li')).toHaveCount(4);
+    await expect(stepper.getByText('Imposta', { exact: true })).toBeVisible();
   });
 
-  test('Dove search + sticky Continua + Quando + Con chi (no Gruppo)', async ({ page }) => {
+  test('Imposta dest only then Partenza requires empty origin', async ({ page }) => {
     await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
-    await expect(
-      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
-    ).toBeVisible({ timeout: 20_000 });
-
-    await page.getByTestId('dest-search').fill('Thailand');
-    const th = page.getByTestId('dest-card-thailandia');
-    await expect(th).toBeVisible();
-    await th.click();
-    await expect(page.getByText(/Selezionato:.*Thailandia/i)).toBeVisible();
-    await expect(page.getByTestId('organizza-destination-map')).toBeVisible();
-
-    // Sticky Continua visible with selection
-    const continua = page.getByRole('button', { name: /^Continua$/i });
-    await expect(continua).toBeEnabled();
-    await continua.click();
-
-    await expect(page.getByRole('heading', { name: /Quando vuoi partire/i })).toBeVisible();
-    await expect(page.getByTestId('organizza-stepper').getByText('Quando', { exact: true })).toBeVisible();
-    await expect(page.getByText(/Date libere/i)).toHaveCount(0);
-    await expect(page.getByText(/gg\/mm\/aaaa/i).first()).toBeVisible();
-    await expect(page.getByText(/Includi volo di rientro/i)).toBeVisible();
-
-    const from = page.locator('input[type="date"]').first();
-    const to = page.locator('input[type="date"]').nth(1);
-    await from.fill('2026-12-10');
-    await to.fill('2026-12-23');
-    await expect(page.getByTestId('smart-flight-calendar').first()).toBeVisible();
-    await expect(page.locator('body')).not.toContainText(/\bn\/d\b/i);
-    await continua.click();
-
-    await expect(page.getByRole('heading', { name: /Con chi parti/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Gruppo/i })).toHaveCount(0);
-    await page.getByRole('button', { name: /Con amici/i }).click();
-    await expect(
-      page.getByText(/Dopo la creazione vedrai il link invito/i)
-    ).toBeVisible();
-    await continua.click();
-
-    await expect(page.getByRole('heading', { name: /Voli del viaggio/i })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByTestId('flight-legs-panel')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Modifica volo/i }).first()).toBeVisible();
-    await expect(page.getByText(/biglietto indipendente|Biglietti indipendenti|tratte separate/i).first()).toBeVisible();
-  });
-
-  test('one-way without return home still reaches Voli', async ({ page }) => {
-    await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
-    await expect(
-      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('organizza-imposta')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('dest-card-thailandia').click();
-    await page.getByRole('button', { name: /^Continua$/i }).click();
-    await page.locator('input[type="date"]').first().fill('2026-12-10');
-    await page.locator('input[type="date"]').nth(1).fill('2026-12-20');
-    await page.getByLabel(/Includi volo di rientro/i).uncheck();
-    await expect(page.getByText(/Solo andata/i)).toBeVisible();
-    await page.getByRole('button', { name: /^Continua$/i }).click();
-    await page.getByRole('button', { name: /Da solo/i }).click();
-    await page.getByRole('button', { name: /^Continua$/i }).click();
-    await expect(page.getByTestId('flight-legs-panel')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/Andata/i).first()).toBeVisible();
-    await expect(page.getByText(/Rientro/i)).toHaveCount(0);
+    await page.getByTestId('organizza-continua').click();
+    await expect(page.getByTestId('organizza-partenza')).toBeVisible();
+    await expect(page.getByTestId('organizza-airports')).toBeVisible();
+    // Departure not prefilled with MXP
+    const origin = page.getByLabel(/Aeroporto di partenza/i);
+    await expect(origin).toHaveValue('');
+    await expect(page.getByTestId('organizza-continua')).toBeDisabled();
   });
 
-  test('curated multi-meta suggestions from Dove', async ({ page }) => {
+  test('amici −/+ stepper and clearable field', async ({ page }) => {
     await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
-    await expect(
-      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
-    ).toBeVisible({ timeout: 20_000 });
-
     await page.getByTestId('dest-card-thailandia').click();
-    await page.getByRole('button', { name: /Vuoi aggiungere un'altra meta/i }).click();
-    await expect(page.getByText(/Cambogia|Malesia/i).first()).toBeVisible();
-    await expect(page.getByText(/verificata/i).first()).toBeVisible();
-  });
-
-  test('non-curated free combo shows unverified notice', async ({ page }) => {
-    await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
-    await expect(
-      page.getByRole('heading', { name: /Organizza il tuo viaggio/i })
-    ).toBeVisible({ timeout: 20_000 });
-
-    await page.getByTestId('dest-card-thailandia').click();
-    await page.getByRole('button', { name: /Vuoi aggiungere un'altra meta/i }).click();
-    // Pick a same-continent neighbour that is not a curated pair (e.g. Giappone / Vietnam / Indonesia)
-    const neighbour = page
-      .getByRole('button', { name: /da verificare/i })
-      .first();
-    await expect(neighbour).toBeVisible({ timeout: 10_000 });
-    await neighbour.click();
-    await expect(
-      page.getByText(/Combinazione non verificata: controlla collegamenti/i)
-    ).toBeVisible();
-    await expect(page.getByText(/Viaggiare Sicuri/i).first()).toBeVisible();
+    await page.getByTestId('organizza-continua').click();
+    await expect(page.getByTestId('organizza-partenza')).toBeVisible();
+    await page.getByTestId('company-amici').click();
+    await expect(page.getByTestId('amici-stepper')).toBeVisible();
+    const input = page.getByTestId('amici-count-input');
+    await expect(input).toHaveValue('3');
+    await page.getByTestId('amici-plus').click();
+    await expect(input).toHaveValue('4');
+    await page.getByTestId('amici-minus').click();
+    await expect(input).toHaveValue('3');
+    await input.fill('');
+    await expect(input).toHaveValue('');
+    await input.blur();
+    await expect(input).toHaveValue('2');
   });
 });

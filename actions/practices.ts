@@ -8,6 +8,7 @@ import {
   createPractice,
   createPracticeFromFlightSearch,
   createPracticeFromHotelSearch,
+  savePracticeSelectedFlightPlan,
 } from '@/lib/data/practices';
 import type { FlightSearchSeed, HotelSearchSeed } from '@/lib/itineraries/from-search';
 import {
@@ -23,7 +24,10 @@ import {
 import {
   FREE_TRIP_TEMPLATE_ID,
   isFreeTripTemplateId,
+  type PlannedLeg,
 } from '@/lib/itineraries/free-trip';
+import type { SelectedFlightPlanSnapshot } from '@/lib/itineraries/selected-flight-plan';
+import { plannedLegsFromSelected } from '@/lib/itineraries/selected-flight-plan';
 import { sendBookingConfirmationEmail } from '@/lib/email/booking-confirmation';
 import type { ActivityBookingRecap } from '@/lib/itineraries/bookings';
 import type { TravelMode } from '@/lib/itineraries/types';
@@ -45,6 +49,9 @@ export async function startPracticeAction(input: {
   destinationLabel?: string | null;
   /** Schema orientativo senza template curato (viaggio-libero). */
   allowFreeTrip?: boolean;
+  /** Organizza Voli selections to persist on the practice. */
+  selectedFlightPlan?: SelectedFlightPlanSnapshot | null;
+  plannedLegs?: PlannedLeg[] | null;
 }): Promise<{ error: string } | never> {
   const userId = await requireUser();
   const free =
@@ -54,6 +61,22 @@ export async function startPracticeAction(input: {
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateFrom)) {
     return { error: 'Scegli una data di partenza.' };
+  }
+
+  const flightSnap = input.selectedFlightPlan ?? null;
+  const planned =
+    input.plannedLegs?.length
+      ? input.plannedLegs
+      : plannedLegsFromSelected(flightSnap);
+
+  async function attachFlights(practiceId: string) {
+    if (!flightSnap) return;
+    await savePracticeSelectedFlightPlan({
+      practiceId,
+      userId,
+      selectedFlightPlan: flightSnap,
+      plannedLegs: planned,
+    });
   }
 
   if (input.mode === 'friends' || input.mode === 'group') {
@@ -66,10 +89,13 @@ export async function startPracticeAction(input: {
         dateFrom: input.dateFrom,
         dateTo: input.dateTo,
         destinationLabel: input.destinationLabel ?? input.title ?? null,
+        plannedLegs: planned,
+        selectedFlightPlan: flightSnap,
       });
       if ('error' in result) {
         return { error: result.error ?? 'Impossibile creare il viaggio.' };
       }
+      await attachFlights(result.practice.id);
       revalidatePath('/pratiche');
       revalidatePath('/organizza');
       redirect(`/pratica/${result.practice.id}/prossimo`);
@@ -90,6 +116,7 @@ export async function startPracticeAction(input: {
       }
       return { error: raw };
     }
+    await attachFlights(result.practice.id);
     revalidatePath('/pratiche');
     revalidatePath('/partenze');
     revalidatePath('/gruppi');
@@ -105,10 +132,13 @@ export async function startPracticeAction(input: {
       dateFrom: input.dateFrom,
       dateTo: input.dateTo,
       destinationLabel: input.destinationLabel ?? input.title ?? null,
+      plannedLegs: planned,
+      selectedFlightPlan: flightSnap,
     });
     if ('error' in result) {
       return { error: result.error ?? 'Impossibile creare il viaggio.' };
     }
+    await attachFlights(result.practice.id);
     revalidatePath('/pratiche');
     revalidatePath('/organizza');
     redirect(`/pratica/${result.practice.id}/prossimo`);
@@ -124,6 +154,7 @@ export async function startPracticeAction(input: {
   if ('error' in result) {
     return { error: result.error ?? 'Impossibile creare il viaggio.' };
   }
+  await attachFlights(result.practice.id);
   revalidatePath('/pratiche');
   revalidatePath('/organizza');
   redirect(`/pratica/${result.practice.id}/prossimo`);

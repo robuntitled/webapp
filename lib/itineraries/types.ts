@@ -84,6 +84,8 @@ export type PracticeRow = {
   planned_legs?: import('./free-trip').PlannedLeg[] | null;
   destination_label?: string | null;
   destination_iata?: string | null;
+  /** Organizza Voli selections (migration 047). */
+  selected_flight_plan?: import('./selected-flight-plan').SelectedFlightPlanSnapshot | null;
 };
 
 export type EditionType = 'official' | 'private';

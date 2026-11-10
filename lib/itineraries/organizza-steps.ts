@@ -1,24 +1,25 @@
 /**
- * Organizza flow (owner redesign Nov 2026):
- * Dove → Quando → Con chi → Voli → Riepilogo
- * Solo / coppia / amici → privato. Gruppo removed from Con chi.
+ * Organizza flow (owner feedback Nov 2026):
+ * Imposta (destinazioni) → Partenza (aeroporti/date/con chi) → Voli → Itinerario
+ * Solo / coppia / amici → privato. Gruppo removed.
  */
 
 import type { TravelMode } from '@/lib/itineraries/types';
 import type { TripFlightPlan } from '@/lib/travel/trip-flight-legs';
 
 export const ORGANIZZA_STEPS = [
-  { id: 'dove', label: 'Dove', index: 0 },
-  { id: 'quando', label: 'Quando', index: 1 },
-  { id: 'con-chi', label: 'Con chi', index: 2 },
-  { id: 'voli', label: 'Voli', index: 3 },
-  { id: 'riepilogo', label: 'Riepilogo', index: 4 },
+  { id: 'imposta', label: 'Imposta', index: 0 },
+  { id: 'partenza', label: 'Partenza', index: 1 },
+  { id: 'voli', label: 'Voli', index: 2 },
+  { id: 'itinerario', label: 'Itinerario', index: 3 },
 ] as const;
 
 export type OrganizzaStepId = (typeof ORGANIZZA_STEPS)[number]['id'];
 
 /** Gruppo removed from Con chi (confused with amici). */
 export type OrganizzaCompanyChoice = 'solo' | 'coppia' | 'amici';
+
+export type OrganizzaTripType = 'roundtrip' | 'oneway' | 'multi';
 
 export type OrganizzaSelectedFlight = {
   offerId: string;
@@ -55,8 +56,11 @@ export type OrganizzaDraft = {
   homeReturnIata: string | null;
   /** When false, no return-home flight leg (trip end date still kept). */
   returnHome: boolean;
-  /** Ordered flight legs (persisted in session draft). */
+  tripType: OrganizzaTripType;
+  /** Main legs (outbound / intercountry / return) — Voli stage. */
   flightPlan: TripFlightPlan | null;
+  /** Domestic legs proposed only at itinerary stage. */
+  domesticPlan: TripFlightPlan | null;
   selectedFlight: OrganizzaSelectedFlight | null;
   legalAck: boolean;
 };
@@ -73,13 +77,18 @@ export const EMPTY_ORGANIZZA_DRAFT: OrganizzaDraft = {
   vibe: null,
   arrivalIata: null,
   departureIata: null,
-  originIata: 'MXP',
-  homeReturnIata: 'MXP',
+  originIata: null,
+  homeReturnIata: null,
   returnHome: true,
+  tripType: 'roundtrip',
   flightPlan: null,
+  domesticPlan: null,
   selectedFlight: null,
   legalAck: false,
 };
+
+export const AMICI_TRAVELERS_MIN = 2;
+export const AMICI_TRAVELERS_MAX = 20;
 
 export function isMultiCountryDraft(draft: OrganizzaDraft): boolean {
   return Array.isArray(draft.slugs) && draft.slugs.length >= 2;
@@ -94,32 +103,60 @@ export function organizzaStepByIndex(index: number): OrganizzaStepId {
   return ORGANIZZA_STEPS[clamped]!.id;
 }
 
+/** Step 1: destinazioni (+ tipo A/R | solo andata). */
+export function isImpostaComplete(draft: OrganizzaDraft): boolean {
+  return Boolean(draft.slug);
+}
+
+/** Step 2: aeroporti, date, compagnia. */
+export function isPartenzaComplete(draft: OrganizzaDraft): boolean {
+  if (!isImpostaComplete(draft)) return false;
+  if (!draft.originIata || draft.originIata.length !== 3) return false;
+  if (!draft.dateFrom) return false;
+  if (draft.returnHome) {
+    if (!draft.dateTo || !draft.homeReturnIata || draft.homeReturnIata.length !== 3) {
+      return false;
+    }
+  } else if (!draft.dateTo) {
+    return false;
+  }
+  if (!draft.durationDays || draft.durationDays < 1) return false;
+  if (
+    draft.company !== 'solo' &&
+    draft.company !== 'coppia' &&
+    draft.company !== 'amici'
+  ) {
+    return false;
+  }
+  if (draft.company === 'amici') {
+    return (
+      draft.travelers >= AMICI_TRAVELERS_MIN &&
+      draft.travelers <= AMICI_TRAVELERS_MAX
+    );
+  }
+  return draft.travelers >= 1;
+}
+
+export function hasMainFlightSelection(draft: OrganizzaDraft): boolean {
+  const plan = draft.flightPlan;
+  if (!plan || plan.legs.length === 0) {
+    return Boolean(draft.selectedFlight && draft.selectedFlight.offerId);
+  }
+  const required = plan.legs.filter(
+    (l) => l.kind !== 'domestic' && l.kind !== 'internal'
+  );
+  if (required.length === 0) return Boolean(draft.selectedFlight);
+  return required.every(
+    (l) => l.status === 'selected' || l.status === 'stale' || l.offer != null
+  );
+}
+
 export function organizzaCompletedSteps(draft: OrganizzaDraft): Set<OrganizzaStepId> {
   const done = new Set<OrganizzaStepId>();
-  if (draft.slug) done.add('dove');
-  if (done.has('dove') && draft.dateFrom && draft.dateTo && draft.durationDays) {
-    done.add('quando');
-  }
-  if (
-    done.has('quando') &&
-    (draft.company === 'solo' || draft.company === 'coppia' || draft.company === 'amici') &&
-    draft.travelers >= 1
-  ) {
-    done.add('con-chi');
-  }
-  const hasFlightSelection =
-    Boolean(draft.selectedFlight) ||
-    Boolean(
-      draft.flightPlan?.legs.some(
-        (l) => l.status === 'selected' || l.status === 'stale' || l.offer != null
-      )
-    );
-  if (done.has('con-chi') && hasFlightSelection) {
-    done.add('voli');
-  }
-  if (done.has('voli') && draft.company) {
-    done.add('riepilogo');
-  }
+  if (isImpostaComplete(draft)) done.add('imposta');
+  if (done.has('imposta') && isPartenzaComplete(draft)) done.add('partenza');
+  if (done.has('partenza') && hasMainFlightSelection(draft)) done.add('voli');
+  if (done.has('voli') && draft.company) done.add('itinerario');
   return done;
 }
 
@@ -143,7 +180,6 @@ export function companyChoiceToTravelMode(
   company: OrganizzaCompanyChoice
 ): TravelMode {
   if (company === 'solo') return 'solo';
-  // Coppia e amici: edizione privata con invito disponibile.
   return 'friends';
 }
 
@@ -159,6 +195,11 @@ export function defaultTravelersForCompany(company: OrganizzaCompanyChoice): num
   if (company === 'solo') return 1;
   if (company === 'coppia') return 2;
   return 3;
+}
+
+export function clampAmiciTravelers(n: number): number {
+  if (!Number.isFinite(n)) return AMICI_TRAVELERS_MIN;
+  return Math.min(AMICI_TRAVELERS_MAX, Math.max(AMICI_TRAVELERS_MIN, Math.round(n)));
 }
 
 export function nextOrganizzaStep(
@@ -193,20 +234,28 @@ export function durationDaysFromRange(dateFrom: string, dateTo: string): number 
   return Math.round((b - a) / 86400000) + 1;
 }
 
-/** Migrate legacy drafts that still have dove-quando / gruppo. */
+/** Migrate legacy step ids and older drafts. */
 export function normalizeOrganizzaStep(raw: string | null | undefined): OrganizzaStepId {
-  if (raw === 'dove-quando' || raw === 'meta') return 'dove';
-  if (raw === 'date') return 'quando';
   if (
     raw === 'dove' ||
-    raw === 'quando' ||
-    raw === 'con-chi' ||
+    raw === 'meta' ||
+    raw === 'dove-quando'
+  ) {
+    return 'imposta';
+  }
+  if (raw === 'quando' || raw === 'con-chi' || raw === 'date' || raw === 'dettagli') {
+    return 'partenza';
+  }
+  if (raw === 'riepilogo') return 'itinerario';
+  if (
+    raw === 'imposta' ||
+    raw === 'partenza' ||
     raw === 'voli' ||
-    raw === 'riepilogo'
+    raw === 'itinerario'
   ) {
     return raw;
   }
-  return 'dove';
+  return 'imposta';
 }
 
 export function normalizeOrganizzaCompany(
@@ -216,4 +265,10 @@ export function normalizeOrganizzaCompany(
   if (raw === 'gruppo') return 'amici';
   if (raw === 'friends') return 'amici';
   return null;
+}
+
+export function tripTypeFromDraft(draft: OrganizzaDraft): OrganizzaTripType {
+  if (draft.tripType === 'multi' || isMultiCountryDraft(draft)) return 'multi';
+  if (!draft.returnHome) return 'oneway';
+  return 'roundtrip';
 }

@@ -247,9 +247,7 @@ function PracticeGrid({
               href={
                 booked
                   ? `/pratica/${p.id}`
-                  : p.edition_id
-                    ? `/partenze/${p.edition_id}`
-                    : `/pratica/${p.id}`
+                  : `/pratica/${p.id}/prossimo`
               }
               className="block overflow-hidden rounded-[28px] border border-border bg-white shadow-sm transition hover:border-accent/40"
             >
