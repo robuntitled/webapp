@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { PraticheHub } from '@/components/itineraries/PraticheHub';
 import { loadFavoriteItineraryIds } from '@/lib/data/favorites';
 import { listUserPractices } from '@/lib/data/practices';
+import { enrichPracticesForHub } from '@/lib/itineraries/pratiche-hub';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +14,12 @@ export default async function PratichePage() {
     listUserPractices(session.user.id),
     loadFavoriteItineraryIds(session.user.id),
   ]);
+  const hubPractices = await enrichPracticesForHub(session.user.id, practices);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
       <div className="nl-page w-full space-y-8 py-12">
-        <PraticheHub practices={practices} likedTemplateIds={[...liked]} />
+        <PraticheHub practices={hubPractices} likedTemplateIds={[...liked]} />
       </div>
     </div>
   );

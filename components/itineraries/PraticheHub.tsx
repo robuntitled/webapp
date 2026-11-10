@@ -4,11 +4,11 @@ import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
+  Bookmark,
+  CalendarDays,
   Heart,
-  History,
-  MapPin,
   Plane,
-  Sparkles,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
@@ -16,18 +16,15 @@ import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
 import { itineraryPath } from '@/lib/itineraries/params';
-import {
-  getPracticeLifecyclePhase,
-  hasFlightBooked,
-  LIFECYCLE_COPY,
-  type PracticeLifecyclePhase,
-} from '@/lib/itineraries/practice-lifecycle';
-import type { PracticeRow } from '@/lib/itineraries/types';
+import { hasFlightBooked } from '@/lib/itineraries/practice-lifecycle';
+import type { HubPracticeCard } from '@/lib/itineraries/pratiche-hub-types';
 import { cn } from '@/lib/utils';
+
+export type { HubPracticeCard };
 
 const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
 
-type SectionId = 'liked' | PracticeLifecyclePhase;
+type SectionId = 'organized' | 'joined' | 'bookings' | 'saved';
 
 const SECTIONS: {
   id: SectionId;
@@ -36,34 +33,28 @@ const SECTIONS: {
   icon: typeof Heart;
 }[] = [
   {
-    id: 'liked',
-    label: 'Itinerari salvati',
-    description: 'Piani che ti interessano',
-    icon: Heart,
+    id: 'organized',
+    label: 'Organizzati da me',
+    description: 'Viaggi che hai creato',
+    icon: CalendarDays,
   },
   {
-    id: 'interested',
-    label: LIFECYCLE_COPY.interested.label,
-    description: LIFECYCLE_COPY.interested.description,
-    icon: Sparkles,
+    id: 'joined',
+    label: 'A cui partecipo',
+    description: 'Inviti e gruppi uniti',
+    icon: Users,
   },
   {
-    id: 'booked',
-    label: LIFECYCLE_COPY.booked.label,
-    description: LIFECYCLE_COPY.booked.description,
+    id: 'bookings',
+    label: 'Prenotazioni',
+    description: 'Voli e hotel pagati',
     icon: Plane,
   },
   {
-    id: 'active',
-    label: LIFECYCLE_COPY.active.label,
-    description: LIFECYCLE_COPY.active.description,
-    icon: MapPin,
-  },
-  {
-    id: 'past',
-    label: LIFECYCLE_COPY.past.label,
-    description: LIFECYCLE_COPY.past.description,
-    icon: History,
+    id: 'saved',
+    label: 'Salvati',
+    description: 'Itinerari da trasformare',
+    icon: Bookmark,
   },
 ];
 
@@ -71,7 +62,7 @@ export function PraticheHub({
   practices,
   likedTemplateIds,
 }: {
-  practices: PracticeRow[];
+  practices: HubPracticeCard[];
   likedTemplateIds: string[];
 }) {
   const activePractices = useMemo(
@@ -88,51 +79,49 @@ export function PraticheHub({
   );
 
   const buckets = useMemo(() => {
-    const interested: PracticeRow[] = [];
-    const booked: PracticeRow[] = [];
-    const active: PracticeRow[] = [];
-    const past: PracticeRow[] = [];
+    const organized: HubPracticeCard[] = [];
+    const joined: HubPracticeCard[] = [];
+    const bookings: HubPracticeCard[] = [];
+
     for (const p of activePractices) {
-      const phase = getPracticeLifecyclePhase(p);
-      if (phase === 'interested') interested.push(p);
-      else if (phase === 'booked') booked.push(p);
-      else if (phase === 'active') active.push(p);
-      else past.push(p);
+      if (p.organizedByMe === false) joined.push(p);
+      else organized.push(p);
+      if (hasFlightBooked(p) || (p.hotel_bookings?.length ?? 0) > 0) {
+        bookings.push(p);
+      }
     }
-    return { liked, interested, booked, active, past };
+
+    return { organized, joined, bookings, saved: liked };
   }, [activePractices, liked]);
 
   const [active, setActive] = useState<SectionId>(() => {
-    if (buckets.interested.length) return 'interested';
-    if (buckets.booked.length) return 'booked';
-    if (buckets.active.length) return 'active';
-    if (buckets.liked.length) return 'liked';
-    if (buckets.past.length) return 'past';
-    return 'liked';
+    if (buckets.organized.length) return 'organized';
+    if (buckets.joined.length) return 'joined';
+    if (buckets.bookings.length) return 'bookings';
+    return 'saved';
   });
 
   const counts = {
-    liked: buckets.liked.length,
-    interested: buckets.interested.length,
-    booked: buckets.booked.length,
-    active: buckets.active.length,
-    past: buckets.past.length,
+    organized: buckets.organized.length,
+    joined: buckets.joined.length,
+    bookings: buckets.bookings.length,
+    saved: buckets.saved.length,
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="pratiche-hub">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
           Account
         </p>
         <h1 className="mt-2 font-display text-4xl font-semibold text-foreground">I miei viaggi</h1>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Interessato → volo prenotato → in viaggio. Un solo filo: prenoti il volo quando sei
-          pronto, poi hotel e attività sul piano.
+          Organizzati da te, a cui partecipi, prenotazioni e salvati. Tocca un viaggio per aprire
+          Itinerario, Voli, Hotel e Partecipanti.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           const isActive = active === section.id;
@@ -141,6 +130,7 @@ export function PraticheHub({
               key={section.id}
               type="button"
               onClick={() => setActive(section.id)}
+              data-testid={`pratiche-tab-${section.id}`}
               className={cn(
                 'rounded-2xl border p-4 text-left transition',
                 isActive
@@ -163,46 +153,59 @@ export function PraticheHub({
         })}
       </div>
 
-      {active === 'liked' ? (
+      {active === 'saved' ? (
         liked.length === 0 ? (
           <Empty
             title="Nessun itinerario salvato"
-            body="Apri un piano di viaggio e tocca il cuore a destra della scheda."
+            body="Apri un piano di viaggio e tocca il cuore, oppure transforma un salvato in viaggio."
           />
         ) : (
           <ul className="grid gap-5 sm:grid-cols-2">
             {liked.map((tpl, i) => (
               <li key={tpl.template_id}>
-                <Link
-                  href={itineraryPath(tpl.destination_slug, tpl.duration_days)}
-                  className="block overflow-hidden rounded-[28px] border border-border bg-white shadow-sm transition hover:border-accent/40"
-                >
-                  <div className="relative h-52">
-                    <Image
-                      src={uniqueCover(tpl.destination_slug, i)}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="50vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                    <p className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                      <Heart className="h-3 w-3 fill-accent text-accent" /> Salvato
-                    </p>
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <p className="font-display text-2xl font-semibold text-white">
-                        {tpl.destination_name} · {tpl.duration_days} giorni
+                <div className="overflow-hidden rounded-[28px] border border-border bg-white shadow-sm">
+                  <Link
+                    href={itineraryPath(tpl.destination_slug, tpl.duration_days)}
+                    className="block"
+                  >
+                    <div className="relative h-52">
+                      <Image
+                        src={uniqueCover(tpl.destination_slug, i)}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="50vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                      <p className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                        <Heart className="h-3 w-3 fill-accent text-accent" /> Salvato
                       </p>
-                      <p className="mt-1 line-clamp-2 text-sm text-white/80">{tpl.summary}</p>
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <p className="font-display text-2xl font-semibold text-white">
+                          {tpl.destination_name} · {tpl.duration_days} giorni
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm text-white/80">{tpl.summary}</p>
+                      </div>
                     </div>
+                  </Link>
+                  <div className="border-t border-border p-3">
+                    <Button asChild className="min-h-11 w-full rounded-full" variant="cta">
+                      <Link href={`/organizza?slug=${encodeURIComponent(tpl.destination_slug)}`}>
+                        Trasforma in viaggio
+                      </Link>
+                    </Button>
                   </div>
-                </Link>
+                </div>
               </li>
             ))}
           </ul>
         )
       ) : (
-        <PracticeGrid items={buckets[active]} empty={active} />
+        <PracticeGrid
+          items={buckets[active]}
+          empty={active}
+          showBookingStatus={active === 'organized'}
+        />
       )}
     </div>
   );
@@ -211,25 +214,26 @@ export function PraticheHub({
 function PracticeGrid({
   items,
   empty,
+  showBookingStatus,
 }: {
-  items: PracticeRow[];
-  empty: PracticeLifecyclePhase;
+  items: HubPracticeCard[];
+  empty: Exclude<SectionId, 'saved'>;
+  showBookingStatus?: boolean;
 }) {
   if (items.length === 0) {
     const copy = {
-      interested: [
-        'Nessun viaggio in valutazione',
-        'Unisciti a una partenza o crea un viaggio: finché non prenoti il volo resta qui.',
+      organized: [
+        'Nessun viaggio organizzato',
+        'Crea un viaggio da Organizza: comparirà qui con lo stato delle prenotazioni.',
       ],
-      booked: [
-        'Nessun volo prenotato in attesa',
-        'Dopo la conferma del volo completa hotel e attività dal recap.',
+      joined: [
+        'Nessun viaggio a cui partecipi',
+        'Quando accetti un invito, il viaggio compare qui.',
       ],
-      active: [
-        'Nessun viaggio in corso',
-        'Quando parti, il viaggio compare qui con chat e recap.',
+      bookings: [
+        'Nessuna prenotazione',
+        'I voli e hotel che hai pagato restano raccolti in questa sezione.',
       ],
-      past: ['Nessun viaggio passato', 'I viaggi conclusi compariranno qui.'],
     }[empty];
     return <Empty title={copy[0]} body={copy[1]} />;
   }
@@ -239,17 +243,24 @@ function PracticeGrid({
       {items.map((p, i) => {
         const tpl = findItineraryTemplate(p.template_id);
         const booked = hasFlightBooked(p);
-        const phase = getPracticeLifecyclePhase(p);
-        const badge = LIFECYCLE_COPY[phase].badge;
+        const title =
+          p.hubTitle?.trim() ||
+          tpl?.destination_name ||
+          p.destination_label ||
+          'Il tuo viaggio';
+        const seatLabel =
+          showBookingStatus &&
+          p.totalSeats != null &&
+          p.totalSeats > 0 &&
+          p.bookedSeats != null
+            ? `${p.bookedSeats} su ${p.totalSeats} prenotati`
+            : null;
         return (
           <li key={p.id}>
             <Link
-              href={
-                booked
-                  ? `/pratica/${p.id}`
-                  : `/pratica/${p.id}/prossimo`
-              }
+              href={`/pratica/${p.id}`}
               className="block overflow-hidden rounded-[28px] border border-border bg-white shadow-sm transition hover:border-accent/40"
+              data-testid={`pratiche-card-${p.id}`}
             >
               <div className="relative h-52">
                 <Image
@@ -264,11 +275,11 @@ function PracticeGrid({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
                 <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                  {booked ? badge : MODE_LABEL[p.mode]}
+                  {seatLabel ?? (booked ? 'Prenotato' : MODE_LABEL[p.mode])}
                 </p>
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="font-display text-2xl font-semibold text-white">
-                    {tpl?.destination_name ?? p.template_id}
+                    {title}
                     {tpl ? ` · ${tpl.duration_days} giorni` : ''}
                   </p>
                   <p className="mt-1 text-sm text-white/80">
@@ -280,7 +291,7 @@ function PracticeGrid({
                     </div>
                   ) : (
                     <p className="mt-2 text-xs font-medium text-white/70">
-                      Prenota il volo per passare al passo successivo
+                      Apri Voli per vedere le tratte salvate
                     </p>
                   )}
                 </div>
@@ -299,7 +310,7 @@ function Empty({ title, body }: { title: string; body: string }) {
       <p className="font-medium text-foreground">{title}</p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{body}</p>
       <Button asChild className="mt-6 rounded-full">
-        <Link href="/destinazioni">Scegli un itinerario</Link>
+        <Link href="/organizza">Organizza un viaggio</Link>
       </Button>
     </div>
   );

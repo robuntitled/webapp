@@ -101,7 +101,7 @@ export async function startPracticeAction(input: {
       await attachFlights(result.practice.id);
       revalidatePath('/pratiche');
       revalidatePath('/organizza');
-      redirect(`/pratica/${result.practice.id}/prossimo`);
+      redirect(`/pratica/${result.practice.id}?tab=voli`);
     }
     const result = await createPrivateEdition({
       userId,
@@ -124,7 +124,7 @@ export async function startPracticeAction(input: {
     revalidatePath('/partenze');
     revalidatePath('/gruppi');
     revalidatePath('/organizza');
-    redirect(`/pratica/${result.practice.id}/prossimo`);
+    redirect(`/pratica/${result.practice.id}?tab=voli`);
   }
 
   if (free) {
@@ -144,7 +144,7 @@ export async function startPracticeAction(input: {
     await attachFlights(result.practice.id);
     revalidatePath('/pratiche');
     revalidatePath('/organizza');
-    redirect(`/pratica/${result.practice.id}/prossimo`);
+    redirect(`/pratica/${result.practice.id}?tab=voli`);
   }
 
   const result = await createOrReuseDraftPractice({
@@ -160,7 +160,29 @@ export async function startPracticeAction(input: {
   await attachFlights(result.practice.id);
   revalidatePath('/pratiche');
   revalidatePath('/organizza');
-  redirect(`/pratica/${result.practice.id}/prossimo`);
+  redirect(`/pratica/${result.practice.id}?tab=voli`);
+}
+
+/** Persist edited Organizza-style legs on an existing practice (Modifica voli). */
+export async function updatePracticeSelectedFlightPlanAction(input: {
+  practiceId: string;
+  selectedFlightPlan: SelectedFlightPlanSnapshot;
+}): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUser();
+  if (!input.selectedFlightPlan?.legs?.length) {
+    return { error: 'Seleziona almeno una tratta.' };
+  }
+  const saved = await savePracticeSelectedFlightPlan({
+    practiceId: input.practiceId,
+    userId,
+    selectedFlightPlan: input.selectedFlightPlan,
+    plannedLegs: plannedLegsFromSelected(input.selectedFlightPlan),
+  });
+  if ('error' in saved) return { error: saved.error };
+  revalidatePath(`/pratica/${input.practiceId}`);
+  revalidatePath(`/pratica/${input.practiceId}/prossimo`);
+  revalidatePath('/pratiche');
+  return { ok: true };
 }
 
 export async function joinEditionAction(editionId: string): Promise<{ error: string } | never> {

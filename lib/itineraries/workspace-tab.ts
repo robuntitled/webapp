@@ -1,10 +1,18 @@
-export const WORKSPACE_TABS = ['itinerario', 'voli', 'hotel'] as const;
+export const WORKSPACE_TABS = ['itinerario', 'voli', 'hotel', 'partecipanti'] as const;
 
 export type WorkspaceTab = (typeof WORKSPACE_TABS)[number];
 
 export function parseWorkspaceTab(value?: string | null): WorkspaceTab {
   if (value === 'voli' || value === 'flight' || value === 'flights') return 'voli';
   if (value === 'hotel' || value === 'hotels') return 'hotel';
+  if (
+    value === 'partecipanti' ||
+    value === 'participants' ||
+    value === 'members' ||
+    value === 'group'
+  ) {
+    return 'partecipanti';
+  }
   if (value === 'itinerario' || value === 'plan' || value === 'sights') return 'itinerario';
   return 'itinerario';
 }
