@@ -11,16 +11,23 @@ import { ItineraryExplorerWidget } from '@/components/itineraries/workspace/Itin
 import {
   WorkspaceEmptyState,
 } from '@/components/itineraries/workspace/ItineraryScrollWidget';
+import {
+  TripSelectedFlightsPanel,
+  type TripParticipant,
+} from '@/components/itineraries/workspace/TripSelectedFlightsPanel';
 import { WorkspaceHero, WorkspaceMetaChip } from '@/components/itineraries/workspace/WorkspaceHero';
 import { WorkspaceStatusCard } from '@/components/itineraries/workspace/WorkspaceStatusCard';
 import { WorkspaceTabs, type WorkspaceTabItem } from '@/components/itineraries/workspace/WorkspaceTabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FlightSearchPanel } from '@/components/travel/FlightSearchPanel';
 import { LiteApiHotelSearch } from '@/components/travel/LiteApiHotelSearch';
 import { accediHref } from '@/lib/auth/callback-url';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 import { staysFromTemplate, formatItDate } from '@/lib/itineraries/dates';
+import {
+  parseSelectedFlightPlan,
+  snapshotFromPlannedLegs,
+} from '@/lib/itineraries/selected-flight-plan';
 import { getStayBookingProgress, isStayBooked } from '@/lib/itineraries/stay-progress';
 import {
   parseWorkspaceTab,
@@ -45,6 +52,8 @@ type TripWorkspaceProps = {
   tripTitle?: string | null;
   canRename?: boolean;
   members?: EditionMemberCard[];
+  /** Owner + joined with booking flags (for Voli / Partecipanti). */
+  participants?: TripParticipant[];
   isMember?: boolean;
   canJoin?: boolean;
   /** A4: partenza ufficiale senza tour operator. */
@@ -67,6 +76,7 @@ export function TripWorkspace({
   tripTitle = null,
   canRename = false,
   members = [],
+  participants: participantsProp,
   isMember = Boolean(practice),
   canJoin = false,
   comingSoon = false,
@@ -94,6 +104,7 @@ export function TripWorkspace({
     practice?.destination_iata ||
     'viaggio';
   const displayName = tripTitle?.trim() || resolvedDestinationName;
+  const currentUserId = session?.user?.id ?? '';
 
   // Difesa UI: dedup per userId (allineato a listEditionMembers in lettura)
   const uniqueMembers = useMemo(() => {
@@ -109,11 +120,33 @@ export function TripWorkspace({
   }, [members]);
   const groupSize = uniqueMembers.length;
 
+  const participants = useMemo<TripParticipant[]>(() => {
+    if (participantsProp?.length) return participantsProp;
+    if (!currentUserId) return [];
+    return [
+      {
+        userId: currentUserId,
+        name: session?.user?.name?.trim() || 'Tu',
+        isOwner: true,
+        isSelf: true,
+        flightsBought: Boolean(
+          practice?.flight_confirmed_at ||
+            practice?.flight_booking ||
+            (Array.isArray(practice?.flight_bookings) && practice.flight_bookings.length > 0)
+        ),
+      },
+    ];
+  }, [participantsProp, currentUserId, session?.user?.name, practice]);
+
   const flightBooked = Boolean(
     practice?.flight_confirmed_at ||
       practice?.flight_booking ||
       (Array.isArray(practice?.flight_bookings) && practice.flight_bookings.length > 0)
   );
+  const selectedPlan =
+    parseSelectedFlightPlan(practice?.selected_flight_plan) ??
+    snapshotFromPlannedLegs(practice?.planned_legs);
+  const hasSelectedPlan = Boolean(selectedPlan?.legs?.length);
   const hotels = practice?.hotel_bookings ?? [];
   const stays = useMemo(
     () => (template ? staysFromTemplate(template, dateFrom) : []),
@@ -170,13 +203,19 @@ export function TripWorkspace({
     {
       id: 'voli',
       label: 'Voli',
-      status: flightBooked ? 'done' : 'pending',
+      status: flightBooked || hasSelectedPlan ? 'done' : 'pending',
     },
     {
       id: 'hotel',
       label: 'Hotel',
       status: hotelCount > 0 ? 'count' : 'pending',
       count: hotelCount > 0 ? hotelCount : undefined,
+    },
+    {
+      id: 'partecipanti',
+      label: 'Partecipanti',
+      status: participants.length > 1 ? 'count' : null,
+      count: participants.length > 1 ? participants.length : undefined,
     },
   ];
 
@@ -331,10 +370,16 @@ export function TripWorkspace({
                 icon={Plane}
                 title="Voli"
                 subtitle={
-                  flightBooked ? 'Prenotazione confermata' : 'Andata e ritorno sulle date del viaggio'
+                  flightBooked
+                    ? 'Prenotazione confermata'
+                    : hasSelectedPlan
+                      ? `${selectedPlan!.legs.length} tratt${selectedPlan!.legs.length === 1 ? 'a' : 'e'} salvate`
+                      : 'Voli fissati dopo la creazione — nessuna ricerca automatica'
                 }
-                complete={flightBooked}
-                actionLabel={flightBooked ? 'Vedi dettaglio' : 'Scegli voli'}
+                complete={flightBooked || hasSelectedPlan}
+                actionLabel={
+                  flightBooked ? 'Vedi dettaglio' : hasSelectedPlan ? 'Vedi voli' : 'Scegli voli'
+                }
                 onAction={() => selectTab('voli')}
               >
                 {flightBooked && practice?.flight_booking ? (
@@ -350,10 +395,18 @@ export function TripWorkspace({
                       </p>
                     ) : null}
                   </div>
+                ) : hasSelectedPlan ? (
+                  <ul className="space-y-1 text-sm text-slate-700">
+                    {selectedPlan!.legs.slice(0, 3).map((l) => (
+                      <li key={l.id}>
+                        {l.originIata} → {l.destinationIata}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   <WorkspaceEmptyState
                     title="Nessun volo selezionato"
-                    body="Cerca e confronta le opzioni quando sei pronto."
+                    body="I voli scelti in Organizza restano fissi qui. Puoi modificarli quando vuoi."
                   />
                 )}
               </WorkspaceStatusCard>
@@ -401,13 +454,14 @@ export function TripWorkspace({
         ) : null}
 
         {tab === 'voli' ? (
-          <div className="ws-widget rounded-2xl p-5 sm:p-6">
+          <div className="ws-widget rounded-2xl p-5 sm:p-6" data-testid="trip-tab-voli">
             <div className="mb-5 border-b border-slate-100 pb-5">
               <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
                 Voli
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Cerca, confronta e scegli andata e ritorno sulle date del viaggio.
+                Voli fissati alla creazione. Nessuna ricerca automatica: modifica solo se vuoi
+                cambiare una tratta.
               </p>
             </div>
             {!canBookFlights ? (
@@ -422,9 +476,9 @@ export function TripWorkspace({
                   </>
                 ) : (
                   <>
-                    <p className="font-medium text-slate-800">Partecipa per prenotare i voli</p>
+                    <p className="font-medium text-slate-800">Partecipa per vedere i voli</p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Unisciti al gruppo per sbloccare la ricerca voli.
+                      Unisciti al gruppo per sbloccare voli e prenotazione.
                     </p>
                     {canJoin && !isMember ? (
                       <Button
@@ -440,26 +494,74 @@ export function TripWorkspace({
                 )}
               </div>
             ) : flightBooked && practice ? (
-              <BookingRecap practice={practice} section="flight" />
+              <div className="space-y-4">
+                <BookingRecap practice={practice} section="flight" />
+                {hasSelectedPlan ? (
+                  <TripSelectedFlightsPanel
+                    practice={practice}
+                    currentUserId={currentUserId}
+                    participants={participants}
+                    members={uniqueMembers}
+                    canEdit={false}
+                  />
+                ) : null}
+              </div>
             ) : practice ? (
-              <FlightSearchPanel
-                hideSearchForm={Boolean(template)}
-                defaultOrigin="FCO"
-                defaultDestination={
-                  practice.destination_iata ||
-                  template?.hub_iata ||
-                  template?.destination_name ||
-                  resolvedDestinationName
-                }
-                defaultStartDate={dateFrom}
-                defaultEndDate={dateTo}
-                defaultTripType="roundtrip"
-                defaultAdults={1}
-                autoSearch
-                cacheKey={null}
-                practiceId={practice.id}
+              <TripSelectedFlightsPanel
+                practice={practice}
+                currentUserId={currentUserId}
+                participants={participants}
+                members={uniqueMembers}
+                canEdit={isMember}
               />
             ) : null}
+          </div>
+        ) : null}
+
+        {tab === 'partecipanti' ? (
+          <div className="ws-widget rounded-2xl p-5 sm:p-6" data-testid="trip-tab-partecipanti">
+            <div className="mb-5 border-b border-slate-100 pb-5">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
+                Partecipanti
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Creatore e invitati. Lo stato volo di ciascuno è su Voli → Chi paga.
+              </p>
+            </div>
+            {participants.length === 0 ? (
+              <WorkspaceEmptyState
+                title="Nessun partecipante"
+                body="Invita amici dal prossimo passo o dalla chat del gruppo."
+              />
+            ) : (
+              <ul className="space-y-2">
+                {participants.map((p) => (
+                  <li
+                    key={p.userId}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {p.isSelf ? 'Tu' : p.name}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {p.isOwner ? 'Creatore' : 'Partecipante'}
+                        {p.flightsBought ? ' · volo prenotato' : ' · volo in attesa'}
+                      </p>
+                    </div>
+                    <Users className="h-4 w-4 shrink-0 text-slate-300" />
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4 min-h-11 w-full rounded-full"
+              onClick={() => selectTab('voli')}
+            >
+              Vai a Voli · Chi paga
+            </Button>
           </div>
         ) : null}
 

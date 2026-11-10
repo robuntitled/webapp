@@ -86,6 +86,8 @@ export type PracticeRow = {
   destination_iata?: string | null;
   /** Organizza Voli selections (migration 048 / selected_flight_plan). */
   selected_flight_plan?: import('./selected-flight-plan').SelectedFlightPlanSnapshot | null;
+  /** Who pays for whom (migration 049 / flight_booking_coverage). Soft until applied. */
+  flight_booking_coverage?: import('./flight-booking-coverage').FlightCoverageEntry[] | null;
 };
 
 export type EditionType = 'official' | 'private';
