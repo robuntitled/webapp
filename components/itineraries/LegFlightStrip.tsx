@@ -157,12 +157,26 @@ export function LegFlightStrip({
   }
 
   const didAuto = useRef(false);
-  // Auto-select best offer for the requested date once (tap still changes day/offer).
+  // Auto-select best offer for the requested date; retry briefly if empty.
   useEffect(() => {
     if (didAuto.current) return;
     if (leg.status === 'selected' && leg.offer) return;
     didAuto.current = true;
-    void selectDay(leg.date);
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
+          if (cancelled) return;
+        }
+        await selectDay(leg.date);
+        // Parent state may still be catching up; brief pause before retry.
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leg.id]);
 

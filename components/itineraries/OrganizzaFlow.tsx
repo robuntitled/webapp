@@ -521,15 +521,28 @@ export function OrganizzaFlow({
     date: string,
     offer: TripFlightOfferSnapshot | null
   ) {
-    let plan = ensureMainPlan();
-    plan = updateLegFields(plan, legId, { date });
-    if (offer) {
-      plan = selectOfferOnLeg(plan, legId, offer);
-    } else {
-      plan = clearLegOffer(plan, legId);
-    }
-    setFlightPlan(plan);
-    update({ domesticPlan: null });
+    // Functional update: parallel LegFlightStrip auto-selects must not
+    // overwrite each other via a stale draft.flightPlan closure.
+    setDraft((d) => {
+      let plan =
+        d.flightPlan && d.flightPlan.legs.length > 0
+          ? {
+              ...d.flightPlan,
+              legs: d.flightPlan.legs.filter(
+                (l) => l.kind !== 'domestic' && l.kind !== 'internal'
+              ),
+            }
+          : buildMainFlightPlanForDraft(d, multiPlan);
+      plan = updateLegFields(plan, legId, { date });
+      plan = offer
+        ? selectOfferOnLeg(plan, legId, offer)
+        : clearLegOffer(plan, legId);
+      return patchOrganizzaDraft(d, {
+        flightPlan: plan,
+        selectedFlight: mirrorSelectedFlightFromPlan(plan),
+        domesticPlan: null,
+      });
+    });
   }
 
   function createTrip() {
