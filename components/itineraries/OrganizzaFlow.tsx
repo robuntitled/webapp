@@ -1739,7 +1739,38 @@ export function OrganizzaFlow({
                   size="lg"
                   className="min-h-11 rounded-[10px]"
                   disabled={!canContinue}
+                  data-testid="organizza-continua"
                   onClick={() => {
+                    if (step === 'imposta') {
+                      if (!isImpostaComplete(draft)) {
+                        toast.error(
+                          'Completa destinazione, aeroporti, date e «Con chi» per continuare.'
+                        );
+                        return;
+                      }
+                      // Build main plan when entering voli
+                      const plan = buildMainFlightPlanForDraft(draft, multiPlan);
+                      update({
+                        flightPlan: plan,
+                        domesticPlan: null,
+                      });
+                      setEditingLegId(plan.legs[0]?.id ?? null);
+                      setStep('voli');
+                      return;
+                    }
+                    if (step === 'voli') {
+                      if (
+                        !hasMainFlightSelection(draft) &&
+                        !flightPlanAllowsContinue(draft.flightPlan)
+                      ) {
+                        toast.error(
+                          'Seleziona almeno i voli principali oppure continua senza tariffa.'
+                        );
+                        return;
+                      }
+                      setStep('itinerario');
+                      return;
+                    }
                     const next = nextOrganizzaStep(step, draft);
                     if (next) setStep(next);
                   }}
