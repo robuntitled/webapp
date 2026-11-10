@@ -1,8 +1,14 @@
+import type { FlightBookingRecap } from '@/lib/itineraries/bookings';
 import type {
   SelectedFlightLegSnapshot,
   SelectedFlightPlanSnapshot,
 } from '@/lib/itineraries/selected-flight-plan';
 import type { TripFlightLeg, TripFlightOfferSnapshot } from '@/lib/travel/trip-flight-legs';
+import type {
+  FlightCheckoutDraft,
+  FlightCheckoutLegItem,
+  FlightLegDraft,
+} from '@/lib/travel/flight-checkout-draft';
 
 /** Sum of per-person leg prices for the saved plan (all legs). */
 export function sumSelectedPlanPerPerson(
@@ -17,6 +23,120 @@ export function sumSelectedPlanPerPerson(
     any = true;
   }
   return any ? total : null;
+}
+
+export function sumSelectedLegsPerPerson(
+  legs: SelectedFlightLegSnapshot[]
+): number | null {
+  if (!legs.length) return null;
+  let total = 0;
+  let any = false;
+  for (const leg of legs) {
+    if (leg.price == null || !Number.isFinite(leg.price)) continue;
+    total += leg.price;
+    any = true;
+  }
+  return any ? total : null;
+}
+
+function bookingRouteMatches(
+  booking: FlightBookingRecap,
+  leg: SelectedFlightLegSnapshot
+): boolean {
+  const candidates = [booking.outbound, booking.returnLeg].filter(Boolean);
+  const datePrefix = leg.date.slice(0, 10);
+  for (const route of candidates) {
+    if (!route) continue;
+    if (route.origin !== leg.originIata || route.destination !== leg.destinationIata) {
+      continue;
+    }
+    const dep = (route.departureAt ?? '').slice(0, 10);
+    if (dep && datePrefix && dep !== datePrefix) continue;
+    return true;
+  }
+  return false;
+}
+
+/** Match a selected plan leg to an existing practice booking (one-way tickets). */
+export function findBookingForSelectedLeg(
+  leg: SelectedFlightLegSnapshot,
+  bookings: FlightBookingRecap[]
+): FlightBookingRecap | null {
+  for (const b of bookings) {
+    if (bookingRouteMatches(b, leg)) return b;
+  }
+  return null;
+}
+
+export function isSelectedLegBooked(
+  leg: SelectedFlightLegSnapshot,
+  bookings: FlightBookingRecap[]
+): boolean {
+  return Boolean(findBookingForSelectedLeg(leg, bookings));
+}
+
+export function legKindLabelIt(kind: string): string {
+  if (kind === 'return' || kind === 'openjaw_return') return 'Rientro';
+  if (kind === 'intercountry') return 'Tra paesi';
+  if (kind === 'outbound') return 'Andata';
+  return 'Tratta';
+}
+
+export function selectedLegToCheckoutItem(
+  leg: SelectedFlightLegSnapshot
+): FlightCheckoutLegItem | null {
+  if (!leg.offerId || leg.price == null || !Number.isFinite(leg.price)) return null;
+  const draftLeg: FlightLegDraft = {
+    origin: leg.originIata,
+    destination: leg.destinationIata,
+    airline: leg.airline,
+    departureAt: leg.departureAt,
+    arrivalAt: leg.arrivalAt,
+    durationMinutes: leg.durationMinutes,
+    stops: leg.stops ?? undefined,
+  };
+  return {
+    id: leg.id,
+    offerId: leg.offerId,
+    price: leg.price,
+    currency: leg.currency ?? 'EUR',
+    kind: leg.kind,
+    labelIt: leg.labelIt || `${leg.originIata} → ${leg.destinationIata}`,
+    leg: draftLeg,
+  };
+}
+
+/** Build a multi-leg (or single) checkout draft from selected plan legs. */
+export function buildCheckoutDraftFromLegs(input: {
+  legs: SelectedFlightLegSnapshot[];
+  adults: number;
+  practiceId: string;
+  mode: 'all' | 'separate';
+}): FlightCheckoutDraft | null {
+  const items = input.legs
+    .map(selectedLegToCheckoutItem)
+    .filter((x): x is FlightCheckoutLegItem => Boolean(x));
+  if (!items.length) return null;
+  const adults = Math.max(1, input.adults);
+  const unitTotal = items.reduce((s, l) => s + l.price, 0);
+  const first = items[0]!;
+  return {
+    offerId: first.offerId,
+    price: unitTotal * adults,
+    currency: first.currency || 'EUR',
+    adults,
+    tripType: 'oneway',
+    practiceId: input.practiceId,
+    createdAt: Date.now(),
+    outbound: first.leg,
+    returnLeg: null,
+    checkoutLegs: items.map((item) => ({
+      ...item,
+      price: item.price * adults,
+    })),
+    checkoutMode: input.mode,
+    activeLegIndex: 0,
+  };
 }
 
 export function formatStopsIt(stops: number | null | undefined): string {

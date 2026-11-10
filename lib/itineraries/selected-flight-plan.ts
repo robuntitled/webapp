@@ -128,6 +128,16 @@ export function primaryOfferFromSelected(
   return snap.legs.find((l) => l.offerId && l.price != null) ?? null;
 }
 
+/** Legs that have an offerId + price (can be booked as one-way tickets). */
+export function purchasableLegsFromSelected(
+  snap: SelectedFlightPlanSnapshot | null | undefined
+): SelectedFlightLegSnapshot[] {
+  if (!snap?.legs?.length) return [];
+  return snap.legs.filter(
+    (l) => Boolean(l.offerId) && l.price != null && Number.isFinite(l.price)
+  );
+}
+
 export const PRACTICE_FLIGHTS_STORAGE_PREFIX = 'nl-practice-selected-flights-';
 
 export function savePracticeFlightsLocal(

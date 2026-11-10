@@ -10,6 +10,7 @@ import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { formatCalendarMonthDropdownIt } from "@/lib/ui/calendar-locale"
 
 function Calendar({
   className,
@@ -29,79 +30,89 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+        // Compact cells; min-w-0 on day buttons so size-11 from Button never stretches columns.
+        "bg-background group/calendar p-3 [--cell-size:2rem] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent [&_button[data-day]]:min-w-0 [&_button[data-day]]:h-(--cell-size) [&_button[data-day]]:w-(--cell-size)",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+        // Always Italian month labels in dropdown (app copy is it-IT).
+        formatMonthDropdown: formatCalendarMonthDropdownIt,
         ...formatters,
       }}
       classNames={{
-        root: cn("w-fit", defaultClassNames.root, classNames?.root),
+        root: cn("w-full min-w-0 max-w-[17.5rem]", defaultClassNames.root, classNames?.root),
         months: cn(
-          "flex gap-4 flex-col md:flex-row relative",
+          "relative flex w-full min-w-0 flex-col gap-4 md:flex-row",
           defaultClassNames.months,
           classNames?.months
         ),
-        month: cn("flex flex-col w-full gap-4", defaultClassNames.month, classNames?.month),
+        month: cn(
+          "flex w-full min-w-0 flex-col gap-2",
+          defaultClassNames.month,
+          classNames?.month
+        ),
         month_grid: cn(
-          "w-full border-collapse",
-          defaultClassNames.month_grid,
+          // Equal 7 columns on the <table> — never display:grid/flex on rows.
+          "w-full min-w-0 table-fixed border-collapse",
           classNames?.month_grid
         ),
         nav: cn(
-          "z-20 flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
+          // pointer-events-none so month/year <select> receive taps on iOS Safari;
+          // only the prev/next buttons re-enable pointer events.
+          "z-10 flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between pointer-events-none",
           defaultClassNames.nav,
           classNames?.nav
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none",
+          "relative z-20 size-8 min-h-8 min-w-8 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_previous,
           classNames?.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none",
+          "relative z-20 size-8 min-h-8 min-w-8 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_next,
           classNames?.button_next
         ),
         month_caption: cn(
-          "pointer-events-none relative z-0 flex items-center justify-center h-11 w-full px-12",
+          captionLayout === "label"
+            ? "pointer-events-none relative z-0 flex items-center justify-center h-9 w-full px-9"
+            : "pointer-events-auto relative z-30 flex items-center justify-center h-9 w-full px-9",
           defaultClassNames.month_caption,
           classNames?.month_caption
         ),
         dropdowns: cn(
-          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5",
-          defaultClassNames.dropdowns,
+          "relative z-40 flex h-9 w-full items-center justify-center gap-1.5 pointer-events-auto",
           classNames?.dropdowns
         ),
         dropdown_root: cn(
-          "relative has-focus:border-ring border border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] rounded-md",
-          defaultClassNames.dropdown_root,
+          "relative z-40 inline-flex h-9 items-center rounded-md border border-input bg-background shadow-xs has-focus:border-ring has-focus:ring-ring/50 has-focus:ring-[3px]",
           classNames?.dropdown_root
         ),
-        dropdown: cn("absolute inset-0 opacity-0", defaultClassNames.dropdown, classNames?.dropdown),
+        // Visible native select (≥16px) — opacity-0 overlays break month/year taps on iOS Safari.
+        dropdown: cn(
+          "relative z-50 h-9 min-w-[3.5rem] appearance-auto bg-transparent px-1.5 text-base font-medium text-foreground outline-none",
+          classNames?.dropdown
+        ),
         caption_label: cn(
           "select-none font-medium",
           captionLayout === "label"
             ? "text-sm"
-            : "rounded-md pl-2 pr-1 flex items-center gap-1 text-sm h-8 [&>svg]:text-muted-foreground [&>svg]:size-3.5",
+            : "sr-only",
           defaultClassNames.caption_label,
           classNames?.caption_label
         ),
         // RDP v9 usa <table>/<tr>/<td>: niente display:grid/flex sulle righe.
-        weekdays: cn("w-full", defaultClassNames.weekdays, classNames?.weekdays),
+        weekdays: cn("mb-0.5 w-full", classNames?.weekdays),
         weekday: cn(
-          "text-muted-foreground rounded-md font-normal text-[0.8rem] select-none",
-          defaultClassNames.weekday,
+          "h-7 w-[14.2857%] p-0 text-center align-middle text-[0.7rem] font-medium text-muted-foreground select-none",
           classNames?.weekday
         ),
-        week: cn("w-full mt-2", defaultClassNames.week, classNames?.week),
+        week: cn("w-full", classNames?.week),
         week_number_header: cn(
           "select-none w-(--cell-size)",
           defaultClassNames.week_number_header,
@@ -113,11 +124,14 @@ function Calendar({
           classNames?.week_number
         ),
         day: cn(
-          "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day aspect-square select-none",
-          defaultClassNames.day,
+          "relative h-8 w-[14.2857%] p-0 text-center align-middle select-none group/day [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md",
           classNames?.day
         ),
-        day_button: cn(defaultClassNames.day_button, classNames?.day_button),
+        day_button: cn(
+          "h-(--cell-size) w-(--cell-size) min-h-0 min-w-0 p-0",
+          defaultClassNames.day_button,
+          classNames?.day_button
+        ),
         range_start: cn(
           "rounded-l-md bg-accent",
           defaultClassNames.range_start,
@@ -151,6 +165,30 @@ function Calendar({
               className={cn(className)}
               {...props}
             />
+          )
+        },
+        Dropdown: ({ options, value, onChange, className, ...props }) => {
+          return (
+            <select
+              data-slot="calendar-dropdown"
+              value={value}
+              onChange={onChange}
+              className={cn(
+                "relative z-50 h-9 min-w-[3.75rem] max-w-[7.5rem] appearance-auto rounded-md border-0 bg-transparent px-1.5 text-base font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                className
+              )}
+              {...props}
+            >
+              {options?.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  disabled={option.disabled}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
           )
         },
         Chevron: ({ className, orientation, ...props }) => {
@@ -207,8 +245,8 @@ function CalendarDayButton({
     <Button
       ref={ref}
       variant="ghost"
-      size="icon"
-      data-day={day.date.toLocaleDateString()}
+      // Avoid size="icon" (size-11) — it wins over arbitrary size-(--cell-size) in twMerge.
+      data-day={day.date.toLocaleDateString("it-IT")}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&
@@ -219,7 +257,9 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70",
+        // Important size: Button default is h-11; twMerge may not drop it for arbitrary tokens.
+        "!h-8 !w-8 !min-h-0 !min-w-0 !p-0 !px-0 !py-0",
+        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground mx-auto flex flex-col items-center justify-center gap-0 text-sm leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-[10px] [&>span]:opacity-70",
         modifiers.today &&
           !modifiers.selected &&
           !modifiers.range_start &&
