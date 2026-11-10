@@ -30,8 +30,8 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        // Fixed compact cell size — avoid aspect-square rows stretching with wide captions.
-        "bg-background group/calendar p-3 [--cell-size:2rem] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+        // Compact cells; min-w-0 on day buttons so size-11 from Button never stretches columns.
+        "bg-background group/calendar p-3 [--cell-size:2rem] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent [&_button[data-day]]:min-w-0 [&_button[data-day]]:h-(--cell-size) [&_button[data-day]]:w-(--cell-size)",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
@@ -43,20 +43,20 @@ function Calendar({
         ...formatters,
       }}
       classNames={{
-        root: cn("w-fit max-w-[17.5rem]", defaultClassNames.root, classNames?.root),
+        root: cn("w-full min-w-0 max-w-[17.5rem]", defaultClassNames.root, classNames?.root),
         months: cn(
-          "flex gap-4 flex-col md:flex-row relative",
+          "relative flex w-full min-w-0 flex-col gap-4 md:flex-row",
           defaultClassNames.months,
           classNames?.months
         ),
         month: cn(
-          "flex flex-col w-full gap-3",
+          "flex w-full min-w-0 flex-col gap-2",
           defaultClassNames.month,
           classNames?.month
         ),
         month_grid: cn(
-          // Equal 7 columns; do not inherit flex/grid from RDP defaults onto <table>.
-          "w-full table-fixed border-collapse",
+          // Equal 7 columns on the <table> — never display:grid/flex on rows.
+          "w-full min-w-0 table-fixed border-collapse",
           classNames?.month_grid
         ),
         nav: cn(
@@ -68,25 +68,25 @@ function Calendar({
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "relative z-20 size-9 min-h-9 min-w-9 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
+          "relative z-20 size-8 min-h-8 min-w-8 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_previous,
           classNames?.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "relative z-20 size-9 min-h-9 min-w-9 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
+          "relative z-20 size-8 min-h-8 min-w-8 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_next,
           classNames?.button_next
         ),
         month_caption: cn(
           captionLayout === "label"
-            ? "pointer-events-none relative z-0 flex items-center justify-center h-9 w-full px-10"
-            : "pointer-events-auto relative z-30 flex items-center justify-center h-9 w-full px-10",
+            ? "pointer-events-none relative z-0 flex items-center justify-center h-9 w-full px-9"
+            : "pointer-events-auto relative z-30 flex items-center justify-center h-9 w-full px-9",
           defaultClassNames.month_caption,
           classNames?.month_caption
         ),
         dropdowns: cn(
-          "relative z-40 w-full flex items-center justify-center h-9 gap-1.5 pointer-events-auto",
+          "relative z-40 flex h-9 w-full items-center justify-center gap-1.5 pointer-events-auto",
           classNames?.dropdowns
         ),
         dropdown_root: cn(
@@ -95,7 +95,7 @@ function Calendar({
         ),
         // Visible native select (≥16px) — opacity-0 overlays break month/year taps on iOS Safari.
         dropdown: cn(
-          "relative z-50 h-9 min-w-[3.75rem] appearance-auto bg-transparent px-1.5 text-base font-medium text-foreground outline-none",
+          "relative z-50 h-9 min-w-[3.5rem] appearance-auto bg-transparent px-1.5 text-base font-medium text-foreground outline-none",
           classNames?.dropdown
         ),
         caption_label: cn(
@@ -107,9 +107,9 @@ function Calendar({
           classNames?.caption_label
         ),
         // RDP v9 usa <table>/<tr>/<td>: niente display:grid/flex sulle righe.
-        weekdays: cn("w-full", classNames?.weekdays),
+        weekdays: cn("mb-0.5 w-full", classNames?.weekdays),
         weekday: cn(
-          "w-[14.2857%] text-muted-foreground rounded-md font-normal text-[0.7rem] select-none text-center align-middle h-8 p-0",
+          "h-7 w-[14.2857%] p-0 text-center align-middle text-[0.7rem] font-medium text-muted-foreground select-none",
           classNames?.weekday
         ),
         week: cn("w-full", classNames?.week),
@@ -124,10 +124,14 @@ function Calendar({
           classNames?.week_number
         ),
         day: cn(
-          "relative w-[14.2857%] h-8 p-0 text-center align-middle select-none [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day",
+          "relative h-8 w-[14.2857%] p-0 text-center align-middle select-none group/day [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md",
           classNames?.day
         ),
-        day_button: cn(defaultClassNames.day_button, classNames?.day_button),
+        day_button: cn(
+          "h-(--cell-size) w-(--cell-size) min-h-0 min-w-0 p-0",
+          defaultClassNames.day_button,
+          classNames?.day_button
+        ),
         range_start: cn(
           "rounded-l-md bg-accent",
           defaultClassNames.range_start,
@@ -241,7 +245,7 @@ function CalendarDayButton({
     <Button
       ref={ref}
       variant="ghost"
-      size="icon"
+      // Avoid size="icon" (size-11) — it wins over arbitrary size-(--cell-size) in twMerge.
       data-day={day.date.toLocaleDateString("it-IT")}
       data-selected-single={
         modifiers.selected &&
@@ -253,8 +257,9 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        // Fixed cell size (no w-full aspect-square) so rows stay compact when caption is wide.
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground mx-auto flex size-(--cell-size) max-h-(--cell-size) max-w-(--cell-size) flex-col items-center justify-center gap-0 p-0 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-[10px] [&>span]:opacity-70",
+        // Important size: Button default is h-11; twMerge may not drop it for arbitrary tokens.
+        "!h-8 !w-8 !min-h-0 !min-w-0 !p-0 !px-0 !py-0",
+        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground mx-auto flex flex-col items-center justify-center gap-0 text-sm leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-[10px] [&>span]:opacity-70",
         modifiers.today &&
           !modifiers.selected &&
           !modifiers.range_start &&
