@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
+import { MapCreditsControl } from '@/components/maps/MapCreditsControl';
 import { cn } from '@/lib/utils';
 
 export type HotelMapPin = {
@@ -319,7 +320,7 @@ function MapCanvas({
         center={center}
         zoom={12}
         scrollWheelZoom={scrollZoom}
-        attributionControl
+        attributionControl={false}
         className="h-full w-full min-h-[280px] bg-[#eef0fa]"
         style={{ zIndex: 0 }}
       >
@@ -355,6 +356,8 @@ function MapCanvas({
           );
         })}
       </MapContainer>
+
+      <MapCreditsControl attribution={MAP_TILES.attribution} />
 
       {selected ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex justify-center p-3 sm:p-4">

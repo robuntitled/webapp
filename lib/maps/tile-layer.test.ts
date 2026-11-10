@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
+import { getLeafletTileLayer, plainMapAttribution } from '@/lib/maps/tile-layer';
 
 describe('getLeafletTileLayer', () => {
   const prev = process.env.NEXT_PUBLIC_CARTO_API_KEY;
@@ -20,6 +20,9 @@ describe('getLeafletTileLayer', () => {
     expect(layer.url).not.toContain('cartocdn.com');
     expect(layer.subdomains).toBeUndefined();
     expect(layer.attribution.toLowerCase()).toContain('esri');
+    expect(plainMapAttribution(layer.attribution)).toBe(
+      'Tiles © Esri — Esri, DeLorme, NAVTEQ'
+    );
   });
 
   it('uses Carto voyager_nolabels when API key is set', () => {

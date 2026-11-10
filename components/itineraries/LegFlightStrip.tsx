@@ -12,7 +12,14 @@ import {
   writeFlightOfferCache,
   type CachedFlightOffer,
 } from '@/lib/travel/flight-offer-cache';
-import { pickRecommendedFlights } from '@/lib/travel/flight-score';
+import {
+  calendarCacheKey,
+  writeCalendarCache,
+} from '@/lib/travel/flight-calendar-cache';
+import {
+  chipStatsFromOffer,
+  pickCheapestDayOffer,
+} from '@/lib/travel/day-flight-representative';
 import type { TripFlightLeg, TripFlightOfferSnapshot } from '@/lib/travel/trip-flight-legs';
 import { cn } from '@/lib/utils';
 
@@ -55,9 +62,28 @@ async function fetchDayOffers(input: {
     const res = await fetch(`/api/liteapi/flights/search?${params}`, {
       credentials: 'same-origin',
     });
-    const data = (await res.json()) as { offers?: CachedFlightOffer[]; error?: string };
+    const data = (await res.json()) as {
+      offers?: Array<
+        CachedFlightOffer & { offerId?: string; durationMinutes?: number | null }
+      >;
+      error?: string;
+    };
     if (!res.ok) throw new Error(data.error ?? 'Ricerca non riuscita');
-    const list = data.offers ?? [];
+    // API uses offerId; cache/UI use id — normalize once.
+    const list: CachedFlightOffer[] = (data.offers ?? [])
+      .map((o) => ({
+        id: o.id || o.offerId || '',
+        price: o.price,
+        currency: o.currency,
+        stops: o.stops,
+        durationMinutes: o.durationMinutes ?? 0,
+        origin: o.origin,
+        destination: o.destination,
+        departureAt: o.departureAt,
+        arrivalAt: o.arrivalAt,
+        airline: o.airline ?? null,
+      }))
+      .filter((o) => o.id && Number.isFinite(o.price));
     writeFlightOfferCache(key, list);
     return list;
   })();
@@ -147,17 +173,45 @@ export function LegFlightStrip({
         setError('Nessun volo per questo giorno.');
         return;
       }
-      const scored = pickRecommendedFlights(
+      // Same representative as calendar chip (cheapest offer, not balanced/score).
+      const best = pickCheapestDayOffer(
         offers.map((o) => ({
           id: o.id,
           price: o.price,
           stops: o.stops,
           durationMinutes: o.durationMinutes,
+          airline: o.airline ?? null,
         }))
       );
-      const bestId = scored.find((s) => s.kind === 'cheapest')?.offerId ?? offers[0]!.id;
-      const best = offers.find((o) => o.id === bestId) ?? offers[0]!;
-      onDateAndOffer(iso, snapshotForParty(best, iso));
+      const full = best
+        ? (offers.find((o) => o.id === best.id) ?? offers[0]!)
+        : offers[0]!;
+      // Keep calendar badge cache in sync with the offer we just selected
+      // (summary probes can drift from the full search).
+      const chip = chipStatsFromOffer({
+        id: full.id,
+        price: full.price,
+        stops: full.stops,
+        durationMinutes: full.durationMinutes,
+        airline: full.airline ?? null,
+      });
+      writeCalendarCache(
+        calendarCacheKey({
+          origin: leg.originIata,
+          destination: leg.destinationIata,
+          date: iso,
+          tripType: 'oneway',
+        }),
+        {
+          date: iso,
+          cheapestPrice: chip.cheapestPrice,
+          minStops: chip.minStops,
+          minDurationMinutes: chip.minDurationMinutes,
+          offerCount: offers.length,
+          status: 'ok',
+        }
+      );
+      onDateAndOffer(iso, snapshotForParty(full, iso));
     } catch (e) {
       if (runId.current !== id) return;
       setError((e as Error)?.message ?? 'Ricerca non riuscita');
@@ -241,6 +295,24 @@ export function LegFlightStrip({
         onChange={(iso) => {
           void selectDay(iso);
         }}
+        selectedDayChip={
+          leg.offer && (leg.status === 'selected' || leg.status === 'stale')
+            ? {
+                date: leg.date,
+                ...chipStatsFromOffer({
+                  id: leg.offer.offerId,
+                  // Snapshot stores party total; chip is always a persona.
+                  price:
+                    Math.round(
+                      (leg.offer.price / Math.max(1, adults)) * 100
+                    ) / 100,
+                  stops: leg.offer.stops,
+                  durationMinutes: leg.offer.durationMinutes,
+                  airline: leg.offer.airline ?? null,
+                }),
+              }
+            : null
+        }
       />
       <p className="text-[10px] text-[var(--color-text-secondary)]">
         Prezzi in calendario: a persona

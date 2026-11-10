@@ -16,6 +16,7 @@ import type { DestinationMeta } from '@/types/composer';
 import { googleMapsPlaceUrl } from '@/lib/maps/google-maps-links';
 import 'leaflet/dist/leaflet.css';
 import { getLeafletTileLayer } from '@/lib/maps/tile-layer';
+import { MapCreditsControl } from '@/components/maps/MapCreditsControl';
 
 type ReactLeafletTripMapProps = {
   destination: string;
@@ -167,7 +168,7 @@ export function ReactLeafletTripMap({
         boxZoom={interactive}
         keyboard={interactive}
         zoomControl={false}
-        attributionControl
+        attributionControl={false}
       >
         <TileLayer
           url={MAP_TILES.url}
@@ -233,6 +234,8 @@ export function ReactLeafletTripMap({
           );
         })}
       </MapContainer>
+
+      <MapCreditsControl attribution={MAP_TILES.attribution} />
 
       {onMapClick && (
         <p className="pointer-events-none absolute bottom-3 left-3 right-3 z-[400] rounded-full bg-white/90 px-3 py-1.5 text-center text-[10px] text-slate-600 shadow-sm backdrop-blur">

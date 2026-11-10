@@ -4,8 +4,21 @@
  * - Senza chiave: Esri World Light Gray (pubblico) — niente watermark Carto e
  *   niente griglia densissima di scritte locali (es. thai). Zoom/pin restano in-app.
  *
- * Attribution is always returned and must stay visible on the map (license).
+ * Attribution is always returned and must remain accessible via MapCreditsControl
+ * (default Leaflet attribution bar is disabled for a clean UI).
  */
+
+/** Decode tile attribution HTML entities / tags to plain text for the credits popover. */
+export function plainMapAttribution(html: string): string {
+  return html
+    .replace(/&copy;/gi, '©')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&amp;/gi, '&')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export type LeafletTileVariant = 'stylized' | 'soft' | 'labeled';
 

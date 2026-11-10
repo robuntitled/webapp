@@ -925,11 +925,9 @@
     border: none !important;
   }
 
-  /* Credits basemap sempre leggibili (licenza Esri/Carto/OSM) */
+  /* Default Leaflet attribution is disabled; credits live in MapCreditsControl. */
   .leaflet-control-attribution {
-    font-size: 10px !important;
-    max-width: min(100%, 28rem);
-    background: rgba(255, 255, 255, 0.85) !important;
+    display: none !important;
   }
 
   .leaflet-tile-container img {

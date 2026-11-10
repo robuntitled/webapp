@@ -6,6 +6,7 @@ import { LiteApiError } from '@/lib/liteapi/client';
 import { searchFlightRates } from '@/lib/liteapi/flights';
 import { resolveFlightDestinationIata } from '@/lib/travel/iata';
 import { normalizeCountryCode } from '@/lib/travel/airports-by-country';
+import { dayChipFromOffers } from '@/lib/travel/day-flight-representative';
 
 export const runtime = 'nodejs';
 /** Long-haul probes (calendar ±3) often need 20–45s; keep under Vercel hobby/pro caps. */
@@ -192,20 +193,27 @@ export async function GET(request: Request) {
     }
 
     if (summaryOnly) {
-      const prices = offers.map((o) => o.price).filter((n) => Number.isFinite(n));
-      const stops = offers.map((o) => o.stops);
-      const durs = offers
-        .map((o) => o.durationMinutes)
-        .filter((n): n is number => n != null && Number.isFinite(n));
+      // Chip stats from ONE offer (cheapest) — never mix mins across flights.
+      const chip = dayChipFromOffers(
+        offers.map((o) => ({
+          id: o.offerId,
+          price: o.price,
+          stops: o.stops,
+          durationMinutes: o.durationMinutes ?? 0,
+          airline: o.airline ?? null,
+        }))
+      );
       return NextResponse.json({
         configured: true,
         summary: true,
         date: parsed.data.startDate,
-        found: offers.length > 0,
-        status: offers.length > 0 ? 'ok' : 'empty',
-        cheapestPrice: prices.length ? Math.min(...prices) : null,
-        minStops: stops.length ? Math.min(...stops) : null,
-        minDurationMinutes: durs.length ? Math.min(...durs) : null,
+        found: Boolean(chip),
+        status: chip ? 'ok' : 'empty',
+        cheapestPrice: chip?.cheapestPrice ?? null,
+        minStops: chip?.minStops ?? null,
+        minDurationMinutes: chip?.minDurationMinutes ?? null,
+        airline: chip?.airline ?? null,
+        offerId: chip?.offerId ?? null,
         offerCount: offers.length,
         destinationIata,
         tripType: parsed.data.tripType,
