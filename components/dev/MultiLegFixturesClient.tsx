@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { format, subYears } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { CalendarDays, Check, Pencil, Plane, Users } from 'lucide-react';
+import { CalendarDays, Pencil, Plane, Users } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -192,10 +192,6 @@ export function MultiLegFixturesClient() {
             />
           </PopoverContent>
         </Popover>
-        <p className="flex items-center gap-1 text-[11px] text-slate-500">
-          <Check className="h-3.5 w-3.5 text-emerald-600" />
-          Select mese/anno nativi ≥16px, z-index sopra il popover
-        </p>
       </section>
     </div>
   );
