@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Minus,
+  Plus,
   Search,
   Users,
   X,
@@ -41,6 +43,8 @@ import {
 } from '@/lib/itineraries/multi-country';
 import { multiCountryGateHubs } from '@/lib/travel/intercountry-legs';
 import {
+  AMICI_TRAVELERS_MAX,
+  AMICI_TRAVELERS_MIN,
   EMPTY_ORGANIZZA_DRAFT,
   ORGANIZZA_STEPS,
   type OrganizzaCompanyChoice,
@@ -48,6 +52,7 @@ import {
   type OrganizzaStepId,
   type OrganizzaTripType,
   canNavigateToOrganizzaStep,
+  clampAmiciTravelers,
   companyChoiceToTravelMode,
   companyCreatesPrivateTrip,
   companyShowsInviteAfterCreate,
@@ -55,6 +60,7 @@ import {
   durationDaysFromRange,
   isImpostaComplete,
   isMultiCountryDraft,
+  isPartenzaComplete,
   nextOrganizzaStep,
   normalizeOrganizzaCompany,
   normalizeOrganizzaStep,
@@ -215,14 +221,12 @@ export function OrganizzaFlow({
   const [stopsOpen, setStopsOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
-  const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(() =>
-    placeFromIata('MXP')
-  );
-  const [returnPlace, setReturnPlace] = useState<PlaceSuggestion | null>(() =>
-    placeFromIata('MXP')
-  );
-  const [originText, setOriginText] = useState('Milano Malpensa (MXP)');
-  const [returnText, setReturnText] = useState('Milano Malpensa (MXP)');
+  const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(null);
+  const [returnPlace, setReturnPlace] = useState<PlaceSuggestion | null>(null);
+  const [originText, setOriginText] = useState('');
+  const [returnText, setReturnText] = useState('');
+  /** Clearable draft for amici count while typing (validated on blur). */
+  const [amiciCountText, setAmiciCountText] = useState('3');
 
   useEffect(() => {
     const stored = loadDraft();
@@ -237,10 +241,19 @@ export function OrganizzaFlow({
       if (o) {
         setOriginPlace(o);
         setOriginText(`${o.label} (${o.code})`);
+      } else {
+        setOriginPlace(null);
+        setOriginText('');
       }
       if (r) {
         setReturnPlace(r);
         setReturnText(`${r.label} (${r.code})`);
+      } else {
+        setReturnPlace(null);
+        setReturnText('');
+      }
+      if (stored.draft.company === 'amici') {
+        setAmiciCountText(String(stored.draft.travelers));
       }
     }
     const slugQ = searchParams.get('slug');
@@ -382,8 +395,6 @@ export function OrganizzaFlow({
         arrivalIata: hub,
         departureIata: hub,
         tripType: draft.returnHome ? 'roundtrip' : 'oneway',
-        originIata: draft.originIata ?? 'MXP',
-        homeReturnIata: draft.homeReturnIata ?? draft.originIata ?? 'MXP',
         selectedFlight: null,
         flightPlan: null,
         domesticPlan: null,
@@ -397,8 +408,6 @@ export function OrganizzaFlow({
       tripType: 'multi',
       arrivalIata: hubs.arrivalIata,
       departureIata: hubs.departureIata,
-      originIata: draft.originIata ?? 'MXP',
-      homeReturnIata: draft.homeReturnIata ?? draft.originIata ?? 'MXP',
       selectedFlight: null,
       flightPlan: null,
       domesticPlan: null,
@@ -454,10 +463,18 @@ export function OrganizzaFlow({
   }
 
   function setCompany(c: OrganizzaCompanyChoice) {
-    update({
-      company: c,
-      travelers: c === 'amici' ? Math.max(draft.travelers, 3) : defaultTravelersForCompany(c),
-    });
+    const travelers =
+      c === 'amici'
+        ? clampAmiciTravelers(Math.max(draft.travelers, AMICI_TRAVELERS_MIN))
+        : defaultTravelersForCompany(c);
+    if (c === 'amici') setAmiciCountText(String(travelers));
+    update({ company: c, travelers });
+  }
+
+  function setAmiciTravelers(n: number) {
+    const next = clampAmiciTravelers(n);
+    setAmiciCountText(String(next));
+    update({ travelers: next });
   }
 
   function ensureMainPlan(base?: OrganizzaDraft): TripFlightPlan {
@@ -621,24 +638,22 @@ export function OrganizzaFlow({
 
   const canContinue =
     (step === 'imposta' && isImpostaComplete(draft)) ||
+    (step === 'partenza' && isPartenzaComplete(draft)) ||
     (step === 'voli' && flightPlanAllowsContinue(draft.flightPlan)) ||
     step === 'itinerario';
 
-  const showOriginSection = Boolean(draft.slug);
-  const showDatesSection = Boolean(draft.slug);
-  const showCompanySection = Boolean(draft.slug && draft.dateFrom && draft.dateTo);
   const unverifiedMulti =
     isMultiCountryDraft(draft) && !isCuratedMultiSelection(draft.slugs);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(9.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
       <div className="nl-page w-full space-y-5 pt-6 sm:pt-8">
         <header>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-3xl">
             Organizza il tuo viaggio
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Imposta, scegli i voli principali, poi itinerario e mappa.
+            Destinazione, partenza, voli principali, poi itinerario e mappa.
           </p>
         </header>
 
@@ -685,8 +700,8 @@ export function OrganizzaFlow({
           })}
         </ol>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-6">
-          {/* ——— STAGE 1: IMPOSTA ——— */}
+        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 pb-8 shadow-[var(--shadow-soft)] sm:p-6 sm:pb-10">
+          {/* ——— STAGE 1: IMPOSTA (destinazioni) ——— */}
           {step === 'imposta' ? (
             <div className="space-y-5" data-testid="organizza-imposta">
               <div>
@@ -694,7 +709,7 @@ export function OrganizzaFlow({
                   Imposta il viaggio
                 </h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  Destinazioni, partenza, date e compagnia — un solo schermo.
+                  Scegli destinazioni e tipo di viaggio.
                 </p>
               </div>
 
@@ -818,215 +833,268 @@ export function OrganizzaFlow({
                   </Button>
                 ) : null}
               </section>
+            </div>
+          ) : null}
 
-              {showOriginSection ? (
-                <section
-                  className="space-y-3 border-t border-[var(--color-border)] pt-4"
-                  data-testid="organizza-airports"
-                >
-                  <h3 className="text-sm font-bold">Da dove parti?</h3>
-                  <AirportPlaceInput
-                    label="Aeroporto di partenza"
-                    value={originText}
-                    selected={originPlace}
-                    onValueChange={setOriginText}
-                    onSelect={(place) => {
-                      setOriginPlace(place);
-                      setOriginText(
-                        place.kind === 'airport'
-                          ? `${place.label} (${place.code})`
-                          : place.label
-                      );
-                      const iata =
-                        place.kind === 'airport'
-                          ? place.code
-                          : findAirportByIata(place.code)?.iata ?? place.code;
-                      const prev = draft.flightPlan;
-                      if (prev) {
-                        const flagged = flagStaleLegs(prev, {
-                          homeOriginIata: iata,
-                        });
-                        update({
-                          originIata: iata,
-                          flightPlan: flagged,
-                          selectedFlight: mirrorSelectedFlightFromPlan(flagged),
-                        });
-                      } else {
-                        update({ originIata: iata });
-                      }
-                    }}
-                    kinds={['airport', 'city']}
-                    placeholder="Milano, Roma, FCO…"
-                  />
+          {/* ——— STAGE 2: PARTENZA (aeroporti / date / con chi) ——— */}
+          {step === 'partenza' ? (
+            <div className="space-y-5" data-testid="organizza-partenza">
+              <div>
+                <h2 className="font-display text-xl font-extrabold text-primary">
+                  Da dove parti?
+                </h2>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  Aeroporti, date e compagnia di viaggio.
+                </p>
+                {selectedSlugs.length > 0 ? (
+                  <p className="mt-2 text-xs font-semibold text-[var(--color-text-secondary)]">
+                    {selectedSlugs.map((s) => getMaster(s)?.nameIt ?? s).join(' → ')}
+                    {draft.returnHome ? '' : ' · solo andata'}
+                  </p>
+                ) : null}
+              </div>
 
-                  {draft.returnHome ? (
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-bold">Dove torni?</h3>
-                      <AirportPlaceInput
-                        label="Aeroporto di rientro"
-                        value={returnText}
-                        selected={returnPlace}
-                        onValueChange={setReturnText}
-                        onSelect={(place) => {
-                          setReturnPlace(place);
-                          setReturnText(
-                            place.kind === 'airport'
-                              ? `${place.label} (${place.code})`
-                              : place.label
-                          );
-                          const iata =
-                            place.kind === 'airport'
-                              ? place.code
-                              : findAirportByIata(place.code)?.iata ?? place.code;
-                          const prev = draft.flightPlan;
-                          if (prev) {
-                            const flagged = flagStaleLegs(prev, {
-                              homeReturnIata: iata,
-                            });
-                            update({
-                              homeReturnIata: iata,
-                              flightPlan: flagged,
-                              selectedFlight: mirrorSelectedFlightFromPlan(flagged),
-                            });
-                          } else {
-                            update({ homeReturnIata: iata });
-                          }
-                        }}
-                        kinds={['airport', 'city']}
-                        placeholder="Stesso di partenza o diverso…"
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-xs text-[var(--color-text-secondary)]">
-                      Solo andata: nessun volo di rientro. Imposta comunque la data di
-                      fine viaggio per l’itinerario.
-                    </p>
-                  )}
-                </section>
-              ) : null}
+              <section className="space-y-3" data-testid="organizza-airports">
+                <h3 className="text-sm font-bold">Da dove parti?</h3>
+                <AirportPlaceInput
+                  label="Aeroporto di partenza"
+                  value={originText}
+                  selected={originPlace}
+                  onValueChange={setOriginText}
+                  onSelect={(place) => {
+                    setOriginPlace(place);
+                    const label =
+                      place.kind === 'airport'
+                        ? `${place.label} (${place.code})`
+                        : place.label;
+                    setOriginText(label);
+                    const iata =
+                      place.kind === 'airport'
+                        ? place.code
+                        : findAirportByIata(place.code)?.iata ?? place.code;
+                    const sameReturn =
+                      draft.returnHome &&
+                      (!draft.homeReturnIata ||
+                        draft.homeReturnIata === draft.originIata);
+                    if (sameReturn) {
+                      setReturnPlace(place);
+                      setReturnText(label);
+                    }
+                    const prev = draft.flightPlan;
+                    const patch: Partial<OrganizzaDraft> = {
+                      originIata: iata,
+                      ...(sameReturn ? { homeReturnIata: iata } : {}),
+                    };
+                    if (prev) {
+                      const flagged = flagStaleLegs(prev, {
+                        homeOriginIata: iata,
+                        ...(sameReturn ? { homeReturnIata: iata } : {}),
+                      });
+                      update({
+                        ...patch,
+                        flightPlan: flagged,
+                        selectedFlight: mirrorSelectedFlightFromPlan(flagged),
+                      });
+                    } else {
+                      update(patch);
+                    }
+                  }}
+                  kinds={['airport', 'city']}
+                  placeholder="Cerca città o aeroporto…"
+                />
 
-              {showDatesSection ? (
-                <section
-                  className="space-y-3 border-t border-[var(--color-border)] pt-4"
-                  data-testid="organizza-dates"
-                >
-                  <h3 className="text-sm font-bold">Quando?</h3>
-                  <div className="grid gap-3 sm:grid-cols-2" lang="it-IT">
-                    <label className="text-xs font-semibold">
-                      Partenza
-                      <input
-                        type="date"
-                        lang="it-IT"
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-                        value={draft.dateFrom ?? ''}
-                        min={minBookableDateIso()}
-                        onChange={(e) => {
-                          const from = e.target.value;
-                          const to =
-                            draft.dateTo && draft.dateTo >= from
-                              ? draft.dateTo
-                              : from;
-                          setDates(from, to);
-                        }}
-                      />
-                      <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
-                        {formatDateIt(draft.dateFrom) ?? 'gg/mm/aaaa'}
-                      </span>
-                    </label>
-                    <label className="text-xs font-semibold">
-                      {draft.returnHome ? 'Rientro' : 'Fine viaggio'}
-                      <input
-                        type="date"
-                        lang="it-IT"
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-                        value={draft.dateTo ?? ''}
-                        min={draft.dateFrom ?? minBookableDateIso()}
-                        onChange={(e) => {
-                          if (!draft.dateFrom) return;
-                          setDates(draft.dateFrom, e.target.value);
-                        }}
-                      />
-                      <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
-                        {formatDateIt(draft.dateTo) ?? 'gg/mm/aaaa'}
-                      </span>
-                    </label>
-                  </div>
-                  {draft.durationDays ? (
-                    <p className="text-xs font-semibold text-primary">
-                      {tripDurationLabelIt(draft.durationDays)}
-                      {multiPlan
-                        ? ` · ${multiPlan.shares.map((s) => `${s.nameIt} ${s.days}g`).join(' + ')}`
-                        : ''}
-                    </p>
-                  ) : null}
-                </section>
-              ) : null}
-
-              {showCompanySection ? (
-                <section
-                  className="space-y-3 border-t border-[var(--color-border)] pt-4"
-                  data-testid="organizza-company"
-                >
-                  <h3 className="text-sm font-bold">Con chi?</h3>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {(
-                      [
-                        { id: 'solo', label: 'Da solo', hint: '1 persona' },
-                        { id: 'coppia', label: 'In coppia', hint: '2 persone' },
-                        { id: 'amici', label: 'Con amici', hint: 'Scegli quante' },
-                      ] as const
-                    ).map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setCompany(opt.id)}
-                        className={cn(
-                          'rounded-xl border px-3 py-3 text-left',
-                          draft.company === opt.id
-                            ? 'border-primary ring-2 ring-primary/20'
-                            : 'border-[var(--color-border)]'
-                        )}
-                      >
-                        <p className="text-sm font-bold">{opt.label}</p>
-                        <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
-                          {opt.hint}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                  {draft.company === 'amici' ? (
-                    <label className="block text-sm font-semibold">
-                      Quante persone?
-                      <input
-                        type="number"
-                        min={2}
-                        max={12}
-                        className="mt-1 w-28 rounded-xl border border-[var(--color-border)] px-3 py-2"
-                        value={draft.travelers}
-                        onChange={(e) =>
+                {draft.returnHome ? (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold">Dove torni?</h3>
+                    <AirportPlaceInput
+                      label="Aeroporto di rientro"
+                      value={returnText}
+                      selected={returnPlace}
+                      onValueChange={setReturnText}
+                      onSelect={(place) => {
+                        setReturnPlace(place);
+                        setReturnText(
+                          place.kind === 'airport'
+                            ? `${place.label} (${place.code})`
+                            : place.label
+                        );
+                        const iata =
+                          place.kind === 'airport'
+                            ? place.code
+                            : findAirportByIata(place.code)?.iata ?? place.code;
+                        const prev = draft.flightPlan;
+                        if (prev) {
+                          const flagged = flagStaleLegs(prev, {
+                            homeReturnIata: iata,
+                          });
                           update({
-                            travelers: Math.min(
-                              12,
-                              Math.max(2, Number(e.target.value) || 2)
-                            ),
-                          })
+                            homeReturnIata: iata,
+                            flightPlan: flagged,
+                            selectedFlight: mirrorSelectedFlightFromPlan(flagged),
+                          });
+                        } else {
+                          update({ homeReturnIata: iata });
                         }
+                      }}
+                      kinds={['airport', 'city']}
+                      placeholder="Stesso di partenza o diverso…"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Solo andata: nessun volo di rientro. Imposta comunque la data di fine
+                    viaggio per l’itinerario.
+                  </p>
+                )}
+              </section>
+
+              <section
+                className="space-y-3 border-t border-[var(--color-border)] pt-4"
+                data-testid="organizza-dates"
+              >
+                <h3 className="text-sm font-bold">Quando?</h3>
+                <div className="grid gap-3 sm:grid-cols-2" lang="it-IT">
+                  <label className="text-xs font-semibold">
+                    Partenza
+                    <input
+                      type="date"
+                      lang="it-IT"
+                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                      value={draft.dateFrom ?? ''}
+                      min={minBookableDateIso()}
+                      onChange={(e) => {
+                        const from = e.target.value;
+                        const to =
+                          draft.dateTo && draft.dateTo >= from
+                            ? draft.dateTo
+                            : from;
+                        setDates(from, to);
+                      }}
+                    />
+                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                      {formatDateIt(draft.dateFrom) ?? 'gg/mm/aaaa'}
+                    </span>
+                  </label>
+                  <label className="text-xs font-semibold">
+                    {draft.returnHome ? 'Rientro' : 'Fine viaggio'}
+                    <input
+                      type="date"
+                      lang="it-IT"
+                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                      value={draft.dateTo ?? ''}
+                      min={draft.dateFrom ?? minBookableDateIso()}
+                      onChange={(e) => {
+                        if (!draft.dateFrom) return;
+                        setDates(draft.dateFrom, e.target.value);
+                      }}
+                    />
+                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                      {formatDateIt(draft.dateTo) ?? 'gg/mm/aaaa'}
+                    </span>
+                  </label>
+                </div>
+                {draft.durationDays ? (
+                  <p className="text-xs font-semibold text-primary">
+                    {tripDurationLabelIt(draft.durationDays)}
+                    {multiPlan
+                      ? ` · ${multiPlan.shares.map((s) => `${s.nameIt} ${s.days}g`).join(' + ')}`
+                      : ''}
+                  </p>
+                ) : null}
+              </section>
+
+              <section
+                className="space-y-3 border-t border-[var(--color-border)] pt-4"
+                data-testid="organizza-company"
+              >
+                <h3 className="text-sm font-bold">Con chi?</h3>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(
+                    [
+                      { id: 'solo', label: 'Da solo', hint: '1 persona' },
+                      { id: 'coppia', label: 'In coppia', hint: '2 persone' },
+                      { id: 'amici', label: 'Con amici', hint: 'Scegli quante' },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCompany(opt.id)}
+                      className={cn(
+                        'rounded-xl border px-3 py-3 text-left',
+                        draft.company === opt.id
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-[var(--color-border)]'
+                      )}
+                      data-testid={`company-${opt.id}`}
+                    >
+                      <p className="text-sm font-bold">{opt.label}</p>
+                      <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                        {opt.hint}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                {draft.company === 'amici' ? (
+                  <div className="space-y-2" data-testid="amici-stepper">
+                    <p className="text-sm font-semibold">Quante persone?</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white disabled:opacity-40"
+                        aria-label="Diminuisci"
+                        disabled={draft.travelers <= AMICI_TRAVELERS_MIN}
+                        onClick={() => setAmiciTravelers(draft.travelers - 1)}
+                        data-testid="amici-minus"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="h-11 w-20 rounded-xl border border-[var(--color-border)] px-3 text-center text-sm font-bold"
+                        value={amiciCountText}
+                        aria-label="Numero persone"
+                        data-testid="amici-count-input"
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^\d]/g, '');
+                          setAmiciCountText(raw);
+                        }}
+                        onBlur={() => {
+                          if (amiciCountText.trim() === '') {
+                            setAmiciTravelers(AMICI_TRAVELERS_MIN);
+                            return;
+                          }
+                          setAmiciTravelers(Number(amiciCountText));
+                        }}
                       />
-                    </label>
-                  ) : null}
-                  {draft.company === 'amici' ? (
+                      <button
+                        type="button"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white disabled:opacity-40"
+                        aria-label="Aumenta"
+                        disabled={draft.travelers >= AMICI_TRAVELERS_MAX}
+                        onClick={() => setAmiciTravelers(draft.travelers + 1)}
+                        data-testid="amici-plus"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                      <span className="text-xs text-[var(--color-text-secondary)]">
+                        {AMICI_TRAVELERS_MIN}–{AMICI_TRAVELERS_MAX}
+                      </span>
+                    </div>
                     <p className="inline-flex items-start gap-2 rounded-xl bg-[var(--color-tint)] px-3 py-2 text-xs text-[var(--color-text-secondary)]">
                       <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                       Dopo la creazione vedrai il link invito (nessun messaggio inviato
                       da noi).
                     </p>
-                  ) : null}
-                </section>
-              ) : null}
+                  </div>
+                ) : null}
+              </section>
             </div>
           ) : null}
 
-          {/* ——— STAGE 2: VOLI PRINCIPALI ——— */}
+          {/* ——— STAGE 3: VOLI PRINCIPALI ——— */}
           {step === 'voli' ? (
             <div className="space-y-5" data-testid="organizza-voli">
               <div>
@@ -1086,7 +1154,7 @@ export function OrganizzaFlow({
             </div>
           ) : null}
 
-          {/* ——— STAGE 3: ITINERARIO E MAPPA ——— */}
+          {/* ——— STAGE 4: ITINERARIO E MAPPA ——— */}
           {step === 'itinerario' ? (
             <div className="space-y-4" data-testid="organizza-itinerario">
               <div>
@@ -1296,8 +1364,16 @@ export function OrganizzaFlow({
                   onClick={() => {
                     if (step === 'imposta') {
                       if (!isImpostaComplete(draft)) {
+                        toast.error('Scegli almeno una destinazione per continuare.');
+                        return;
+                      }
+                      setStep('partenza');
+                      return;
+                    }
+                    if (step === 'partenza') {
+                      if (!isPartenzaComplete(draft)) {
                         toast.error(
-                          'Completa destinazione, aeroporti, date e «Con chi» per continuare.'
+                          'Completa aeroporto di partenza, date e «Con chi» per continuare.'
                         );
                         return;
                       }

@@ -117,17 +117,28 @@ export function LegFlightStrip({
           ? `Rientro da ${leg.originIata} · giorni vicini`
           : `${leg.labelIt} · giorni vicini`;
 
+  function snapshotForParty(offer: CachedFlightOffer, date: string): TripFlightOfferSnapshot {
+    const pax = Math.max(1, adults);
+    // Search with 1 adult so chip (calendar) and selection share the same per-person basis.
+    const perPerson = offer.price;
+    const total = Math.round(perPerson * pax * 100) / 100;
+    return {
+      ...toSnapshot({ ...offer, price: total }, { ...leg, date }),
+    };
+  }
+
   async function selectDay(iso: string) {
     const id = ++runId.current;
     setSelecting(true);
     setError(null);
     setAltsOpen(false);
     try {
+      // adults=1: same basis as SmartFlightCalendar chips (per person).
       const offers = await fetchDayOffers({
         origin: leg.originIata,
         destination: leg.destinationIata,
         date: iso,
-        adults,
+        adults: 1,
       });
       if (runId.current !== id) return;
       setAlts(offers);
@@ -146,7 +157,7 @@ export function LegFlightStrip({
       );
       const bestId = scored.find((s) => s.kind === 'cheapest')?.offerId ?? offers[0]!.id;
       const best = offers.find((o) => o.id === bestId) ?? offers[0]!;
-      onDateAndOffer(iso, toSnapshot(best, { ...leg, date: iso }));
+      onDateAndOffer(iso, snapshotForParty(best, iso));
     } catch (e) {
       if (runId.current !== id) return;
       setError((e as Error)?.message ?? 'Ricerca non riuscita');
@@ -180,18 +191,18 @@ export function LegFlightStrip({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leg.id]);
 
-  // Prefetch alts when already selected (for alternatives UI)
+  // Prefetch alts when already selected (for alternatives UI) — same 1-adult basis as chips.
   useEffect(() => {
     if (!leg.offer || leg.status !== 'selected') return;
     void fetchDayOffers({
       origin: leg.originIata,
       destination: leg.destinationIata,
       date: leg.date,
-      adults,
+      adults: 1,
     })
       .then(setAlts)
       .catch(() => undefined);
-  }, [leg.offer?.offerId, leg.date, leg.originIata, leg.destinationIata, adults, leg.status]);
+  }, [leg.offer?.offerId, leg.date, leg.originIata, leg.destinationIata, leg.status]);
 
   return (
     <section
@@ -231,23 +242,51 @@ export function LegFlightStrip({
           void selectDay(iso);
         }}
       />
+      <p className="text-[10px] text-[var(--color-text-secondary)]">
+        Prezzi in calendario: a persona
+      </p>
 
       {error ? (
         <p className="text-xs font-medium text-amber-800">{error}</p>
       ) : null}
 
       {leg.offer && (leg.status === 'selected' || leg.status === 'stale') ? (
-        <div className="rounded-xl border border-primary/30 bg-primary/[0.03] px-3 py-2.5">
+        <div
+          className="rounded-xl border border-primary/30 bg-primary/[0.03] px-3 py-2.5"
+          data-testid={`leg-selected-${leg.id}`}
+          data-offer-date={leg.date}
+          data-offer-id={leg.offer.offerId}
+        >
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-[11px] font-bold uppercase text-primary">
                 {leg.status === 'stale' ? 'Da ricontrollare' : 'Selezionato'}
               </p>
-              <p className="text-sm font-extrabold">
-                {formatEuro(leg.offer.price, { approx: false }) ??
-                  `${leg.offer.price} €`}
-              </p>
-              <p className="text-[11px] text-[var(--color-text-secondary)]">
+              {(() => {
+                const pax = Math.max(1, adults);
+                const total = leg.offer.price;
+                const perPerson = Math.round((total / pax) * 100) / 100;
+                const perLabel =
+                  formatEuro(perPerson, { approx: false }) ?? `${perPerson} €`;
+                const totalLabel =
+                  formatEuro(total, { approx: false }) ?? `${total} €`;
+                return (
+                  <>
+                    <p className="text-sm font-extrabold" data-testid="leg-price-per-person">
+                      {perLabel} a persona
+                    </p>
+                    {pax > 1 ? (
+                      <p
+                        className="text-[11px] font-semibold text-[var(--color-text)]"
+                        data-testid="leg-price-total"
+                      >
+                        {totalLabel} totale ({pax} pax)
+                      </p>
+                    ) : null}
+                  </>
+                );
+              })()}
+              <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
                 {leg.offer.stops === 0 ? 'Diretto' : `${leg.offer.stops} scalo/i`} ·{' '}
                 {Math.round(leg.offer.durationMinutes / 60)} h
                 {leg.offer.airline ? ` · ${leg.offer.airline}` : ''}
@@ -284,15 +323,18 @@ export function LegFlightStrip({
                           : 'border-[var(--color-border)]'
                       )}
                       onClick={() =>
-                        onDateAndOffer(leg.date, toSnapshot(o, leg))
+                        onDateAndOffer(leg.date, snapshotForParty(o, leg.date))
                       }
                     >
                       <span>
                         {o.stops === 0 ? 'Diretto' : `${o.stops} sc.`} ·{' '}
                         {Math.round(o.durationMinutes / 60)} h
                       </span>
-                      <span className="font-bold">
+                      <span className="font-bold text-right">
                         {formatEuro(o.price, { approx: false }) ?? `${o.price} €`}
+                        <span className="block text-[10px] font-medium text-[var(--color-text-secondary)]">
+                          a persona
+                        </span>
                       </span>
                     </button>
                   </li>
