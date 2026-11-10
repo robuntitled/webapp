@@ -173,6 +173,30 @@ export function SmartFlightCalendar({
   const [retryToken, setRetryToken] = useState(0);
   const runId = useRef(0);
   const stripRef = useRef<HTMLDivElement | null>(null);
+  const selectedChipDateRef = useRef<string | null>(null);
+  selectedChipDateRef.current = selectedDayChip?.date ?? null;
+
+  // Keep selected day's badge identical to Selezionato (incl. Altre opzioni).
+  useEffect(() => {
+    if (!selectedDayChip?.date) return;
+    setBadges((prev) => ({
+      ...prev,
+      [selectedDayChip.date]: {
+        date: selectedDayChip.date,
+        cheapestPrice: selectedDayChip.cheapestPrice,
+        minStops: selectedDayChip.minStops,
+        minDurationMinutes: selectedDayChip.minDurationMinutes,
+        status: 'ok',
+        loading: false,
+      },
+    }));
+  }, [
+    selectedDayChip?.date,
+    selectedDayChip?.cheapestPrice,
+    selectedDayChip?.minStops,
+    selectedDayChip?.minDurationMinutes,
+    selectedDayChip?.offerId,
+  ]);
 
   const floor = useMemo(() => {
     const bookable = minBookableDateIso();
@@ -273,17 +297,21 @@ export function SmartFlightCalendar({
         const hit = readCalendarCache(cachedKey);
         if (hit && hit.status !== 'error') {
           if (runId.current !== id) return;
-          setBadges((prev) => ({
-            ...prev,
-            [date]: {
-              date: hit.date,
-              cheapestPrice: hit.cheapestPrice,
-              minStops: hit.minStops,
-              minDurationMinutes: hit.minDurationMinutes,
-              status: hit.status,
-              loading: false,
-            },
-          }));
+          setBadges((prev) => {
+            // Never clobber the selected day's Selezionato-synced chip.
+            if (selectedChipDateRef.current === date) return prev;
+            return {
+              ...prev,
+              [date]: {
+                date: hit.date,
+                cheapestPrice: hit.cheapestPrice,
+                minStops: hit.minStops,
+                minDurationMinutes: hit.minDurationMinutes,
+                status: hit.status,
+                loading: false,
+              },
+            };
+          });
           continue;
         }
         const result = await probeDay({
@@ -294,10 +322,13 @@ export function SmartFlightCalendar({
           returnDate: tripType === 'roundtrip' ? pairedReturnDate : null,
         });
         if (runId.current !== id) return;
-        setBadges((prev) => ({
-          ...prev,
-          [date]: { ...result, loading: false },
-        }));
+        setBadges((prev) => {
+          if (selectedChipDateRef.current === date) return prev;
+          return {
+            ...prev,
+            [date]: { ...result, loading: false },
+          };
+        });
       }
     }
 

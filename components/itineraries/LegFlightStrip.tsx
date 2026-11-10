@@ -13,6 +13,10 @@ import {
   type CachedFlightOffer,
 } from '@/lib/travel/flight-offer-cache';
 import {
+  calendarCacheKey,
+  writeCalendarCache,
+} from '@/lib/travel/flight-calendar-cache';
+import {
   chipStatsFromOffer,
   pickCheapestDayOffer,
 } from '@/lib/travel/day-flight-representative';
@@ -182,6 +186,31 @@ export function LegFlightStrip({
       const full = best
         ? (offers.find((o) => o.id === best.id) ?? offers[0]!)
         : offers[0]!;
+      // Keep calendar badge cache in sync with the offer we just selected
+      // (summary probes can drift from the full search).
+      const chip = chipStatsFromOffer({
+        id: full.id,
+        price: full.price,
+        stops: full.stops,
+        durationMinutes: full.durationMinutes,
+        airline: full.airline ?? null,
+      });
+      writeCalendarCache(
+        calendarCacheKey({
+          origin: leg.originIata,
+          destination: leg.destinationIata,
+          date: iso,
+          tripType: 'oneway',
+        }),
+        {
+          date: iso,
+          cheapestPrice: chip.cheapestPrice,
+          minStops: chip.minStops,
+          minDurationMinutes: chip.minDurationMinutes,
+          offerCount: offers.length,
+          status: 'ok',
+        }
+      );
       onDateAndOffer(iso, snapshotForParty(full, iso));
     } catch (e) {
       if (runId.current !== id) return;
