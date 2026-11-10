@@ -646,7 +646,7 @@ export function OrganizzaFlow({
     isMultiCountryDraft(draft) && !isCuratedMultiSelection(draft.slugs);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(9.5rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(12rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
       <div className="nl-page w-full space-y-5 pt-6 sm:pt-8">
         <header>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-3xl">
@@ -700,7 +700,7 @@ export function OrganizzaFlow({
           })}
         </ol>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 pb-8 shadow-[var(--shadow-soft)] sm:p-6 sm:pb-10">
+        <div className="mb-24 rounded-2xl border border-[var(--color-border)] bg-white p-4 pb-10 shadow-[var(--shadow-soft)] sm:mb-16 sm:p-6 sm:pb-12">
           {/* ——— STAGE 1: IMPOSTA (destinazioni) ——— */}
           {step === 'imposta' ? (
             <div className="space-y-5" data-testid="organizza-imposta">
