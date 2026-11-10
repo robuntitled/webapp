@@ -23,7 +23,9 @@ export function calendarCacheKey(input: {
   tripType: 'oneway' | 'roundtrip';
   returnDate?: string | null;
 }): string {
+  // v2: chip stats from a single cheapest offer (not independent mins).
   return [
+    'v2',
     input.origin.trim().toUpperCase(),
     input.destination.trim().toUpperCase(),
     input.date,

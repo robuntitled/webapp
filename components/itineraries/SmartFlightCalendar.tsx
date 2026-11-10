@@ -18,6 +18,7 @@ import {
   suggestNearbyFlightDay,
   type DayBadgeStats,
 } from '@/lib/travel/flight-score';
+import type { DayChipStats } from '@/lib/travel/day-flight-representative';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -31,6 +32,11 @@ type Props = {
   /** Extra floor (e.g. return cannot precede departure). */
   minDate?: string | null;
   className?: string;
+  /**
+   * When the selected day has an explicit offer (tap or Altre opzioni),
+   * override that day's chip so it matches Selezionato.
+   */
+  selectedDayChip?: (DayChipStats & { date: string }) | null;
 };
 
 const WEEKDAY_IT = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'] as const;
@@ -160,6 +166,7 @@ export function SmartFlightCalendar({
   tripType = 'oneway',
   minDate = null,
   className,
+  selectedDayChip = null,
 }: Props) {
   const [badges, setBadges] = useState<Record<string, DayBadgeStats>>({});
   const [loading, setLoading] = useState(false);
@@ -350,11 +357,27 @@ export function SmartFlightCalendar({
         aria-label={labelIt}
       >
         {windowDates.map((d) => {
-          const b = badges[d];
+          const raw = badges[d];
+          const override =
+            selectedDayChip && selectedDayChip.date === d ? selectedDayChip : null;
+          const b: DayBadgeStats | undefined = override
+            ? {
+                date: d,
+                cheapestPrice: override.cheapestPrice,
+                minStops: override.minStops,
+                minDurationMinutes: override.minDurationMinutes,
+                status: 'ok',
+                loading: false,
+              }
+            : raw;
           const selected = d === value;
           const isBest = d === bestPriceDate;
           const isFast = d === fastestDate;
           const dayNum = Number(d.slice(8, 10));
+          const chipMarked =
+            Boolean(override) &&
+            raw?.cheapestPrice != null &&
+            Math.abs(raw.cheapestPrice - override!.cheapestPrice) > 0.5;
           return (
             <div
               key={d}
@@ -415,7 +438,11 @@ export function SmartFlightCalendar({
                 </span>
               ) : b.status === 'ok' && b.cheapestPrice != null ? (
                 <>
-                  <span className="mt-1 text-[12px] font-bold leading-none">
+                  <span
+                    className="mt-1 text-[12px] font-bold leading-none"
+                    data-testid={selected ? 'calendar-chip-selected-price' : undefined}
+                    data-chip-price={b.cheapestPrice}
+                  >
                     {Math.round(b.cheapestPrice)}€
                   </span>
                   <span
@@ -423,6 +450,7 @@ export function SmartFlightCalendar({
                       'mt-0.5 inline-flex items-center gap-0.5 text-[9px] font-medium',
                       selected ? 'text-white/85' : 'text-slate-600'
                     )}
+                    data-testid={selected ? 'calendar-chip-selected-stops' : undefined}
                   >
                     {b.minStops === 0 ? (
                       <>
@@ -438,9 +466,20 @@ export function SmartFlightCalendar({
                         'inline-flex items-center gap-0.5 text-[9px]',
                         selected ? 'text-white/70' : 'text-slate-400'
                       )}
+                      data-testid={selected ? 'calendar-chip-selected-duration' : undefined}
                     >
                       <Timer className="h-2.5 w-2.5" />
                       {formatDurationShort(b.minDurationMinutes)}
+                    </span>
+                  ) : null}
+                  {chipMarked ? (
+                    <span
+                      className={cn(
+                        'mt-0.5 text-[8px] font-bold uppercase tracking-wide',
+                        selected ? 'text-white/90' : 'text-primary'
+                      )}
+                    >
+                      Scelto
                     </span>
                   ) : null}
                 </>
