@@ -20,10 +20,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
 import { formatEuro } from '@/lib/format/euro';
+import { buildCheckoutDraftFromLegs } from '@/lib/itineraries/selected-flight-display';
 import {
   loadPracticeFlightsLocal,
   parseSelectedFlightPlan,
   primaryOfferFromSelected,
+  purchasableLegsFromSelected,
   savePracticeFlightsLocal,
   type SelectedFlightPlanSnapshot,
 } from '@/lib/itineraries/selected-flight-plan';
@@ -170,32 +172,19 @@ export function ProssimoPasso({
   }
 
   function goBuyFlights() {
-    const primary = primaryOfferFromSelected(localPlan);
-    if (!primary?.offerId || primary.price == null) {
+    const draft = buildCheckoutDraftFromLegs({
+      legs: purchasableLegsFromSelected(localPlan),
+      adults: Math.max(1, localPlan?.travelers ?? 1),
+      practiceId,
+      mode: 'all',
+    });
+    if (!draft) {
       toast.message(
         'Nessun volo selezionato salvato. Torna in Organizza o modifica le tratte dal viaggio.'
       );
       return;
     }
-    saveFlightCheckoutDraft({
-      offerId: primary.offerId,
-      price: primary.price,
-      currency: primary.currency || 'EUR',
-      outbound: {
-        origin: primary.originIata,
-        destination: primary.destinationIata,
-        airline: primary.airline,
-        departureAt: primary.departureAt,
-        arrivalAt: primary.arrivalAt,
-        durationMinutes: primary.durationMinutes,
-        stops: primary.stops ?? undefined,
-      },
-      returnLeg: null,
-      adults: Math.max(1, localPlan?.travelers ?? 1),
-      tripType: 'oneway',
-      practiceId,
-      createdAt: Date.now(),
-    });
+    saveFlightCheckoutDraft(draft);
     router.push('/prenota/voli/checkout');
   }
 

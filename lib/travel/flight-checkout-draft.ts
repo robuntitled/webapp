@@ -16,6 +16,17 @@ export type FlightLegDraft = {
   cabinClass?: string | null;
 };
 
+/** One purchasable one-way ticket in a multi-leg checkout. */
+export type FlightCheckoutLegItem = {
+  id: string;
+  offerId: string;
+  price: number;
+  currency: string;
+  kind: string;
+  labelIt: string;
+  leg: FlightLegDraft;
+};
+
 export type FlightCheckoutDraft = {
   offerId: string;
   price: number;
@@ -27,6 +38,15 @@ export type FlightCheckoutDraft = {
   tripId?: string;
   practiceId?: string;
   createdAt: number;
+  /**
+   * Multi-leg checkout (Organizza / trip page).
+   * Each item is a separate one-way LiteAPI offer; paid sequentially in one session.
+   */
+  checkoutLegs?: FlightCheckoutLegItem[];
+  /** `all` = pay every selected unbooked leg; `separate` = single leg. */
+  checkoutMode?: 'all' | 'separate';
+  /** Index into checkoutLegs currently being prepaid/paid. */
+  activeLegIndex?: number;
   /** @deprecated flat fields kept for older sessions */
   origin?: string;
   destination?: string;
@@ -42,23 +62,47 @@ export type FlightCheckoutDraft = {
 };
 
 function normalizeDraft(parsed: FlightCheckoutDraft): FlightCheckoutDraft {
-  if (parsed.outbound) return parsed;
+  const withOutbound = parsed.outbound
+    ? parsed
+    : {
+        ...parsed,
+        outbound: {
+          origin: parsed.origin ?? '',
+          destination: parsed.destination ?? '',
+          airline: parsed.airline ?? null,
+          airlineCode: parsed.airlineCode,
+          airlineLogo: parsed.airlineLogo,
+          departureAt: parsed.departureAt,
+          arrivalAt: parsed.arrivalAt,
+          durationMinutes: parsed.durationMinutes,
+          stops: parsed.stops,
+          flightNumber: parsed.flightNumber,
+          cabinClass: parsed.cabinClass,
+        },
+        returnLeg: parsed.returnLeg ?? null,
+      };
+
+  const legs = withOutbound.checkoutLegs;
+  if (!Array.isArray(legs) || legs.length === 0) return withOutbound;
+
+  const idx = Math.min(
+    Math.max(0, withOutbound.activeLegIndex ?? 0),
+    legs.length - 1
+  );
+  const active = legs[idx]!;
   return {
-    ...parsed,
-    outbound: {
-      origin: parsed.origin ?? '',
-      destination: parsed.destination ?? '',
-      airline: parsed.airline ?? null,
-      airlineCode: parsed.airlineCode,
-      airlineLogo: parsed.airlineLogo,
-      departureAt: parsed.departureAt,
-      arrivalAt: parsed.arrivalAt,
-      durationMinutes: parsed.durationMinutes,
-      stops: parsed.stops,
-      flightNumber: parsed.flightNumber,
-      cabinClass: parsed.cabinClass,
-    },
+    ...withOutbound,
+    activeLegIndex: idx,
+    offerId: active.offerId,
+    outbound: active.leg,
     returnLeg: null,
+    tripType: 'oneway',
+    currency: active.currency || withOutbound.currency || 'EUR',
+    // Keep total for the whole multi-leg scope on the draft; active charge uses payment.price.
+    price:
+      withOutbound.checkoutMode === 'separate'
+        ? active.price
+        : legs.reduce((s, l) => s + (Number.isFinite(l.price) ? l.price : 0), 0),
   };
 }
 

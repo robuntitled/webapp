@@ -493,27 +493,21 @@ export function TripWorkspace({
                   </>
                 )}
               </div>
-            ) : flightBooked && practice ? (
+            ) : practice ? (
               <div className="space-y-4">
-                <BookingRecap practice={practice} section="flight" />
-                {hasSelectedPlan ? (
+                {flightBooked ? (
+                  <BookingRecap practice={practice} section="flight" />
+                ) : null}
+                {hasSelectedPlan || !flightBooked ? (
                   <TripSelectedFlightsPanel
                     practice={practice}
                     currentUserId={currentUserId}
                     participants={participants}
                     members={uniqueMembers}
-                    canEdit={false}
+                    canEdit={isMember}
                   />
                 ) : null}
               </div>
-            ) : practice ? (
-              <TripSelectedFlightsPanel
-                practice={practice}
-                currentUserId={currentUserId}
-                participants={participants}
-                members={uniqueMembers}
-                canEdit={isMember}
-              />
             ) : null}
           </div>
         ) : null}

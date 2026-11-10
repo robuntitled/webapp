@@ -14,20 +14,26 @@ import {
   participantFlightUiStatus,
 } from '@/lib/itineraries/flight-booking-coverage';
 import {
+  buildCheckoutDraftFromLegs,
   formatClockIt,
   formatDurationIt,
   formatLegDateIt,
   formatStopsIt,
+  isSelectedLegBooked,
+  legKindLabelIt,
+  sumSelectedLegsPerPerson,
   sumSelectedPlanPerPerson,
 } from '@/lib/itineraries/selected-flight-display';
 import {
   loadPracticeFlightsLocal,
   parseSelectedFlightPlan,
-  primaryOfferFromSelected,
+  purchasableLegsFromSelected,
   savePracticeFlightsLocal,
   snapshotFromPlannedLegs,
+  type SelectedFlightLegSnapshot,
   type SelectedFlightPlanSnapshot,
 } from '@/lib/itineraries/selected-flight-plan';
+import { listPracticeFlightBookings } from '@/lib/itineraries/practice-flights';
 import { saveFlightCheckoutDraft } from '@/lib/travel/flight-checkout-draft';
 import type { EditionMemberCard } from '@/lib/itineraries/bookings';
 import type { PracticeRow } from '@/lib/itineraries/types';
@@ -71,6 +77,7 @@ export function TripSelectedFlightsPanel({
   const [picking, setPicking] = useState(false);
   const [payOthersOpen, setPayOthersOpen] = useState(false);
   const [selectedPayIds, setSelectedPayIds] = useState<string[]>(() => [currentUserId]);
+  const [separateLegs, setSeparateLegs] = useState(false);
 
   const coverage = useMemo(
     () =>
@@ -79,6 +86,8 @@ export function TripSelectedFlightsPanel({
       ),
     [practice]
   );
+
+  const bookings = useMemo(() => listPracticeFlightBookings(practice), [practice]);
 
   useEffect(() => {
     const server = resolvePlan(practice);
@@ -96,13 +105,26 @@ export function TripSelectedFlightsPanel({
     return m;
   }, [participants]);
 
+  const purchasable = useMemo(() => purchasableLegsFromSelected(plan), [plan]);
+  const unbookedLegs = useMemo(
+    () => purchasable.filter((l) => !isSelectedLegBooked(l, bookings)),
+    [purchasable, bookings]
+  );
   const perPersonTotal = useMemo(() => sumSelectedPlanPerPerson(plan), [plan]);
+  const unbookedPerPerson = useMemo(
+    () => sumSelectedLegsPerPerson(unbookedLegs),
+    [unbookedLegs]
+  );
 
-  function isLockedBeneficiary(userId: string): boolean {
+  function isPersonFullyCovered(userId: string): boolean {
     const cov = coverageForUser(coverage, userId);
-    if (cov && (cov.status === 'booked' || cov.status === 'covered')) return true;
+    if (cov && (cov.status === 'booked' || cov.status === 'covered')) {
+      // Coverage is person-level; still allow remaining legs if plan has unbooked offers.
+      return unbookedLegs.length === 0;
+    }
     const p = participants.find((x) => x.userId === userId);
-    return Boolean(p?.flightsBought);
+    if (p?.flightsBought && unbookedLegs.length === 0) return true;
+    return false;
   }
 
   function openEdit(legId?: string) {
@@ -117,13 +139,12 @@ export function TripSelectedFlightsPanel({
   }
 
   function openPayOthers() {
-    // Default: me + other uncovered participants (me can be unticked later).
     const defaults = participants
-      .filter((p) => !isLockedBeneficiary(p.userId))
+      .filter((p) => !isPersonFullyCovered(p.userId))
       .map((p) => p.userId);
     const withSelf = defaults.includes(currentUserId)
       ? defaults
-      : isLockedBeneficiary(currentUserId)
+      : isPersonFullyCovered(currentUserId)
         ? defaults
         : [currentUserId, ...defaults];
     setSelectedPayIds(withSelf.length ? withSelf : [currentUserId]);
@@ -131,49 +152,16 @@ export function TripSelectedFlightsPanel({
   }
 
   function togglePay(userId: string) {
-    if (isLockedBeneficiary(userId)) return;
+    if (isPersonFullyCovered(userId)) return;
     setSelectedPayIds((prev) => {
       if (prev.includes(userId)) {
-        const next = prev.filter((id) => id !== userId);
-        return next; // allow empty while selecting; CTA disabled if 0
+        return prev.filter((id) => id !== userId);
       }
       return [...prev, userId];
     });
   }
 
-  function goCheckout(beneficiaryIds: string[]) {
-    const ids = beneficiaryIds.filter((id) => !isLockedBeneficiary(id));
-    if (!ids.length) {
-      toast.error('Seleziona almeno una persona da prenotare.');
-      return;
-    }
-    const offer = primaryOfferFromSelected(plan);
-    if (!offer?.offerId || offer.price == null) {
-      toast.error('Seleziona i voli prima di prenotare.');
-      return;
-    }
-    const adults = Math.max(1, ids.length);
-    const unit = perPersonTotal ?? offer.price;
-    saveFlightCheckoutDraft({
-      offerId: offer.offerId,
-      price: unit * adults,
-      currency: offer.currency ?? 'EUR',
-      adults,
-      tripType: 'oneway',
-      practiceId: practice.id,
-      createdAt: Date.now(),
-      outbound: {
-        origin: offer.originIata,
-        destination: offer.destinationIata,
-        airline: offer.airline,
-        departureAt: offer.departureAt,
-        arrivalAt: offer.arrivalAt,
-        durationMinutes: offer.durationMinutes,
-        stops: offer.stops ?? undefined,
-      },
-      returnLeg: null,
-    });
-    // Stash who we intend to cover (client-side until migration 049 is applied).
+  function stashCoverageIntent(ids: string[]) {
     try {
       sessionStorage.setItem(
         `nl-flight-coverage-intent-${practice.id}`,
@@ -185,7 +173,43 @@ export function TripSelectedFlightsPanel({
     } catch {
       /* ignore */
     }
+  }
+
+  function goCheckout(beneficiaryIds: string[], legs: SelectedFlightLegSnapshot[], mode: 'all' | 'separate') {
+    const ids = beneficiaryIds.filter((id) => !isPersonFullyCovered(id));
+    if (!ids.length) {
+      toast.error('Seleziona almeno una persona da prenotare.');
+      return;
+    }
+    if (!legs.length) {
+      toast.error(
+        unbookedLegs.length === 0
+          ? 'Tutte le tratte selezionate risultano già prenotate.'
+          : 'Seleziona i voli prima di prenotare.'
+      );
+      return;
+    }
+    const draft = buildCheckoutDraftFromLegs({
+      legs,
+      adults: Math.max(1, ids.length),
+      practiceId: practice.id,
+      mode,
+    });
+    if (!draft) {
+      toast.error('Seleziona i voli prima di prenotare.');
+      return;
+    }
+    saveFlightCheckoutDraft(draft);
+    stashCoverageIntent(ids);
     router.push('/prenota/voli/checkout');
+  }
+
+  function goCheckoutAll(beneficiaryIds: string[]) {
+    goCheckout(beneficiaryIds, unbookedLegs, 'all');
+  }
+
+  function goCheckoutOne(beneficiaryIds: string[], leg: SelectedFlightLegSnapshot) {
+    goCheckout(beneficiaryIds, [leg], 'separate');
   }
 
   if (!plan || plan.legs.length === 0) {
@@ -232,64 +256,89 @@ export function TripSelectedFlightsPanel({
     );
   }
 
+  const canPay = unbookedLegs.length > 0;
+
   return (
     <div className="space-y-5" data-testid="trip-voli-fixed">
       <ul className="space-y-2.5">
-        {plan.legs.map((leg) => (
-          <li
-            key={leg.id}
-            className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm"
-            data-testid={`trip-voli-leg-${leg.id}`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  {leg.kind === 'return' || leg.kind === 'openjaw_return'
-                    ? 'Rientro'
-                    : leg.kind === 'intercountry'
-                      ? 'Tra paesi'
-                      : 'Tratta'}
-                </p>
-                <p className="mt-0.5 font-display text-base font-semibold text-slate-900">
-                  {leg.originIata} → {leg.destinationIata}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {formatLegDateIt(leg.date)}
-                  {leg.departureAt
-                    ? ` · ${formatClockIt(leg.departureAt)}–${formatClockIt(leg.arrivalAt)}`
-                    : ''}
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  {formatStopsIt(leg.stops)} · {formatDurationIt(leg.durationMinutes)}
-                  {leg.airline ? ` · ${leg.airline}` : ''}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                {leg.price != null ? (
-                  <p className="text-sm font-extrabold tabular-nums text-slate-900">
-                    {formatEuro(leg.price)}
-                    <span className="block text-[10px] font-medium text-slate-500">
-                      a persona
+        {plan.legs.map((leg) => {
+          const booked = isSelectedLegBooked(leg, bookings);
+          return (
+            <li
+              key={leg.id}
+              className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm"
+              data-testid={`trip-voli-leg-${leg.id}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      {legKindLabelIt(leg.kind)}
+                    </p>
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                        booked
+                          ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200'
+                          : 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'
+                      )}
+                      data-testid={`trip-voli-leg-status-${leg.id}`}
+                    >
+                      {booked ? 'Prenotato' : 'Da prenotare'}
                     </span>
+                  </div>
+                  <p className="mt-0.5 font-display text-base font-semibold text-slate-900">
+                    {leg.originIata} → {leg.destinationIata}
                   </p>
-                ) : (
-                  <p className="text-xs text-amber-700">Da completare</p>
-                )}
-                {canEdit ? (
-                  <button
-                    type="button"
-                    className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
-                    onClick={() => openEdit(leg.id)}
-                    data-testid={`trip-voli-edit-${leg.id}`}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    Modifica
-                  </button>
-                ) : null}
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {formatLegDateIt(leg.date)}
+                    {leg.departureAt
+                      ? ` · ${formatClockIt(leg.departureAt)}–${formatClockIt(leg.arrivalAt)}`
+                      : ''}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {formatStopsIt(leg.stops)} · {formatDurationIt(leg.durationMinutes)}
+                    {leg.airline ? ` · ${leg.airline}` : ''}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  {leg.price != null ? (
+                    <p className="text-sm font-extrabold tabular-nums text-slate-900">
+                      {formatEuro(leg.price)}
+                      <span className="block text-[10px] font-medium text-slate-500">
+                        a persona
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-amber-700">Da completare</p>
+                  )}
+                  {canEdit && !booked ? (
+                    <button
+                      type="button"
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
+                      onClick={() => openEdit(leg.id)}
+                      data-testid={`trip-voli-edit-${leg.id}`}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Modifica
+                    </button>
+                  ) : null}
+                  {separateLegs && !booked && leg.offerId && leg.price != null ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="mt-2 h-9 rounded-full px-3 text-xs"
+                      onClick={() => goCheckoutOne([currentUserId], leg)}
+                      data-testid={`trip-voli-prenota-leg-${leg.id}`}
+                    >
+                      Prenota
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       {canEdit ? (
@@ -303,6 +352,29 @@ export function TripSelectedFlightsPanel({
           <Pencil className="h-4 w-4" />
           Modifica voli
         </Button>
+      ) : null}
+
+      {canPay ? (
+        <label
+          className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-3"
+          data-testid="trip-voli-separate-toggle"
+        >
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-primary"
+            checked={separateLegs}
+            onChange={(e) => setSeparateLegs(e.target.checked)}
+          />
+          <span>
+            <span className="block text-sm font-semibold text-slate-900">
+              Paga tratte separatamente
+            </span>
+            <span className="mt-0.5 block text-[11px] text-slate-500">
+              Ogni tratta è un biglietto one-way. Di default le paghi insieme in un unico
+              checkout; attiva questa opzione per prenotare una tratta alla volta.
+            </span>
+          </span>
+        </label>
       ) : null}
 
       <section
@@ -320,7 +392,7 @@ export function TripSelectedFlightsPanel({
               const cov = coverageForUser(coverage, p.userId);
               const ui = participantFlightUiStatus({
                 userId: p.userId,
-                selfBooked: p.flightsBought,
+                selfBooked: p.flightsBought && unbookedLegs.length === 0,
                 coverage: cov,
                 coveredByName: cov
                   ? nameById.get(cov.coveredByUserId) ?? null
@@ -347,7 +419,9 @@ export function TripSelectedFlightsPanel({
                   >
                     {ui.kind === 'covered'
                       ? `Pagato da ${ui.byName}`
-                      : coverageStatusLabelIt(ui)}
+                      : unbookedLegs.length > 0 && (p.flightsBought || bookings.length > 0) && p.isSelf
+                        ? `${bookings.length} tratta/e · resta da prenotare`
+                        : coverageStatusLabelIt(ui)}
                   </span>
                 </li>
               );
@@ -355,22 +429,33 @@ export function TripSelectedFlightsPanel({
           </ul>
         ) : null}
 
-        {!payOthersOpen ? (
+        {!canPay ? (
+          <p className="text-xs text-emerald-800" data-testid="trip-voli-all-booked">
+            Tutte le tratte selezionate risultano prenotate.
+          </p>
+        ) : !payOthersOpen ? (
           <div className="space-y-2" data-testid="trip-chi-paga-choices">
-            <Button
-              type="button"
-              className="min-h-11 w-full rounded-full"
-              onClick={() => goCheckout([currentUserId])}
-              disabled={isLockedBeneficiary(currentUserId)}
-              data-testid="trip-pago-per-me"
-            >
-              Pago per me
-              {perPersonTotal != null ? (
-                <span className="ml-1 font-semibold opacity-90">
-                  · {formatEuro(perPersonTotal)}
-                </span>
-              ) : null}
-            </Button>
+            {!separateLegs ? (
+              <Button
+                type="button"
+                className="min-h-11 w-full rounded-full"
+                onClick={() => goCheckoutAll([currentUserId])}
+                disabled={isPersonFullyCovered(currentUserId)}
+                data-testid="trip-pago-per-me"
+              >
+                Pago per me
+                {unbookedPerPerson != null ? (
+                  <span className="ml-1 font-semibold opacity-90">
+                    · {formatEuro(unbookedPerPerson)}
+                  </span>
+                ) : null}
+              </Button>
+            ) : (
+              <p className="text-[11px] text-slate-500" data-testid="trip-voli-separate-hint">
+                Usa Prenota su ogni tratta qui sopra, oppure Pago per altri per includere più
+                persone su una tratta.
+              </p>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -398,11 +483,11 @@ export function TripSelectedFlightsPanel({
             </div>
             <ul className="space-y-1.5">
               {participants.map((p) => {
-                const locked = isLockedBeneficiary(p.userId);
+                const locked = isPersonFullyCovered(p.userId);
                 const cov = coverageForUser(coverage, p.userId);
                 const ui = participantFlightUiStatus({
                   userId: p.userId,
-                  selfBooked: p.flightsBought,
+                  selfBooked: p.flightsBought && unbookedLegs.length === 0,
                   coverage: cov,
                   coveredByName: cov
                     ? nameById.get(cov.coveredByUserId) ?? null
@@ -452,26 +537,51 @@ export function TripSelectedFlightsPanel({
               <span>
                 {selectedPayIds.length}{' '}
                 {selectedPayIds.length === 1 ? 'persona' : 'persone'}
+                {separateLegs ? ' · scegli la tratta sotto' : ''}
               </span>
               <span className="font-bold tabular-nums text-slate-900">
-                {perPersonTotal != null
-                  ? formatEuro(perPersonTotal * Math.max(0, selectedPayIds.length))
-                  : '—'}
+                {!separateLegs && unbookedPerPerson != null
+                  ? formatEuro(unbookedPerPerson * Math.max(0, selectedPayIds.length))
+                  : perPersonTotal != null && !separateLegs
+                    ? formatEuro(perPersonTotal * Math.max(0, selectedPayIds.length))
+                    : '—'}
               </span>
             </div>
-            <Button
-              type="button"
-              className="min-h-11 w-full rounded-full"
-              disabled={selectedPayIds.length === 0}
-              onClick={() => goCheckout(selectedPayIds)}
-              data-testid="trip-voli-checkout-altri"
-            >
-              {selectedPayIds.length <= 1
-                ? selectedPayIds[0] === currentUserId
-                  ? 'Prenota il mio posto'
-                  : 'Prenota per 1 persona'
-                : `Prenota per ${selectedPayIds.length} persone`}
-            </Button>
+            {!separateLegs ? (
+              <Button
+                type="button"
+                className="min-h-11 w-full rounded-full"
+                disabled={selectedPayIds.length === 0}
+                onClick={() => goCheckoutAll(selectedPayIds)}
+                data-testid="trip-voli-checkout-altri"
+              >
+                {selectedPayIds.length <= 1
+                  ? selectedPayIds[0] === currentUserId
+                    ? `Prenota ${unbookedLegs.length} tratt${unbookedLegs.length === 1 ? 'a' : 'e'}`
+                    : 'Prenota per 1 persona'
+                  : `Prenota ${unbookedLegs.length} tratte · ${selectedPayIds.length} persone`}
+              </Button>
+            ) : (
+              <ul className="space-y-2" data-testid="trip-voli-separate-altri">
+                {unbookedLegs.map((leg) => (
+                  <li key={leg.id}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 w-full rounded-full"
+                      disabled={selectedPayIds.length === 0}
+                      onClick={() => goCheckoutOne(selectedPayIds, leg)}
+                      data-testid={`trip-voli-checkout-leg-${leg.id}`}
+                    >
+                      Prenota {leg.originIata}→{leg.destinationIata}
+                      {leg.price != null
+                        ? ` · ${formatEuro(leg.price * Math.max(1, selectedPayIds.length))}`
+                        : ''}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </section>

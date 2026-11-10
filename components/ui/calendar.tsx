@@ -54,43 +54,52 @@ function Calendar({
           classNames?.month_grid
         ),
         nav: cn(
-          "z-20 flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
+          // pointer-events-none so month/year <select> receive taps on iOS Safari;
+          // only the prev/next buttons re-enable pointer events.
+          "z-10 flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between pointer-events-none",
           defaultClassNames.nav,
           classNames?.nav
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none",
+          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_previous,
           classNames?.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none",
+          "relative z-20 size-11 min-h-11 min-w-11 aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_next,
           classNames?.button_next
         ),
         month_caption: cn(
-          "pointer-events-none relative z-0 flex items-center justify-center h-11 w-full px-12",
+          captionLayout === "label"
+            ? "pointer-events-none relative z-0 flex items-center justify-center h-11 w-full px-12"
+            : "pointer-events-auto relative z-30 flex items-center justify-center h-11 w-full px-12",
           defaultClassNames.month_caption,
           classNames?.month_caption
         ),
         dropdowns: cn(
-          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5",
+          "relative z-40 w-full flex items-center justify-center h-11 gap-2 pointer-events-auto",
           defaultClassNames.dropdowns,
           classNames?.dropdowns
         ),
         dropdown_root: cn(
-          "relative has-focus:border-ring border border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] rounded-md",
+          "relative z-40 inline-flex min-h-11 items-center rounded-md border border-input bg-background shadow-xs has-focus:border-ring has-focus:ring-ring/50 has-focus:ring-[3px]",
           defaultClassNames.dropdown_root,
           classNames?.dropdown_root
         ),
-        dropdown: cn("absolute inset-0 opacity-0", defaultClassNames.dropdown, classNames?.dropdown),
+        // Visible native select (≥16px) — opacity-0 overlays break month/year taps on iOS Safari.
+        dropdown: cn(
+          "relative z-50 h-11 min-w-[4.75rem] appearance-auto bg-transparent px-2 text-base font-medium text-foreground outline-none",
+          defaultClassNames.dropdown,
+          classNames?.dropdown
+        ),
         caption_label: cn(
           "select-none font-medium",
           captionLayout === "label"
             ? "text-sm"
-            : "rounded-md pl-2 pr-1 flex items-center gap-1 text-sm h-8 [&>svg]:text-muted-foreground [&>svg]:size-3.5",
+            : "sr-only",
           defaultClassNames.caption_label,
           classNames?.caption_label
         ),
@@ -151,6 +160,30 @@ function Calendar({
               className={cn(className)}
               {...props}
             />
+          )
+        },
+        Dropdown: ({ options, value, onChange, className, ...props }) => {
+          return (
+            <select
+              data-slot="calendar-dropdown"
+              value={value}
+              onChange={onChange}
+              className={cn(
+                "relative z-50 h-11 min-w-[4.75rem] max-w-[9rem] appearance-auto rounded-md border border-input bg-background px-2 text-base font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                className
+              )}
+              {...props}
+            >
+              {options?.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  disabled={option.disabled}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
           )
         },
         Chevron: ({ className, orientation, ...props }) => {

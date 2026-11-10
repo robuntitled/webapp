@@ -15,6 +15,7 @@ import {
   type FlightLegRecap,
   type HotelBookingRecap,
 } from '@/lib/itineraries/bookings';
+import { listPracticeFlightBookings } from '@/lib/itineraries/practice-flights';
 import type { PracticeRow } from '@/lib/itineraries/types';
 
 function formatDuration(mins?: number | null) {
@@ -74,9 +75,11 @@ function Leg({ label, leg }: { label: string; leg: FlightLegRecap }) {
 export function FlightBookingCard({
   flight,
   practiceId,
+  legLabel = 'Andata',
 }: {
   flight: FlightBookingRecap;
   practiceId?: string;
+  legLabel?: string;
 }) {
   const router = useRouter();
   const [live, setLive] = useState(flight);
@@ -142,7 +145,7 @@ export function FlightBookingCard({
       ) : statusInfo.kind !== 'unknown' ? (
         <p className="text-xs text-white/60">{statusInfo.label}</p>
       ) : null}
-      <Leg label="Andata" leg={live.outbound} />
+      <Leg label={legLabel} leg={live.outbound} />
       {live.returnLeg ? <Leg label="Ritorno" leg={live.returnLeg} /> : null}
       <p className="text-sm text-white/70">{money}</p>
     </section>
@@ -212,7 +215,8 @@ export function BookingRecap({
   compact?: boolean;
   section?: 'all' | 'flight' | 'hotel' | 'activity';
 }) {
-  const flight = practice.flight_booking ?? null;
+  const flights = listPracticeFlightBookings(practice);
+  const flight = flights[0] ?? practice.flight_booking ?? null;
   const hotels = practice.hotel_bookings ?? [];
   const activities = practice.activity_bookings ?? [];
   const showFlight = section === 'all' || section === 'flight';
@@ -223,7 +227,9 @@ export function BookingRecap({
     const flightBit =
       showFlight &&
       (flight?.bookingRef
-        ? `Volo ${flight.bookingRef}`
+        ? flights.length > 1
+          ? `${flights.length} voli · ${flight.bookingRef}`
+          : `Volo ${flight.bookingRef}`
         : practice.flight_confirmed_at
           ? isFlightPendingConfirmation(flight?.status)
             ? 'Volo · in elaborazione'
@@ -250,10 +256,23 @@ export function BookingRecap({
 
   return (
     <div className="space-y-3">
-      {showFlight && flight ? (
-        <FlightBookingCard flight={flight} practiceId={practice.id} />
-      ) : null}
-      {showFlight && !flight && practice.flight_confirmed_at ? (
+      {showFlight
+        ? flights.map((f, i) => (
+            <FlightBookingCard
+              key={f.bookingId ?? f.bookingRef ?? f.prebookId ?? `flight-${i}`}
+              flight={f}
+              practiceId={practice.id}
+              legLabel={
+                f.returnLeg
+                  ? 'Andata'
+                  : flights.length > 1
+                    ? `Tratta ${i + 1}`
+                    : 'Andata'
+              }
+            />
+          ))
+        : null}
+      {showFlight && flights.length === 0 && practice.flight_confirmed_at ? (
         <p className="rounded-3xl bg-[#161d2b] p-4 text-sm text-white/80">
           Volo confermato. Il codice è nella tua email di conferma.
         </p>
