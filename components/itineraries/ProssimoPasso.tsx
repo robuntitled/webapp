@@ -358,7 +358,7 @@ export function ProssimoPasso({
                               : ''}
                             {leg.airline ? ` · ${leg.airline}` : ''}
                             {leg.price != null
-                              ? ` · ${formatEuro(leg.price / Math.max(1, localPlan.travelers), { approx: false }) ?? `${leg.price} €`} a persona`
+                              ? ` · ${formatEuro(leg.price, { approx: false }) ?? `${leg.price} €`} a persona`
                               : ''}
                           </p>
                         </li>

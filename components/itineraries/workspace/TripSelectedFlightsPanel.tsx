@@ -311,7 +311,7 @@ export function TripSelectedFlightsPanel({
                 <div className="shrink-0 text-right">
                   {(() => {
                     const unit = selectedLegPerPersonPrice(leg, priceBasis);
-                    const party = selectedLegPartyTotal(leg);
+                    const party = selectedLegPartyTotal(leg, priceBasis);
                     if (unit == null || party == null) {
                       return <p className="text-xs text-amber-700">Da completare</p>;
                     }

@@ -3,6 +3,9 @@ import type {
   SelectedFlightLegSnapshot,
   SelectedFlightPlanSnapshot,
 } from '@/lib/itineraries/selected-flight-plan';
+import {
+  normalizeSelectedFlightPlan,
+} from '@/lib/itineraries/selected-flight-plan';
 import type { TripFlightLeg, TripFlightOfferSnapshot } from '@/lib/travel/trip-flight-legs';
 import type {
   FlightCheckoutDraft,
@@ -11,9 +14,8 @@ import type {
 } from '@/lib/travel/flight-checkout-draft';
 
 /**
- * Organizza / LegFlightStrip stores `leg.price` as the **party total** for
- * `plan.travelers` (search is 1-adult, then × pax). Never treat raw `leg.price`
- * as “a persona” without dividing by the basis.
+ * Source of truth: `leg.price` is always **unit price a persona**.
+ * Party total = unit × travelers. Never store ambiguous party totals.
  */
 export function planPriceBasisTravelers(
   plan: Pick<SelectedFlightPlanSnapshot, 'travelers'> | null | undefined
@@ -25,31 +27,32 @@ function roundMoney(amount: number): number {
   return Math.round(amount * 100) / 100;
 }
 
-/** Per-person unit from a stored party-total leg price. */
+/** Per-person unit (stored price is already a persona). */
 export function selectedLegPerPersonPrice(
   leg: Pick<SelectedFlightLegSnapshot, 'price'>,
-  priceBasisTravelers: number
-): number | null {
-  if (leg.price == null || !Number.isFinite(leg.price)) return null;
-  const basis = Math.max(1, priceBasisTravelers);
-  return roundMoney(leg.price / basis);
-}
-
-/** Party total as stored (for the Organizza traveler count). */
-export function selectedLegPartyTotal(
-  leg: Pick<SelectedFlightLegSnapshot, 'price'>
+  _priceBasisTravelers?: number
 ): number | null {
   if (leg.price == null || !Number.isFinite(leg.price)) return null;
   return roundMoney(leg.price);
 }
 
+/** Party total = unit × travelers for the saved plan size. */
+export function selectedLegPartyTotal(
+  leg: Pick<SelectedFlightLegSnapshot, 'price'>,
+  priceBasisTravelers = 1
+): number | null {
+  const unit = selectedLegPerPersonPrice(leg);
+  if (unit == null) return null;
+  return roundMoney(unit * Math.max(1, priceBasisTravelers));
+}
+
 /** Charge for `payForCount` people on one leg (unit × count). */
 export function selectedLegChargeForPax(
   leg: Pick<SelectedFlightLegSnapshot, 'price'>,
-  priceBasisTravelers: number,
+  _priceBasisTravelers: number,
   payForCount: number
 ): number | null {
-  const unit = selectedLegPerPersonPrice(leg, priceBasisTravelers);
+  const unit = selectedLegPerPersonPrice(leg);
   if (unit == null) return null;
   return roundMoney(unit * Math.max(1, payForCount));
 }
@@ -58,12 +61,12 @@ export function selectedLegChargeForPax(
 export function sumSelectedPlanPerPerson(
   plan: SelectedFlightPlanSnapshot | null | undefined
 ): number | null {
-  if (!plan?.legs?.length) return null;
-  const basis = planPriceBasisTravelers(plan);
+  const normalized = plan ? normalizeSelectedFlightPlan(plan) : null;
+  if (!normalized?.legs?.length) return null;
   let total = 0;
   let any = false;
-  for (const leg of plan.legs) {
-    const unit = selectedLegPerPersonPrice(leg, basis);
+  for (const leg of normalized.legs) {
+    const unit = selectedLegPerPersonPrice(leg);
     if (unit == null) continue;
     total += unit;
     any = true;
@@ -73,14 +76,13 @@ export function sumSelectedPlanPerPerson(
 
 export function sumSelectedLegsPerPerson(
   legs: SelectedFlightLegSnapshot[],
-  priceBasisTravelers = 1
+  _priceBasisTravelers = 1
 ): number | null {
   if (!legs.length) return null;
-  const basis = Math.max(1, priceBasisTravelers);
   let total = 0;
   let any = false;
   for (const leg of legs) {
-    const unit = selectedLegPerPersonPrice(leg, basis);
+    const unit = selectedLegPerPersonPrice(leg);
     if (unit == null) continue;
     total += unit;
     any = true;
@@ -144,10 +146,10 @@ export function legKindLabelIt(kind: string): string {
 
 export function selectedLegToCheckoutItem(
   leg: SelectedFlightLegSnapshot,
-  priceBasisTravelers = 1
+  _priceBasisTravelers = 1
 ): FlightCheckoutLegItem | null {
   if (!leg.offerId || leg.price == null || !Number.isFinite(leg.price)) return null;
-  const unit = selectedLegPerPersonPrice(leg, priceBasisTravelers);
+  const unit = selectedLegPerPersonPrice(leg);
   if (unit == null) return null;
   const draftLeg: FlightLegDraft = {
     origin: leg.originIata,
@@ -172,8 +174,7 @@ export function selectedLegToCheckoutItem(
 
 /**
  * Build a multi-leg (or single) checkout draft from selected plan legs.
- * `priceBasisTravelers` = Organizza party size used when prices were stored.
- * `adults` = how many passengers this checkout pays for (Pago per me → 1).
+ * Stored prices are unit (a persona). `adults` = passengers this checkout pays for.
  */
 export function buildCheckoutDraftFromLegs(input: {
   legs: SelectedFlightLegSnapshot[];
@@ -182,10 +183,9 @@ export function buildCheckoutDraftFromLegs(input: {
   mode: 'all' | 'separate';
   priceBasisTravelers?: number;
 }): FlightCheckoutDraft | null {
-  const basis = Math.max(1, input.priceBasisTravelers ?? 1);
   const adults = Math.max(1, input.adults);
   const items = input.legs
-    .map((leg) => selectedLegToCheckoutItem(leg, basis))
+    .map((leg) => selectedLegToCheckoutItem(leg))
     .filter((x): x is FlightCheckoutLegItem => Boolean(x));
   if (!items.length) return null;
   const unitTotal = roundMoney(items.reduce((s, l) => s + l.price, 0));
@@ -245,11 +245,13 @@ export function snapshotLegToTripLeg(
   leg: SelectedFlightLegSnapshot,
   passengers = 1
 ): TripFlightLeg {
+  const unit = selectedLegPerPersonPrice(leg);
   const offer: TripFlightOfferSnapshot | null =
-    leg.offerId && leg.price != null
+    leg.offerId && unit != null
       ? {
           offerId: leg.offerId,
-          price: leg.price,
+          // TripFlightOfferSnapshot.price is unit (a persona) after this fix.
+          price: unit,
           currency: leg.currency ?? 'EUR',
           originIata: leg.originIata,
           destinationIata: leg.destinationIata,
@@ -307,6 +309,7 @@ export function applyOfferToSnapshotLeg(
     ...leg,
     date,
     offerId: offer.offerId,
+    // Offer.price is unit (a persona).
     price: offer.price,
     currency: offer.currency,
     stops: offer.stops,

@@ -446,18 +446,22 @@ export function FlightCheckoutClient({
             amountEur,
             error: data.error ?? 'Conferma prenotazione fallita',
           };
-          setLegResults((prev) => [...prev, fail]);
+          setLegResults((prev) => {
+            const next = [...prev, fail];
+            const priorOk = next.some((r) => r.ok);
+            setConfirmation({
+              bookingId: null,
+              bookingRef: null,
+              status: priorOk ? 'PARTIAL' : 'FAILED',
+              amountEur: 0,
+              practiceId: draft?.practiceId,
+            });
+            return next;
+          });
           toast.error(fail.error);
-          // Honest partial state: keep prior successes, stop the queue.
+          // Honest partial/fail state: keep prior successes, never claim "confermata".
           clearFlightPaymentPending();
           setPayment(null);
-          setConfirmation({
-            bookingId: null,
-            bookingRef: null,
-            status: 'FAILED',
-            amountEur: 0,
-            practiceId: draft?.practiceId,
-          });
           setStep('done');
           return;
         }
@@ -778,7 +782,11 @@ export function FlightCheckoutClient({
         currency?: string | null;
       };
       if (!res.ok) {
-        toast.error(data.error ?? 'Impossibile riservare il volo');
+        toast.error(
+          data.code === 'PREVIEW_PAYMENTS_DISABLED'
+            ? data.error ?? 'Anteprima: pagamenti disattivati'
+            : data.error ?? 'Impossibile riservare il volo'
+        );
         if (legs && legs.length > 1 && legResults.length > 0) {
           // Partial success already saved — show honest done state.
           setConfirmation({
@@ -915,32 +923,38 @@ export function FlightCheckoutClient({
           <CheckCircle2 className="h-9 w-9" />
           <div>
             <h2 className="font-display text-2xl font-semibold">
-              {partial
-                ? 'Prenotazione parziale'
-                : reconciling
-                  ? 'Prenotazione ricevuta'
-                  : pending
-                    ? 'Pagamento confermato'
-                    : multiDone
-                      ? 'Tratte prenotate'
-                      : 'Prenotazione confermata'}
+              {failedAny && !okAny
+                ? 'Prenotazione non completata'
+                : partial
+                  ? 'Prenotazione parziale'
+                  : reconciling
+                    ? 'Prenotazione ricevuta'
+                    : pending
+                      ? 'Pagamento confermato'
+                      : multiDone
+                        ? 'Tratte prenotate'
+                        : 'Prenotazione confermata'}
             </h2>
             <p
               className={cn(
                 'text-sm',
-                reconciling || pending || partial
-                  ? 'text-amber-900/80'
-                  : 'text-emerald-800/80'
+                failedAny && !okAny
+                  ? 'text-rose-800/90'
+                  : reconciling || pending || partial
+                    ? 'text-amber-900/80'
+                    : 'text-emerald-800/80'
               )}
             >
-              {partial
-                ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
-                : reconciling
-                  ? confirmation?.reconciliationMessage ??
-                    'Prenotazione ricevuta, stiamo completando la registrazione'
-                  : pending
-                    ? statusInfo.description
-                    : 'Conserva i codici per il check-in.'}
+              {failedAny && !okAny
+                ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
+                : partial
+                  ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
+                  : reconciling
+                    ? confirmation?.reconciliationMessage ??
+                      'Prenotazione ricevuta, stiamo completando la registrazione'
+                    : pending
+                      ? statusInfo.description
+                      : 'Conserva i codici per il check-in.'}
             </p>
           </div>
         </div>

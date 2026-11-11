@@ -15,8 +15,8 @@ export type SelectedFlightLegSnapshot = {
   labelIt: string;
   offerId: string | null;
   /**
-   * Party total for `SelectedFlightPlanSnapshot.travelers` (Organizza searches
-   * 1 adult then multiplies). Divide by travelers for “a persona”.
+   * Unit price **a persona** (source of truth).
+   * Party total = price × travelers. Never store an ambiguous party total here.
    */
   price: number | null;
   currency: string | null;
@@ -28,11 +28,17 @@ export type SelectedFlightLegSnapshot = {
 };
 
 export type SelectedFlightPlanSnapshot = {
-  version: 1;
+  /** 1 = legacy (may be party total); 2 = unit a persona. */
+  version: 1 | 2;
   travelers: number;
   returnHome: boolean;
   savedAt: string;
   legs: SelectedFlightLegSnapshot[];
+  /**
+   * `unit` = leg.price is a persona (canonical).
+   * `party` = legacy Organizza party totals (normalize ÷ travelers).
+   */
+  priceMode?: 'unit' | 'party';
 };
 
 export function tripPlanToSelectedSnapshot(
@@ -59,13 +65,14 @@ export function tripPlanToSelectedSnapshot(
       arrivalAt: l.offer?.arrivalAt ?? null,
     }));
   if (!legs.length) return null;
-  return {
-    version: 1,
+  return normalizeSelectedFlightPlan({
+    version: 2,
     travelers: Math.max(1, travelers),
     returnHome: plan.returnHome !== false,
     savedAt: new Date().toISOString(),
+    priceMode: 'unit',
     legs,
-  };
+  });
 }
 
 export function plannedLegsFromSelected(
@@ -90,8 +97,71 @@ export function plannedLegsFromSelected(
 export function parseSelectedFlightPlan(raw: unknown): SelectedFlightPlanSnapshot | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as SelectedFlightPlanSnapshot;
-  if (o.version !== 1 || !Array.isArray(o.legs) || o.legs.length === 0) return null;
-  return o;
+  if ((o.version !== 1 && o.version !== 2) || !Array.isArray(o.legs) || o.legs.length === 0) {
+    return null;
+  }
+  return normalizeSelectedFlightPlan(o);
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/**
+ * Canonicalize stored plans to unit (a persona) prices.
+ * - priceMode `unit` / version 2 → as-is
+ * - priceMode `party` → ÷ travelers (legacy Organizza party totals)
+ * - missing priceMode on version 1 → treat as unit if already looks like
+ *   post-Modifica unit storage; only convert when explicitly marked `party`.
+ *
+ * Deterministic rule: only `priceMode: 'party'` divides. Writers always set
+ * `priceMode: 'unit'` + version 2. Ambiguous v1 without mode is read as unit
+ * (fixes the fb2b187 double-divide after Modifica with adults=1).
+ */
+export function normalizeSelectedFlightPlan(
+  plan: SelectedFlightPlanSnapshot
+): SelectedFlightPlanSnapshot {
+  const travelers = Math.max(1, plan.travelers || 1);
+  if (plan.priceMode === 'unit' || plan.version === 2) {
+    return {
+      ...plan,
+      version: 2,
+      travelers,
+      priceMode: 'unit',
+      legs: plan.legs.map((l) => ({
+        ...l,
+        price:
+          l.price == null || !Number.isFinite(l.price) ? l.price : roundMoney(l.price),
+      })),
+    };
+  }
+  if (plan.priceMode === 'party') {
+    return {
+      ...plan,
+      version: 2,
+      travelers,
+      priceMode: 'unit',
+      legs: plan.legs.map((l) => ({
+        ...l,
+        price:
+          l.price == null || !Number.isFinite(l.price)
+            ? l.price
+            : roundMoney(l.price / travelers),
+      })),
+    };
+  }
+  // version 1, no priceMode: assume unit (Modifica / current SoT).
+  return {
+    ...plan,
+    version: 2,
+    travelers,
+    priceMode: 'unit',
+    legs: plan.legs.map((l) => ({
+      ...l,
+      price:
+        l.price == null || !Number.isFinite(l.price) ? l.price : roundMoney(l.price),
+    })),
+  };
 }
 
 /** Display-only fallback when selected_flight_plan is empty (use planned_legs). */
@@ -101,10 +171,11 @@ export function snapshotFromPlannedLegs(
 ): SelectedFlightPlanSnapshot | null {
   if (!legs?.length) return null;
   return {
-    version: 1,
+    version: 2,
     travelers: Math.max(1, travelers),
     returnHome: legs.some((l) => l.kind === 'return'),
     savedAt: new Date(0).toISOString(),
+    priceMode: 'unit',
     legs: legs.map((l, i) => ({
       id: `planned-${i}-${l.origin}-${l.destination}`,
       kind: l.kind ?? 'other',

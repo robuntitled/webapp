@@ -67,6 +67,8 @@ export function EditSelectedFlightLegModal({
     if (!active || !legId) return;
     const nextPlan: SelectedFlightPlanSnapshot = {
       ...plan,
+      version: 2,
+      priceMode: 'unit',
       savedAt: new Date().toISOString(),
       legs: plan.legs.map((l) => (l.id === legId ? active : l)),
     };
@@ -87,21 +89,23 @@ export function EditSelectedFlightLegModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
-      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto rounded-2xl p-4 sm:p-5">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg">
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-1.25rem)] max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl p-3 sm:p-5">
+        <DialogHeader className="min-w-0 pr-6">
+          <DialogTitle className="truncate font-display text-base sm:text-lg">
             Modifica volo
             {active ? ` · ${active.originIata} → ${active.destinationIata}` : ''}
           </DialogTitle>
         </DialogHeader>
         {tripLeg ? (
-          <div className="space-y-4 pt-1">
-            <LegFlightStrip
-              leg={tripLeg}
-              adults={1}
-              minDate={null}
-              onDateAndOffer={onDateAndOffer}
-            />
+          <div className="min-w-0 space-y-4 overflow-x-hidden pt-1">
+            <div className="min-w-0 overflow-x-hidden">
+              <LegFlightStrip
+                leg={tripLeg}
+                adults={Math.max(1, plan.travelers)}
+                minDate={null}
+                onDateAndOffer={onDateAndOffer}
+              />
+            </div>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -117,7 +121,7 @@ export function EditSelectedFlightLegModal({
                 disabled={pending || !active?.offerId}
                 onClick={save}
               >
-                {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                 Salva tratta
               </Button>
             </div>
