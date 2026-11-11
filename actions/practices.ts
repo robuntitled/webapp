@@ -185,14 +185,36 @@ export async function updatePracticeSelectedFlightPlanAction(input: {
   return { ok: true };
 }
 
-export async function joinEditionAction(editionId: string): Promise<{ error: string } | never> {
+export async function joinEditionAction(
+  editionId: string,
+  options?: { ageConfirmed18?: boolean }
+): Promise<{ error: string } | never> {
   const userId = await requireUser();
+  if (!options?.ageConfirmed18) {
+    return { error: 'Per unirti conferma di avere almeno 18 anni.' };
+  }
   const result = await joinEdition({ userId, editionId });
   if ('error' in result) {
     return { error: result.error ?? 'Impossibile unirsi al viaggio.' };
   }
   revalidatePath('/pratiche');
   redirect(`/pratica/${result.practice.id}`);
+}
+
+/** Elimina bozza / esci con eventuale passaggio di ruolo creatore (regole Kr). */
+export async function deleteOrLeavePracticeAction(
+  practiceId: string
+): Promise<
+  | { ok: true; mode: 'hard_deleted' | 'transferred_and_left' | 'left' }
+  | { error: string }
+> {
+  const userId = await requireUser();
+  const { deleteOrLeavePractice } = await import('@/lib/data/practice-delete');
+  const result = await deleteOrLeavePractice({ practiceId, userId });
+  if ('error' in result) return result;
+  revalidatePath('/pratiche');
+  revalidatePath(`/pratica/${practiceId}`);
+  return { ok: true, mode: result.mode };
 }
 
 export async function confirmHotelAction(practiceId: string) {
@@ -272,6 +294,55 @@ export async function createTripFromHotelAction(input: {
   revalidatePath('/pratiche');
   revalidatePath('/organizza');
   return { practiceId: result.practice.id };
+}
+
+/**
+ * Aggiorna le date della pratica. Se il viaggio era legato a una partenza di gruppo,
+ * esce dal gruppo (Kr #5).
+ */
+export async function updatePracticeDatesAction(input: {
+  practiceId: string;
+  dateFrom: string;
+  dateTo: string;
+}): Promise<{ ok: true; detachedFromGroup: boolean } | { error: string }> {
+  const userId = await requireUser();
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.dateFrom) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.dateTo)
+  ) {
+    return { error: 'Date non valide.' };
+  }
+  const { getPractice } = await import('@/lib/data/practices');
+  const { supabaseAdmin } = await import('@/lib/supabase-admin');
+  const practice = await getPractice(input.practiceId, userId);
+  if (!practice) return { error: 'Viaggio non trovato.' };
+
+  const datesChanged =
+    practice.date_from.slice(0, 10) !== input.dateFrom ||
+    practice.date_to.slice(0, 10) !== input.dateTo;
+
+  const { error } = await supabaseAdmin
+    .from('practices')
+    .update({ date_from: input.dateFrom, date_to: input.dateTo })
+    .eq('id', input.practiceId)
+    .eq('user_id', userId);
+  if (error) return { error: 'Impossibile aggiornare le date.' };
+
+  let detachedFromGroup = false;
+  if (datesChanged && practice.edition_id) {
+    const { detachPracticeFromEditionOnDateChange } = await import(
+      '@/lib/data/practice-delete'
+    );
+    const det = await detachPracticeFromEditionOnDateChange({
+      practiceId: input.practiceId,
+      userId,
+    });
+    detachedFromGroup = det.detached;
+  }
+
+  revalidatePath('/pratiche');
+  revalidatePath(`/pratica/${input.practiceId}`);
+  return { ok: true, detachedFromGroup };
 }
 
 export async function renameEditionAction(input: {
