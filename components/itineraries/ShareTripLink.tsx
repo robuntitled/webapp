@@ -42,7 +42,7 @@ export function ShareTripLink({
   return (
     <div className="flex flex-wrap gap-2">
       <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={shareWhatsApp}>
-        WhatsApp
+        Invita su WhatsApp
       </Button>
       <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => void nativeShare()}>
         <Share2 className="mr-1 h-3.5 w-3.5" />

@@ -11,18 +11,16 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { BookingRecap } from '@/components/itineraries/BookingRecap';
+import { PracticeTripCard } from '@/components/itineraries/PracticeTripCard';
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
-import { formatItDate } from '@/lib/itineraries/dates';
 import { itineraryPath } from '@/lib/itineraries/params';
 import { hasFlightBooked } from '@/lib/itineraries/practice-lifecycle';
 import type { HubPracticeCard } from '@/lib/itineraries/pratiche-hub-types';
+import { DASHBOARD_VIAGGI_COPY } from '@/lib/itineraries/dashboard-viaggi-copy';
 import { cn } from '@/lib/utils';
 
 export type { HubPracticeCard };
-
-const MODE_LABEL = { solo: 'Da solo', friends: 'Con amici', group: 'In gruppo' } as const;
 
 type SectionId = 'organized' | 'joined' | 'bookings' | 'saved';
 
@@ -65,9 +63,15 @@ export function PraticheHub({
   practices: HubPracticeCard[];
   likedTemplateIds: string[];
 }) {
+  const copy = DASHBOARD_VIAGGI_COPY;
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
+
   const activePractices = useMemo(
-    () => practices.filter((p) => p.status !== 'cancelled'),
-    [practices]
+    () =>
+      practices.filter(
+        (p) => p.status !== 'cancelled' && !removedIds.includes(p.id)
+      ),
+    [practices, removedIds]
   );
 
   const liked = useMemo(
@@ -112,13 +116,12 @@ export function PraticheHub({
     <div className="space-y-8" data-testid="pratiche-hub">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-          Account
+          {copy.pageEyebrow}
         </p>
-        <h1 className="mt-2 font-display text-4xl font-semibold text-foreground">I miei viaggi</h1>
-        <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Organizzati da te, a cui partecipi, prenotazioni e salvati. Tocca un viaggio per aprire
-          Itinerario, Voli, Hotel e Partecipanti.
-        </p>
+        <h1 className="mt-2 font-display text-4xl font-semibold text-foreground">
+          {copy.pageTitle}
+        </h1>
+        <p className="mt-2 max-w-xl text-sm text-muted-foreground">{copy.pageSub}</p>
       </header>
 
       <div
@@ -137,9 +140,9 @@ export function PraticheHub({
               aria-selected={isActive}
               id={`pratiche-tab-${section.id}`}
               aria-controls={`pratiche-panel-${section.id}`}
+              aria-label={`${section.label}, ${counts[section.id]}`}
               onClick={() => setActive(section.id)}
               data-testid={`pratiche-tab-${section.id}`}
-              aria-label={`${section.label}, ${counts[section.id]}`}
               className={cn(
                 'min-h-[5.5rem] rounded-2xl border p-4 text-left transition',
                 isActive
@@ -190,7 +193,7 @@ export function PraticheHub({
                       href={itineraryPath(tpl.destination_slug, tpl.duration_days)}
                       className="block"
                     >
-                      <div className="relative h-52">
+                      <div className="relative h-48 sm:h-52">
                         <Image
                           src={uniqueCover(tpl.destination_slug, i)}
                           alt={`${tpl.destination_name}, ${tpl.duration_days} giorni`}
@@ -198,19 +201,17 @@ export function PraticheHub({
                           className="object-cover"
                           sizes="50vw"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                        <p className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                          <Heart className="h-3 w-3 fill-accent text-accent" aria-hidden /> Salvato
-                        </p>
-                        <div className="absolute bottom-4 left-4 right-4">
-                          <p className="line-clamp-2 font-display text-2xl font-semibold text-white">
-                            {tpl.destination_name} · {tpl.duration_days} giorni
-                          </p>
-                          <p className="mt-1 line-clamp-2 text-sm text-white/80">{tpl.summary}</p>
-                        </div>
                       </div>
                     </Link>
-                    <div className="border-t border-border p-3">
+                    <div className="space-y-3 border-t border-border p-4">
+                      <div>
+                        <p className="line-clamp-2 font-display text-xl font-semibold text-foreground">
+                          {tpl.destination_name} · {tpl.duration_days} giorni
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                          {tpl.summary}
+                        </p>
+                      </div>
                       <Button asChild className="min-h-11 w-full rounded-full" variant="cta">
                         <Link href={`/organizza?slug=${encodeURIComponent(tpl.destination_slug)}`}>
                           Trasforma in viaggio
@@ -226,7 +227,7 @@ export function PraticheHub({
           <PracticeGrid
             items={buckets[active]}
             empty={active}
-            showBookingStatus={active === 'organized'}
+            onRemoved={(id) => setRemovedIds((prev) => [...prev, id])}
           />
         )}
       </div>
@@ -237,102 +238,45 @@ export function PraticheHub({
 function PracticeGrid({
   items,
   empty,
-  showBookingStatus,
+  onRemoved,
 }: {
   items: HubPracticeCard[];
   empty: Exclude<SectionId, 'saved'>;
-  showBookingStatus?: boolean;
+  onRemoved: (id: string) => void;
 }) {
+  const copy = DASHBOARD_VIAGGI_COPY.empty;
   if (items.length === 0) {
-    const copy: Record<
-      Exclude<SectionId, 'saved'>,
-      { title: string; body: string; href: string; label: string }
-    > = {
+    const map = {
       organized: {
-        title: 'Nessun viaggio organizzato',
-        body: 'Crea un viaggio da Organizza: comparirà qui con lo stato delle prenotazioni.',
+        title: copy.organizedTitle,
+        body: copy.organizedBody,
         href: '/organizza',
         label: 'Organizza un viaggio',
       },
       joined: {
-        title: 'Nessun viaggio a cui partecipi',
-        body: 'Quando accetti un invito o entri in un gruppo, il viaggio compare qui.',
+        title: copy.joinedTitle,
+        body: copy.joinedBody,
         href: '/gruppi',
         label: 'Scopri le partenze',
       },
       bookings: {
-        title: 'Nessuna prenotazione',
-        body: 'I voli e hotel che hai pagato restano raccolti in questa sezione.',
+        title: copy.bookingsTitle,
+        body: copy.bookingsBody,
         href: '/organizza',
         label: 'Organizza un viaggio',
       },
-    };
-    const c = copy[empty];
+    } as const;
+    const c = map[empty];
     return <Empty title={c.title} body={c.body} ctaHref={c.href} ctaLabel={c.label} />;
   }
 
   return (
     <ul className="grid gap-5 sm:grid-cols-2">
-      {items.map((p, i) => {
-        const tpl = findItineraryTemplate(p.template_id);
-        const booked = hasFlightBooked(p);
-        const title =
-          p.hubTitle?.trim() ||
-          tpl?.destination_name ||
-          p.destination_label ||
-          'Il tuo viaggio';
-        const seatLabel =
-          showBookingStatus &&
-          p.totalSeats != null &&
-          p.totalSeats > 0 &&
-          p.bookedSeats != null
-            ? `${p.bookedSeats} su ${p.totalSeats} prenotati`
-            : null;
-        return (
-          <li key={p.id}>
-            <Link
-              href={`/pratica/${p.id}`}
-              className="block overflow-hidden rounded-[28px] border border-border bg-white shadow-sm transition hover:border-accent/40"
-              data-testid={`pratiche-card-${p.id}`}
-            >
-              <div className="relative h-52">
-                <Image
-                  src={uniqueCover(
-                    tpl?.destination_slug ?? p.destination_label ?? p.template_id ?? 'viaggio',
-                    i
-                  )}
-                  alt={title}
-                  fill
-                  className="object-cover"
-                  sizes="50vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                <p className="absolute left-4 top-4 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                  {seatLabel ?? (booked ? 'Prenotato' : MODE_LABEL[p.mode])}
-                </p>
-                <div className="absolute bottom-4 left-4 right-4">
-                  <p className="line-clamp-2 font-display text-xl font-semibold text-white sm:text-2xl">
-                    {title}
-                    {tpl ? ` · ${tpl.duration_days} giorni` : ''}
-                  </p>
-                  <p className="mt-1 text-sm text-white/80">
-                    {formatItDate(p.date_from)} – {formatItDate(p.date_to)}
-                  </p>
-                  {booked ? (
-                    <div className="mt-2">
-                      <BookingRecap practice={p} compact />
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs font-medium text-white/70">
-                      Apri Voli per vedere le tratte salvate
-                    </p>
-                  )}
-                </div>
-              </div>
-            </Link>
-          </li>
-        );
-      })}
+      {items.map((p, i) => (
+        <li key={p.id}>
+          <PracticeTripCard practice={p} index={i} onRemoved={onRemoved} />
+        </li>
+      ))}
     </ul>
   );
 }

@@ -45,3 +45,11 @@ export function placesCacheTtlDays(): number {
   const n = Number.parseInt(process.env.PLACES_CACHE_TTL_DAYS ?? '14', 10);
   return Number.isFinite(n) && n >= 0 ? n : 14;
 }
+
+/**
+ * Invito email (Kr #7): spento finché Legale non conferma.
+ * Override: INVITE_EMAIL_ENABLED=true
+ */
+export function isInviteEmailEnabled(): boolean {
+  return envFlag('INVITE_EMAIL_ENABLED', false);
+}
