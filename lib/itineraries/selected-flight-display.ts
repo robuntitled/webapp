@@ -10,33 +10,93 @@ import type {
   FlightLegDraft,
 } from '@/lib/travel/flight-checkout-draft';
 
+/**
+ * Organizza / LegFlightStrip stores `leg.price` as the **party total** for
+ * `plan.travelers` (search is 1-adult, then × pax). Never treat raw `leg.price`
+ * as “a persona” without dividing by the basis.
+ */
+export function planPriceBasisTravelers(
+  plan: Pick<SelectedFlightPlanSnapshot, 'travelers'> | null | undefined
+): number {
+  return Math.max(1, plan?.travelers ?? 1);
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/** Per-person unit from a stored party-total leg price. */
+export function selectedLegPerPersonPrice(
+  leg: Pick<SelectedFlightLegSnapshot, 'price'>,
+  priceBasisTravelers: number
+): number | null {
+  if (leg.price == null || !Number.isFinite(leg.price)) return null;
+  const basis = Math.max(1, priceBasisTravelers);
+  return roundMoney(leg.price / basis);
+}
+
+/** Party total as stored (for the Organizza traveler count). */
+export function selectedLegPartyTotal(
+  leg: Pick<SelectedFlightLegSnapshot, 'price'>
+): number | null {
+  if (leg.price == null || !Number.isFinite(leg.price)) return null;
+  return roundMoney(leg.price);
+}
+
+/** Charge for `payForCount` people on one leg (unit × count). */
+export function selectedLegChargeForPax(
+  leg: Pick<SelectedFlightLegSnapshot, 'price'>,
+  priceBasisTravelers: number,
+  payForCount: number
+): number | null {
+  const unit = selectedLegPerPersonPrice(leg, priceBasisTravelers);
+  if (unit == null) return null;
+  return roundMoney(unit * Math.max(1, payForCount));
+}
+
 /** Sum of per-person leg prices for the saved plan (all legs). */
 export function sumSelectedPlanPerPerson(
   plan: SelectedFlightPlanSnapshot | null | undefined
 ): number | null {
   if (!plan?.legs?.length) return null;
+  const basis = planPriceBasisTravelers(plan);
   let total = 0;
   let any = false;
   for (const leg of plan.legs) {
-    if (leg.price == null || !Number.isFinite(leg.price)) continue;
-    total += leg.price;
+    const unit = selectedLegPerPersonPrice(leg, basis);
+    if (unit == null) continue;
+    total += unit;
     any = true;
   }
-  return any ? total : null;
+  return any ? roundMoney(total) : null;
 }
 
 export function sumSelectedLegsPerPerson(
-  legs: SelectedFlightLegSnapshot[]
+  legs: SelectedFlightLegSnapshot[],
+  priceBasisTravelers = 1
 ): number | null {
   if (!legs.length) return null;
+  const basis = Math.max(1, priceBasisTravelers);
   let total = 0;
   let any = false;
   for (const leg of legs) {
-    if (leg.price == null || !Number.isFinite(leg.price)) continue;
-    total += leg.price;
+    const unit = selectedLegPerPersonPrice(leg, basis);
+    if (unit == null) continue;
+    total += unit;
     any = true;
   }
-  return any ? total : null;
+  return any ? roundMoney(total) : null;
+}
+
+/** Quota to charge for N beneficiaries across the given legs. */
+export function sumSelectedLegsChargeForPax(
+  legs: SelectedFlightLegSnapshot[],
+  priceBasisTravelers: number,
+  payForCount: number
+): number | null {
+  const perPerson = sumSelectedLegsPerPerson(legs, priceBasisTravelers);
+  if (perPerson == null) return null;
+  return roundMoney(perPerson * Math.max(1, payForCount));
 }
 
 function bookingRouteMatches(
@@ -83,9 +143,12 @@ export function legKindLabelIt(kind: string): string {
 }
 
 export function selectedLegToCheckoutItem(
-  leg: SelectedFlightLegSnapshot
+  leg: SelectedFlightLegSnapshot,
+  priceBasisTravelers = 1
 ): FlightCheckoutLegItem | null {
   if (!leg.offerId || leg.price == null || !Number.isFinite(leg.price)) return null;
+  const unit = selectedLegPerPersonPrice(leg, priceBasisTravelers);
+  if (unit == null) return null;
   const draftLeg: FlightLegDraft = {
     origin: leg.originIata,
     destination: leg.destinationIata,
@@ -98,7 +161,8 @@ export function selectedLegToCheckoutItem(
   return {
     id: leg.id,
     offerId: leg.offerId,
-    price: leg.price,
+    // Unit (a persona) until buildCheckoutDraftFromLegs scales by adults.
+    price: unit,
     currency: leg.currency ?? 'EUR',
     kind: leg.kind,
     labelIt: leg.labelIt || `${leg.originIata} → ${leg.destinationIata}`,
@@ -106,23 +170,29 @@ export function selectedLegToCheckoutItem(
   };
 }
 
-/** Build a multi-leg (or single) checkout draft from selected plan legs. */
+/**
+ * Build a multi-leg (or single) checkout draft from selected plan legs.
+ * `priceBasisTravelers` = Organizza party size used when prices were stored.
+ * `adults` = how many passengers this checkout pays for (Pago per me → 1).
+ */
 export function buildCheckoutDraftFromLegs(input: {
   legs: SelectedFlightLegSnapshot[];
   adults: number;
   practiceId: string;
   mode: 'all' | 'separate';
+  priceBasisTravelers?: number;
 }): FlightCheckoutDraft | null {
+  const basis = Math.max(1, input.priceBasisTravelers ?? 1);
+  const adults = Math.max(1, input.adults);
   const items = input.legs
-    .map(selectedLegToCheckoutItem)
+    .map((leg) => selectedLegToCheckoutItem(leg, basis))
     .filter((x): x is FlightCheckoutLegItem => Boolean(x));
   if (!items.length) return null;
-  const adults = Math.max(1, input.adults);
-  const unitTotal = items.reduce((s, l) => s + l.price, 0);
+  const unitTotal = roundMoney(items.reduce((s, l) => s + l.price, 0));
   const first = items[0]!;
   return {
     offerId: first.offerId,
-    price: unitTotal * adults,
+    price: roundMoney(unitTotal * adults),
     currency: first.currency || 'EUR',
     adults,
     tripType: 'oneway',
@@ -132,7 +202,7 @@ export function buildCheckoutDraftFromLegs(input: {
     returnLeg: null,
     checkoutLegs: items.map((item) => ({
       ...item,
-      price: item.price * adults,
+      price: roundMoney(item.price * adults),
     })),
     checkoutMode: input.mode,
     activeLegIndex: 0,

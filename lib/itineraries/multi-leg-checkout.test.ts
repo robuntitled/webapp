@@ -95,7 +95,7 @@ describe('multi-leg checkout helpers', () => {
 
   it('lists all purchasable legs (not only the first)', () => {
     expect(purchasableLegsFromSelected(plan)).toHaveLength(2);
-    expect(sumSelectedLegsPerPerson(plan.legs)).toBe(107);
+    expect(sumSelectedLegsPerPerson(plan.legs, plan.travelers)).toBe(107);
   });
 
   it('builds a draft with every selected leg and total', () => {
@@ -104,6 +104,7 @@ describe('multi-leg checkout helpers', () => {
       adults: 1,
       practiceId: 'prac-1',
       mode: 'all',
+      priceBasisTravelers: plan.travelers,
     });
     expect(draft?.checkoutLegs).toHaveLength(2);
     expect(draft?.price).toBe(107);
@@ -118,6 +119,7 @@ describe('multi-leg checkout helpers', () => {
       adults: 2,
       practiceId: 'prac-1',
       mode: 'all',
+      priceBasisTravelers: plan.travelers,
     });
     expect(draft?.price).toBe(214);
     expect(draft?.checkoutLegs?.[0]?.price).toBe(100);
@@ -138,6 +140,7 @@ describe('multi-leg checkout helpers', () => {
       adults: 1,
       practiceId: 'prac-1',
       mode: 'all',
+      priceBasisTravelers: plan.travelers,
     })!;
     draft.activeLegIndex = 1;
     saveFlightCheckoutDraft(draft);
