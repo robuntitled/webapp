@@ -1372,7 +1372,7 @@ export function OrganizzaFlow({
                 </p>
               ) : null}
             </div>
-            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
               {step !== 'imposta' ? (
                 <Button
                   type="button"
