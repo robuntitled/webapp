@@ -251,15 +251,15 @@ function LegSummary({
       data-testid="checkout-leg-summary"
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
           {title}
         </p>
         {status === 'paid' ? (
-          <span className="text-[10px] font-semibold text-emerald-700">Prenotato</span>
+          <span className="text-[11px] font-semibold text-emerald-700">Prenotato</span>
         ) : status === 'failed' ? (
-          <span className="text-[10px] font-semibold text-rose-700">Fallito</span>
+          <span className="text-[11px] font-semibold text-rose-700">Fallito</span>
         ) : status === 'active' ? (
-          <span className="text-[10px] font-semibold text-primary">In pagamento</span>
+          <span className="text-[11px] font-semibold text-primary">In pagamento</span>
         ) : null}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
@@ -446,18 +446,22 @@ export function FlightCheckoutClient({
             amountEur,
             error: data.error ?? 'Conferma prenotazione fallita',
           };
-          setLegResults((prev) => [...prev, fail]);
+          setLegResults((prev) => {
+            const next = [...prev, fail];
+            const priorOk = next.some((r) => r.ok);
+            setConfirmation({
+              bookingId: null,
+              bookingRef: null,
+              status: priorOk ? 'PARTIAL' : 'FAILED',
+              amountEur: 0,
+              practiceId: draft?.practiceId,
+            });
+            return next;
+          });
           toast.error(fail.error);
-          // Honest partial state: keep prior successes, stop the queue.
+          // Honest partial/fail state: keep prior successes, never claim "confermata".
           clearFlightPaymentPending();
           setPayment(null);
-          setConfirmation({
-            bookingId: null,
-            bookingRef: null,
-            status: 'FAILED',
-            amountEur: 0,
-            practiceId: draft?.practiceId,
-          });
           setStep('done');
           return;
         }
@@ -778,7 +782,11 @@ export function FlightCheckoutClient({
         currency?: string | null;
       };
       if (!res.ok) {
-        toast.error(data.error ?? 'Impossibile riservare il volo');
+        toast.error(
+          data.code === 'PREVIEW_PAYMENTS_DISABLED'
+            ? data.error ?? 'Anteprima: pagamenti disattivati'
+            : data.error ?? 'Impossibile riservare il volo'
+        );
         if (legs && legs.length > 1 && legResults.length > 0) {
           // Partial success already saved — show honest done state.
           setConfirmation({
@@ -846,14 +854,32 @@ export function FlightCheckoutClient({
       ? `${window.location.origin}/prenota/voli/checkout?paid=1&tid=${encodeURIComponent(payment.transactionId)}&pid=${encodeURIComponent(payment.prebookId)}`
       : '';
 
+  if (verifying && !draft && !payment && step !== 'done') {
+    return (
+      <div
+        className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+        aria-busy="true"
+        aria-label="Caricamento checkout"
+      >
+        <div className="h-5 w-40 animate-pulse rounded bg-slate-100" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-50" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-50" />
+        <p className="flex items-center gap-2 text-sm text-slate-500">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Preparo il checkout…
+        </p>
+      </div>
+    );
+  }
+
   if (!draft && !verifying && !payment && step !== 'done' && !submitting) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
         <p className="text-sm text-slate-600">
-          Nessuna offerta selezionata. Torna alla ricerca voli.
+          Nessuna offerta selezionata. Torna alla selezione voli.
         </p>
-        <Button asChild className="mt-4 rounded-xl">
-          <Link href="/prenota/voli">Cerca voli</Link>
+        <Button asChild className="mt-4 min-h-11 rounded-xl">
+          <Link href={getCheckoutReturnHref(undefined, 'voli')}>Torna ai voli</Link>
         </Button>
       </div>
     );
@@ -897,32 +923,38 @@ export function FlightCheckoutClient({
           <CheckCircle2 className="h-9 w-9" />
           <div>
             <h2 className="font-display text-2xl font-semibold">
-              {partial
-                ? 'Prenotazione parziale'
-                : reconciling
-                  ? 'Prenotazione ricevuta'
-                  : pending
-                    ? 'Pagamento confermato'
-                    : multiDone
-                      ? 'Tratte prenotate'
-                      : 'Prenotazione confermata'}
+              {failedAny && !okAny
+                ? 'Prenotazione non completata'
+                : partial
+                  ? 'Prenotazione parziale'
+                  : reconciling
+                    ? 'Prenotazione ricevuta'
+                    : pending
+                      ? 'Pagamento confermato'
+                      : multiDone
+                        ? 'Tratte prenotate'
+                        : 'Prenotazione confermata'}
             </h2>
             <p
               className={cn(
                 'text-sm',
-                reconciling || pending || partial
-                  ? 'text-amber-900/80'
-                  : 'text-emerald-800/80'
+                failedAny && !okAny
+                  ? 'text-rose-800/90'
+                  : reconciling || pending || partial
+                    ? 'text-amber-900/80'
+                    : 'text-emerald-800/80'
               )}
             >
-              {partial
-                ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
-                : reconciling
-                  ? confirmation?.reconciliationMessage ??
-                    'Prenotazione ricevuta, stiamo completando la registrazione'
-                  : pending
-                    ? statusInfo.description
-                    : 'Conserva i codici per il check-in.'}
+              {failedAny && !okAny
+                ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
+                : partial
+                  ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
+                  : reconciling
+                    ? confirmation?.reconciliationMessage ??
+                      'Prenotazione ricevuta, stiamo completando la registrazione'
+                    : pending
+                      ? statusInfo.description
+                      : 'Conserva i codici per il check-in.'}
             </p>
           </div>
         </div>
@@ -1028,9 +1060,10 @@ export function FlightCheckoutClient({
                     {formatMoney(displayPrice, displayCurrency)}
                   </span>
                 </p>
-                <label className="mt-3 flex items-center gap-2 text-xs font-medium">
+                <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 accent-primary"
                     checked={acceptedPriceChange}
                     onChange={(e) => setAcceptedPriceChange(e.target.checked)}
                   />
@@ -1245,13 +1278,43 @@ export function FlightCheckoutClient({
             {/* A7: Allegato B prima di passare al pagamento (Continua con hotel). */}
             <AllegatoBLinkedNotice />
 
+            {draft ? (
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:hidden"
+                data-testid="checkout-summary-mobile"
+              >
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      {isMultiLeg ? 'Totale tratte' : 'Totale'}
+                    </p>
+                    <p className="truncate text-xs text-slate-600">
+                      {draft.adults}{' '}
+                      {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
+                      {isMultiLeg
+                        ? ` · ${checkoutLegs.length} tratte`
+                        : draft.tripType === 'roundtrip'
+                          ? ' · A/R'
+                          : ' · solo andata'}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-display text-xl font-semibold tabular-nums text-slate-900">
+                    {formatMoney(
+                      isMultiLeg ? planTotal : displayPrice,
+                      displayCurrency
+                    )}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             <Button
               type="button"
               disabled={verifying || submitting}
               onClick={() => void startPrebook()}
-              className="h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
+              className="h-12 min-h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
             >
-              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Continua al pagamento
             </Button>
           </CheckoutStepShell>
@@ -1268,7 +1331,7 @@ export function FlightCheckoutClient({
             }
             description={
               isMultiLeg
-                ? `${activeCheckoutLeg?.leg.origin ?? ''} → ${activeCheckoutLeg?.leg.destination ?? ''} · addebito ${formatMoney(displayPrice, displayCurrency)} (piano ${formatMoney(planTotal, displayCurrency)})`
+                ? `${activeCheckoutLeg?.leg.origin ?? ''} → ${activeCheckoutLeg?.leg.destination ?? ''}`
                 : `Totale ${formatMoney(displayPrice, displayCurrency)}`
             }
             footer={
@@ -1279,10 +1342,22 @@ export function FlightCheckoutClient({
             }
           >
             {isMultiLeg ? (
-              <p className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                Ogni tratta è un biglietto one-way: paghi in sequenza nella stessa sessione.
-                Se una fallisce, le altre già confermate restano valide.
-              </p>
+              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+                <p className="font-semibold text-slate-800">
+                  Addebito di questa tratta:{' '}
+                  <span className="tabular-nums">
+                    {formatMoney(displayPrice, displayCurrency)}
+                  </span>
+                  <span className="font-normal text-slate-500">
+                    {' '}
+                    · piano {formatMoney(planTotal, displayCurrency)}
+                  </span>
+                </p>
+                <p>
+                  Ogni tratta è un biglietto one-way: paghi in sequenza. Se una fallisce, le
+                  altre già confermate restano valide.
+                </p>
+              </div>
             ) : null}
             <AllegatoBLinkedNotice />
             {paymentReturnUrl ? (
@@ -1309,7 +1384,7 @@ export function FlightCheckoutClient({
           data-testid="checkout-summary"
         >
           <div className="flex items-center gap-2">
-            <Plane className="h-4 w-4 text-primary" />
+            <Plane className="h-4 w-4 text-primary" aria-hidden />
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
               Riepilogo
             </p>

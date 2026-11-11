@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { getLiteApiPaymentEnv, isLiteApiConfigured } from '@/lib/liteapi/config';
+import {
+  PREVIEW_PAYMENTS_DISABLED_IT,
+  areLivePaymentsBlockedOnThisDeploy,
+  getLiteApiPaymentEnv,
+  isLiteApiConfigured,
+} from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { prebookFlight } from '@/lib/liteapi/flight-booking';
 import { storePrebookQuote } from '@/lib/liteapi/prebook-store';
@@ -40,6 +45,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: 'Servizio voli non configurato.' },
       { status: 503 }
+    );
+  }
+  if (areLivePaymentsBlockedOnThisDeploy()) {
+    return NextResponse.json(
+      {
+        error: PREVIEW_PAYMENTS_DISABLED_IT,
+        code: 'PREVIEW_PAYMENTS_DISABLED',
+      },
+      { status: 403 }
     );
   }
 

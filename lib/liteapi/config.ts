@@ -58,6 +58,21 @@ export function getLiteApiPaymentEnv(): 'sandbox' | 'live' {
 }
 
 /**
+ * Preview/dev must not charge real (live) payments with shared prod keys.
+ * Allowed only when payment env resolves to sandbox (sand_ key or
+ * LITEAPI_PAYMENT_ENV=sandbox). Production deploys unchanged.
+ */
+export function areLivePaymentsBlockedOnThisDeploy(): boolean {
+  const vercelEnv = process.env.VERCEL_ENV?.trim();
+  if (vercelEnv === 'production') return false;
+  // Local / preview / undefined: block unless sandbox is explicit.
+  return getLiteApiPaymentEnv() !== 'sandbox';
+}
+
+export const PREVIEW_PAYMENTS_DISABLED_IT =
+  'Anteprima: pagamenti disattivati. Usa un ambiente sandbox dedicato per testare i pagamenti.';
+
+/**
  * Publishable key Stripe di LiteAPI (opzionale override).
  * Non usare NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: è un altro account e il form resta vuoto.
  */

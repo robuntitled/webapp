@@ -371,9 +371,14 @@ export function SmartFlightCalendar({
   }
 
   return (
-    <div className={cn('space-y-2.5', className)} data-testid="smart-flight-calendar">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[var(--color-text)]">{labelIt}</p>
+    <div
+      className={cn('min-w-0 max-w-full space-y-2.5', className)}
+      data-testid="smart-flight-calendar"
+    >
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-sm font-semibold text-[var(--color-text)]">
+          {labelIt}
+        </p>
         {loading ? (
           <span className="text-[11px] font-medium text-[var(--color-text-secondary)]">
             Prezzi in arrivo…
@@ -383,7 +388,7 @@ export function SmartFlightCalendar({
 
       <div
         ref={stripRef}
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x snap-mandatory [scrollbar-width:thin]"
+        className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 snap-x snap-mandatory [scrollbar-width:thin]"
         role="listbox"
         aria-label={labelIt}
       >

@@ -100,24 +100,33 @@ export async function POST(request: Request) {
 
   if (practiceId) {
     const existing = await getPractice(practiceId, session.user.id);
-    const fb = existing?.flight_booking;
-    if (fb) {
-      // Idempotenza: stesso prebook/transazione → ok senza riprenotare.
-      if (
-        (fb.prebookId && fb.prebookId === prebookId) ||
-        (fb.transactionId && fb.transactionId === transactionId)
-      ) {
+    if (existing) {
+      const { listPracticeFlightBookings } = await import(
+        '@/lib/itineraries/practice-flights'
+      );
+      const bookings = listPracticeFlightBookings(existing);
+      const same = bookings.find(
+        (fb) =>
+          (fb.prebookId && fb.prebookId === prebookId) ||
+          (fb.transactionId && fb.transactionId === transactionId)
+      );
+      if (same) {
+        // Idempotenza: stesso prebook/transazione → ok senza riprenotare.
         return NextResponse.json({
           ok: true,
-          bookingId: fb.bookingId,
-          bookingRef: fb.bookingRef,
-          status: fb.status,
+          bookingId: same.bookingId,
+          bookingRef: same.bookingRef,
+          status: same.status,
           practiceId,
           idempotent: true,
         });
       }
-      // A1: blocco PRIMA del provider — evita un secondo addebito che poi non può essere salvato.
-      return NextResponse.json({ error: FLIGHT_ALREADY_BOOKED_ERROR }, { status: 409 });
+      // Multi-tratta: un booking per tratta (append su flight_bookings).
+      // Blocca solo se lo schema non ha la colonna e c'è già un volo salvato.
+      const multiOk = Object.prototype.hasOwnProperty.call(existing, 'flight_bookings');
+      if (bookings.length > 0 && !multiOk) {
+        return NextResponse.json({ error: FLIGHT_ALREADY_BOOKED_ERROR }, { status: 409 });
+      }
     }
   }
 

@@ -367,12 +367,10 @@ export async function listChatGroupsForUser(userId: string): Promise<ChatGroupIt
 
   const groups: ChatGroupItem[] = [];
 
-  const todayIso = new Date().toISOString().slice(0, 10);
   for (const ed of editions) {
-    // Hide vale solo per viaggi già conclusi: se la pratica è ancora live, rimostra.
-    // (Non c’è UI di unhide; altrimenti membership future restano irrecuperabili.)
-    const stillLive = ed.date_to >= todayIso || ed.date_from >= todayIso;
-    if (hidden.has(ed.id) && !stillLive) continue;
+    // Hide persiste finché l’utente non riapre la chat di quel viaggio.
+    // (Prima: i viaggi “live” riparivano subito → duplicati percepiti dopo “Chat rimossa”.)
+    if (hidden.has(ed.id)) continue;
     // Dedup membri (difesa da eventuali doppioni lato DB)
     const memberIds = [...new Set(ed.memberIds)];
     const participantCount = memberIds.length;

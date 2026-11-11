@@ -2,116 +2,142 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCheckoutDraftFromLegs,
   selectedLegChargeForPax,
+  selectedLegPartyTotal,
   selectedLegPerPersonPrice,
   sumSelectedLegsChargeForPax,
   sumSelectedLegsPerPerson,
   sumSelectedPlanPerPerson,
 } from '@/lib/itineraries/selected-flight-display';
-import type { SelectedFlightPlanSnapshot } from '@/lib/itineraries/selected-flight-plan';
+import {
+  normalizeSelectedFlightPlan,
+  type SelectedFlightPlanSnapshot,
+} from '@/lib/itineraries/selected-flight-plan';
 
-/** Mirrors Organizza: 2 pax → stored prices are party totals (408×2, 478×2). */
-const plan2pax: SelectedFlightPlanSnapshot = {
-  version: 1,
-  travelers: 2,
+/** Canonical SoT: prices are unit (a persona). */
+const plan4pax: SelectedFlightPlanSnapshot = {
+  version: 2,
+  travelers: 4,
   returnHome: true,
   savedAt: '2026-11-11T00:00:00.000Z',
+  priceMode: 'unit',
   legs: [
     {
       id: 'out',
       kind: 'outbound',
       originIata: 'MXP',
-      destinationIata: 'BKK',
-      date: '2026-12-01',
-      labelIt: 'MXP → BKK',
+      destinationIata: 'IST',
+      date: '2026-11-16',
+      labelIt: 'MXP → IST',
       offerId: 'off-out',
-      price: 815,
+      price: 110,
       currency: 'EUR',
       stops: 1,
-      durationMinutes: 700,
-      airline: 'Emirates',
-      departureAt: '2026-12-01T10:00:00.000Z',
-      arrivalAt: '2026-12-02T06:00:00.000Z',
+      durationMinutes: 370,
+      airline: 'Air Serbia',
+      departureAt: '2026-11-16T20:30:00.000Z',
+      arrivalAt: '2026-11-17T04:40:00.000Z',
     },
     {
       id: 'ret',
       kind: 'return',
-      originIata: 'BKK',
+      originIata: 'IST',
       destinationIata: 'MXP',
-      date: '2026-12-15',
-      labelIt: 'BKK → MXP',
+      date: '2026-11-28',
+      labelIt: 'IST → MXP',
       offerId: 'off-ret',
-      price: 955,
+      price: 102.5,
       currency: 'EUR',
       stops: 1,
-      durationMinutes: 720,
-      airline: 'Emirates',
-      departureAt: '2026-12-15T08:00:00.000Z',
-      arrivalAt: '2026-12-15T18:00:00.000Z',
+      durationMinutes: 440,
+      airline: 'Sky Express',
+      departureAt: '2026-11-28T10:30:00.000Z',
+      arrivalAt: '2026-11-28T15:50:00.000Z',
     },
   ],
 };
 
-describe('selected flight prices (party total vs a persona)', () => {
-  it('derives per-person from stored party totals', () => {
-    expect(selectedLegPerPersonPrice(plan2pax.legs[0]!, 2)).toBe(407.5);
-    expect(selectedLegPerPersonPrice(plan2pax.legs[1]!, 2)).toBe(477.5);
-    expect(sumSelectedPlanPerPerson(plan2pax)).toBe(885);
+describe('selected flight prices (unit a persona SoT)', () => {
+  it('1/2/4 pax: a persona stays 110; totale = unit × travelers', () => {
+    for (const pax of [1, 2, 4] as const) {
+      expect(selectedLegPerPersonPrice(plan4pax.legs[0]!, pax)).toBe(110);
+      expect(selectedLegPartyTotal(plan4pax.legs[0]!, pax)).toBe(110 * pax);
+    }
+    expect(selectedLegPartyTotal(plan4pax.legs[0]!, 4)).toBe(440);
+    expect(selectedLegPartyTotal(plan4pax.legs[1]!, 4)).toBe(410);
   });
 
-  it('Pago per me charges one seat (not the full party total)', () => {
-    expect(sumSelectedLegsChargeForPax(plan2pax.legs, 2, 1)).toBe(885);
-    expect(sumSelectedLegsPerPerson(plan2pax.legs, 2)).toBe(885);
+  it('does not divide an already-per-person price (Modifica volo regression)', () => {
+    // Stored 110 after edit with adults=1 — must NOT become 27.
+    expect(selectedLegPerPersonPrice({ price: 110 }, 4)).toBe(110);
+    expect(selectedLegPartyTotal({ price: 110 }, 4)).toBe(440);
   });
 
-  it('Pago per altri for 2 selected equals the stored party totals', () => {
-    expect(sumSelectedLegsChargeForPax(plan2pax.legs, 2, 2)).toBe(1770);
-    expect(selectedLegChargeForPax(plan2pax.legs[0]!, 2, 2)).toBe(815);
+  it('Pago per me charges one seat', () => {
+    expect(sumSelectedLegsChargeForPax(plan4pax.legs, 4, 1)).toBe(212.5);
+    expect(sumSelectedLegsPerPerson(plan4pax.legs, 4)).toBe(212.5);
+    expect(selectedLegChargeForPax(plan4pax.legs[0]!, 4, 1)).toBe(110);
   });
 
-  it('checkout draft for 1 adult does not double party totals', () => {
+  it('Pago per altri for 4 = unit × 4', () => {
+    expect(sumSelectedLegsChargeForPax(plan4pax.legs, 4, 4)).toBe(850);
+    expect(selectedLegChargeForPax(plan4pax.legs[0]!, 4, 4)).toBe(440);
+  });
+
+  it('checkout draft for 1 adult uses unit prices', () => {
     const draft = buildCheckoutDraftFromLegs({
-      legs: plan2pax.legs,
+      legs: plan4pax.legs,
       adults: 1,
       practiceId: 'p1',
-      mode: 'all',
-      priceBasisTravelers: 2,
+      mode: 'separate',
+      priceBasisTravelers: 4,
     });
     expect(draft?.adults).toBe(1);
-    expect(draft?.price).toBe(885);
-    expect(draft?.checkoutLegs?.[0]?.price).toBe(407.5);
-    expect(draft?.checkoutLegs?.[1]?.price).toBe(477.5);
+    expect(draft?.price).toBe(212.5);
+    expect(draft?.checkoutLegs?.[0]?.price).toBe(110);
+    expect(draft?.checkoutLegs?.[1]?.price).toBe(102.5);
   });
 
-  it('checkout draft for full party equals stored totals (no double multiply)', () => {
+  it('checkout draft for 4 adults = unit × 4 (LiteAPI amount)', () => {
     const draft = buildCheckoutDraftFromLegs({
-      legs: plan2pax.legs,
-      adults: 2,
+      legs: [plan4pax.legs[0]!],
+      adults: 4,
       practiceId: 'p1',
-      mode: 'all',
-      priceBasisTravelers: 2,
+      mode: 'separate',
+      priceBasisTravelers: 4,
     });
-    expect(draft?.price).toBe(1770);
-    expect(draft?.checkoutLegs?.[0]?.price).toBe(815);
-    expect(draft?.checkoutLegs?.[1]?.price).toBe(955);
+    expect(draft?.price).toBe(440);
+    expect(draft?.checkoutLegs?.[0]?.price).toBe(440);
   });
 
-  it('travelers=1 keeps legacy per-person storage working', () => {
-    const solo: SelectedFlightPlanSnapshot = {
-      ...plan2pax,
-      travelers: 1,
-      legs: plan2pax.legs.map((l) => ({
-        ...l,
-        price: l.id === 'out' ? 408 : 478,
-      })),
+  it('sumSelectedPlanPerPerson matches calendar/Selezionato', () => {
+    expect(sumSelectedPlanPerPerson(plan4pax)).toBe(212.5);
+  });
+
+  it('normalize converts explicit party totals to unit', () => {
+    const legacy: SelectedFlightPlanSnapshot = {
+      version: 1,
+      travelers: 4,
+      returnHome: true,
+      savedAt: '2026-11-01T00:00:00.000Z',
+      priceMode: 'party',
+      legs: [{ ...plan4pax.legs[0]!, price: 440 }],
     };
-    expect(sumSelectedPlanPerPerson(solo)).toBe(886);
-    const draft = buildCheckoutDraftFromLegs({
-      legs: solo.legs,
-      adults: 1,
-      practiceId: 'p1',
-      mode: 'all',
-      priceBasisTravelers: 1,
-    });
-    expect(draft?.price).toBe(886);
+    const n = normalizeSelectedFlightPlan(legacy);
+    expect(n.priceMode).toBe('unit');
+    expect(n.version).toBe(2);
+    expect(n.legs[0]!.price).toBe(110);
+  });
+
+  it('normalize leaves ambiguous v1 (post-Modifica unit) unchanged', () => {
+    const ambiguous: SelectedFlightPlanSnapshot = {
+      version: 1,
+      travelers: 4,
+      returnHome: true,
+      savedAt: '2026-11-11T00:00:00.000Z',
+      legs: [{ ...plan4pax.legs[0]!, price: 110 }],
+    };
+    const n = normalizeSelectedFlightPlan(ambiguous);
+    expect(n.legs[0]!.price).toBe(110);
+    expect(n.priceMode).toBe('unit');
   });
 });

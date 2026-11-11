@@ -76,6 +76,7 @@ import { minBookableDateIso } from '@/lib/travel/flight-calendar-dates';
 import {
   buildDomesticPlanForDraft,
   buildMainFlightPlanForDraft,
+  countMissingMainFlightLegs,
   flightPlanAllowsContinue,
   mergeMainAndDomestic,
   mirrorSelectedFlightFromPlan,
@@ -659,7 +660,7 @@ export function OrganizzaFlow({
     isMultiCountryDraft(draft) && !isCuratedMultiSelection(draft.slugs);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(12rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(16rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
       <div className="nl-page w-full space-y-5 pt-6 sm:pt-8">
         <header>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-3xl">
@@ -667,6 +668,13 @@ export function OrganizzaFlow({
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Destinazione, partenza, voli principali, poi itinerario e mappa.
+          </p>
+          <p
+            className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary sm:hidden"
+            data-testid="organizza-step-mobile-label"
+          >
+            Passo {ORGANIZZA_STEPS.findIndex((s) => s.id === step) + 1} ·{' '}
+            {ORGANIZZA_STEPS.find((s) => s.id === step)?.label}
           </p>
         </header>
 
@@ -738,12 +746,15 @@ export function OrganizzaFlow({
                     type="button"
                     onClick={() => setTripType(opt.id)}
                     className={cn(
-                      'rounded-full border px-3.5 py-1.5 text-xs font-bold transition',
+                      'min-h-11 rounded-full border px-4 text-sm font-bold transition',
                       (opt.id === 'oneway' ? !draft.returnHome : draft.returnHome)
                         ? 'border-primary bg-primary text-white'
                         : 'border-[var(--color-border)] bg-[var(--color-tint)]/60 text-[var(--color-text)]'
                     )}
                     data-testid={`trip-type-${opt.id}`}
+                    aria-pressed={
+                      opt.id === 'oneway' ? !draft.returnHome : draft.returnHome
+                    }
                   >
                     {opt.label}
                   </button>
@@ -768,7 +779,7 @@ export function OrganizzaFlow({
                       setDestShowAll(false);
                     }}
                     placeholder="Cerca destinazione…"
-                    className="w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
+                    className="min-h-11 w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
                     data-testid="dest-search"
                   />
                 </label>
@@ -783,10 +794,10 @@ export function OrganizzaFlow({
                       </span>
                       <button
                         type="button"
-                        className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                        className="ml-auto inline-flex min-h-11 items-center gap-1 px-1 text-xs font-semibold text-primary"
                         onClick={() => applyDestinationList([])}
                       >
-                        <X className="h-3.5 w-3.5" /> Svuota
+                        <X className="h-3.5 w-3.5" aria-hidden /> Svuota
                       </button>
                     </div>
                     {selectedSlugs.length >= 2 ? (
@@ -799,7 +810,7 @@ export function OrganizzaFlow({
                             {i + 1}. {getMaster(s)?.nameIt ?? s}
                             <button
                               type="button"
-                              className="text-slate-400 hover:text-primary"
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center text-slate-400 hover:text-primary disabled:opacity-40"
                               aria-label="Sposta avanti"
                               disabled={i >= selectedSlugs.length - 1}
                               onClick={() => moveSlug(i, i + 1)}
@@ -839,7 +850,7 @@ export function OrganizzaFlow({
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-h-10 w-full rounded-[10px]"
+                    className="min-h-11 w-full rounded-[10px]"
                     onClick={() => setDestShowAll(true)}
                   >
                     Mostra di più ({filteredDests.length - DEST_PREVIEW})
@@ -972,7 +983,7 @@ export function OrganizzaFlow({
                     <input
                       type="date"
                       lang="it-IT"
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                      className="mt-1 min-h-11 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                       value={draft.dateFrom ?? ''}
                       min={minBookableDateIso()}
                       onChange={(e) => {
@@ -993,7 +1004,7 @@ export function OrganizzaFlow({
                     <input
                       type="date"
                       lang="it-IT"
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                      className="mt-1 min-h-11 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                       value={draft.dateTo ?? ''}
                       min={draft.dateFrom ?? minBookableDateIso()}
                       onChange={(e) => {
@@ -1033,8 +1044,9 @@ export function OrganizzaFlow({
                       key={opt.id}
                       type="button"
                       onClick={() => setCompany(opt.id)}
+                      aria-pressed={draft.company === opt.id}
                       className={cn(
-                        'rounded-xl border px-3 py-3 text-left',
+                        'min-h-11 rounded-xl border px-3 py-3 text-left',
                         draft.company === opt.id
                           ? 'border-primary ring-2 ring-primary/20'
                           : 'border-[var(--color-border)]'
@@ -1160,8 +1172,16 @@ export function OrganizzaFlow({
               <SeparateTicketsNotice />
 
               {!flightPlanAllowsContinue(draft.flightPlan) ? (
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Continua si attiva quando ogni tratta ha un volo selezionato.
+                <p
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950"
+                  role="status"
+                  id="organizza-voli-hint"
+                >
+                  Manca ancora{' '}
+                  {countMissingMainFlightLegs(draft.flightPlan) === 1
+                    ? '1 tratta'
+                    : `${countMissingMainFlightLegs(draft.flightPlan)} tratte`}
+                  : tocca un giorno sulla striscia per scegliere il volo.
                 </p>
               ) : null}
             </div>
@@ -1310,15 +1330,17 @@ export function OrganizzaFlow({
                 {legalOpen ? (
                   <div className="space-y-3 border-t border-amber-200/80 px-3 py-3">
                     <AllegatoBLinkedNotice />
-                    <label className="flex items-start gap-2 text-xs text-amber-950">
+                    <label className="flex min-h-11 cursor-pointer items-start gap-3 text-xs text-amber-950">
                       <input
                         type="checkbox"
-                        className="mt-0.5"
+                        className="mt-1 h-4 w-4 accent-primary"
                         checked={draft.legalAck}
                         onChange={(e) => update({ legalAck: e.target.checked })}
                       />
-                      Ho letto le informazioni importanti (BOZZA Allegato B). Le
-                      confermerò di nuovo prima di qualsiasi pagamento.
+                      <span>
+                        Ho letto le informazioni importanti (BOZZA Allegato B). Le
+                        confermerò di nuovo prima di qualsiasi pagamento.
+                      </span>
                     </label>
                   </div>
                 ) : null}
@@ -1334,23 +1356,35 @@ export function OrganizzaFlow({
             paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
           }}
         >
-          <div className="nl-page flex flex-wrap items-center justify-between gap-3 py-3">
-            <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-success)]">
-              <Check className="h-3.5 w-3.5" />
-              Scelte salvate su questo dispositivo
-            </p>
-            <div className="flex flex-wrap gap-2">
+          <div className="nl-page flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="min-w-0">
+              <p className="hidden items-center gap-1.5 text-xs font-medium text-[var(--color-success)] sm:inline-flex">
+                <Check className="h-3.5 w-3.5" aria-hidden />
+                Scelte salvate su questo dispositivo
+              </p>
+              {step === 'voli' && !canContinue ? (
+                <p className="text-xs font-medium text-amber-800" role="status">
+                  Completa le tratte per continuare
+                </p>
+              ) : null}
+              {step === 'itinerario' && !draft.legalAck ? (
+                <p className="text-xs font-medium text-amber-800">
+                  Conferma le informazioni importanti
+                </p>
+              ) : null}
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
               {step !== 'imposta' ? (
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11 rounded-[10px]"
+                  className="min-h-11 w-full rounded-[10px] sm:w-auto"
                   onClick={() => {
                     const prev = prevOrganizzaStep(step);
                     if (prev) setStep(prev);
                   }}
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
                   Indietro
                 </Button>
               ) : null}
@@ -1359,9 +1393,10 @@ export function OrganizzaFlow({
                   type="button"
                   variant="cta"
                   size="lg"
-                  className="min-h-11 rounded-[10px]"
-                  disabled={pending}
+                  className="min-h-11 w-full rounded-[10px] sm:w-auto"
+                  disabled={pending || !draft.legalAck}
                   onClick={createTrip}
+                  aria-disabled={pending || !draft.legalAck}
                 >
                   {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Crea viaggio
@@ -1371,9 +1406,12 @@ export function OrganizzaFlow({
                   type="button"
                   variant="cta"
                   size="lg"
-                  className="min-h-11 rounded-[10px]"
+                  className="min-h-11 w-full rounded-[10px] sm:w-auto"
                   disabled={!canContinue}
                   data-testid="organizza-continua"
+                  aria-describedby={
+                    step === 'voli' && !canContinue ? 'organizza-voli-hint' : undefined
+                  }
                   onClick={() => {
                     if (step === 'imposta') {
                       if (!isImpostaComplete(draft)) {
@@ -1410,7 +1448,7 @@ export function OrganizzaFlow({
                   }}
                 >
                   Continua
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
               )}
             </div>

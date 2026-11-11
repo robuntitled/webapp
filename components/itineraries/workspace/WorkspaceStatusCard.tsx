@@ -37,7 +37,11 @@ export function WorkspaceStatusCard({
             complete ? 'bg-primary/12 text-primary' : 'bg-slate-100 text-slate-400'
           )}
         >
-          {complete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+          {complete ? (
+            <Check className="h-4 w-4" aria-hidden />
+          ) : (
+            <Icon className="h-4 w-4" aria-hidden />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -50,10 +54,10 @@ export function WorkspaceStatusCard({
           <button
             type="button"
             onClick={onAction}
-            className="group inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 rounded-md"
+            className="group inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm font-semibold text-primary transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           >
             {actionLabel}
-            <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+            <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" aria-hidden />
           </button>
         ) : null}
       </div>
