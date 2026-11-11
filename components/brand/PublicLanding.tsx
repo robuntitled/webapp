@@ -148,7 +148,7 @@ export function PublicLanding({
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-full px-3 py-1.5 text-sm font-medium text-white/95 hover:bg-white/10"
+                className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-white/95 hover:bg-white/10"
               >
                 {link.label}
               </Link>
@@ -209,7 +209,7 @@ export function PublicLanding({
             <ul className="space-y-2.5">
               {ORGANIZZA_POINTS.map((t) => (
                 <li key={t} className="flex gap-2.5 text-sm text-[var(--color-text)]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
                   {t}
                 </li>
               ))}
@@ -233,7 +233,7 @@ export function PublicLanding({
             <ul className="space-y-2.5">
               {GRUPPI_POINTS.map((t) => (
                 <li key={t} className="flex gap-2.5 text-sm text-[var(--color-text)]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
                   {t}
                 </li>
               ))}

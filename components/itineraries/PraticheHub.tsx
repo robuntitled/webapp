@@ -139,6 +139,7 @@ export function PraticheHub({
               aria-controls={`pratiche-panel-${section.id}`}
               onClick={() => setActive(section.id)}
               data-testid={`pratiche-tab-${section.id}`}
+              aria-label={`${section.label}, ${counts[section.id]}`}
               className={cn(
                 'min-h-[5.5rem] rounded-2xl border p-4 text-left transition',
                 isActive
@@ -192,7 +193,7 @@ export function PraticheHub({
                       <div className="relative h-52">
                         <Image
                           src={uniqueCover(tpl.destination_slug, i)}
-                          alt=""
+                          alt={`${tpl.destination_name}, ${tpl.duration_days} giorni`}
                           fill
                           className="object-cover"
                           sizes="50vw"
@@ -300,7 +301,7 @@ function PracticeGrid({
                     tpl?.destination_slug ?? p.destination_label ?? p.template_id ?? 'viaggio',
                     i
                   )}
-                  alt=""
+                  alt={title}
                   fill
                   className="object-cover"
                   sizes="50vw"
@@ -351,7 +352,7 @@ function Empty({
     <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-14 text-center">
       <p className="font-display text-lg font-semibold text-foreground">{title}</p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{body}</p>
-      <Button asChild className="mt-6 min-h-11 rounded-full">
+      <Button asChild className="mt-6 min-h-11 w-full max-w-xs rounded-full sm:w-auto">
         <Link href={ctaHref}>{ctaLabel}</Link>
       </Button>
     </div>

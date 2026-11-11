@@ -276,15 +276,15 @@ export function TripSelectedFlightsPanel({
               className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm"
               data-testid={`trip-voli-leg-${leg.id}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                       {legKindLabelIt(leg.kind)}
                     </p>
                     <span
                       className={cn(
-                        'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                        'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                         booked
                           ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200'
                           : 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'
@@ -319,12 +319,12 @@ export function TripSelectedFlightsPanel({
                       <div data-testid={`trip-voli-leg-price-${leg.id}`}>
                         <p className="text-sm font-extrabold tabular-nums text-slate-900">
                           {formatEuro(unit, { approx: false })}
-                          <span className="block text-[10px] font-medium text-slate-500">
+                          <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
                             a persona
                           </span>
                         </p>
                         {priceBasis > 1 ? (
-                          <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-slate-600">
+                          <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
                             {formatEuro(party, { approx: false })} totale ({priceBasis}{' '}
                             pax)
                           </p>
@@ -332,10 +332,15 @@ export function TripSelectedFlightsPanel({
                       </div>
                     );
                   })()}
+                </div>
+              </div>
+              {(canEdit && !booked) ||
+              (separateLegs && !booked && leg.offerId && leg.price != null) ? (
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-2.5">
                   {canEdit && !booked ? (
                     <button
                       type="button"
-                      className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-xs font-semibold text-primary"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-primary sm:flex-none"
                       onClick={() => openEdit(leg.id)}
                       data-testid={`trip-voli-edit-${leg.id}`}
                       aria-label={`Modifica tratta ${leg.originIata} ${leg.destinationIata}`}
@@ -347,7 +352,7 @@ export function TripSelectedFlightsPanel({
                   {separateLegs && !booked && leg.offerId && leg.price != null ? (
                     <Button
                       type="button"
-                      className="mt-2 min-h-11 rounded-full px-4 text-xs"
+                      className="min-h-11 flex-1 rounded-full px-4 text-xs sm:flex-none"
                       onClick={() => goCheckoutOne([currentUserId], leg)}
                       data-testid={`trip-voli-prenota-leg-${leg.id}`}
                       aria-label={`Prenota ${leg.originIata} ${leg.destinationIata}`}
@@ -356,7 +361,7 @@ export function TripSelectedFlightsPanel({
                     </Button>
                   ) : null}
                 </div>
-              </div>
+              ) : null}
             </li>
           );
         })}
@@ -370,7 +375,7 @@ export function TripSelectedFlightsPanel({
           onClick={() => openEdit()}
           data-testid="trip-voli-modifica"
         >
-          <Pencil className="h-4 w-4" />
+          <Pencil className="h-4 w-4" aria-hidden />
           Modifica voli
         </Button>
       ) : null}
@@ -493,13 +498,13 @@ export function TripSelectedFlightsPanel({
           </div>
         ) : (
           <div className="space-y-3" data-testid="trip-pago-per-altri-panel">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
               <p className="text-xs text-slate-500">
                 Spunta chi include nel checkout (puoi togliere te stesso).
               </p>
               <button
                 type="button"
-                className="inline-flex min-h-11 items-center px-2 text-xs font-semibold text-primary"
+                className="inline-flex min-h-11 shrink-0 items-center self-start px-2 text-xs font-semibold text-primary"
                 onClick={() => setPayOthersOpen(false)}
                 data-testid="trip-pago-per-altri-chiudi"
               >

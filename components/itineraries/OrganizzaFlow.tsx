@@ -660,7 +660,7 @@ export function OrganizzaFlow({
     isMultiCountryDraft(draft) && !isCuratedMultiSelection(draft.slugs);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(14rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-tint)]/50 pb-[calc(16rem+env(safe-area-inset-bottom,0px)+var(--cookie-banner-pad,0px))]">
       <div className="nl-page w-full space-y-5 pt-6 sm:pt-8">
         <header>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-3xl">
@@ -779,7 +779,7 @@ export function OrganizzaFlow({
                       setDestShowAll(false);
                     }}
                     placeholder="Cerca destinazione…"
-                    className="w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
+                    className="min-h-11 w-full rounded-xl border border-[var(--color-border)] py-2.5 pl-10 pr-3 text-sm"
                     data-testid="dest-search"
                   />
                 </label>
@@ -794,10 +794,10 @@ export function OrganizzaFlow({
                       </span>
                       <button
                         type="button"
-                        className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                        className="ml-auto inline-flex min-h-11 items-center gap-1 px-1 text-xs font-semibold text-primary"
                         onClick={() => applyDestinationList([])}
                       >
-                        <X className="h-3.5 w-3.5" /> Svuota
+                        <X className="h-3.5 w-3.5" aria-hidden /> Svuota
                       </button>
                     </div>
                     {selectedSlugs.length >= 2 ? (
@@ -810,7 +810,7 @@ export function OrganizzaFlow({
                             {i + 1}. {getMaster(s)?.nameIt ?? s}
                             <button
                               type="button"
-                              className="text-slate-400 hover:text-primary"
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center text-slate-400 hover:text-primary disabled:opacity-40"
                               aria-label="Sposta avanti"
                               disabled={i >= selectedSlugs.length - 1}
                               onClick={() => moveSlug(i, i + 1)}
@@ -850,7 +850,7 @@ export function OrganizzaFlow({
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-h-10 w-full rounded-[10px]"
+                    className="min-h-11 w-full rounded-[10px]"
                     onClick={() => setDestShowAll(true)}
                   >
                     Mostra di più ({filteredDests.length - DEST_PREVIEW})
@@ -983,7 +983,7 @@ export function OrganizzaFlow({
                     <input
                       type="date"
                       lang="it-IT"
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                      className="mt-1 min-h-11 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                       value={draft.dateFrom ?? ''}
                       min={minBookableDateIso()}
                       onChange={(e) => {
@@ -1004,7 +1004,7 @@ export function OrganizzaFlow({
                     <input
                       type="date"
                       lang="it-IT"
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                      className="mt-1 min-h-11 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                       value={draft.dateTo ?? ''}
                       min={draft.dateFrom ?? minBookableDateIso()}
                       onChange={(e) => {
@@ -1044,8 +1044,9 @@ export function OrganizzaFlow({
                       key={opt.id}
                       type="button"
                       onClick={() => setCompany(opt.id)}
+                      aria-pressed={draft.company === opt.id}
                       className={cn(
-                        'rounded-xl border px-3 py-3 text-left',
+                        'min-h-11 rounded-xl border px-3 py-3 text-left',
                         draft.company === opt.id
                           ? 'border-primary ring-2 ring-primary/20'
                           : 'border-[var(--color-border)]'

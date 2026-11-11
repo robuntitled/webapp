@@ -364,19 +364,20 @@ export function LegFlightStrip({
                 {leg.offer.airline ? ` · ${leg.offer.airline}` : ''}
               </p>
             </div>
-            <Plane className="mt-1 h-4 w-4 text-primary" />
+            <Plane className="mt-1 h-4 w-4 text-primary" aria-hidden />
           </div>
           {alts.length > 1 ? (
             <button
               type="button"
-              className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
+              className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-primary"
               onClick={() => setAltsOpen((v) => !v)}
+              aria-expanded={altsOpen}
             >
               Altre opzioni
               {altsOpen ? (
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="h-3.5 w-3.5" aria-hidden />
               ) : (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
               )}
             </button>
           ) : null}
@@ -389,11 +390,12 @@ export function LegFlightStrip({
                     <button
                       type="button"
                       className={cn(
-                        'flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-xs',
+                        'flex min-h-11 w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-xs',
                         active
                           ? 'border-primary bg-primary/5'
                           : 'border-[var(--color-border)]'
                       )}
+                      aria-pressed={active}
                       onClick={() =>
                         onDateAndOffer(leg.date, snapshotForParty(o, leg.date))
                       }
@@ -402,9 +404,9 @@ export function LegFlightStrip({
                         {o.stops === 0 ? 'Diretto' : `${o.stops} sc.`} ·{' '}
                         {Math.round(o.durationMinutes / 60)} h
                       </span>
-                      <span className="font-bold text-right">
+                      <span className="text-right font-bold">
                         {formatEuro(o.price, { approx: false }) ?? `${o.price} €`}
-                        <span className="block text-[10px] font-medium text-[var(--color-text-secondary)]">
+                        <span className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
                           a persona
                         </span>
                       </span>

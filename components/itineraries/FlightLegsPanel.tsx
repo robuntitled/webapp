@@ -36,12 +36,13 @@ export function SeparateTicketsNotice({ className }: { className?: string }) {
   return (
     <div className={cn('text-[11px] text-[var(--color-text-secondary)]', className)}>
       <p className="inline">
-        <Plane className="mr-1 inline h-3 w-3 text-primary" />
+        <Plane className="mr-1 inline h-3 w-3 text-primary" aria-hidden />
         Biglietti indipendenti per tratta.{' '}
         <button
           type="button"
-          className="font-semibold text-primary underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-primary underline-offset-2 hover:underline"
           onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
         >
           {open ? 'Nascondi' : 'Dettagli'}
         </button>

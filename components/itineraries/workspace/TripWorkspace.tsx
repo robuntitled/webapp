@@ -482,7 +482,7 @@ export function TripWorkspace({
                     {canJoin && !isMember ? (
                       <Button
                         type="button"
-                        className="mt-4 rounded-full"
+                        className="mt-4 min-h-11 w-full rounded-full sm:w-auto"
                         disabled={pendingJoin}
                         onClick={joinTrip}
                       >
@@ -584,7 +584,7 @@ export function TripWorkspace({
                 <Button
                   type="button"
                   variant="outline"
-                  className="mt-4 rounded-full"
+                  className="mt-4 min-h-11 w-full rounded-full sm:w-auto"
                   onClick={() => selectTab('voli')}
                 >
                   Vai ai voli
