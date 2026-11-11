@@ -213,17 +213,6 @@ export function PublicLanding({
                 </li>
               ))}
             </ul>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <Button asChild variant="outline" className="rounded-[10px]">
-                <Link href="/prenota/voli">Cerca voli</Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-[10px]">
-                <Link href="/prenota/hotel">Cerca hotel</Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-[10px]">
-                <Link href="/organizza">Esplora gli itinerari</Link>
-              </Button>
-            </div>
             <Button asChild size="lg" className={pathBtnClass}>
               <Link href="/organizza">Vai a Organizza →</Link>
             </Button>

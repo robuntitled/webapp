@@ -14,8 +14,8 @@ describe('PublicLanding home entrances', () => {
     expect(src).toContain('Scopri le partenze');
   });
 
-  it('renames Lasciati ispirare to Esplora gli itinerari', () => {
-    expect(src).toContain('Esplora gli itinerari');
+  it('keeps itinerary copy without the old Lasciati ispirare label', () => {
+    expect(src).toContain('Esplora gli itinerari pronti');
     expect(src).not.toContain('Lasciati ispirare');
   });
 
@@ -24,9 +24,14 @@ describe('PublicLanding home entrances', () => {
     expect(src).not.toMatch(/Prenotabile/);
   });
 
-  it('keeps flights/hotels inside Organizza, not as sole hero comparator', () => {
-    expect(src).toContain('href="/prenota/voli"');
-    expect(src).toContain('href="/prenota/hotel"');
+  it('Organizza card has only Vai a Organizza CTA (no shortcut buttons)', () => {
+    expect(src).toContain('Vai a Organizza →');
+    // Dead shortcut buttons removed from the Organizza entry card.
+    expect(src).not.toMatch(/>Cerca voli</);
+    expect(src).not.toMatch(/>Cerca hotel</);
+    expect(src).not.toMatch(/>Esplora gli itinerari</);
+    expect(src).not.toContain('href="/prenota/voli"');
+    expect(src).not.toContain('href="/prenota/hotel"');
     // Hero equal-weight buttons should not be coral Cerca voli
     expect(src).not.toMatch(
       /min-w-\[12rem\][\s\S]{0,120}bg-\[var\(--color-cta\)\][\s\S]{0,80}Cerca voli/

@@ -14,6 +14,10 @@ export type SelectedFlightLegSnapshot = {
   date: string;
   labelIt: string;
   offerId: string | null;
+  /**
+   * Party total for `SelectedFlightPlanSnapshot.travelers` (Organizza searches
+   * 1 adult then multiplies). Divide by travelers for “a persona”.
+   */
   price: number | null;
   currency: string | null;
   stops: number | null;

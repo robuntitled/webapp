@@ -172,11 +172,14 @@ export function ProssimoPasso({
   }
 
   function goBuyFlights() {
+    const travelers = Math.max(1, localPlan?.travelers ?? 1);
     const draft = buildCheckoutDraftFromLegs({
       legs: purchasableLegsFromSelected(localPlan),
-      adults: Math.max(1, localPlan?.travelers ?? 1),
+      adults: travelers,
       practiceId,
       mode: 'all',
+      // Prices are party totals for `travelers` — do not multiply again.
+      priceBasisTravelers: travelers,
     });
     if (!draft) {
       toast.message(
