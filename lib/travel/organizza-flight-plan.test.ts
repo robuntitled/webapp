@@ -4,6 +4,7 @@ import { combineMultiCountryPlan } from '@/lib/itineraries/multi-country';
 import {
   buildDomesticPlanForDraft,
   buildMainFlightPlanForDraft,
+  countMissingMainFlightLegs,
   flightPlanAllowsContinue,
   intercountryLegsFromMultiPlan,
   proposeDomesticLegsFromItinerary,
@@ -93,6 +94,12 @@ describe('organizza-flight-plan (intercountry vs domestic)', () => {
       /Domestico/i
     );
     expect(flightPlanAllowsContinue(main)).toBe(false);
+    expect(countMissingMainFlightLegs(main)).toBe(3);
+  });
+
+  it('countMissingMainFlightLegs is 1 when plan is empty', () => {
+    expect(countMissingMainFlightLegs(null)).toBe(1);
+    expect(flightPlanAllowsContinue(null)).toBe(false);
   });
 
   it('3 countries → 4 main legs (outbound + 2 intercountry + return)', () => {

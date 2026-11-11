@@ -121,7 +121,11 @@ export function PraticheHub({
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+        role="tablist"
+        aria-label="Sezioni I miei viaggi"
+      >
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           const isActive = active === section.id;
@@ -129,17 +133,24 @@ export function PraticheHub({
             <button
               key={section.id}
               type="button"
+              role="tab"
+              aria-selected={isActive}
+              id={`pratiche-tab-${section.id}`}
+              aria-controls={`pratiche-panel-${section.id}`}
               onClick={() => setActive(section.id)}
               data-testid={`pratiche-tab-${section.id}`}
               className={cn(
-                'rounded-2xl border p-4 text-left transition',
+                'min-h-[5.5rem] rounded-2xl border p-4 text-left transition',
                 isActive
                   ? 'border-accent bg-accent/10 shadow-sm'
                   : 'border-border bg-white hover:border-accent/40'
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <Icon className={cn('h-5 w-5', isActive ? 'text-accent' : 'text-muted-foreground')} />
+                <Icon
+                  className={cn('h-5 w-5', isActive ? 'text-accent' : 'text-muted-foreground')}
+                  aria-hidden
+                />
                 <span className="text-xs font-bold tabular-nums text-muted-foreground">
                   {counts[section.id]}
                 </span>
@@ -147,66 +158,77 @@ export function PraticheHub({
               <p className="mt-3 font-display text-sm font-semibold text-foreground">
                 {section.label}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">{section.description}</p>
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                {section.description}
+              </p>
             </button>
           );
         })}
       </div>
 
-      {active === 'saved' ? (
-        liked.length === 0 ? (
-          <Empty
-            title="Nessun itinerario salvato"
-            body="Apri un piano di viaggio e tocca il cuore, oppure transforma un salvato in viaggio."
-          />
-        ) : (
-          <ul className="grid gap-5 sm:grid-cols-2">
-            {liked.map((tpl, i) => (
-              <li key={tpl.template_id}>
-                <div className="overflow-hidden rounded-[28px] border border-border bg-white shadow-sm">
-                  <Link
-                    href={itineraryPath(tpl.destination_slug, tpl.duration_days)}
-                    className="block"
-                  >
-                    <div className="relative h-52">
-                      <Image
-                        src={uniqueCover(tpl.destination_slug, i)}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="50vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                      <p className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                        <Heart className="h-3 w-3 fill-accent text-accent" /> Salvato
-                      </p>
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <p className="font-display text-2xl font-semibold text-white">
-                          {tpl.destination_name} · {tpl.duration_days} giorni
+      <div
+        role="tabpanel"
+        id={`pratiche-panel-${active}`}
+        aria-labelledby={`pratiche-tab-${active}`}
+        className="motion-safe:animate-[nl-landing-in_400ms_ease_forwards]"
+      >
+        {active === 'saved' ? (
+          liked.length === 0 ? (
+            <Empty
+              title="Nessun itinerario salvato"
+              body="Apri un piano di viaggio e tocca il cuore per ritrovarlo qui."
+              ctaHref="/organizza"
+              ctaLabel="Esplora itinerari"
+            />
+          ) : (
+            <ul className="grid gap-5 sm:grid-cols-2">
+              {liked.map((tpl, i) => (
+                <li key={tpl.template_id}>
+                  <div className="overflow-hidden rounded-[28px] border border-border bg-white shadow-sm">
+                    <Link
+                      href={itineraryPath(tpl.destination_slug, tpl.duration_days)}
+                      className="block"
+                    >
+                      <div className="relative h-52">
+                        <Image
+                          src={uniqueCover(tpl.destination_slug, i)}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="50vw"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                        <p className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                          <Heart className="h-3 w-3 fill-accent text-accent" aria-hidden /> Salvato
                         </p>
-                        <p className="mt-1 line-clamp-2 text-sm text-white/80">{tpl.summary}</p>
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <p className="line-clamp-2 font-display text-2xl font-semibold text-white">
+                            {tpl.destination_name} · {tpl.duration_days} giorni
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-sm text-white/80">{tpl.summary}</p>
+                        </div>
                       </div>
+                    </Link>
+                    <div className="border-t border-border p-3">
+                      <Button asChild className="min-h-11 w-full rounded-full" variant="cta">
+                        <Link href={`/organizza?slug=${encodeURIComponent(tpl.destination_slug)}`}>
+                          Trasforma in viaggio
+                        </Link>
+                      </Button>
                     </div>
-                  </Link>
-                  <div className="border-t border-border p-3">
-                    <Button asChild className="min-h-11 w-full rounded-full" variant="cta">
-                      <Link href={`/organizza?slug=${encodeURIComponent(tpl.destination_slug)}`}>
-                        Trasforma in viaggio
-                      </Link>
-                    </Button>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )
-      ) : (
-        <PracticeGrid
-          items={buckets[active]}
-          empty={active}
-          showBookingStatus={active === 'organized'}
-        />
-      )}
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
+          <PracticeGrid
+            items={buckets[active]}
+            empty={active}
+            showBookingStatus={active === 'organized'}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -221,21 +243,31 @@ function PracticeGrid({
   showBookingStatus?: boolean;
 }) {
   if (items.length === 0) {
-    const copy = {
-      organized: [
-        'Nessun viaggio organizzato',
-        'Crea un viaggio da Organizza: comparirà qui con lo stato delle prenotazioni.',
-      ],
-      joined: [
-        'Nessun viaggio a cui partecipi',
-        'Quando accetti un invito, il viaggio compare qui.',
-      ],
-      bookings: [
-        'Nessuna prenotazione',
-        'I voli e hotel che hai pagato restano raccolti in questa sezione.',
-      ],
-    }[empty];
-    return <Empty title={copy[0]} body={copy[1]} />;
+    const copy: Record<
+      Exclude<SectionId, 'saved'>,
+      { title: string; body: string; href: string; label: string }
+    > = {
+      organized: {
+        title: 'Nessun viaggio organizzato',
+        body: 'Crea un viaggio da Organizza: comparirà qui con lo stato delle prenotazioni.',
+        href: '/organizza',
+        label: 'Organizza un viaggio',
+      },
+      joined: {
+        title: 'Nessun viaggio a cui partecipi',
+        body: 'Quando accetti un invito o entri in un gruppo, il viaggio compare qui.',
+        href: '/gruppi',
+        label: 'Scopri le partenze',
+      },
+      bookings: {
+        title: 'Nessuna prenotazione',
+        body: 'I voli e hotel che hai pagato restano raccolti in questa sezione.',
+        href: '/organizza',
+        label: 'Organizza un viaggio',
+      },
+    };
+    const c = copy[empty];
+    return <Empty title={c.title} body={c.body} ctaHref={c.href} ctaLabel={c.label} />;
   }
 
   return (
@@ -278,7 +310,7 @@ function PracticeGrid({
                   {seatLabel ?? (booked ? 'Prenotato' : MODE_LABEL[p.mode])}
                 </p>
                 <div className="absolute bottom-4 left-4 right-4">
-                  <p className="font-display text-2xl font-semibold text-white">
+                  <p className="line-clamp-2 font-display text-xl font-semibold text-white sm:text-2xl">
                     {title}
                     {tpl ? ` · ${tpl.duration_days} giorni` : ''}
                   </p>
@@ -304,13 +336,23 @@ function PracticeGrid({
   );
 }
 
-function Empty({ title, body }: { title: string; body: string }) {
+function Empty({
+  title,
+  body,
+  ctaHref = '/organizza',
+  ctaLabel = 'Organizza un viaggio',
+}: {
+  title: string;
+  body: string;
+  ctaHref?: string;
+  ctaLabel?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-border bg-white px-6 py-14 text-center">
-      <p className="font-medium text-foreground">{title}</p>
+    <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-14 text-center">
+      <p className="font-display text-lg font-semibold text-foreground">{title}</p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{body}</p>
-      <Button asChild className="mt-6 rounded-full">
-        <Link href="/organizza">Organizza un viaggio</Link>
+      <Button asChild className="mt-6 min-h-11 rounded-full">
+        <Link href={ctaHref}>{ctaLabel}</Link>
       </Button>
     </div>
   );

@@ -356,14 +356,19 @@ export function mirrorSelectedFlightFromPlan(
 
 /** Stage 2 continue: all main (non-domestic) legs selected or skipped. */
 export function flightPlanAllowsContinue(plan: TripFlightPlan | null): boolean {
-  if (!plan || plan.legs.length === 0) return false;
+  return countMissingMainFlightLegs(plan) === 0 && Boolean(plan?.legs?.length);
+}
+
+/** How many main legs still need a selected offer (for footer / hints). */
+export function countMissingMainFlightLegs(plan: TripFlightPlan | null): number {
+  if (!plan || plan.legs.length === 0) return 1;
   const required = plan.legs.filter(
     (l) => l.kind !== 'domestic' && l.kind !== 'internal'
   );
-  if (required.length === 0) return true;
-  return required.every(
-    (l) => l.status === 'selected' || l.status === 'stale' || l.offer != null
-  );
+  if (required.length === 0) return 0;
+  return required.filter(
+    (l) => !(l.status === 'selected' || l.status === 'stale' || l.offer != null)
+  ).length;
 }
 
 export function mainLegsOf(plan: TripFlightPlan | null): TripFlightLeg[] {

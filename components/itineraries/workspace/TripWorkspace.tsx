@@ -455,13 +455,12 @@ export function TripWorkspace({
 
         {tab === 'voli' ? (
           <div className="ws-widget rounded-2xl p-5 sm:p-6" data-testid="trip-tab-voli">
-            <div className="mb-5 border-b border-slate-100 pb-5">
+            <div className="mb-4 border-b border-slate-100 pb-4">
               <h2 className="font-display text-xl font-semibold tracking-tight text-slate-900">
                 Voli
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Voli fissati alla creazione. Nessuna ricerca automatica: modifica solo se vuoi
-                cambiare una tratta.
+                Tratte salvate. Modifica o prenota quando sei pronto.
               </p>
             </div>
             {!canBookFlights ? (

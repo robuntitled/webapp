@@ -846,14 +846,32 @@ export function FlightCheckoutClient({
       ? `${window.location.origin}/prenota/voli/checkout?paid=1&tid=${encodeURIComponent(payment.transactionId)}&pid=${encodeURIComponent(payment.prebookId)}`
       : '';
 
+  if (verifying && !draft && !payment && step !== 'done') {
+    return (
+      <div
+        className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+        aria-busy="true"
+        aria-label="Caricamento checkout"
+      >
+        <div className="h-5 w-40 animate-pulse rounded bg-slate-100" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-50" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-50" />
+        <p className="flex items-center gap-2 text-sm text-slate-500">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Preparo il checkout…
+        </p>
+      </div>
+    );
+  }
+
   if (!draft && !verifying && !payment && step !== 'done' && !submitting) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
         <p className="text-sm text-slate-600">
-          Nessuna offerta selezionata. Torna alla ricerca voli.
+          Nessuna offerta selezionata. Torna alla selezione voli.
         </p>
-        <Button asChild className="mt-4 rounded-xl">
-          <Link href="/prenota/voli">Cerca voli</Link>
+        <Button asChild className="mt-4 min-h-11 rounded-xl">
+          <Link href={getCheckoutReturnHref(undefined, 'voli')}>Torna ai voli</Link>
         </Button>
       </div>
     );

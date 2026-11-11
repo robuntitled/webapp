@@ -335,21 +335,22 @@ export function TripSelectedFlightsPanel({
                   {canEdit && !booked ? (
                     <button
                       type="button"
-                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
+                      className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-xs font-semibold text-primary"
                       onClick={() => openEdit(leg.id)}
                       data-testid={`trip-voli-edit-${leg.id}`}
+                      aria-label={`Modifica tratta ${leg.originIata} ${leg.destinationIata}`}
                     >
-                      <Pencil className="h-3 w-3" />
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
                       Modifica
                     </button>
                   ) : null}
                   {separateLegs && !booked && leg.offerId && leg.price != null ? (
                     <Button
                       type="button"
-                      size="sm"
-                      className="mt-2 h-9 rounded-full px-3 text-xs"
+                      className="mt-2 min-h-11 rounded-full px-4 text-xs"
                       onClick={() => goCheckoutOne([currentUserId], leg)}
                       data-testid={`trip-voli-prenota-leg-${leg.id}`}
+                      aria-label={`Prenota ${leg.originIata} ${leg.destinationIata}`}
                     >
                       Prenota
                     </Button>
@@ -376,22 +377,26 @@ export function TripSelectedFlightsPanel({
 
       {canPay ? (
         <label
-          className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-3"
+          className="flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-3"
           data-testid="trip-voli-separate-toggle"
         >
           <input
             type="checkbox"
-            className="mt-1 h-4 w-4 accent-primary"
+            className="mt-1 h-4 w-4 shrink-0 accent-primary"
             checked={separateLegs}
             onChange={(e) => setSeparateLegs(e.target.checked)}
+            aria-describedby="trip-voli-separate-desc"
           />
           <span>
             <span className="block text-sm font-semibold text-slate-900">
               Paga tratte separatamente
             </span>
-            <span className="mt-0.5 block text-[11px] text-slate-500">
-              Ogni tratta è un biglietto one-way. Di default le paghi insieme in un unico
-              checkout; attiva questa opzione per prenotare una tratta alla volta.
+            <span
+              id="trip-voli-separate-desc"
+              className="mt-0.5 block text-[11px] leading-snug text-slate-500"
+            >
+              Ogni tratta è un biglietto one-way. Di default le paghi insieme; attiva per
+              prenotare una tratta alla volta.
             </span>
           </span>
         </label>
@@ -402,7 +407,7 @@ export function TripSelectedFlightsPanel({
         data-testid="trip-chi-paga"
       >
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-primary" />
+          <Users className="h-4 w-4 text-primary" aria-hidden />
           <h3 className="text-sm font-bold text-slate-900">Chi paga</h3>
         </div>
 
@@ -421,9 +426,9 @@ export function TripSelectedFlightsPanel({
               return (
                 <li
                   key={p.userId}
-                  className="flex items-center justify-between gap-2 px-0.5 py-0.5 text-[11px]"
+                  className="flex flex-col gap-0.5 px-0.5 py-1.5 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-2"
                 >
-                  <span className="truncate font-medium text-slate-700">
+                  <span className="min-w-0 truncate font-medium text-slate-700">
                     {p.isSelf ? 'Io' : p.name}
                     {p.isOwner ? (
                       <span className="ml-1 font-normal text-slate-400">· creatore</span>
@@ -431,7 +436,7 @@ export function TripSelectedFlightsPanel({
                   </span>
                   <span
                     className={cn(
-                      'shrink-0',
+                      'min-w-0 text-[11px] sm:max-w-[55%] sm:truncate sm:text-right',
                       ui.kind === 'booked' || ui.kind === 'covered'
                         ? 'text-emerald-700'
                         : 'text-slate-500'
@@ -489,12 +494,12 @@ export function TripSelectedFlightsPanel({
         ) : (
           <div className="space-y-3" data-testid="trip-pago-per-altri-panel">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] text-slate-500">
+              <p className="text-xs text-slate-500">
                 Spunta chi include nel checkout (puoi togliere te stesso).
               </p>
               <button
                 type="button"
-                className="text-[11px] font-semibold text-primary"
+                className="inline-flex min-h-11 items-center px-2 text-xs font-semibold text-primary"
                 onClick={() => setPayOthersOpen(false)}
                 data-testid="trip-pago-per-altri-chiudi"
               >
@@ -515,40 +520,46 @@ export function TripSelectedFlightsPanel({
                 });
                 const checked = selectedPayIds.includes(p.userId);
                 return (
-                  <li
-                    key={p.userId}
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl border bg-white px-3 py-2',
-                      locked ? 'border-emerald-200/70 opacity-80' : 'border-slate-200'
-                    )}
-                  >
+                  <li key={p.userId}>
                     <button
                       type="button"
                       disabled={locked}
-                      aria-pressed={checked}
+                      role="checkbox"
+                      aria-checked={checked || locked}
+                      aria-label={p.isSelf ? 'Io' : p.name}
                       onClick={() => togglePay(p.userId)}
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
-                        checked
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-slate-300 bg-white',
-                        locked && 'cursor-not-allowed'
+                        'flex min-h-11 w-full items-center gap-3 rounded-xl border bg-white px-3 py-2 text-left transition',
+                        locked
+                          ? 'cursor-not-allowed border-emerald-200/70 opacity-80'
+                          : checked
+                            ? 'border-primary/40 ring-1 ring-primary/20'
+                            : 'border-slate-200'
                       )}
                       data-testid={`trip-pay-toggle-${p.userId}`}
                     >
-                      {checked && !locked ? <Check className="h-3 w-3" /> : null}
-                      {locked ? <Check className="h-3 w-3 opacity-40" /> : null}
+                      <span
+                        className={cn(
+                          'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
+                          checked || locked
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-slate-300 bg-white'
+                        )}
+                        aria-hidden
+                      >
+                        {checked || locked ? <Check className="h-3 w-3" /> : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-slate-900">
+                          {p.isSelf ? 'Io' : p.name}
+                        </span>
+                        <span className="block text-[11px] text-slate-500">
+                          {ui.kind === 'covered'
+                            ? `Pagato da ${ui.byName}`
+                            : coverageStatusLabelIt(ui)}
+                        </span>
+                      </span>
                     </button>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {p.isSelf ? 'Io' : p.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {ui.kind === 'covered'
-                          ? `Pagato da ${ui.byName}`
-                          : coverageStatusLabelIt(ui)}
-                      </p>
-                    </div>
                   </li>
                 );
               })}

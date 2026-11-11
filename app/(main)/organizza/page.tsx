@@ -41,7 +41,25 @@ export default async function OrganizzaPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[80vh] w-full bg-[var(--color-tint)]/30" aria-busy="true" />
+        <div
+          className="min-h-[calc(100vh-4rem)] w-full bg-[var(--color-tint)]/50"
+          aria-busy="true"
+          aria-label="Caricamento Organizza"
+        >
+          <div className="nl-page space-y-5 pt-6 sm:pt-8">
+            <div className="h-8 w-56 animate-pulse rounded-lg bg-white/70" />
+            <div className="h-4 w-72 animate-pulse rounded bg-white/50" />
+            <div className="flex gap-1.5">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-11 flex-1 animate-pulse rounded-2xl bg-white/70"
+                />
+              ))}
+            </div>
+            <div className="h-64 animate-pulse rounded-2xl bg-white/80" />
+          </div>
+        </div>
       }
     >
       <OrganizzaFlow

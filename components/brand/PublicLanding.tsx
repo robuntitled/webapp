@@ -173,14 +173,15 @@ export function PublicLanding({
               <Button
                 asChild
                 size="lg"
-                className="h-12 min-w-[12rem] rounded-[10px] border border-white/40 bg-white/15 px-6 font-semibold text-white hover:bg-white/25"
+                className="h-12 min-h-12 min-w-[12rem] rounded-[10px] bg-white px-6 font-semibold text-primary shadow-md hover:bg-white/95"
               >
                 <Link href="/organizza">Organizza il tuo viaggio</Link>
               </Button>
               <Button
                 asChild
                 size="lg"
-                className="h-12 min-w-[12rem] rounded-[10px] border border-white/40 bg-white/15 px-6 font-semibold text-white hover:bg-white/25"
+                variant="outline"
+                className="h-12 min-h-12 min-w-[12rem] rounded-[10px] border-white/55 bg-transparent px-6 font-semibold text-white hover:bg-white/15 hover:text-white"
               >
                 <Link href="/gruppi">
                   {groupCount > 0 ? 'Parti con un gruppo' : 'Scopri le partenze'}
@@ -192,11 +193,11 @@ export function PublicLanding({
       </section>
 
       {/* Due ingressi pari peso: Organizza vs Gruppi */}
-      <section className="nl-page relative z-20 -mt-24 w-full pb-4 sm:-mt-28">
+      <section className="nl-page relative z-20 -mt-16 w-full pb-6 sm:-mt-24">
         <div className="grid gap-5 md:grid-cols-2 md:gap-6">
-          <article className="flex flex-col gap-3.5 rounded-[18px] border border-[var(--color-border)] bg-white p-7 shadow-[var(--shadow-soft)]">
+          <article className="flex flex-col gap-4 rounded-[18px] border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-soft)] sm:p-7">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
-              <Compass className="h-6 w-6" />
+              <Compass className="h-6 w-6" aria-hidden />
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight">
               Organizza il tuo viaggio
@@ -218,9 +219,9 @@ export function PublicLanding({
             </Button>
           </article>
 
-          <article className="flex flex-col gap-3.5 rounded-[18px] border border-[var(--color-border)] bg-white p-7 shadow-[var(--shadow-soft)]">
+          <article className="flex flex-col gap-4 rounded-[18px] border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-soft)] sm:p-7">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
-              <Users className="h-6 w-6" />
+              <Users className="h-6 w-6" aria-hidden />
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight">
               Parti con un gruppo
