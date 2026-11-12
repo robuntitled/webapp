@@ -87,15 +87,27 @@ function extractPrice(node: UnknownRecord | null): { price: number | null; curre
   if (!node) return { price: null, currency: null };
   const pricing = asRecord(node.pricing);
   const display = asRecord(pricing?.display);
+  const fare = asRecord(node.fare) ?? asRecord(pricing?.fare);
+  const total = asRecord(node.total) ?? asRecord(pricing?.total);
   const price =
     toNum(display?.total) ??
     toNum(node.price) ??
     toNum(asRecord(node.price)?.total) ??
-    toNum(asRecord(node.price)?.amount);
+    toNum(asRecord(node.price)?.amount) ??
+    toNum(node.amount) ??
+    toNum(node.totalAmount) ??
+    toNum(node.amountEur) ??
+    toNum(fare?.total) ??
+    toNum(fare?.amount) ??
+    toNum(total?.amount) ??
+    toNum(pricing?.total);
   const currency =
     toStr(display?.currency) ??
     toStr(node.currency) ??
-    toStr(asRecord(node.price)?.currency);
+    toStr(asRecord(node.price)?.currency) ??
+    toStr(fare?.currency) ??
+    toStr(total?.currency) ??
+    toStr(pricing?.currency);
   return { price, currency: currency?.toUpperCase() ?? null };
 }
 

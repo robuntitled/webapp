@@ -13,8 +13,10 @@ import {
   parseFlightBookingCoverage,
   participantFlightUiStatus,
 } from '@/lib/itineraries/flight-booking-coverage';
+import { isFlightPendingConfirmation } from '@/lib/itineraries/bookings';
 import {
   buildCheckoutDraftFromLegs,
+  findBookingForSelectedLeg,
   formatClockIt,
   formatDurationIt,
   formatLegDateIt,
@@ -269,7 +271,16 @@ export function TripSelectedFlightsPanel({
     <div className="space-y-5" data-testid="trip-voli-fixed">
       <ul className="space-y-2.5">
         {plan.legs.map((leg) => {
-          const booked = isSelectedLegBooked(leg, bookings);
+          const booking = findBookingForSelectedLeg(leg, bookings);
+          const pending = Boolean(
+            booking && isFlightPendingConfirmation(booking.status)
+          );
+          const booked = Boolean(booking) && !pending;
+          const statusLabel = booked
+            ? 'Prenotato'
+            : pending
+              ? 'Volo in conferma'
+              : 'Da prenotare';
           return (
             <li
               key={leg.id}
@@ -287,11 +298,13 @@ export function TripSelectedFlightsPanel({
                         'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                         booked
                           ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200'
+                          : pending
+                            ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'
                           : 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'
                       )}
                       data-testid={`trip-voli-leg-status-${leg.id}`}
                     >
-                      {booked ? 'Prenotato' : 'Da prenotare'}
+                      {statusLabel}
                     </span>
                   </div>
                   <p className="mt-0.5 font-display text-base font-semibold text-slate-900">
