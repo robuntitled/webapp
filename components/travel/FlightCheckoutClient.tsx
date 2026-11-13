@@ -28,6 +28,8 @@ import { legKindLabelIt } from '@/lib/itineraries/selected-flight-display';
 import {
   clearFlightCheckoutDraft,
   clearFlightPaymentPending,
+  flightCheckoutChargeNow,
+  flightCheckoutPlanTotal,
   loadFlightCheckoutDraft,
   loadFlightPaymentPending,
   saveFlightCheckoutDraft,
@@ -237,12 +239,17 @@ function LegSummary({
   price,
   currency,
   status,
+  adults = 1,
+  unitPrice,
 }: {
   title: string;
   leg: FlightLegDraft;
   price?: number | null;
   currency?: string | null;
   status?: 'pending' | 'paid' | 'confirming' | 'failed' | 'active' | null;
+  adults?: number;
+  /** Per-person amount when adults > 1 (owner rule: show both). */
+  unitPrice?: number | null;
 }) {
   return (
     <div
@@ -308,9 +315,19 @@ function LegSummary({
           <span />
         )}
         {price != null ? (
-          <p className="text-xs font-bold tabular-nums text-slate-800">
-            {formatMoney(price, currency || 'EUR')}
-          </p>
+          <div className="text-right">
+            <p className="text-xs font-bold tabular-nums text-slate-800">
+              {formatMoney(price, currency || 'EUR')}
+              {adults > 1 ? (
+                <span className="ml-1 font-medium text-slate-500">totale</span>
+              ) : null}
+            </p>
+            {adults > 1 && unitPrice != null ? (
+              <p className="text-[10px] font-medium tabular-nums text-slate-500">
+                {formatMoney(unitPrice, currency || 'EUR')} a persona
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>
@@ -345,18 +362,6 @@ function checkoutLegsOf(draft: FlightCheckoutDraft | null): FlightCheckoutLegIte
       : []),
   ];
 }
-
-function draftPlanTotal(draft: FlightCheckoutDraft | null): number {
-  if (!draft) return 0;
-  if (draft.checkoutLegs?.length) {
-    return draft.checkoutLegs.reduce(
-      (s, l) => s + (Number.isFinite(l.price) ? l.price : 0),
-      0
-    );
-  }
-  return draft.price;
-}
-
 
 export function FlightCheckoutClient({
   defaultEmail = '',
@@ -679,18 +684,17 @@ export function FlightCheckoutClient({
   const checkoutLegs = checkoutLegsOf(draft);
   const activeLegIndex = draft?.activeLegIndex ?? 0;
   const activeCheckoutLeg = checkoutLegs[activeLegIndex] ?? checkoutLegs[0] ?? null;
-  const planTotal = roundMoney(draftPlanTotal(draft));
+  const planTotal = roundMoney(flightCheckoutPlanTotal(draft));
+  const chargeNow = roundMoney(flightCheckoutChargeNow(draft));
   const isMultiLeg = Boolean(draft?.checkoutLegs && draft.checkoutLegs.length > 1);
+  const adults = Math.max(1, draft?.adults ?? 1);
 
-  // Una sola fonte: dopo prebook usa il prezzo pagabile della tratta attiva;
-  // in riepilogo details mostriamo il totale piano multi-tratta.
+  // Payable amount = ONLY the active leg (or live payment session). Never plan sum.
   const displayPrice = roundMoney(
     payment?.price ??
-      (step === 'payment'
-        ? activeCheckoutLeg?.price ?? verify?.price ?? draft?.price ?? 0
-        : isMultiLeg
-          ? planTotal
-          : verify?.price ?? draft?.price ?? 0)
+      (isMultiLeg
+        ? activeCheckoutLeg?.price ?? chargeNow
+        : verify?.price ?? draft?.price ?? chargeNow)
   );
   const displayCurrency =
     payment?.currency ??
@@ -840,6 +844,15 @@ export function FlightCheckoutClient({
         return;
       }
       const paymentEnv = data.paymentEnv ?? 'sandbox';
+      // Never fall back to working.price (was plan sum for mode=all).
+      const charged = roundMoney(
+        data.price ?? expectedLegPrice ?? flightCheckoutChargeNow(working)
+      );
+      if (!(charged > 0)) {
+        toast.error('Prezzo tratta non disponibile. Riprova o riscegli il volo.');
+        setStep('details');
+        return;
+      }
       const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,
@@ -847,7 +860,7 @@ export function FlightCheckoutClient({
         publishableKey: data.publishableKey ?? null,
         paymentEnv,
         paymentMode: 'liteapi_sdk' as const,
-        price: roundMoney(data.price ?? expectedLegPrice ?? working.price),
+        price: charged,
         currency: data.currency ?? active?.currency ?? working.currency,
         createdAt: Date.now(),
       };
@@ -1327,23 +1340,31 @@ export function FlightCheckoutClient({
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      {isMultiLeg ? 'Totale tratte' : 'Totale'}
+                      {isMultiLeg
+                        ? `Addebito tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
+                        : 'Totale'}
                     </p>
                     <p className="truncate text-xs text-slate-600">
                       {draft.adults}{' '}
                       {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
                       {isMultiLeg
-                        ? ` · ${checkoutLegs.length} tratte`
+                        ? ` · ${activeCheckoutLeg?.leg.origin ?? ''}→${activeCheckoutLeg?.leg.destination ?? ''}`
                         : draft.tripType === 'roundtrip'
                           ? ' · A/R'
                           : ' · solo andata'}
                     </p>
+                    {isMultiLeg && planTotal !== displayPrice ? (
+                      <p className="mt-0.5 text-[10px] text-slate-500">
+                        Piano completo {formatMoney(planTotal, displayCurrency)} (altre
+                        tratte dopo)
+                      </p>
+                    ) : null}
                   </div>
-                  <p className="shrink-0 font-display text-xl font-semibold tabular-nums text-slate-900">
-                    {formatMoney(
-                      isMultiLeg ? planTotal : displayPrice,
-                      displayCurrency
-                    )}
+                  <p
+                    className="shrink-0 font-display text-xl font-semibold tabular-nums text-slate-900"
+                    data-testid="checkout-charge-now-mobile"
+                  >
+                    {formatMoney(displayPrice, displayCurrency)}
                   </p>
                 </div>
               </div>
@@ -1354,9 +1375,12 @@ export function FlightCheckoutClient({
               disabled={verifying || submitting}
               onClick={() => void startPrebook()}
               className="h-12 min-h-12 w-full rounded-xl bg-primary text-base font-semibold hover:bg-primary/90"
+              data-testid="checkout-pay-cta"
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              Continua al pagamento
+              {isMultiLeg
+                ? `Paga tratta ${activeLegIndex + 1}/${checkoutLegs.length} · ${formatMoney(displayPrice, displayCurrency)}`
+                : `Continua al pagamento · ${formatMoney(displayPrice, displayCurrency)}`}
             </Button>
           </CheckoutStepShell>
         ) : null}
@@ -1383,20 +1407,20 @@ export function FlightCheckoutClient({
             }
           >
             {isMultiLeg ? (
-              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
-                <p className="font-semibold text-slate-800">
-                  Addebito di questa tratta:{' '}
-                  <span className="tabular-nums">
+              <div
+                className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-amber-950"
+                data-testid="checkout-multi-leg-charge-note"
+              >
+                <p className="font-semibold">
+                  Addebito ora (solo questa tratta):{' '}
+                  <span className="tabular-nums" data-testid="checkout-charge-now">
                     {formatMoney(displayPrice, displayCurrency)}
                   </span>
-                  <span className="font-normal text-slate-500">
-                    {' '}
-                    · piano {formatMoney(planTotal, displayCurrency)}
-                  </span>
                 </p>
-                <p>
-                  Ogni tratta è un biglietto one-way: paghi in sequenza. Se una fallisce, le
-                  altre già confermate restano valide.
+                <p className="text-amber-900/80">
+                  Piano completo {formatMoney(planTotal, displayCurrency)} — le altre tratte
+                  si pagano dopo, una alla volta. Se una fallisce, non addebitiamo le tratte
+                  non prenotate.
                 </p>
               </div>
             ) : null}
@@ -1453,6 +1477,8 @@ export function FlightCheckoutClient({
                   price={item.price}
                   currency={item.currency}
                   status={status}
+                  adults={adults}
+                  unitPrice={adults > 1 ? roundMoney(item.price / adults) : null}
                 />
               );
             })
@@ -1471,19 +1497,25 @@ export function FlightCheckoutClient({
 
           <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
             <p className="text-[11px] uppercase tracking-wider text-white/70">
-              {isMultiLeg ? 'Totale tratte' : 'Totale'}
+              {isMultiLeg
+                ? `Addebito tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
+                : 'Totale'}
             </p>
             <p className="font-display text-2xl font-semibold" data-testid="checkout-total">
-              {formatMoney(
-                isMultiLeg ? planTotal : displayPrice,
-                displayCurrency
-              )}
+              {formatMoney(displayPrice, displayCurrency)}
             </p>
+            {isMultiLeg && adults > 1 ? (
+              <p className="text-[11px] text-white/70" data-testid="checkout-unit-price">
+                {formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona
+                {' · '}
+                {adults} passeggeri
+              </p>
+            ) : null}
             <p className="text-[11px] text-white/60">
               {draft.adults}{' '}
               {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
               {isMultiLeg
-                ? ` · ${checkoutLegs.length} tratte (biglietti one-way)`
+                ? ` · one-way (piano ${formatMoney(planTotal, displayCurrency)})`
                 : draft.tripType === 'roundtrip'
                   ? ' · A/R'
                   : ' · solo andata'}
