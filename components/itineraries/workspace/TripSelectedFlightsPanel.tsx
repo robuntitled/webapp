@@ -118,11 +118,17 @@ export function TripSelectedFlightsPanel({
     [purchasable, bookings]
   );
   const perPersonTotal = useMemo(() => sumSelectedPlanPerPerson(plan), [plan]);
-  /** Quota for one passenger across unbooked legs (Pago per me). */
+  /** Quota for one passenger across unbooked legs (piano completo). */
   const unbookedPerPerson = useMemo(
     () => sumSelectedLegsChargeForPax(unbookedLegs, priceBasis, 1),
     [unbookedLegs, priceBasis]
   );
+  /** First unbooked leg charge for 1 pax — what the next payment actually bills. */
+  const nextLegPerPerson = useMemo(() => {
+    const first = unbookedLegs[0];
+    if (!first) return null;
+    return selectedLegChargeForPax(first, priceBasis, 1);
+  }, [unbookedLegs, priceBasis]);
 
   function isPersonFullyCovered(userId: string): boolean {
     const cov = coverageForUser(coverage, userId);
@@ -487,12 +493,22 @@ export function TripSelectedFlightsPanel({
                 data-testid="trip-pago-per-me"
               >
               Pago per me
-              {unbookedPerPerson != null ? (
+              {nextLegPerPerson != null ? (
                 <span className="ml-1 font-semibold opacity-90">
-                  · {formatEuro(unbookedPerPerson, { approx: false })}
+                  · da {formatEuro(nextLegPerPerson, { approx: false })}
+                  {unbookedLegs.length > 1 ? '/tratta' : ''}
                 </span>
               ) : null}
               </Button>
+              {unbookedLegs.length > 1 && unbookedPerPerson != null ? (
+                <p
+                  className="text-center text-[11px] text-slate-500"
+                  data-testid="trip-pago-per-me-hint"
+                >
+                  Paghi una tratta alla volta (solo la tua quota). Piano:{' '}
+                  {formatEuro(unbookedPerPerson, { approx: false })} a persona.
+                </p>
+              ) : null}
             ) : (
               <p className="text-[11px] text-slate-500" data-testid="trip-voli-separate-hint">
                 Usa Prenota su ogni tratta qui sopra, oppure Pago per altri per includere più

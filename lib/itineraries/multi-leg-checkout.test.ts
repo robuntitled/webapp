@@ -98,7 +98,7 @@ describe('multi-leg checkout helpers', () => {
     expect(sumSelectedLegsPerPerson(plan.legs, plan.travelers)).toBe(107);
   });
 
-  it('builds a draft with every selected leg and total', () => {
+  it('builds a draft with every selected leg; price = active leg only', () => {
     const draft = buildCheckoutDraftFromLegs({
       legs: plan.legs,
       adults: 1,
@@ -107,13 +107,16 @@ describe('multi-leg checkout helpers', () => {
       priceBasisTravelers: plan.travelers,
     });
     expect(draft?.checkoutLegs).toHaveLength(2);
-    expect(draft?.price).toBe(107);
+    // Charge now = first leg (50), NOT sum 107 — LiteAPI prebooks one offerId.
+    expect(draft?.price).toBe(50);
+    expect(draft?.checkoutLegs?.[0]?.price).toBe(50);
+    expect(draft?.checkoutLegs?.[1]?.price).toBe(57);
     expect(draft?.checkoutMode).toBe('all');
     expect(draft?.checkoutLegs?.[0]?.offerId).toBe('offer-out');
     expect(draft?.checkoutLegs?.[1]?.offerId).toBe('offer-ret');
   });
 
-  it('scales prices by adults for group checkout', () => {
+  it('scales prices by adults for group checkout (charge = first leg × adults)', () => {
     const draft = buildCheckoutDraftFromLegs({
       legs: plan.legs,
       adults: 2,
@@ -121,7 +124,7 @@ describe('multi-leg checkout helpers', () => {
       mode: 'all',
       priceBasisTravelers: plan.travelers,
     });
-    expect(draft?.price).toBe(214);
+    expect(draft?.price).toBe(100);
     expect(draft?.checkoutLegs?.[0]?.price).toBe(100);
     expect(draft?.checkoutLegs?.[1]?.price).toBe(114);
   });
@@ -148,6 +151,7 @@ describe('multi-leg checkout helpers', () => {
     expect(loaded?.offerId).toBe('offer-ret');
     expect(loaded?.outbound.origin).toBe('KEF');
     expect(loaded?.checkoutLegs).toHaveLength(2);
-    expect(loaded?.price).toBe(107);
+    // Loaded price must be the ACTIVE leg charge (return 57), never plan sum.
+    expect(loaded?.price).toBe(57);
   });
 });
