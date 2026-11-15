@@ -87,7 +87,7 @@ export function CatalogHeroSearchBar({
         runSearch();
       }}
     >
-      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-1 sm:min-h-[3.25rem]">
+      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 px-1 sm:min-h-[3.25rem]">
         <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.25} aria-hidden />
         <input
           ref={inputRef}
@@ -95,7 +95,7 @@ export function CatalogHeroSearchBar({
           value={value.query}
           onChange={(e) => set('query', e.target.value)}
           placeholder={placeholder}
-          className="min-w-0 w-full flex-1 border-0 bg-transparent py-2 text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
+          className="min-h-[44px] min-w-0 w-full flex-1 border-0 bg-transparent py-2.5 text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
           autoComplete="off"
           aria-controls={resultsId}
           aria-label={placeholder}

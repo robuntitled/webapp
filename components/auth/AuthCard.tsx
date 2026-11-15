@@ -458,17 +458,7 @@ export function AuthCard() {
                   isRegisterMode ? 'h-10' : 'h-11'
                 )}
               />
-              {!isRegisterMode ? (
-                <p className="pt-1 text-right text-xs">
-                  <Link
-                    href="/assistenza?motivo=password"
-                    className="text-primary hover:underline"
-                    data-testid="password-forgot-link"
-                  >
-                    Password dimenticata?
-                  </Link>
-                </p>
-              ) : null}
+              {/* Password reset: no in-app Supabase reset flow yet — hide until wired (no emails in QA). */}
             </div>
 
             {isRegisterMode && (

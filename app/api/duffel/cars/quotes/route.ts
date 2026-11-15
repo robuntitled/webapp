@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   if (!isDuffelConfigured()) {
     return NextResponse.json(
-      { error: 'API Duffel non configurata.', code: 'missing_token', configured: false },
+      { error: 'Noleggio auto non disponibile al momento.', code: 'missing_token', configured: false },
       { status: 503 }
     );
   }

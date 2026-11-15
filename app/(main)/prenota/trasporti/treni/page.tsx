@@ -18,8 +18,7 @@ export default async function PrenotaTrasportiTreniPage() {
   return (
     <PrenotaPageShell
       title="Treni"
-      subtitle="Biglietti ferroviari in Europa. Ricerca su Noivia · prenotazione Omio."
-      badge="Omio"
+      subtitle="Biglietti ferroviari in Europa. Ricerca su Noivia · prenotazione sul sito del fornitore."
     >
       <PrenotaTransportSubnav />
       <OmioSearchWidget mode="train" />

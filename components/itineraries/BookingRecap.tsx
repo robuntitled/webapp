@@ -208,7 +208,7 @@ export function ActivityBookingCard({ activity }: { activity: ActivityBookingRec
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           <Ticket className="h-3.5 w-3.5" />
-          {activity.provider === 'attractions' ? 'Attrazione' : 'Viator'}
+          {activity.provider === 'attractions' ? 'Attrazione' : 'Attività'}
         </p>
         {activity.bookingRef ? <CopyRef value={activity.bookingRef} /> : null}
       </div>
@@ -221,7 +221,7 @@ export function ActivityBookingCard({ activity }: { activity: ActivityBookingRec
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
         >
-          Apri su Viator
+          Apri prenotazione
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       ) : null}
@@ -270,7 +270,7 @@ export function BookingRecap({
         (activities.length
           ? `${activities.length} attività`
           : practice.activity_confirmed_at
-            ? 'Viator'
+            ? 'Attività'
             : null),
     ].filter(Boolean);
     if (!bits.length) return null;

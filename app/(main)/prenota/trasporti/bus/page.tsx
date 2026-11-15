@@ -18,8 +18,7 @@ export default async function PrenotaTrasportiBusPage() {
   return (
     <PrenotaPageShell
       title="Bus"
-      subtitle="Autobus e pullman in Europa. Ricerca su Noivia · prenotazione Omio."
-      badge="Omio"
+      subtitle="Autobus e pullman in Europa. Ricerca su Noivia · prenotazione sul sito del fornitore."
     >
       <PrenotaTransportSubnav />
       <OmioSearchWidget mode="bus" />

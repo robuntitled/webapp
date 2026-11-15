@@ -18,7 +18,6 @@ import { GuestsPicker } from '@/components/travel/GuestsPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { buildGetTransferAffiliateHandoff } from '@/lib/gettransfer/affiliate-url';
-import { isGetTransferAffiliateConfigured } from '@/lib/gettransfer/config';
 import {
   resolvePlaceExact,
   type PlaceSuggestion,
@@ -27,6 +26,7 @@ import {
   loadSearchFormCache,
   saveSearchFormCache,
 } from '@/lib/travel/search-form-cache';
+import { toUserFacingError } from '@/lib/user-facing-error';
 import { cn } from '@/lib/utils';
 
 type FormCache = {
@@ -150,7 +150,7 @@ function TransferOfferCard({
                 {offer.priceLabel}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Pagamento su GetTransfer
+                Pagamento sul sito del fornitore
               </p>
             </div>
             <Button
@@ -190,7 +190,6 @@ export function PrenotaTransferClient() {
   const [apiUnavailable, setApiUnavailable] = useState(false);
   const [noOffersHint, setNoOffersHint] = useState<string | null>(null);
 
-  const affiliateReady = isGetTransferAffiliateConfigured();
   const pax = adults + children;
 
   useEffect(() => {
@@ -240,9 +239,8 @@ export function PrenotaTransferClient() {
     });
     window.open(url, '_blank', 'noopener,noreferrer');
     if (!hasAffiliateTracking) {
-      toast.message('Apertura GetTransfer', {
-        description:
-          'Tracking affiliate non attivo: configura NEXT_PUBLIC_TRAVELPAYOUTS_MARKER in .env.local.',
+      toast.message('Apertura fornitore', {
+        description: 'Stiamo aprendo il sito del fornitore per completare la richiesta.',
       });
     }
   };
@@ -299,7 +297,7 @@ export function PrenotaTransferClient() {
       }
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Ricerca fallita', { duration: 8000 });
+        toast.error(toUserFacingError(data.error, 'Ricerca fallita'), { duration: 8000 });
         return;
       }
 
@@ -312,13 +310,23 @@ export function PrenotaTransferClient() {
         duration: data.duration,
       });
 
-      setNoOffersHint(list.length ? null : (data.hint ?? null));
+      setNoOffersHint(
+        list.length
+          ? null
+          : data.hint
+            ? toUserFacingError(
+                data.hint,
+                'Prova date diverse o richiedi un preventivo sul sito del fornitore.'
+              )
+            : null
+      );
 
       if (!list.length) {
         toast.message('Nessuna offerta per questo tragitto', {
-          description:
-            data.hint ??
-            'Prova date diverse o apri GetTransfer per richiedere un preventivo.',
+          description: toUserFacingError(
+            data.hint,
+            'Prova date diverse o richiedi un preventivo sul sito del fornitore.'
+          ),
           duration: data.hint ? 8000 : undefined,
         });
       }
@@ -425,16 +433,8 @@ export function PrenotaTransferClient() {
           </div>
 
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/40 pt-2.5">
-            <p className="text-[11px] font-medium text-muted-foreground">
-              Partner: <span className="text-foreground">GetTransfer</span>
-              {!affiliateReady ? (
-                <span className="ml-1.5 text-amber-600 dark:text-amber-400">
-                  (marker non configurato)
-                </span>
-              ) : null}
-            </p>
-            <p className="ml-auto text-[11px] text-muted-foreground">
-              Ricerca su Noivia · pagamento GetTransfer
+            <p className="text-xs text-muted-foreground">
+              Confronti su Noivia · pagamento sul sito del fornitore
             </p>
           </div>
         </div>
@@ -445,39 +445,10 @@ export function PrenotaTransferClient() {
           <div className="flex gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="space-y-2">
-              <p className="font-medium text-foreground">
-                API GetTransfer non configurata
+              <p className="font-medium text-foreground">Trasferimenti non disponibili</p>
+              <p className="text-muted-foreground">
+                Il servizio non è attivo in questa versione. Riprova più tardi.
               </p>
-              <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
-                <li>
-                  Scrivi a{' '}
-                  <a
-                    href="mailto:support@travelpayouts.com?subject=GetTransfer%20API%20access%20token"
-                    className="font-medium text-foreground underline-offset-2 hover:underline"
-                  >
-                    support@travelpayouts.com
-                  </a>{' '}
-                  per ottenere il token X-ACCESS-TOKEN
-                </li>
-                <li>
-                  Aggiungi <code className="text-xs">GETTRANSFER_ACCESS_TOKEN</code> in
-                  .env.local (solo server)
-                </li>
-                <li>
-                  Per test usa <code className="text-xs">GETTRANSFER_ENV=sandbox</code>{' '}
-                  (gtrbox.org)
-                </li>
-              </ol>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-1 rounded-lg"
-                onClick={openAffiliateHandoff}
-              >
-                Apri GetTransfer
-                <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
             </div>
           </div>
         </div>
@@ -528,7 +499,7 @@ export function PrenotaTransferClient() {
             className="mt-3 rounded-lg"
             onClick={openAffiliateHandoff}
           >
-            Richiedi preventivo su GetTransfer
+            Richiedi un preventivo
             <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
           </Button>
         </div>
@@ -537,9 +508,7 @@ export function PrenotaTransferClient() {
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
         <p>
           Confronti prezzi e classi veicolo su Noivia. La prenotazione e il pagamento si
-          completano su{' '}
-          <span className="font-medium text-foreground">GetTransfer</span> in una nuova
-          scheda
+          completano sul sito del fornitore in una nuova scheda
           <ExternalLink className="ml-0.5 inline h-3.5 w-3.5 align-text-bottom opacity-70" />
           .
         </p>

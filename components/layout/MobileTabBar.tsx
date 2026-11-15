@@ -14,22 +14,30 @@ const ICONS = {
   profilo: UserRound,
 } as const;
 
+/** True when the page already has a sticky/fixed bottom action bar. */
+function hideMobileTabBar(pathname: string): boolean {
+  if (pathname === '/organizza' || pathname.startsWith('/organizza/')) return true;
+  if (pathname.startsWith('/accedi') || pathname.startsWith('/onboarding')) return true;
+  if (pathname.startsWith('/completa-registrazione')) return true;
+  // Checkout / payment only — keep tab bar on Voli/Hotel search discovery
+  if (
+    pathname.includes('/checkout') ||
+    pathname.includes('/payment') ||
+    /\/prenota\/[^/]+\/(checkout|payment)/.test(pathname)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Fixed 5-tab bar — mockup home-m / hub-viaggio-m.
- * Hidden on flows that already have a sticky/fixed bottom action bar
- * (Organizza Continua/Crea, checkout) so taps are not intercepted.
+ * Hidden on Organizza (sticky Continua/Crea) and checkout/payment only.
  */
 export function MobileTabBar({ isLoggedIn }: { isLoggedIn: boolean }) {
   const pathname = usePathname();
 
-  if (
-    pathname === '/organizza' ||
-    pathname.startsWith('/organizza/') ||
-    pathname.startsWith('/prenota/') ||
-    pathname.startsWith('/accedi') ||
-    pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/completa-registrazione')
-  ) {
+  if (hideMobileTabBar(pathname)) {
     return null;
   }
 

@@ -117,7 +117,7 @@ export function PrenotaAffiliateSearchBar({
         {showFilters ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/40 pt-2.5">
             <p className="text-[11px] font-medium text-muted-foreground">
-              Partner: <span className="text-foreground">Viator</span>
+              Catalogo attività
             </p>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">

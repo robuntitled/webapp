@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
-  title: 'Supporto — Noivia',
+  title: 'Supporto',
   description: 'Aiuto su Noivia: domande frequenti e come funziona.',
   robots: { index: false, follow: false },
 };

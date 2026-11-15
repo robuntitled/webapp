@@ -194,7 +194,10 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : String(unreadTotal)) : null;
 
   return (
-    <div className="fixed bottom-5 right-4 z-[55] flex flex-col items-end gap-3 pb-[max(0px,calc(env(safe-area-inset-bottom)+var(--cookie-banner-pad,0px)))] sm:right-5">
+    <div
+      className="fixed bottom-5 right-4 z-[55] flex flex-col items-end gap-3 pb-[max(0px,calc(env(safe-area-inset-bottom)+var(--cookie-banner-pad,0px)))] max-md:bottom-[calc(68px+1rem+env(safe-area-inset-bottom))] sm:right-5"
+      data-testid="trip-groups-chat-dock"
+    >
       <div className="flex flex-col items-end gap-3">
       <AnimatePresence>
         {open && (

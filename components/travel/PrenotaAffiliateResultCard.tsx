@@ -65,7 +65,7 @@ export function PrenotaAffiliateResultCard({ item }: { item: PrenotaAffiliateCar
             </div>
           )}
           <span className="absolute left-2.5 top-2.5 rounded-md bg-emerald-950/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 backdrop-blur-sm">
-            Viator
+            Partner
           </span>
         </div>
 

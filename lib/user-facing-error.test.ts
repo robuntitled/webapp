@@ -12,6 +12,10 @@ describe('toUserFacingError', () => {
     expect(toUserFacingError('LiteAPI timeout on /flights')).toMatch(/Riprova/);
     expect(toUserFacingError('Duffel 401 Unauthorized')).toMatch(/Riprova/);
     expect(toUserFacingError('Applica la migration 032')).toMatch(/Riprova/);
+    expect(toUserFacingError('Segnalazioni: migrazione 044 non applicata')).toMatch(/Riprova/);
+    expect(
+      toUserFacingError('Richiedi il token a support@travelpayouts.com')
+    ).toMatch(/Riprova/);
   });
 
   it('attaches opaque ref', () => {

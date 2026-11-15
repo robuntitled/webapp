@@ -19,19 +19,15 @@ type FooterProps = {
   company: CompanyProfile;
 };
 
+/**
+ * Draft content pages (Come funziona / FAQ / Regole) stay reachable by URL + noindex,
+ * but are hidden from the footer while they still show BOZZA banners / placeholders.
+ */
 const COL = {
-  noivia: [
-    { href: '/come-funziona', label: 'Come funziona' },
-    { href: '/domande-frequenti', label: 'Domande frequenti' },
-    { href: '/organizza', label: 'Mete' },
-  ],
+  noivia: [{ href: '/organizza', label: 'Mete' }],
   viaggi: [
     { href: '/organizza', label: 'Organizza' },
     { href: '/gruppi', label: 'Partenze di gruppo' },
-  ],
-  aiuto: [
-    { href: '/assistenza', label: 'Assistenza', testId: 'footer-supporto' },
-    { href: '/regole-community', label: 'Regole della community' },
   ],
   legale: [
     { href: '/privacy', label: 'Privacy' },
@@ -117,19 +113,11 @@ export function Footer({ company }: FooterProps) {
             <ul className="mt-3 space-y-1">
               <li>
                 <Link
-                  href="/assistenza"
+                  href="/supporto"
                   className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:text-[var(--color-primary-hover)]"
                   data-testid="footer-supporto"
                 >
-                  Assistenza
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/regole-community"
-                  className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:text-[var(--color-primary-hover)]"
-                >
-                  Regole della community
+                  Supporto
                 </Link>
               </li>
             </ul>

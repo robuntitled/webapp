@@ -105,13 +105,33 @@ for (const vp of [
       await shot(page, `v2-tabbar-${vp.name}.png`);
     });
 
-    test('footer has Come funziona + Supporto, no owner placeholder', async ({ page }) => {
+    test('footer has Supporto; draft pages hidden; no owner placeholder', async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       await expect(page.getByTestId('footer-logo-home')).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByRole('link', { name: 'Come funziona' }).first()).toBeVisible();
       await expect(page.getByTestId('footer-supporto')).toBeVisible();
       const footer = await page.locator('footer').innerText();
+      expect(footer).not.toMatch(/Come funziona|Domande frequenti|Regole della community/i);
       expect(footer).not.toMatch(/segnaposto|decisione owner|DB-\d+/i);
+      await shot(page, `v3-footer-${vp.name}.png`);
+    });
+
+    test('tab bar visible on Voli search; hidden on Organizza', async ({ page }) => {
+      test.skip(vp.width > 500, 'tab bar is mobile-only');
+      await page.goto('/prenota/voli', { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('mobile-tab-bar')).toBeVisible({ timeout: 20_000 });
+      await shot(page, `v3-voli-tabbar-${vp.name}.png`);
+      await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('mobile-tab-bar')).toHaveCount(0);
+    });
+
+    test('Gruppi search input is at least 44px tall', async ({ page }) => {
+      await page.goto('/gruppi', { waitUntil: 'domcontentloaded' });
+      const input = page.getByTestId('catalog-hero-search-input');
+      await expect(input).toBeVisible({ timeout: 20_000 });
+      const box = await input.boundingBox();
+      expect(box).toBeTruthy();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      await shot(page, `v3-gruppi-search-${vp.name}.png`);
     });
 
     test('home hero H1 is white; no fake open counter', async ({ page }) => {
@@ -245,12 +265,42 @@ test.describe('P1 guest auth redirects', () => {
   test('/pratiche → Accedi', async ({ page }) => {
     await page.goto('/pratiche', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/accedi/);
-    await shot(page, 'v2-pratiche-guest-390.png');
+    await shot(page, 'v3-pratiche-guest-390.png');
   });
 
   test('/profilo → Accedi', async ({ page }) => {
     await page.goto('/profilo', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/accedi.*profilo/);
-    await shot(page, 'v2-profilo-guest-390.png');
+    await shot(page, 'v3-profilo-guest-390.png');
+  });
+
+  test('Password dimenticata? is hidden until reset is wired', async ({ page }) => {
+    await page.goto('/accedi', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('password-forgot-link')).toHaveCount(0);
+    await expect(page.getByText(/Password dimenticata/i)).toHaveCount(0);
+    await shot(page, 'v3-accedi-no-forgot-390.png');
+  });
+
+  test('Supporto title is not doubled', async ({ page }) => {
+    await page.goto('/supporto', { waitUntil: 'domcontentloaded' });
+    const title = await page.title();
+    expect(title).toMatch(/^Supporto/);
+    expect(title).not.toMatch(/Noivia — Noivia|Supporto — Noivia — Noivia/);
+    await shot(page, 'v3-supporto-title-390.png');
+  });
+
+  test('404 page has proper title', async ({ page }) => {
+    await page.goto('/pagina-inesistente-verifica-3', { waitUntil: 'domcontentloaded' });
+    const title = await page.title();
+    expect(title).toMatch(/Pagina non trovata/);
+    expect(title).not.toMatch(/Noivia — Noivia/);
+    await expect(page.getByRole('heading', { name: 'Pagina non trovata' })).toBeVisible();
+    await shot(page, 'v3-404-title-390.png');
+  });
+
+  test('tab bar hidden on checkout path', async ({ page }) => {
+    await page.goto('/prenota/voli/checkout', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('mobile-tab-bar')).toHaveCount(0);
+    await shot(page, 'v3-checkout-no-tabbar-390.png');
   });
 });

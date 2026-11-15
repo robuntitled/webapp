@@ -12,8 +12,7 @@ export default async function PrenotaAttivitaPage() {
   return (
     <PrenotaPageShell
       title="Attività"
-      subtitle="Tour ed esperienze. Completi sul partner."
-      badge="Affiliate"
+      subtitle="Tour ed esperienze. Completi sul sito del fornitore."
     >
       <PrenotaActivitiesClient />
     </PrenotaPageShell>
