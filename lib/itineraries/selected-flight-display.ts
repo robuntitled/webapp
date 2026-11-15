@@ -188,11 +188,16 @@ export function buildCheckoutDraftFromLegs(input: {
     .map((leg) => selectedLegToCheckoutItem(leg))
     .filter((x): x is FlightCheckoutLegItem => Boolean(x));
   if (!items.length) return null;
-  const unitTotal = roundMoney(items.reduce((s, l) => s + l.price, 0));
   const first = items[0]!;
+  const pricedLegs = items.map((item) => ({
+    ...item,
+    price: roundMoney(item.price * adults),
+  }));
+  // draft.price = charge for the FIRST (active) leg only. Each LiteAPI prebook
+  // is one offerId; charging the sum while booking one leg overcharged users.
   return {
     offerId: first.offerId,
-    price: roundMoney(unitTotal * adults),
+    price: pricedLegs[0]!.price,
     currency: first.currency || 'EUR',
     adults,
     tripType: 'oneway',
@@ -200,10 +205,7 @@ export function buildCheckoutDraftFromLegs(input: {
     createdAt: Date.now(),
     outbound: first.leg,
     returnLeg: null,
-    checkoutLegs: items.map((item) => ({
-      ...item,
-      price: roundMoney(item.price * adults),
-    })),
+    checkoutLegs: pricedLegs,
     checkoutMode: input.mode,
     activeLegIndex: 0,
   };

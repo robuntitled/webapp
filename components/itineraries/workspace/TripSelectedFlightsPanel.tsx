@@ -118,11 +118,17 @@ export function TripSelectedFlightsPanel({
     [purchasable, bookings]
   );
   const perPersonTotal = useMemo(() => sumSelectedPlanPerPerson(plan), [plan]);
-  /** Quota for one passenger across unbooked legs (Pago per me). */
+  /** Quota for one passenger across unbooked legs (piano completo). */
   const unbookedPerPerson = useMemo(
     () => sumSelectedLegsChargeForPax(unbookedLegs, priceBasis, 1),
     [unbookedLegs, priceBasis]
   );
+  /** First unbooked leg charge for 1 pax — what the next payment actually bills. */
+  const nextLegPerPerson = useMemo(() => {
+    const first = unbookedLegs[0];
+    if (!first) return null;
+    return selectedLegChargeForPax(first, priceBasis, 1);
+  }, [unbookedLegs, priceBasis]);
 
   function isPersonFullyCovered(userId: string): boolean {
     const cov = coverageForUser(coverage, userId);
@@ -479,20 +485,32 @@ export function TripSelectedFlightsPanel({
         ) : !payOthersOpen ? (
           <div className="space-y-2" data-testid="trip-chi-paga-choices">
             {!separateLegs ? (
-              <Button
-                type="button"
-                className="min-h-11 w-full rounded-full"
-                onClick={() => goCheckoutAll([currentUserId])}
-                disabled={isPersonFullyCovered(currentUserId)}
-                data-testid="trip-pago-per-me"
-              >
-              Pago per me
-              {unbookedPerPerson != null ? (
-                <span className="ml-1 font-semibold opacity-90">
-                  · {formatEuro(unbookedPerPerson, { approx: false })}
-                </span>
-              ) : null}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  className="min-h-11 w-full rounded-full"
+                  onClick={() => goCheckoutAll([currentUserId])}
+                  disabled={isPersonFullyCovered(currentUserId)}
+                  data-testid="trip-pago-per-me"
+                >
+                  Pago per me
+                  {nextLegPerPerson != null ? (
+                    <span className="ml-1 font-semibold opacity-90">
+                      · da {formatEuro(nextLegPerPerson, { approx: false })}
+                      {unbookedLegs.length > 1 ? '/tratta' : ''}
+                    </span>
+                  ) : null}
+                </Button>
+                {unbookedLegs.length > 1 && unbookedPerPerson != null ? (
+                  <p
+                    className="text-center text-[11px] text-slate-500"
+                    data-testid="trip-pago-per-me-hint"
+                  >
+                    Paghi una tratta alla volta (solo la tua quota). Piano:{' '}
+                    {formatEuro(unbookedPerPerson, { approx: false })} a persona.
+                  </p>
+                ) : null}
+              </>
             ) : (
               <p className="text-[11px] text-slate-500" data-testid="trip-voli-separate-hint">
                 Usa Prenota su ogni tratta qui sopra, oppure Pago per altri per includere più

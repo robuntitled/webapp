@@ -98,12 +98,38 @@ function normalizeDraft(parsed: FlightCheckoutDraft): FlightCheckoutDraft {
     returnLeg: null,
     tripType: 'oneway',
     currency: active.currency || withOutbound.currency || 'EUR',
-    // Keep total for the whole multi-leg scope on the draft; active charge uses payment.price.
-    price:
-      withOutbound.checkoutMode === 'separate'
-        ? active.price
-        : legs.reduce((s, l) => s + (Number.isFinite(l.price) ? l.price : 0), 0),
+    // CRITICAL: draft.price is ALWAYS the active leg charge (what LiteAPI will bill
+    // for this prebook). Never the sum of all legs — that caused UI/charge to show
+    // ~50 while only the outbound offerId was booked (incident 2026-11-12/13).
+    price: active.price,
   };
+}
+
+/** Sum of all checkoutLegs (plan total). Not the amount charged on the next pay. */
+export function flightCheckoutPlanTotal(draft: FlightCheckoutDraft | null): number {
+  if (!draft) return 0;
+  if (draft.checkoutLegs?.length) {
+    return draft.checkoutLegs.reduce(
+      (s, l) => s + (Number.isFinite(l.price) ? l.price : 0),
+      0
+    );
+  }
+  return Number.isFinite(draft.price) ? draft.price : 0;
+}
+
+/** Amount charged for the current active leg / prebook. */
+export function flightCheckoutChargeNow(draft: FlightCheckoutDraft | null): number {
+  if (!draft) return 0;
+  const legs = draft.checkoutLegs;
+  if (legs?.length) {
+    const idx = Math.min(
+      Math.max(0, draft.activeLegIndex ?? 0),
+      legs.length - 1
+    );
+    const p = legs[idx]?.price;
+    return Number.isFinite(p) ? (p as number) : 0;
+  }
+  return Number.isFinite(draft.price) ? draft.price : 0;
 }
 
 export function saveFlightCheckoutDraft(draft: FlightCheckoutDraft): void {

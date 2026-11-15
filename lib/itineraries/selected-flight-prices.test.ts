@@ -83,7 +83,7 @@ describe('selected flight prices (unit a persona SoT)', () => {
     expect(selectedLegChargeForPax(plan4pax.legs[0]!, 4, 4)).toBe(440);
   });
 
-  it('checkout draft for 1 adult uses unit prices', () => {
+  it('checkout draft for 1 adult uses unit prices; draft.price = first leg', () => {
     const draft = buildCheckoutDraftFromLegs({
       legs: plan4pax.legs,
       adults: 1,
@@ -92,7 +92,7 @@ describe('selected flight prices (unit a persona SoT)', () => {
       priceBasisTravelers: 4,
     });
     expect(draft?.adults).toBe(1);
-    expect(draft?.price).toBe(212.5);
+    expect(draft?.price).toBe(110);
     expect(draft?.checkoutLegs?.[0]?.price).toBe(110);
     expect(draft?.checkoutLegs?.[1]?.price).toBe(102.5);
   });
