@@ -179,14 +179,20 @@ export function TripWorkspace({
     [pathname, router, stayIdx]
   );
 
+  const [ageConfirmed18, setAgeConfirmed18] = useState(false);
+
   function joinTrip() {
     if (!editionId) return;
     if (!session?.user) {
       router.push(accediHref(`/partenze/${editionId}`, 'register'));
       return;
     }
+    if (!ageConfirmed18) {
+      toast.error('Per unirti conferma di avere almeno 18 anni.');
+      return;
+    }
     startJoin(async () => {
-      const result = await joinEditionAction(editionId);
+      const result = await joinEditionAction(editionId, { ageConfirmed18: true });
       if (result?.error) toast.error(result.error);
     });
   }
@@ -225,17 +231,31 @@ export function TripWorkspace({
         In arrivo
       </span>
     ) : canJoin && !isMember ? (
-      <Button
-        type="button"
-        variant="cta"
-        size="sm"
-        className="rounded-full px-5 font-semibold shadow-lg shadow-[var(--color-cta)]/25"
-        disabled={pendingJoin}
-        onClick={joinTrip}
-      >
-        {pendingJoin ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        Partecipa
-      </Button>
+      <div className="flex max-w-xs flex-col items-end gap-2">
+        {session?.user ? (
+          <label className="flex cursor-pointer items-start gap-2 rounded-xl bg-black/35 px-3 py-2 text-left text-[11px] text-white backdrop-blur-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-[var(--color-cta)]"
+              checked={ageConfirmed18}
+              onChange={(e) => setAgeConfirmed18(e.target.checked)}
+              data-testid="workspace-join-age-18"
+            />
+            <span>Dichiaro di avere almeno 18 anni</span>
+          </label>
+        ) : null}
+        <Button
+          type="button"
+          variant="cta"
+          size="sm"
+          className="min-h-11 rounded-full px-5 font-semibold shadow-lg shadow-[var(--color-cta)]/25"
+          disabled={pendingJoin || (Boolean(session?.user) && !ageConfirmed18)}
+          onClick={joinTrip}
+        >
+          {pendingJoin ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+          Partecipa
+        </Button>
+      </div>
     ) : null;
 
   return (

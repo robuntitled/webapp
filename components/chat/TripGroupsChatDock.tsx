@@ -362,9 +362,18 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{group.title}</p>
+                                <p className="truncate text-sm font-medium">
+                                  {!group.chatUnlocked ? (
+                                    <span className="mr-1" aria-label="Chat bloccata">
+                                      🔒
+                                    </span>
+                                  ) : null}
+                                  {group.title}
+                                </p>
                                 <p className="truncate text-xs text-muted-foreground">
-                                  {group.lastMessagePreview || group.destination}
+                                  {!group.chatUnlocked
+                                    ? 'Chat chiusa finché non sei iscritto / sbloccata'
+                                    : group.lastMessagePreview || group.destination}
                                 </p>
                               </div>
                               <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">

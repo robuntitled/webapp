@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { formatEditionDateRange } from '@/lib/itineraries/dates';
 import { formatEuro } from '@/lib/format/euro';
+import { DASHBOARD_VIAGGI_COPY } from '@/lib/itineraries/dashboard-viaggi-copy';
 import { buildCheckoutDraftFromLegs } from '@/lib/itineraries/selected-flight-display';
 import {
   loadPracticeFlightsLocal,
@@ -50,6 +51,8 @@ type Props = {
   mode: string;
   editionType: string | null;
   inviteUrl: string | null;
+  /** Kr #7: email invite dietro feature flag (default off). */
+  inviteEmailEnabled?: boolean;
   isPrivate: boolean;
   /** Show invite step only for amici (friends mode). */
   showInviteStep: boolean;
@@ -66,6 +69,7 @@ export function ProssimoPasso({
   dateTo,
   mode,
   inviteUrl,
+  inviteEmailEnabled = false,
   isPrivate,
   showInviteStep,
   selectedFlightPlan: selectedFromServer,
@@ -305,6 +309,14 @@ export function ProssimoPasso({
                         );
                       })}
                     </ul>
+                  ) : null}
+                  {!inviteEmailEnabled ? (
+                    <p
+                      className="text-[11px] text-[var(--color-text-secondary)]"
+                      data-testid="invite-email-disabled"
+                    >
+                      {DASHBOARD_VIAGGI_COPY.invite.emailDisabled}
+                    </p>
                   ) : null}
                 </div>
               </li>

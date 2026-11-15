@@ -5,11 +5,28 @@ import { revalidatePath } from 'next/cache';
 import { getEdition } from '@/lib/data/editions';
 import { createNotification } from '@/lib/data/notifications';
 import { getSiteUrl } from '@/lib/brand';
+import { isInviteEmailEnabled } from '@/lib/flags';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { DASHBOARD_VIAGGI_COPY } from '@/lib/itineraries/dashboard-viaggi-copy';
+
+/**
+ * Invite channel email (Kr #7). Default OFF — attende Legale.
+ * Keep this action so UI can call it safely; always refuse while flag is off.
+ */
+export async function inviteEditionByEmailAction(_input: {
+  editionId: string;
+  email: string;
+}): Promise<{ ok: true } | { error: string }> {
+  if (!isInviteEmailEnabled()) {
+    return { error: DASHBOARD_VIAGGI_COPY.invite.emailDisabled };
+  }
+  return { error: DASHBOARD_VIAGGI_COPY.invite.emailDisabled };
+}
 
 /**
  * Invite an existing Noivia user to a private edition (in-app notification + invite link).
  * Does not send email/WhatsApp; does not auto-join. No payments.
+ * Email invite channel is gated by isInviteEmailEnabled() (default OFF — attende Legale).
  */
 export async function inviteEditionFriendAction(input: {
   editionId: string;

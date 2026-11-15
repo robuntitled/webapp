@@ -13,6 +13,7 @@ import {
   snapshotFromPlannedLegs,
 } from '@/lib/itineraries/selected-flight-plan';
 import { hasFlightBooked } from '@/lib/itineraries/practice-lifecycle';
+import { isInviteEmailEnabled } from '@/lib/flags';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { PlannedLeg } from '@/lib/itineraries/free-trip';
 
@@ -133,6 +134,7 @@ export default async function ProssimoPassoPage({ params }: PageProps) {
       mode={practice.mode}
       editionType={edition?.edition_type ?? null}
       inviteUrl={inviteUrl}
+      inviteEmailEnabled={isInviteEmailEnabled()}
       isPrivate={edition?.edition_type === 'private' || practice.mode !== 'group'}
       showInviteStep={showInviteStep}
       selectedFlightPlan={selectedFlightPlan}
