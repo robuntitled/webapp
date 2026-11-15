@@ -485,30 +485,32 @@ export function TripSelectedFlightsPanel({
         ) : !payOthersOpen ? (
           <div className="space-y-2" data-testid="trip-chi-paga-choices">
             {!separateLegs ? (
-              <Button
-                type="button"
-                className="min-h-11 w-full rounded-full"
-                onClick={() => goCheckoutAll([currentUserId])}
-                disabled={isPersonFullyCovered(currentUserId)}
-                data-testid="trip-pago-per-me"
-              >
-              Pago per me
-              {nextLegPerPerson != null ? (
-                <span className="ml-1 font-semibold opacity-90">
-                  · da {formatEuro(nextLegPerPerson, { approx: false })}
-                  {unbookedLegs.length > 1 ? '/tratta' : ''}
-                </span>
-              ) : null}
-              </Button>
-              {unbookedLegs.length > 1 && unbookedPerPerson != null ? (
-                <p
-                  className="text-center text-[11px] text-slate-500"
-                  data-testid="trip-pago-per-me-hint"
+              <>
+                <Button
+                  type="button"
+                  className="min-h-11 w-full rounded-full"
+                  onClick={() => goCheckoutAll([currentUserId])}
+                  disabled={isPersonFullyCovered(currentUserId)}
+                  data-testid="trip-pago-per-me"
                 >
-                  Paghi una tratta alla volta (solo la tua quota). Piano:{' '}
-                  {formatEuro(unbookedPerPerson, { approx: false })} a persona.
-                </p>
-              ) : null}
+                  Pago per me
+                  {nextLegPerPerson != null ? (
+                    <span className="ml-1 font-semibold opacity-90">
+                      · da {formatEuro(nextLegPerPerson, { approx: false })}
+                      {unbookedLegs.length > 1 ? '/tratta' : ''}
+                    </span>
+                  ) : null}
+                </Button>
+                {unbookedLegs.length > 1 && unbookedPerPerson != null ? (
+                  <p
+                    className="text-center text-[11px] text-slate-500"
+                    data-testid="trip-pago-per-me-hint"
+                  >
+                    Paghi una tratta alla volta (solo la tua quota). Piano:{' '}
+                    {formatEuro(unbookedPerPerson, { approx: false })} a persona.
+                  </p>
+                ) : null}
+              </>
             ) : (
               <p className="text-[11px] text-slate-500" data-testid="trip-voli-separate-hint">
                 Usa Prenota su ogni tratta qui sopra, oppure Pago per altri per includere più

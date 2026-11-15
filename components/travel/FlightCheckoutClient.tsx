@@ -951,6 +951,14 @@ export function FlightCheckoutClient({
     const okAny = legResults.some((r) => r.ok);
     const partial = failedAny && okAny;
     const multiDone = legResults.length > 1;
+    const plannedLegs = Math.max(
+      checkoutLegs.length,
+      draft?.checkoutLegs?.length ?? 0,
+      legResults.length
+    );
+    const okLegs = legResults.filter((r) => r.ok).length;
+    const remainingLegs = Math.max(0, plannedLegs - okLegs);
+    const needsMoreLegs = isMultiLeg && okAny && remainingLegs > 0;
 
     return (
       <div
@@ -1062,10 +1070,28 @@ export function FlightCheckoutClient({
           </div>
         )}
         <BookingComplianceNote showMerchantOfRecord />
+        {needsMoreLegs || partial ? (
+          <div
+            className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            data-testid="checkout-continue-remaining-legs"
+          >
+            <p className="font-semibold">
+              {remainingLegs > 0
+                ? `Manca ancora ${remainingLegs === 1 ? '1 tratta' : `${remainingLegs} tratte`}`
+                : 'Prenotazione parziale'}
+            </p>
+            <p className="mt-1 text-xs text-amber-900/90">
+              Hai pagato solo le tratte confermate sopra. Torna al viaggio → Voli e
+              completa il rientro (addebito separato, solo quella tratta).
+            </p>
+          </div>
+        ) : null}
         <Button asChild className="w-full rounded-xl bg-primary">
           <Link href={practiceHref}>
             {confirmation?.practiceId || legResults.length
-              ? 'Torna al viaggio'
+              ? needsMoreLegs || partial
+                ? 'Completa le altre tratte sul viaggio'
+                : 'Torna al viaggio'
               : 'Vai ai tuoi viaggi'}
           </Link>
         </Button>
