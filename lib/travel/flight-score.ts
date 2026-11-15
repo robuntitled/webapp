@@ -183,7 +183,11 @@ export function suggestNearbyFlightDay(
 
   const hours = Math.round(bestDur / 60);
   const direct =
-    best.minStops === 0 ? 'un volo diretto' : `un volo con ${best.minStops} scalo/i`;
+    best.minStops === 0
+      ? 'un volo diretto'
+      : best.minStops === 1
+        ? 'un volo con 1 scalo'
+        : `un volo con ${best.minStops} scali`;
   const dayLabel = formatDayIt(best.date);
   return {
     fromDate: selectedDate,

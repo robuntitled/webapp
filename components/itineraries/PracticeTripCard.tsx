@@ -1,11 +1,21 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MoreHorizontal, Trash2, ExternalLink, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteOrLeavePracticeAction } from '@/actions/practices';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +45,7 @@ export function PracticeTripCard({
   onRemoved?: (practiceId: string) => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const tpl = findItineraryTemplate(practice.template_id);
   const title =
     practice.hubTitle?.trim() ||
@@ -87,7 +98,6 @@ export function PracticeTripCard({
           </div>
         </Link>
 
-        {/* Menu fuori dal Link (Kr: ⋯ non dentro <Link>) */}
         <div className="absolute right-3 top-3 z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -118,8 +128,9 @@ export function PracticeTripCard({
                 disabled={pending}
                 onSelect={(e) => {
                   e.preventDefault();
-                  runDeleteOrLeave();
+                  setConfirmOpen(true);
                 }}
+                data-testid={`pratiche-card-delete-leave-${practice.id}`}
               >
                 {isCreator ? (
                   <Trash2 className="mr-2 h-4 w-4" aria-hidden />
@@ -143,7 +154,6 @@ export function PracticeTripCard({
         </span>
       </div>
 
-      {/* Titolo SOTTO la foto */}
       <div className="space-y-2 px-4 py-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -169,6 +179,36 @@ export function PracticeTripCard({
           </p>
         ) : null}
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent data-testid={`pratiche-confirm-${practice.id}`}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isCreator ? 'Eliminare questo viaggio?' : 'Uscire da questo viaggio?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isCreator
+                ? 'Se non ci sono altri partecipanti, il viaggio viene eliminato subito. Se ci sono altri, il ruolo di creatore passa al partecipante iscritto da più tempo.'
+                : 'Uscirai dal viaggio. Le prenotazioni già pagate restano nei documenti del fornitore.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-700 text-white hover:bg-rose-800"
+              disabled={pending}
+              data-testid={`pratiche-confirm-yes-${practice.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                setConfirmOpen(false);
+                runDeleteOrLeave();
+              }}
+            >
+              {isCreator ? 'Elimina' : 'Esci'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </article>
   );
 }

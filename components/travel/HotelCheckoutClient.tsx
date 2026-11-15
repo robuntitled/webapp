@@ -152,14 +152,41 @@ export function HotelCheckoutClient({
         });
         const data = (await res.json()) as {
           error?: string;
+          ok?: boolean;
+          needsReview?: boolean;
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
           reconciliationPending?: boolean;
           message?: string;
+          code?: string;
+          ref?: string;
         };
-        if (!res.ok) {
-          toast.error(data.error ?? 'Conferma prenotazione fallita');
+        const reviewAfterPay =
+          Boolean(data.needsReview) ||
+          data.code === 'book_error' ||
+          (Boolean(data.error) && !data.bookingId && !data.bookingRef);
+        if (!res.ok || reviewAfterPay) {
+          setConfirmation({
+            bookingId: data.bookingId ?? null,
+            bookingRef: data.bookingRef ?? null,
+            status: reviewAfterPay ? 'NEEDS_REVIEW' : data.status ?? 'FAILED',
+            amountEur: reviewAfterPay ? amountEur : 0,
+            practiceId: hotelDraft?.practiceId,
+            reconciliationPending: true,
+            reconciliationMessage:
+              data.message ??
+              data.error ??
+              'Pagamento ricevuto, stiamo verificando la prenotazione.',
+          });
+          clearHotelOfferDraft();
+          clearHotelPaymentPending();
+          setStep('done');
+          toast.message(
+            data.message ??
+              data.error ??
+              'Pagamento ricevuto · prenotazione da verificare'
+          );
           return;
         }
         setConfirmation({

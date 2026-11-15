@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-plus-jakarta), var(--font-inter), system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-plus-jakarta), var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
   --color-success: #15803D;
   --color-warning: #D97706;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -51,9 +51,13 @@
   --color-brand-dark: #1A1F52;
   --color-primary: #232A6B;
   --color-primary-hover: #1A1F52;
-  --color-accent: #C9442A;
-  --color-accent-hover: #A93720;
+  /*
+   * Accent clash fix: Tailwind `bg-accent` / `--accent` stay the soft tint (high contrast
+   * with `--accent-foreground`). Brand coral CTA lives only on `--color-cta`.
+   */
   --color-cta: #C9442A;
+  --color-cta-hover: #A93720;
+  --color-accent-hover: #A93720;
   --color-tint: #EEF0FA;
   --color-lilac: #8A92E6;
   --color-bg: #FFFFFF;
@@ -139,14 +143,14 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-plus-jakarta), var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
     font-size: 16px;
     font-weight: 400;
     line-height: 1.6;
     color: var(--color-text);
   }
   h1, h2, h3 {
-    font-family: var(--font-plus-jakarta), var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
     @apply tracking-tight text-balance text-foreground;
   }
   h1 {
@@ -165,7 +169,8 @@
     line-height: 1.3;
   }
   p, li, label, input, textarea, button, select {
-    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+    word-spacing: 0.07em;
   }
   small {
     font-size: 0.875rem;
@@ -183,7 +188,8 @@
 
 @layer utilities {
   .font-display {
-    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+    word-spacing: 0.07em;
   }
 
   /* Titoli su pagine con photo wash: testo scuro, alto contrasto */

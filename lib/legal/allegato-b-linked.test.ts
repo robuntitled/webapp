@@ -14,8 +14,12 @@ describe('A7 Allegato B draft (nuovo-flusso-legale §L1.4)', () => {
     expect(body).toMatch(/NON beneficerai dei diritti applicabili ai pacchetti/i);
     expect(body).toMatch(/servizio turistico collegato/i);
     expect(body).toMatch(/insolvenza/i);
+    expect(body).toMatch(/BOZZA/i);
+    expect(body).toMatch(/non è ancora confermata|non interpretare/i);
     expect(body).toMatch(/contatto in definizione|da definire/i);
     expect(body).not.toMatch(/TODO LEGAL_EMAIL/i);
     expect(body).not.toMatch(/privacy@|supporto@/i);
+    // Must not promise an active insolvency guarantee as settled fact.
+    expect(body).not.toMatch(/dispone, come prescritto, di una protezione/i);
   });
 });

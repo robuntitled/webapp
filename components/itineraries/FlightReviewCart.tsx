@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Plane } from 'lucide-react';
 import { formatEuroExact } from '@/lib/format/euro';
+import { formatStopsIt } from '@/lib/itineraries/selected-flight-display';
 import {
   SEPARATE_TICKETS_NOTICE_IT,
   STALE_OFFER_NOTICE_IT,
@@ -30,6 +31,36 @@ function formatWhen(iso: string | undefined | null) {
   }
 }
 
+function LegPriceBlock({
+  unit,
+  currency,
+  pax,
+}: {
+  unit: number;
+  currency: string;
+  pax: number;
+}) {
+  const party = Math.round(unit * Math.max(1, pax) * 100) / 100;
+  return (
+    <div
+      className="w-full min-w-0 basis-full text-left sm:w-auto sm:basis-auto sm:text-right"
+      data-testid="flight-review-leg-price"
+    >
+      <p className="text-sm font-extrabold tabular-nums">
+        {formatEuroExact(unit, currency) ?? '—'}
+        <span className="ml-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+          a persona
+        </span>
+      </p>
+      {pax > 1 ? (
+        <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-text)]">
+          {formatEuroExact(party, currency)} totale tratta ({pax} persone)
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * Unified REVIEW/cart for all selected legs.
  * Honest multi-ticket disclosure — stops before purchase/payment.
@@ -47,6 +78,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
     selected[0]?.kind === 'outbound' &&
     (selected[1]?.kind === 'return' || selected[1]?.kind === 'openjaw_return') &&
     (selected[1]?.offer?.price ?? 0) === 0;
+  const partyPax = Math.max(1, travelers, totals.passengers || 1);
 
   return (
     <section
@@ -80,7 +112,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-bold text-primary">
                   Prenotazione unica A/R · {selected[0]!.offer!.originIata} ⇄{' '}
                   {selected[0]!.offer!.destinationIata}
@@ -103,14 +135,15 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                 </p>
                 <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                   Offerta chiusa del fornitore (un biglietto A/R) ·{' '}
-                  {selected[0]!.passengers} pax
+                  {formatStopsIt(selected[0]!.offer!.stops)}
                   {selected[0]!.offer!.airline ? ` · ${selected[0]!.offer!.airline}` : ''}
                 </p>
               </div>
-              <p className="shrink-0 text-sm font-extrabold tabular-nums">
-                {formatEuroExact(selected[0]!.offer!.price, selected[0]!.offer!.currency) ??
-                  '—'}
-              </p>
+              <LegPriceBlock
+                unit={selected[0]!.offer!.price}
+                currency={selected[0]!.offer!.currency}
+                pax={selected[0]!.passengers}
+              />
             </div>
             {selected.some((l) => l.status === 'stale') ? (
               <p className="mt-1 text-[11px] font-medium text-amber-900">
@@ -131,8 +164,8 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                   : 'border-[var(--color-border)]'
               )}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                <div className="min-w-0 flex-1 basis-[12rem]">
                   <p className="text-xs font-bold text-primary">
                     Prenotazione {i + 1} · {leg.labelIt}
                   </p>
@@ -140,19 +173,22 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                     {leg.offer!.originIata} → {leg.offer!.destinationIata}
                   </p>
                   <p className="text-[11px] text-[var(--color-text-secondary)]">
-                    Partenza {formatWhen(leg.offer!.departureAt)} · Arrivo{' '}
-                    {formatWhen(leg.offer!.arrivalAt)}
+                    Partenza {formatWhen(leg.offer!.departureAt)}
                   </p>
                   <p className="text-[11px] text-[var(--color-text-secondary)]">
-                    {leg.offer!.stops === 0 ? 'Diretto' : `${leg.offer!.stops} scali`} ·{' '}
-                    {Math.round(leg.offer!.durationMinutes / 60)} h · {leg.passengers}{' '}
-                    pax
+                    Arrivo {formatWhen(leg.offer!.arrivalAt)}
+                  </p>
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                    {formatStopsIt(leg.offer!.stops)} ·{' '}
+                    {Math.round(leg.offer!.durationMinutes / 60)} h
                     {leg.offer!.airline ? ` · ${leg.offer!.airline}` : ''}
                   </p>
                 </div>
-                <p className="shrink-0 text-sm font-extrabold tabular-nums">
-                  {formatEuroExact(leg.offer!.price, leg.offer!.currency) ?? '—'}
-                </p>
+                <LegPriceBlock
+                  unit={leg.offer!.price}
+                  currency={leg.offer!.currency}
+                  pax={leg.passengers}
+                />
               </div>
               {leg.status === 'stale' ? (
                 <p className="mt-1 text-[11px] font-medium text-amber-900">
@@ -166,20 +202,33 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
 
       <div className="rounded-xl bg-[var(--color-tint)]/60 px-3 py-2.5">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="text-sm font-bold">Totale tariffe selezionate</p>
-          <p className="text-lg font-extrabold tabular-nums">
+          <p className="text-sm font-bold">Totale voli</p>
+          <p
+            className="text-lg font-extrabold tabular-nums"
+            data-testid="flight-review-party-total"
+          >
             {totals.amount != null
               ? formatEuroExact(totals.amount, totals.currency)
               : '—'}
           </p>
         </div>
-        <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
-          {totals.selectedCount} tratte · {travelers} viaggiator
-          {travelers === 1 ? 'e' : 'i'} · valuta {totals.currency}
-        </p>
+        {totals.perPersonAmount != null && partyPax > 1 ? (
+          <p
+            className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]"
+            data-testid="flight-review-per-person"
+          >
+            {formatEuroExact(totals.perPersonAmount, totals.currency)} a persona ·{' '}
+            {partyPax} {partyPax === 1 ? 'persona' : 'persone'}
+          </p>
+        ) : (
+          <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+            {totals.selectedCount} tratt
+            {totals.selectedCount === 1 ? 'a' : 'e'} ·{' '}
+            {partyPax} {partyPax === 1 ? 'persona' : 'persone'}
+          </p>
+        )}
         <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-          Bagagli e condizioni tariffarie: disponibili solo dopo verifica offerta dal
-          fornitore (non inventiamo franchigie).
+          Bagagli e condizioni tariffarie: disponibili dopo la verifica offerta.
         </p>
       </div>
 
@@ -205,9 +254,9 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
         <p>{SEPARATE_TICKETS_NOTICE_IT}</p>
         {!mode.canUseClosedRoundtrip ? (
           <p>
-            LiteAPI in questa integrazione supporta solo one-way o andata/ritorno chiuso
-            per singola ricerca: non emettiamo un unico biglietto multi-tratta. Ogni
-            riga sopra è una prenotazione distinta da verificare separatamente.
+            In questa integrazione supportiamo solo andata o andata/ritorno chiuso per
+            singola ricerca: non emettiamo un unico biglietto multi-tratta. Ogni riga
+            sopra è una prenotazione distinta da verificare separatamente.
           </p>
         ) : (
           <p>
@@ -216,9 +265,8 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
           </p>
         )}
         <p className="font-medium text-amber-950">
-          Nessun pagamento e nessuna prenotazione reale da questo riepilogo (Allegato B
-          BOZZA). I prezzi in cache non sono bloccati: al checkout serve una nuova
-          verifica disponibilità.
+          Nessun pagamento da questo riepilogo. I prezzi non sono bloccati: al checkout
+          serve una nuova verifica disponibilità.
         </p>
       </div>
     </section>

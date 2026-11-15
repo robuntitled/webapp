@@ -3,7 +3,7 @@
 .omio-nemo-shell {
   --primary-color: #0F766E;
   --secondary-color: #0F766E;
-  --font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
   --background: transparent;
   overflow: visible !important;
   position: relative;

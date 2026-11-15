@@ -9,7 +9,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function PratichePage() {
   const session = await auth();
-  if (!session?.user?.id) redirect('/');
+  if (!session?.user?.id) {
+    redirect(`/accedi?callbackUrl=${encodeURIComponent('/pratiche')}`);
+  }
   const [practices, liked] = await Promise.all([
     listUserPractices(session.user.id),
     loadFavoriteItineraryIds(session.user.id),

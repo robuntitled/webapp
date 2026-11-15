@@ -89,6 +89,13 @@ export function Footer({ company }: FooterProps) {
             >
               Cookie
             </Link>
+            <Link
+              href="/supporto"
+              className="inline-flex min-h-11 items-center text-primary transition-colors hover:text-[var(--color-primary-hover)]"
+              data-testid="footer-supporto"
+            >
+              Supporto
+            </Link>
           </nav>
         </div>
 

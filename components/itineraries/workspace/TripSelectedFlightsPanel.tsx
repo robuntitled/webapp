@@ -344,8 +344,9 @@ export function TripSelectedFlightsPanel({
                         </p>
                         {priceBasis > 1 ? (
                           <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
-                            {formatEuro(party, { approx: false })} totale ({priceBasis}{' '}
-                            pax)
+                            {formatEuro(party, { approx: false })} totale tratta (
+                            {priceBasis}{' '}
+                            {priceBasis === 1 ? 'persona' : 'persone'})
                           </p>
                         ) : null}
                       </div>
@@ -419,8 +420,7 @@ export function TripSelectedFlightsPanel({
               id="trip-voli-separate-desc"
               className="mt-0.5 block text-[11px] leading-snug text-slate-500"
             >
-              Ogni tratta è un biglietto one-way. Di default le paghi insieme; attiva per
-              prenotare una tratta alla volta.
+              Ogni tratta è un biglietto a sé. Attiva per prenotare una tratta alla volta.
             </span>
           </span>
         </label>
@@ -488,7 +488,7 @@ export function TripSelectedFlightsPanel({
               <>
                 <Button
                   type="button"
-                  className="min-h-11 w-full rounded-full"
+                  className="min-h-11 w-full rounded-full disabled:bg-slate-200 disabled:text-slate-500 disabled:opacity-100"
                   onClick={() => goCheckoutAll([currentUserId])}
                   disabled={isPersonFullyCovered(currentUserId)}
                   data-testid="trip-pago-per-me"
@@ -496,20 +496,24 @@ export function TripSelectedFlightsPanel({
                   Pago per me
                   {nextLegPerPerson != null ? (
                     <span className="ml-1 font-semibold opacity-90">
-                      · da {formatEuro(nextLegPerPerson, { approx: false })}
-                      {unbookedLegs.length > 1 ? '/tratta' : ''}
+                      · {formatEuro(nextLegPerPerson, { approx: false })}
+                      {unbookedLegs.length > 1 ? ' / tratta' : ''}
                     </span>
                   ) : null}
                 </Button>
-                {unbookedLegs.length > 1 && unbookedPerPerson != null ? (
-                  <p
-                    className="text-center text-[11px] text-slate-500"
-                    data-testid="trip-pago-per-me-hint"
-                  >
-                    Paghi una tratta alla volta (solo la tua quota). Piano:{' '}
-                    {formatEuro(unbookedPerPerson, { approx: false })} a persona.
-                  </p>
-                ) : null}
+                <p
+                  className="text-center text-[11px] text-slate-500"
+                  data-testid="trip-pago-per-me-hint"
+                >
+                  Solo la tua quota
+                  {nextLegPerPerson != null
+                    ? ` · ${formatEuro(nextLegPerPerson, { approx: false })} a persona`
+                    : ''}
+                  {unbookedLegs.length > 1 && unbookedPerPerson != null
+                    ? ` · totale voli ${formatEuro(unbookedPerPerson, { approx: false })} a persona`
+                    : ''}
+                  .
+                </p>
               </>
             ) : (
               <p className="text-[11px] text-slate-500" data-testid="trip-voli-separate-hint">
@@ -520,12 +524,20 @@ export function TripSelectedFlightsPanel({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 w-full rounded-full"
+              className="min-h-11 w-full rounded-full disabled:bg-slate-100 disabled:text-slate-400 disabled:opacity-100"
               onClick={openPayOthers}
               data-testid="trip-pago-per-altri"
             >
               Pago per altri
+              {nextLegPerPerson != null ? (
+                <span className="ml-1 font-semibold opacity-90">
+                  · {formatEuro(nextLegPerPerson, { approx: false })} / persona / tratta
+                </span>
+              ) : null}
             </Button>
+            <p className="text-center text-[11px] text-slate-500">
+              Scegli chi includere nel pagamento (importo per tratta, non totale voli).
+            </p>
           </div>
         ) : (
           <div className="space-y-3" data-testid="trip-pago-per-altri-panel">

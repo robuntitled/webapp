@@ -357,7 +357,12 @@ export function LegFlightStrip({
                 );
               })()}
               <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
-                {leg.offer.stops === 0 ? 'Diretto' : `${leg.offer.stops} scalo/i`} ·{' '}
+                {leg.offer.stops === 0
+                  ? 'Diretto'
+                  : leg.offer.stops === 1
+                    ? '1 scalo'
+                    : `${leg.offer.stops} scali`}{' '}
+                ·{' '}
                 {Math.round(leg.offer.durationMinutes / 60)} h
                 {leg.offer.airline ? ` · ${leg.offer.airline}` : ''}
               </p>

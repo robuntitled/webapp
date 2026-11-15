@@ -402,18 +402,26 @@ export function TripWorkspace({
                 }
                 onAction={() => selectTab('voli')}
               >
-                {flightBooked && practice?.flight_booking ? (
+                {flightBooked && practice ? (
                   <div className="space-y-1.5 text-sm text-slate-700">
-                    <p>
-                      {practice.flight_booking.outbound.origin} →{' '}
-                      {practice.flight_booking.outbound.destination}
-                    </p>
-                    {practice.flight_booking.returnLeg ? (
-                      <p>
-                        {practice.flight_booking.returnLeg.origin} →{' '}
-                        {practice.flight_booking.returnLeg.destination}
+                    {(
+                      Array.isArray(practice.flight_bookings) &&
+                      practice.flight_bookings.length > 0
+                        ? practice.flight_bookings
+                        : practice.flight_booking
+                          ? [practice.flight_booking]
+                          : []
+                    ).map((fb, i) => (
+                      <p key={fb.bookingId ?? fb.bookingRef ?? `fb-${i}`}>
+                        {fb.outbound.origin} → {fb.outbound.destination}
+                        {fb.bookingRef ? (
+                          <span className="ml-1 text-slate-500">· {fb.bookingRef}</span>
+                        ) : null}
+                        {fb.status ? (
+                          <span className="ml-1 text-slate-500">· {fb.status}</span>
+                        ) : null}
                       </p>
-                    ) : null}
+                    ))}
                   </div>
                 ) : hasSelectedPlan ? (
                   <ul className="space-y-1 text-sm text-slate-700">

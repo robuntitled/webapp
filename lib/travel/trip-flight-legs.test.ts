@@ -191,6 +191,47 @@ describe('trip-flight-legs', () => {
       capturedAt: Date.now(),
     });
     expect(selectedLegsTotal(plan).amount).toBe(580);
+    expect(selectedLegsTotal(plan).perPersonAmount).toBe(580);
     expect(selectedLegsTotal(plan).selectedCount).toBe(2);
+  });
+
+  it('multiplies unit prices by passengers for party total', () => {
+    let plan = buildDefaultTripFlightPlan({
+      homeOriginIata: 'MXP',
+      arrivalIata: 'BKK',
+      departureIata: 'BKK',
+      dateFrom: '2026-12-10',
+      dateTo: '2026-12-20',
+      passengers: 3,
+      multiCountry: false,
+    });
+    plan = selectOfferOnLeg(plan, plan.legs[0]!.id, {
+      offerId: 'a',
+      price: 100,
+      currency: 'EUR',
+      originIata: 'MXP',
+      destinationIata: 'BKK',
+      departureAt: '2026-12-10T10:00:00',
+      arrivalAt: '2026-12-10T22:00:00',
+      stops: 0,
+      durationMinutes: 700,
+      capturedAt: Date.now(),
+    });
+    plan = selectOfferOnLeg(plan, plan.legs[1]!.id, {
+      offerId: 'b',
+      price: 80,
+      currency: 'EUR',
+      originIata: 'BKK',
+      destinationIata: 'MXP',
+      departureAt: '2026-12-20T10:00:00',
+      arrivalAt: '2026-12-20T18:00:00',
+      stops: 0,
+      durationMinutes: 700,
+      capturedAt: Date.now(),
+    });
+    const totals = selectedLegsTotal(plan);
+    expect(totals.perPersonAmount).toBe(180);
+    expect(totals.amount).toBe(540);
+    expect(totals.passengers).toBe(3);
   });
 });

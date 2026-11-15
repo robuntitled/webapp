@@ -426,7 +426,15 @@ export async function POST(request: Request) {
         lastError: `book_failed:${e.status}`,
       });
       return NextResponse.json(
-        { error: PAYMENT_VERIFY_MESSAGE, code: 'book_error', ref },
+        {
+          ok: false,
+          needsReview: true,
+          status: 'NEEDS_REVIEW',
+          error: PAYMENT_VERIFY_MESSAGE,
+          message: PAYMENT_VERIFY_MESSAGE,
+          code: 'book_error',
+          ref,
+        },
         { status: 200 }
       );
     }
@@ -448,7 +456,15 @@ export async function POST(request: Request) {
       lastError: 'book_failed',
     });
     return NextResponse.json(
-      { error: PAYMENT_VERIFY_MESSAGE, ref },
+      {
+        ok: false,
+        needsReview: true,
+        status: 'NEEDS_REVIEW',
+        error: PAYMENT_VERIFY_MESSAGE,
+        message: PAYMENT_VERIFY_MESSAGE,
+        code: 'book_error',
+        ref,
+      },
       { status: 200 }
     );
   }

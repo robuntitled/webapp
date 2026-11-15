@@ -190,6 +190,10 @@ export function AirportPlaceInput({
       return;
     }
     updateMenuPosition();
+    const wrap = inputWrapRef.current;
+    if (wrap) {
+      wrap.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }
     const onReposition = () => updateMenuPosition();
     window.addEventListener('resize', onReposition);
     window.addEventListener('scroll', onReposition, true);

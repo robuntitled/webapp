@@ -18,6 +18,8 @@ export default function robots(): MetadataRoute.Robots {
           '/dashboard/',
           '/prenota/',
           '/invito/',
+          '/dev/',
+          '/dev',
         ],
       },
     ],

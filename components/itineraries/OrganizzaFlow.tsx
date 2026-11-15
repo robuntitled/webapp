@@ -685,7 +685,9 @@ export function OrganizzaFlow({
         >
           {ORGANIZZA_STEPS.map((s, i) => {
             const current = s.id === step;
-            const complete = done.has(s.id) && !current;
+            const currentIdx = ORGANIZZA_STEPS.findIndex((x) => x.id === step);
+            // Only steps already passed can be "completato" — never future steps.
+            const complete = done.has(s.id) && !current && i < currentIdx;
             const clickable = canNavigateToOrganizzaStep(draft, s.id, step);
             return (
               <li key={s.id} className="min-w-0 flex-1">
@@ -693,7 +695,9 @@ export function OrganizzaFlow({
                   type="button"
                   disabled={!clickable}
                   aria-current={current ? 'step' : undefined}
-                  aria-label={`${i + 1}. ${s.label}${complete ? ' (completato)' : ''}`}
+                  aria-label={`${i + 1}. ${s.label}${complete ? ' (completato)' : current ? ' (attuale)' : ''}`}
+                  data-testid={`organizza-step-${s.id}`}
+                  data-complete={complete ? 'true' : 'false'}
                   onClick={() => clickable && setStep(s.id)}
                   className={cn(
                     'flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-semibold sm:justify-start sm:px-3 sm:text-sm',
@@ -1318,11 +1322,16 @@ export function OrganizzaFlow({
 
               <SeparateTicketsNotice />
 
-              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50">
+              <div
+                className="rounded-2xl border border-amber-200/80 bg-amber-50/50"
+                data-testid="organizza-legal-ack"
+              >
                 <button
                   type="button"
                   className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-amber-950"
                   onClick={() => setLegalOpen((v) => !v)}
+                  aria-expanded={legalOpen}
+                  data-testid="organizza-legal-toggle"
                 >
                   Informazioni importanti
                   {legalOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1330,20 +1339,21 @@ export function OrganizzaFlow({
                 {legalOpen ? (
                   <div className="space-y-3 border-t border-amber-200/80 px-3 py-3">
                     <AllegatoBLinkedNotice />
-                    <label className="flex min-h-11 cursor-pointer items-start gap-3 text-xs text-amber-950">
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4 accent-primary"
-                        checked={draft.legalAck}
-                        onChange={(e) => update({ legalAck: e.target.checked })}
-                      />
-                      <span>
-                        Ho letto le informazioni importanti (BOZZA Allegato B). Le
-                        confermerò di nuovo prima di qualsiasi pagamento.
-                      </span>
-                    </label>
                   </div>
                 ) : null}
+                <label className="flex min-h-11 cursor-pointer items-start gap-3 border-t border-amber-200/80 px-4 py-3 text-xs text-amber-950">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 accent-primary"
+                    checked={draft.legalAck}
+                    onChange={(e) => update({ legalAck: e.target.checked })}
+                    data-testid="organizza-legal-checkbox"
+                  />
+                  <span>
+                    Ho letto le informazioni importanti. Le confermerò di nuovo prima di
+                    qualsiasi pagamento.
+                  </span>
+                </label>
               </div>
             </div>
           ) : null}

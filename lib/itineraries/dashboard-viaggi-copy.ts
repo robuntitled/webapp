@@ -14,6 +14,7 @@ export const DASHBOARD_VIAGGI_COPY = {
     flightPending: 'Volo in conferma',
     booked: 'Prenotato',
     toBook: 'Da prenotare',
+    needsReview: 'Da verificare',
     carrierCancelled: 'Volo annullato dal vettore',
   },
 

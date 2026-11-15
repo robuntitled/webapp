@@ -156,7 +156,8 @@ export function organizzaCompletedSteps(draft: OrganizzaDraft): Set<OrganizzaSte
   if (isImpostaComplete(draft)) done.add('imposta');
   if (done.has('imposta') && isPartenzaComplete(draft)) done.add('partenza');
   if (done.has('partenza') && hasMainFlightSelection(draft)) done.add('voli');
-  if (done.has('voli') && draft.company) done.add('itinerario');
+  // Itinerario is complete only after legal ack — never mark it done while still on Voli.
+  if (done.has('voli') && draft.legalAck) done.add('itinerario');
   return done;
 }
 

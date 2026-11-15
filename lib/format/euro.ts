@@ -18,13 +18,20 @@ export function formatEuroExact(
 ): string | null {
   if (amount == null || !Number.isFinite(amount)) return null;
   try {
+    // Always Italian grouping (1.166,52 €) — never bare 1166,52.
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency,
+      useGrouping: true,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${currency}`;
+    const body = new Intl.NumberFormat('it-IT', {
+      useGrouping: true,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+    return `${body} ${currency}`;
   }
 }

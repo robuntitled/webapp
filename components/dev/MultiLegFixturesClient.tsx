@@ -71,9 +71,10 @@ export function MultiLegFixturesClient() {
           </div>
         ))}
         <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
-          <p className="text-[11px] uppercase tracking-wider text-white/70">Totale tratte</p>
-          <p className="font-display text-2xl font-semibold">107,00 EUR</p>
-          <p className="text-[11px] text-white/60">1 passeggero · 2 tratte (biglietti one-way)</p>
+          <p className="text-[11px] uppercase tracking-wider text-white/70">Paghi ora</p>
+          <p className="font-display text-2xl font-semibold">50,00 €</p>
+          <p className="text-[11px] text-white/70">50,00 € a persona · totale tratta</p>
+          <p className="mt-1 text-[11px] text-white/55">Totale voli 107,00 €</p>
         </div>
       </section>
 
@@ -144,12 +145,17 @@ export function MultiLegFixturesClient() {
             <h3 className="text-sm font-bold">Chi paga</h3>
           </div>
           {!separate ? (
-            <Button className="min-h-11 w-full rounded-full">Pago per me · 107,00 €</Button>
+            <>
+              <Button className="min-h-11 w-full rounded-full">Pago per me · 50,00 €</Button>
+              <p className="text-center text-[11px] text-slate-500">
+                Solo la tua quota · 50,00 € a persona · totale voli 107,00 € a persona.
+              </p>
+            </>
           ) : (
             <p className="text-[11px] text-slate-500">Usa Prenota su ogni tratta qui sopra.</p>
           )}
           <Button variant="outline" className="min-h-11 w-full rounded-full">
-            Pago per altri
+            Pago per altri · da 107,00 € / persona
           </Button>
         </div>
       </section>

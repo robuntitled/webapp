@@ -94,7 +94,10 @@ export function FlightBookingCard({
     if (!practiceId || !pending) return;
     setSyncing(true);
     try {
-      const res = await fetch(`/api/practices/${practiceId}/sync-flight`, {
+      const qs = flight.bookingId
+        ? `?bookingId=${encodeURIComponent(flight.bookingId)}`
+        : '';
+      const res = await fetch(`/api/practices/${practiceId}/sync-flight${qs}`, {
         method: 'POST',
         credentials: 'same-origin',
       });
@@ -102,13 +105,33 @@ export function FlightBookingCard({
         updated?: boolean;
         status?: string | null;
         bookingRef?: string | null;
+        bookingId?: string | null;
+        legs?: Array<{
+          bookingId: string | null;
+          bookingRef: string | null;
+          status: string | null;
+          updated: boolean;
+        }>;
       };
       if (res.ok) {
-        setLive((prev) => ({
-          ...prev,
-          status: data.status ?? prev.status,
-          bookingRef: data.bookingRef ?? prev.bookingRef,
-        }));
+        // Match THIS leg only — never apply another tratta's code/status.
+        const mine =
+          data.legs?.find((l) => l.bookingId && l.bookingId === flight.bookingId) ??
+          (data.bookingId && data.bookingId === flight.bookingId
+            ? {
+                bookingId: data.bookingId,
+                bookingRef: data.bookingRef ?? null,
+                status: data.status ?? null,
+                updated: Boolean(data.updated),
+              }
+            : null);
+        if (mine) {
+          setLive((prev) => ({
+            ...prev,
+            status: mine.status ?? prev.status,
+            bookingRef: mine.bookingRef ?? prev.bookingRef,
+          }));
+        }
         if (data.updated) router.refresh();
       }
     } catch {
@@ -116,7 +139,7 @@ export function FlightBookingCard({
     } finally {
       setSyncing(false);
     }
-  }, [pending, practiceId, router]);
+  }, [flight.bookingId, pending, practiceId, router]);
 
   useIntervalWhenVisible(
     () => {
@@ -134,7 +157,7 @@ export function FlightBookingCard({
         </p>
         {ref ? <CopyRef value={ref} /> : null}
       </div>
-      {pending ? (
+      {pending || statusInfo.kind === 'needs_review' ? (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2.5">
           <p className="flex items-center gap-2 text-sm font-semibold text-amber-100">
             {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}

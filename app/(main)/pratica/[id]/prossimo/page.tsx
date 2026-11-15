@@ -23,8 +23,10 @@ type PageProps = {
 
 export default async function ProssimoPassoPage({ params }: PageProps) {
   const session = await auth();
-  if (!session?.user?.id) redirect('/');
   const { id } = await params;
+  if (!session?.user?.id) {
+    redirect(`/accedi?callbackUrl=${encodeURIComponent(`/pratica/${id}/prossimo`)}`);
+  }
   const practiceRow = await getPractice(id, session.user.id);
   if (!practiceRow) notFound();
   const practice = practiceRow;

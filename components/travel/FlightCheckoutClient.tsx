@@ -23,6 +23,7 @@ import { COUNTRY_OPTIONS } from '@/lib/travel/countries';
 import {
   formatFlightBookingStatus,
   isFlightPendingConfirmation,
+  parseFlightStatus,
 } from '@/lib/itineraries/bookings';
 import { legKindLabelIt } from '@/lib/itineraries/selected-flight-display';
 import {
@@ -120,10 +121,21 @@ function roundMoney(amount: number) {
 }
 
 function formatMoney(amount: number, currency: string) {
-  return `${roundMoney(amount).toLocaleString('it-IT', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  try {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: currency || 'EUR',
+      useGrouping: true,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(roundMoney(amount));
+  } catch {
+    return `${roundMoney(amount).toLocaleString('it-IT', {
+      useGrouping: true,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${currency}`;
+  }
 }
 
 function formatTime(iso?: string | null) {
@@ -444,14 +456,24 @@ export function FlightCheckoutClient({
         });
         const data = (await res.json()) as {
           error?: string;
+          ok?: boolean;
+          needsReview?: boolean;
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
           practiceId?: string;
           reconciliationPending?: boolean;
           message?: string;
+          code?: string;
+          ref?: string;
         };
-        if (!res.ok) {
+        // HTTP 200 + error/needsReview = paid but provider confirm failed → never "confermata".
+        const reviewAfterPay =
+          Boolean(data.needsReview) ||
+          data.code === 'book_error' ||
+          (Boolean(data.error) && !data.bookingId && !data.bookingRef);
+        if (!res.ok || reviewAfterPay) {
+          const reviewStatus = 'NEEDS_REVIEW';
           const fail: LegCheckoutResult = {
             legId: activeLeg?.id ?? 'unknown',
             labelIt: activeLeg?.labelIt ?? 'Tratta',
@@ -459,26 +481,41 @@ export function FlightCheckoutClient({
               ? `${activeLeg.leg.origin} → ${activeLeg.leg.destination}`
               : '—',
             ok: false,
-            bookingId: null,
-            bookingRef: null,
-            status: null,
+            bookingId: data.bookingId ?? null,
+            bookingRef: data.bookingRef ?? null,
+            status: reviewAfterPay ? reviewStatus : null,
             amountEur,
-            error: data.error ?? 'Conferma prenotazione fallita',
+            error:
+              data.message ??
+              data.error ??
+              'Pagamento ricevuto · da verificare con l’assistenza',
           };
           setLegResults((prev) => {
             const next = [...prev, fail];
             const priorOk = next.some((r) => r.ok);
             setConfirmation({
-              bookingId: null,
-              bookingRef: null,
-              status: priorOk ? 'PARTIAL' : 'FAILED',
-              amountEur: 0,
-              practiceId: draft?.practiceId,
+              bookingId: data.bookingId ?? null,
+              bookingRef: data.bookingRef ?? null,
+              status: reviewAfterPay
+                ? reviewStatus
+                : priorOk
+                  ? 'PARTIAL'
+                  : 'FAILED',
+              amountEur: reviewAfterPay ? amountEur : 0,
+              practiceId: data.practiceId ?? draft?.practiceId,
+              reconciliationPending: true,
+              reconciliationMessage:
+                data.message ??
+                data.error ??
+                'Pagamento ricevuto, stiamo verificando la prenotazione.',
             });
             return next;
           });
-          toast.error(fail.error);
-          // Honest partial/fail state: keep prior successes, never claim "confermata".
+          toast.message(
+            data.message ??
+              data.error ??
+              'Pagamento ricevuto · prenotazione da verificare'
+          );
           clearFlightPaymentPending();
           setPayment(null);
           setStep('done');
@@ -941,8 +978,13 @@ export function FlightCheckoutClient({
 
   if (step === 'done' && (confirmation || legResults.length > 0)) {
     const reconciling = Boolean(confirmation?.reconciliationPending);
+    const needsReview =
+      parseFlightStatus(confirmation?.status) === 'needs_review' ||
+      legResults.some((r) => parseFlightStatus(r.status) === 'needs_review');
     const pending =
-      !reconciling && isFlightPendingConfirmation(confirmation?.status);
+      !reconciling &&
+      !needsReview &&
+      isFlightPendingConfirmation(confirmation?.status);
     const statusInfo = formatFlightBookingStatus(confirmation?.status);
     const practiceHref = confirmation?.practiceId
       ? `/pratica/${confirmation.practiceId}?tab=voli`
@@ -951,6 +993,7 @@ export function FlightCheckoutClient({
     const okAny = legResults.some((r) => r.ok);
     const partial = failedAny && okAny;
     const multiDone = legResults.length > 1;
+    const amberTone = reconciling || pending || partial || needsReview;
     const plannedLegs = Math.max(
       checkoutLegs.length,
       draft?.checkoutLegs?.length ?? 0,
@@ -964,7 +1007,7 @@ export function FlightCheckoutClient({
       <div
         className={cn(
           'mx-auto max-w-lg space-y-6 rounded-3xl border p-6 shadow-sm sm:p-8',
-          reconciling || pending || partial
+          amberTone
             ? 'border-amber-200 bg-gradient-to-b from-amber-50/80 to-white'
             : failedAny && !okAny
               ? 'border-rose-200 bg-gradient-to-b from-rose-50/80 to-white'
@@ -975,7 +1018,7 @@ export function FlightCheckoutClient({
         <div
           className={cn(
             'flex items-center gap-3',
-            reconciling || pending || partial
+            amberTone
               ? 'text-amber-800'
               : failedAny && !okAny
                 ? 'text-rose-800'
@@ -985,38 +1028,43 @@ export function FlightCheckoutClient({
           <CheckCircle2 className="h-9 w-9" />
           <div>
             <h2 className="font-display text-2xl font-semibold">
-              {failedAny && !okAny
-                ? 'Prenotazione non completata'
-                : partial
-                  ? 'Prenotazione parziale'
-                  : reconciling
-                    ? 'Prenotazione ricevuta'
-                    : pending
-                      ? 'Pagamento confermato'
-                      : multiDone
-                        ? 'Tratte prenotate'
-                        : 'Prenotazione confermata'}
+              {needsReview
+                ? 'Pagamento confermato · da verificare'
+                : failedAny && !okAny
+                  ? 'Prenotazione non completata'
+                  : partial
+                    ? 'Prenotazione parziale'
+                    : reconciling
+                      ? 'Prenotazione ricevuta'
+                      : pending
+                        ? 'Pagamento confermato · da verificare'
+                        : multiDone
+                          ? 'Tratte prenotate'
+                          : 'Prenotazione confermata'}
             </h2>
             <p
               className={cn(
                 'text-sm',
-                failedAny && !okAny
+                failedAny && !okAny && !needsReview
                   ? 'text-rose-800/90'
-                  : reconciling || pending || partial
+                  : amberTone
                     ? 'text-amber-900/80'
                     : 'text-emerald-800/80'
               )}
             >
-              {failedAny && !okAny
-                ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
-                : partial
-                  ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
-                  : reconciling
-                    ? confirmation?.reconciliationMessage ??
-                      'Prenotazione ricevuta, stiamo completando la registrazione'
-                    : pending
-                      ? statusInfo.description
-                      : 'Conserva i codici per il check-in.'}
+              {needsReview
+                ? confirmation?.reconciliationMessage ??
+                  statusInfo.description
+                : failedAny && !okAny
+                  ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
+                  : partial
+                    ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
+                    : reconciling
+                      ? confirmation?.reconciliationMessage ??
+                        'Prenotazione ricevuta, stiamo completando la registrazione'
+                      : pending
+                        ? statusInfo.description
+                        : 'Conserva i codici per il check-in.'}
             </p>
           </div>
         </div>
@@ -1363,35 +1411,36 @@ export function FlightCheckoutClient({
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:hidden"
                 data-testid="checkout-summary-mobile"
               >
-                <div className="flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      {isMultiLeg
-                        ? `Addebito tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
-                        : 'Totale'}
-                    </p>
-                    <p className="truncate text-xs text-slate-600">
-                      {draft.adults}{' '}
-                      {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
-                      {isMultiLeg
-                        ? ` · ${activeCheckoutLeg?.leg.origin ?? ''}→${activeCheckoutLeg?.leg.destination ?? ''}`
-                        : draft.tripType === 'roundtrip'
-                          ? ' · A/R'
-                          : ' · solo andata'}
-                    </p>
-                    {isMultiLeg && planTotal !== displayPrice ? (
-                      <p className="mt-0.5 text-[10px] text-slate-500">
-                        Piano completo {formatMoney(planTotal, displayCurrency)} (altre
-                        tratte dopo)
-                      </p>
-                    ) : null}
-                  </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Paghi ora
+                    {isMultiLeg
+                      ? ` · tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
+                      : ''}
+                  </p>
                   <p
-                    className="shrink-0 font-display text-xl font-semibold tabular-nums text-slate-900"
+                    className="font-display text-2xl font-semibold tabular-nums text-slate-900"
                     data-testid="checkout-charge-now-mobile"
                   >
                     {formatMoney(displayPrice, displayCurrency)}
                   </p>
+                  <p className="text-xs text-slate-600">
+                    {adults > 1
+                      ? `${formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona · ${formatMoney(displayPrice, displayCurrency)} totale tratta (${adults} persone)`
+                      : `${draft.adults === 1 ? '1 passeggero' : `${draft.adults} passeggeri`}${
+                          isMultiLeg
+                            ? ` · ${activeCheckoutLeg?.leg.origin ?? ''}→${activeCheckoutLeg?.leg.destination ?? ''}`
+                            : draft.tripType === 'roundtrip'
+                              ? ' · A/R'
+                              : ' · solo andata'
+                        }`}
+                  </p>
+                  {isMultiLeg && planTotal !== displayPrice ? (
+                    <p className="text-[11px] text-slate-500">
+                      Totale voli {formatMoney(planTotal, displayCurrency)} (altre tratte
+                      dopo)
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -1437,17 +1486,27 @@ export function FlightCheckoutClient({
                 className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-amber-950"
                 data-testid="checkout-multi-leg-charge-note"
               >
-                <p className="font-semibold">
-                  Addebito ora (solo questa tratta):{' '}
-                  <span className="tabular-nums" data-testid="checkout-charge-now">
-                    {formatMoney(displayPrice, displayCurrency)}
-                  </span>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-800/90">
+                  Paghi ora
                 </p>
-                <p className="text-amber-900/80">
-                  Piano completo {formatMoney(planTotal, displayCurrency)} — le altre tratte
-                  si pagano dopo, una alla volta. Se una fallisce, non addebitiamo le tratte
-                  non prenotate.
+                <p
+                  className="font-display text-2xl font-semibold tabular-nums"
+                  data-testid="checkout-charge-now"
+                >
+                  {formatMoney(displayPrice, displayCurrency)}
                 </p>
+                <p className="text-amber-950">
+                  {adults > 1
+                    ? `${formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona · ${formatMoney(displayPrice, displayCurrency)} totale tratta (${adults} persone)`
+                    : 'Solo questa tratta'}
+                </p>
+                {planTotal !== displayPrice ? (
+                  <p className="text-[11px] text-amber-900/80">
+                    Totale voli {formatMoney(planTotal, displayCurrency)} — le altre tratte
+                    si pagano dopo, una alla volta. Se una fallisce, non addebitiamo le
+                    tratte non prenotate.
+                  </p>
+                ) : null}
               </div>
             ) : null}
             <AllegatoBLinkedNotice />
@@ -1523,29 +1582,33 @@ export function FlightCheckoutClient({
 
           <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
             <p className="text-[11px] uppercase tracking-wider text-white/70">
+              Paghi ora
               {isMultiLeg
-                ? `Addebito tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
-                : 'Totale'}
+                ? ` · tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
+                : ''}
             </p>
             <p className="font-display text-2xl font-semibold" data-testid="checkout-total">
               {formatMoney(displayPrice, displayCurrency)}
             </p>
-            {isMultiLeg && adults > 1 ? (
+            {adults > 1 ? (
               <p className="text-[11px] text-white/70" data-testid="checkout-unit-price">
                 {formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona
                 {' · '}
-                {adults} passeggeri
+                {formatMoney(displayPrice, displayCurrency)} totale tratta ({adults}{' '}
+                persone)
+              </p>
+            ) : (
+              <p className="text-[11px] text-white/60">
+                {draft.adults}{' '}
+                {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
+                {draft.tripType === 'roundtrip' ? ' · A/R' : ' · solo andata'}
+              </p>
+            )}
+            {isMultiLeg && planTotal !== displayPrice ? (
+              <p className="mt-1 text-[11px] text-white/55">
+                Totale voli {formatMoney(planTotal, displayCurrency)}
               </p>
             ) : null}
-            <p className="text-[11px] text-white/60">
-              {draft.adults}{' '}
-              {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
-              {isMultiLeg
-                ? ` · one-way (piano ${formatMoney(planTotal, displayCurrency)})`
-                : draft.tripType === 'roundtrip'
-                  ? ' · A/R'
-                  : ' · solo andata'}
-            </p>
           </div>
           <BookingComplianceNote showMerchantOfRecord />
           <AllegatoBLinkedNotice compact />
