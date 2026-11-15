@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: '/domande-frequenti' },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
   openGraph: pageOpenGraph('/domande-frequenti', TITLE, DESCRIPTION),
 };
 

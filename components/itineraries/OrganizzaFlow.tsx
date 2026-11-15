@@ -786,7 +786,7 @@ export function OrganizzaFlow({
                 <h3 className="text-sm font-bold text-[var(--color-text)]">
                   Scegli la destinazione
                 </h3>
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                <p className="text-xs text-[var(--color-text-secondary)]">
                   Tocca più paesi per un viaggio multi-meta (ordine 1, 2, 3…). Tocca di
                   nuovo per togliere.
                 </p>
@@ -826,7 +826,7 @@ export function OrganizzaFlow({
                         {selectedSlugs.map((s, i) => (
                           <span
                             key={s}
-                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white px-2 py-1 text-[11px] font-semibold"
+                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white px-2 py-1 text-xs font-semibold"
                           >
                             {i + 1}. {getMaster(s)?.nameIt ?? s}
                             <button
@@ -844,7 +844,7 @@ export function OrganizzaFlow({
                     ) : null}
                     {unverifiedMulti ? (
                       <p
-                        className="text-[11px] text-amber-900"
+                        className="text-xs text-amber-900"
                         data-testid="unverified-combo-note"
                       >
                         Collegamenti da verificare tra i paesi selezionati.
@@ -1016,7 +1016,7 @@ export function OrganizzaFlow({
                         setDates(from, to);
                       }}
                     />
-                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]">
                       {formatDateIt(draft.dateFrom) ?? 'gg/mm/aaaa'}
                     </span>
                   </label>
@@ -1033,7 +1033,7 @@ export function OrganizzaFlow({
                         setDates(draft.dateFrom, e.target.value);
                       }}
                     />
-                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]">
                       {formatDateIt(draft.dateTo) ?? 'gg/mm/aaaa'}
                     </span>
                   </label>
@@ -1075,7 +1075,7 @@ export function OrganizzaFlow({
                       data-testid={`company-${opt.id}`}
                     >
                       <p className="text-sm font-bold">{opt.label}</p>
-                      <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                         {opt.hint}
                       </p>
                     </button>
@@ -1256,7 +1256,7 @@ export function OrganizzaFlow({
               {draft.domesticPlan && draft.domesticPlan.legs.length > 0 ? (
                 <div className="space-y-2 rounded-2xl border border-[var(--color-border)] p-4">
                   <h3 className="text-sm font-bold">Voli domestici suggeriti</h3>
-                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     Solo se l’itinerario lo richiede (es. HAN→SGN). Le tratte tra paesi
                     sono già nei voli principali.
                   </p>
@@ -1339,8 +1339,8 @@ export function OrganizzaFlow({
 
               <SeparateTicketsNotice />
               <p className="text-xs text-[var(--color-text-secondary)]">
-                Creare il viaggio non è un acquisto. Le informazioni legali (Allegato B, BOZZA)
-                compaiono solo al pagamento del primo servizio.
+                Creare il viaggio non è un acquisto. Le condizioni del servizio compaiono al
+                pagamento del primo servizio.
               </p>
             </div>
           ) : null}

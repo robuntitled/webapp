@@ -334,15 +334,15 @@ export function PrenotaCarsClient({
       if (res.status === 503 && data.code === 'missing_token') {
         setApiUnavailable(true);
         setUnavailableCode('missing_token');
-        toast.message('Duffel non configurato', {
-          description: 'Aggiungi DUFFEL_ACCESS_TOKEN (token test va bene).',
+        toast.message('Noleggio auto non disponibile', {
+          description: 'Il servizio non è attivo in questa versione. Riprova più tardi.',
         });
         return;
       }
       if (res.status === 403 && data.code === 'cars_not_enabled') {
         setApiUnavailable(true);
         setUnavailableCode('cars_not_enabled');
-        toast.error(data.error ?? 'Duffel Cars non attivo');
+        toast.error('Noleggio auto non disponibile al momento.');
         return;
       }
       if (!res.ok) {
@@ -625,29 +625,11 @@ export function PrenotaCarsClient({
           <div className="flex gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <div className="space-y-1 text-muted-foreground">
-              <p className="font-medium text-foreground">
-                {unavailableCode === 'cars_not_enabled'
-                  ? 'Duffel Cars non ancora abilitato'
-                  : 'Token Duffel mancante'}
+              <p className="font-medium text-foreground">Noleggio auto non disponibile</p>
+              <p>
+                Il servizio non è attivo in questa versione. Torna più tardi o scegli un altro
+                mezzo.
               </p>
-              <ol className="list-decimal space-y-1 pl-4">
-                <li>
-                  Account su{' '}
-                  <a
-                    href="https://app.duffel.com"
-                    className="font-medium text-foreground underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    app.duffel.com
-                  </a>
-                </li>
-                <li>Developers → Access tokens → token di test (`duffel_test_…`)</li>
-                <li>Richiedi accesso a Duffel Cars</li>
-                <li>
-                  Imposta <code className="text-xs">DUFFEL_ACCESS_TOKEN</code> su Vercel / .env.local
-                </li>
-              </ol>
             </div>
           </div>
         </div>

@@ -124,7 +124,7 @@ export function FlightOfferCard({
         'w-full min-w-0 rounded-2xl ring-1 transition',
         dark
           ? saved
-            ? 'bg-accent/12 ring-accent/50'
+            ? 'bg-primary/12 ring-accent/50'
             : 'bg-[#161d2b] ring-[#2a3344] hover:bg-[#1c2436] hover:ring-[#3a4558]'
           : 'rounded-3xl bg-slate-50/80 ring-slate-100 hover:bg-white hover:ring-slate-200'
       )}
@@ -189,7 +189,7 @@ export function FlightOfferCard({
               <Plane
                 className={cn(
                   'absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90',
-                  dark ? 'text-accent' : 'text-primary'
+                  dark ? 'text-primary' : 'text-primary'
                 )}
               />
             </div>

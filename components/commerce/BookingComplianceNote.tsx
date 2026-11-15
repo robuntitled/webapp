@@ -1,7 +1,7 @@
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
 
 type Props = {
-  /** Mostra la riga MoR LiteAPI/Nuitée + Noivia intermediario (checkout). */
+  /** Mostra la riga «Venduto dal fornitore…» (checkout). */
   showMerchantOfRecord?: boolean;
   /** Hotel: totale già con commissione di servizio Noivia. */
   showHotelServiceFee?: boolean;

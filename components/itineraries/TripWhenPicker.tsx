@@ -335,7 +335,7 @@ export function TripWhenPicker({
             </div>
             {value ? (
               <div className="flex items-start gap-3 rounded-2xl bg-slate-50 px-3 py-3">
-                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
                     {format(value.dateFrom, 'EEEE d MMMM', { locale: it })} →{' '}

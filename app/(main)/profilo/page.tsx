@@ -27,7 +27,7 @@ const HUB_LINKS = [
     href: '/profilo#viaggiatori',
     icon: Users,
     title: 'Viaggiatori e documenti',
-    body: 'Anagrafica per precompilare il checkout (DB-10 in attesa).',
+    body: 'Anagrafica per precompilare il checkout.',
   },
   {
     href: '/profilo#ricevute',
@@ -48,10 +48,10 @@ const HUB_LINKS = [
     body: 'Account, comunicazioni, elimina account.',
   },
   {
-    href: '/assistenza',
+    href: '/supporto',
     icon: HelpCircle,
-    title: 'Assistenza',
-    body: 'Canale in definizione (placeholder owner).',
+    title: 'Supporto',
+    body: 'Domande frequenti e come funziona.',
   },
   {
     href: '/come-funziona',
@@ -61,9 +61,7 @@ const HUB_LINKS = [
   },
 ] as const;
 
-/**
- * Profilo hub (P1-11) — UI with safe fallbacks where DB-10 is not applied.
- */
+/** Profilo hub (P1-11) — safe UI fallbacks when optional profile fields are missing. */
 export default async function ProfiloHubPage() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -79,15 +77,14 @@ export default async function ProfiloHubPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-[var(--color-page,#F6F7FB)]">
       <div className="nl-page w-full space-y-6 py-8 pb-28">
         <header className="space-y-1">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
             Account
           </p>
           <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
             Profilo
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Viaggiatori, preferenze e ricevute. I campi che richiedono nuove tabelle restano in
-            attesa (DB-10 non applicato).
+            Viaggiatori, preferenze e ricevute.
           </p>
         </header>
 
@@ -129,8 +126,8 @@ export default async function ProfiloHubPage() {
         <section id="ricevute" className="scroll-mt-24 rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-4 text-sm text-[var(--color-text-secondary)]">
           <p className="font-semibold text-[var(--color-text)]">Pagamenti e ricevute</p>
           <p className="mt-1">
-            Nessun archivio ricevute locale finché non c&apos;è lo schema (DB-10). Conserva le
-            email di conferma del fornitore.
+            Conserva le email di conferma del fornitore. Un archivio ricevute in-app arriverà
+            più avanti.
           </p>
         </section>
       </div>

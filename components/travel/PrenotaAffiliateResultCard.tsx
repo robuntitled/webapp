@@ -90,7 +90,7 @@ export function PrenotaAffiliateResultCard({ item }: { item: PrenotaAffiliateCar
             <div className="min-w-0">
               {item.rating != null ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground">
-                  <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+                  <Star className="h-3.5 w-3.5 fill-primary text-primary" />
                   {item.rating.toFixed(1)}
                   {item.ratingCount != null ? (
                     <span className="font-normal text-muted-foreground">

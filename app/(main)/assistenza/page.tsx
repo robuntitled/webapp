@@ -1,9 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/**
- * Canonical support URL for nav/footer (`/assistenza`).
- * Content lives on `/supporto` (placeholder — no invented email).
- */
-export default function AssistenzaPage() {
+/** Alias → Supporto (P1-22). */
+export default function AssistenzaRedirectPage() {
   redirect('/supporto');
 }

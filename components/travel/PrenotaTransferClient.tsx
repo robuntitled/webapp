@@ -291,8 +291,8 @@ export function PrenotaTransferClient() {
 
       if (res.status === 503 && data.code === 'missing_token') {
         setApiUnavailable(true);
-        toast.message('API GetTransfer non attiva', {
-          description: 'Usa il fallback su GetTransfer o richiedi il token a Travelpayouts.',
+        toast.message('Trasferimenti non disponibili', {
+          description: 'Il servizio non è attivo in questa versione. Riprova più tardi.',
           duration: 8000,
         });
         return;

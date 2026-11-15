@@ -69,7 +69,7 @@ export function PlaceSearchInput({
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
       />
-      {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-accent" />}
+      {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
       {open && results.length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-xl overflow-hidden shadow-xl">
           {results.slice(0, 6).map((place) => (

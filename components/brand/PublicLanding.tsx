@@ -84,7 +84,7 @@ export function PublicLanding({
           <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-white/80">
             Viaggio fai da te
           </p>
-          <h1 className="mt-2 max-w-2xl font-display text-[clamp(1.75rem,4vw,2.75rem)] font-extrabold leading-[1.12] tracking-[-0.02em]">
+          <h1 className="mt-2 max-w-2xl font-display text-[clamp(1.75rem,4vw,2.75rem)] font-extrabold leading-[1.12] tracking-[-0.02em] text-white drop-shadow-sm">
             Il viaggio fai da te, senza fare tutto da solo.
           </h1>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/90 sm:text-base">

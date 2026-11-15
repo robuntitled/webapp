@@ -49,7 +49,7 @@ export function ProfilePageClient({
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-accent font-medium text-xs uppercase tracking-[0.2em] mb-2">
+        <p className="text-primary font-medium text-xs uppercase tracking-[0.2em] mb-2">
           Il tuo spazio
         </p>
         <h1 className="font-display text-4xl md:text-5xl font-semibold text-foreground tracking-tight">

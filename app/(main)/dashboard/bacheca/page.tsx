@@ -18,7 +18,7 @@ export default async function BachecaPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-white">
       <div className="nl-page w-full space-y-6 py-10 pb-24">
         <header className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             Community
           </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">

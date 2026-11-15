@@ -34,7 +34,7 @@ export function SponsoredFeedCard({
           <AvatarFallback
             className={cn(
               'text-xs font-semibold',
-              onDark ? 'bg-accent/20 text-accent' : 'bg-primary/10 text-primary'
+              onDark ? 'bg-primary/20 text-primary' : 'bg-primary/10 text-primary'
             )}
           >
             {initial}
@@ -55,7 +55,7 @@ export function SponsoredFeedCard({
               <p
                 className={cn(
                   'mt-0.5 text-[11px] font-medium uppercase tracking-wide',
-                  onDark ? 'text-accent/90' : 'text-primary'
+                  onDark ? 'text-primary/90' : 'text-primary'
                 )}
               >
                 Sponsorizzato
@@ -105,7 +105,7 @@ export function SponsoredFeedCard({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition',
                 onDark
-                  ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                  ? 'bg-accent text-primary-foreground hover:bg-accent/90'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
               )}
             >

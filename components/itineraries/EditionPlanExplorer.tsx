@@ -120,7 +120,7 @@ export function EditionPlanExplorer({
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="grid grid-cols-1 divide-y divide-slate-100 md:grid-cols-4 md:divide-x md:divide-y-0">
           <div className="space-y-3 p-4 md:p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
               Partenza ufficiale
             </p>
             <h1 className="font-display text-xl font-semibold leading-tight text-slate-900 md:text-2xl">

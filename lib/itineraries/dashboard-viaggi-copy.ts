@@ -53,7 +53,7 @@ export const DASHBOARD_VIAGGI_COPY = {
     ageRequired: 'Per unirti conferma di avere almeno 18 anni.',
     whatsapp: 'Invita su WhatsApp',
     friends: 'Invita amici',
-    emailDisabled: 'Invito email non disponibile (in attesa di verifica Legale).',
+    emailDisabled: 'Per ora invita con il link o WhatsApp.',
   },
 
   fields: {

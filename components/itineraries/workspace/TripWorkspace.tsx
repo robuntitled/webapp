@@ -7,7 +7,9 @@ import { BedDouble, Loader2, Plane, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, renameEditionAction } from '@/actions/practices';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
+import { StatusBadge } from '@/components/itineraries/StatusBadge';
 import { TripWhatsMissingCard } from '@/components/itineraries/TripWhatsMissingCard';
+import { formatFlightBookingStatus } from '@/lib/itineraries/bookings';
 import { ItineraryExplorerWidget } from '@/components/itineraries/workspace/ItineraryExplorerWidget';
 import {
   WorkspaceEmptyState,
@@ -392,7 +394,7 @@ export function TripWorkspace({
                   </p>
                   <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
                     Hai creato questo viaggio da un volo o un hotel. Aggiungi i servizi uno alla
-                    volta: prima paghi, poi scegli il prossimo. Nessun totale combinato.
+                    volta. Ogni servizio ha il suo prezzo e il suo fornitore.
                   </p>
                 </div>
               )}
@@ -430,7 +432,21 @@ export function TripWorkspace({
                           <span className="ml-1 text-slate-500">· {fb.bookingRef}</span>
                         ) : null}
                         {fb.status ? (
-                          <span className="ml-1 text-slate-500">· {fb.status}</span>
+                          <span className="ml-1 inline-flex align-middle">
+                            <StatusBadge
+                              tone={
+                                String(fb.status).toLowerCase().includes('fail') ||
+                                String(fb.status).toLowerCase().includes('cancel')
+                                  ? 'err'
+                                  : String(fb.status).toLowerCase().includes('review') ||
+                                      String(fb.status).toLowerCase().includes('pending')
+                                    ? 'warn'
+                                    : 'ok'
+                              }
+                            >
+                              {formatFlightBookingStatus(String(fb.status)).label}
+                            </StatusBadge>
+                          </span>
                         ) : null}
                       </p>
                     ))}

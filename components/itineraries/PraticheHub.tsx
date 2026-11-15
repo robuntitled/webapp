@@ -115,7 +115,7 @@ export function PraticheHub({
   return (
     <div className="space-y-8" data-testid="pratiche-hub">
       <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           {copy.pageEyebrow}
         </p>
         <h1 className="mt-2 font-display text-4xl font-semibold text-foreground">
@@ -147,12 +147,12 @@ export function PraticheHub({
                 'min-h-[5.5rem] rounded-2xl border p-4 text-left transition',
                 isActive
                   ? 'border-accent bg-accent/10 shadow-sm'
-                  : 'border-border bg-white hover:border-accent/40'
+                  : 'border-border bg-white hover:border-primary/40'
               )}
             >
               <div className="flex items-start justify-between gap-2">
                 <Icon
-                  className={cn('h-5 w-5', isActive ? 'text-accent' : 'text-muted-foreground')}
+                  className={cn('h-5 w-5', isActive ? 'text-primary' : 'text-muted-foreground')}
                   aria-hidden
                 />
                 <span className="text-xs font-bold tabular-nums text-muted-foreground">

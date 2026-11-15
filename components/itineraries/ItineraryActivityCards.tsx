@@ -27,11 +27,11 @@ function ActivityCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full rounded-2xl border p-4 text-left transition hover:border-accent/50',
+        'w-full rounded-2xl border p-4 text-left transition hover:border-primary/50',
         booked ? 'border-emerald-200 bg-emerald-50/50' : 'border-border bg-white'
       )}
     >
-      <p className="text-[10px] font-bold uppercase tracking-wider text-accent">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
         Giorno {activity.day_number} · {SLOT_LABEL[activity.slot]}
       </p>
       <p className="mt-1 font-display text-base font-semibold text-foreground">
@@ -63,7 +63,7 @@ export function ItineraryActivityCards({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <Sun className="h-4 w-4 text-accent" />
+        <Sun className="h-4 w-4 text-primary" />
         <p className="text-sm font-semibold text-foreground">Dal piano di viaggio</p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">

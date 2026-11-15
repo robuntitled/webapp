@@ -165,7 +165,7 @@ export function OnboardingWizard() {
 function ModelStep({ onNext }: { onNext: () => void }) {
   return (
     <div>
-      <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-accent">
+      <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-primary">
         Come funziona
       </p>
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
@@ -175,7 +175,7 @@ function ModelStep({ onNext }: { onNext: () => void }) {
         {COMPLIANCE_COPY.guide}
       </p>
       <div className="mt-8 rounded-3xl border border-white/12 bg-white/[0.05] p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           Esempio
         </p>
         <p className="mt-2 font-display text-xl font-semibold text-white">
@@ -209,7 +209,7 @@ function IntentStep({
 }) {
   return (
     <div>
-      <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-accent">
+      <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-primary">
         Ultimo passo
       </p>
       <h1 className="font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
@@ -270,7 +270,7 @@ function IntentCard({
           : 'border-white/10 hover:border-white/25'
       )}
     >
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-accent">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 text-primary">
         <Icon className="h-5 w-5" />
       </span>
       <h2 className="mt-4 font-display text-2xl font-semibold text-white">{title}</h2>
@@ -386,7 +386,7 @@ function HomeStep({
         </Button>
         {value?.city ? (
           <p className="flex items-center gap-2 text-sm text-white/70">
-            <MapPin className="h-4 w-4 text-accent" />
+            <MapPin className="h-4 w-4 text-primary" />
             {value.city}
             {value.country ? `, ${value.country}` : ''}
           </p>

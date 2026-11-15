@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
   alternates: { canonical: '/come-funziona' },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
   openGraph: pageOpenGraph('/come-funziona', TITLE, DESCRIPTION),
 };
 
@@ -52,8 +52,8 @@ export default function ComeFunzionaPage() {
       <BreadcrumbJsonLd />
       <div className="nl-page w-full space-y-10 py-12">
         <BozzaBanner>
-          Testo in bozza: da rilettura di Legale e poi di un avvocato. I segnaposto tra parentesi
-          graffe restano finché Operazioni / Nuitée non forniscono i dati reali.
+          Testo in bozza: da rilettura legale. I dettagli del venditore saranno aggiornati quando
+          disponibili.
         </BozzaBanner>
 
         <header className="space-y-3">

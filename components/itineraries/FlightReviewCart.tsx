@@ -81,7 +81,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
       data-testid="flight-review-cart"
     >
       <header className="space-y-1">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
           Revisione voli
         </p>
         <h3 className="font-display text-lg font-extrabold">Carrello tratte</h3>
@@ -113,7 +113,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                   Andata {selected[0]!.offer!.originIata} →{' '}
                   {selected[0]!.offer!.destinationIata}
                 </p>
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                <p className="text-xs text-[var(--color-text-secondary)]">
                   Partenza {formatWhen(selected[0]!.offer!.departureAt)} · Arrivo{' '}
                   {formatWhen(selected[0]!.offer!.arrivalAt)}
                 </p>
@@ -121,11 +121,11 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                   Rientro {selected[1]!.offer!.originIata} →{' '}
                   {selected[1]!.offer!.destinationIata}
                 </p>
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                <p className="text-xs text-[var(--color-text-secondary)]">
                   Partenza {formatWhen(selected[1]!.offer!.departureAt)} · Arrivo{' '}
                   {formatWhen(selected[1]!.offer!.arrivalAt)}
                 </p>
-                <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                   Offerta chiusa del fornitore (un biglietto A/R) ·{' '}
                   {formatStopsIt(selected[0]!.offer!.stops)}
                   {selected[0]!.offer!.airline ? ` · ${selected[0]!.offer!.airline}` : ''}
@@ -138,7 +138,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
               />
             </div>
             {selected.some((l) => l.status === 'stale') ? (
-              <p className="mt-1 text-[11px] font-medium text-amber-900">
+              <p className="mt-1 text-xs font-medium text-amber-900">
                 {STALE_OFFER_NOTICE_IT}
               </p>
             ) : null}
@@ -164,13 +164,13 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                   <p className="mt-0.5 text-sm font-semibold">
                     {leg.offer!.originIata} → {leg.offer!.destinationIata}
                   </p>
-                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     Partenza {formatWhen(leg.offer!.departureAt)}
                   </p>
-                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     Arrivo {formatWhen(leg.offer!.arrivalAt)}
                   </p>
-                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     {formatStopsIt(leg.offer!.stops)} ·{' '}
                     {Math.round(leg.offer!.durationMinutes / 60)} h
                     {leg.offer!.airline ? ` · ${leg.offer!.airline}` : ''}
@@ -183,7 +183,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                 />
               </div>
               {leg.status === 'stale' ? (
-                <p className="mt-1 text-[11px] font-medium text-amber-900">
+                <p className="mt-1 text-xs font-medium text-amber-900">
                   {STALE_OFFER_NOTICE_IT}
                 </p>
               ) : null}
@@ -230,20 +230,20 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
         </div>
         {totals.perPersonAmount != null && partyPax > 1 ? (
           <p
-            className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]"
+            className="mt-0.5 text-xs text-[var(--color-text-secondary)]"
             data-testid="flight-review-per-person"
           >
             {formatEuroExact(totals.perPersonAmount, totals.currency)} a persona ·{' '}
             {partyPax} {partyPax === 1 ? 'persona' : 'persone'}
           </p>
         ) : (
-          <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+          <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
             {totals.selectedCount} tratt
             {totals.selectedCount === 1 ? 'a' : 'e'} ·{' '}
             {partyPax} {partyPax === 1 ? 'persona' : 'persone'}
           </p>
         )}
-        <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+        <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
           Bagagli e condizioni tariffarie: disponibili dopo la verifica offerta.
         </p>
       </div>
@@ -255,14 +255,14 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
             Tempi da controllare
           </p>
           {timing.map((t) => (
-            <p key={`${t.legId}-${t.messageIt}`} className="text-[11px] text-amber-950">
+            <p key={`${t.legId}-${t.messageIt}`} className="text-xs text-amber-950">
               {t.messageIt}
             </p>
           ))}
         </div>
       ) : null}
 
-      <div className="space-y-2 rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
+      <div className="space-y-2 rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-xs leading-relaxed text-[var(--color-text-secondary)]">
         <p className="flex items-start gap-1.5 font-semibold text-[var(--color-text)]">
           <Plane className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
           Biglietti indipendenti

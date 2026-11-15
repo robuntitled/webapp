@@ -143,11 +143,7 @@ export function Footer({ company }: FooterProps) {
           </span>
           {legalLineParts.length > 0 ? (
             <span>{legalLineParts.join(' · ')}</span>
-          ) : (
-            <span className="text-[var(--color-warning)]">
-              Dati societari in definizione (segnaposto — decisione owner)
-            </span>
-          )}
+          ) : null}
         </div>
       </div>
     </footer>

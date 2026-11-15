@@ -103,8 +103,9 @@ export default async function HomePage() {
         }
       : null;
 
+  // Conta solo partenze davvero iscrivibili (non «In arrivo» / coming_soon).
   const openEditions = editions
-    .filter((e) => e.edition_type !== 'private')
+    .filter((e) => e.edition_type !== 'private' && !e.coming_soon)
     .slice(0, 6)
     .map((e) => {
       const tpl = findItineraryTemplate(e.template_id);

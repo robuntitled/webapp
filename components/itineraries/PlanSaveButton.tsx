@@ -48,7 +48,7 @@ export function PlanSaveButton({
         'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition sm:h-12 sm:w-12',
         saved
           ? 'border-accent bg-accent text-white shadow-md shadow-accent/30'
-          : 'border-border bg-white text-accent hover:border-accent hover:bg-accent/10'
+          : 'border-border bg-white text-primary hover:border-primary hover:bg-primary/10'
       )}
     >
       {pending ? (

@@ -14,18 +14,22 @@ const ICONS = {
   profilo: UserRound,
 } as const;
 
-/** Fixed 5-tab bar — mockup home-m / hub-viaggio-m */
+/**
+ * Fixed 5-tab bar — mockup home-m / hub-viaggio-m.
+ * Hidden on flows that already have a sticky/fixed bottom action bar
+ * (Organizza Continua/Crea, checkout) so taps are not intercepted.
+ */
 export function MobileTabBar({ isLoggedIn }: { isLoggedIn: boolean }) {
   const pathname = usePathname();
 
-  // Hide on immersive flows where bottom CTA already exists
   if (
-    pathname.startsWith('/prenota/') &&
-    (pathname.includes('/checkout') || pathname.includes('/payment'))
+    pathname === '/organizza' ||
+    pathname.startsWith('/organizza/') ||
+    pathname.startsWith('/prenota/') ||
+    pathname.startsWith('/accedi') ||
+    pathname.startsWith('/onboarding') ||
+    pathname.startsWith('/completa-registrazione')
   ) {
-    return null;
-  }
-  if (pathname.startsWith('/accedi') || pathname.startsWith('/onboarding')) {
     return null;
   }
 
@@ -49,7 +53,7 @@ export function MobileTabBar({ isLoggedIn }: { isLoggedIn: boolean }) {
             href={href}
             prefetch={tab.href === '/organizza' || tab.href === '/gruppi' ? false : undefined}
             className={cn(
-              'flex w-[72px] flex-col items-center gap-0.5 text-[12px] font-semibold transition-colors',
+              'flex w-[72px] flex-col items-center gap-0.5 text-xs font-semibold transition-colors',
               active ? 'text-primary' : 'text-[var(--color-text-secondary)]'
             )}
             aria-current={active ? 'page' : undefined}

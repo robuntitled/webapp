@@ -23,11 +23,10 @@ export const COMPLIANCE_COPY = {
     'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
   /**
    * Checkout voli/hotel — riga unica sopra il widget di pagamento (P1-5).
-   * Il nome venditore esatto arriva da Nuitée (decisione D-4); finché manca usiamo il segnaposto.
-   * Nessun gergo «merchant of record».
+   * Nome venditore esatto: decisione owner (D-4). Nessun gergo «merchant of record».
    */
   checkoutMerchantOfRecord:
-    'Venduto da Nuitée, che gestisce anche il pagamento. Noivia ti aiuta a prenotare e non è il venditore.',
+    'Venduto dal fornitore del servizio, che gestisce anche il pagamento. Noivia ti aiuta a prenotare e non è il venditore.',
   /** Volo: compagnia operativa (template; sostituire {compagnia}). */
   operatedByTemplate: 'Volo operato da {compagnia}.',
   /**

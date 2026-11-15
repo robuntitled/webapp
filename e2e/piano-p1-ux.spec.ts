@@ -29,6 +29,36 @@ async function assertNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
 }
 
+/** Real tap: center of control must not be covered by the mobile tab bar. */
+async function assertNotCoveredByTabBar(
+  page: import('@playwright/test').Page,
+  testId: string
+) {
+  const btn = page.getByTestId(testId);
+  await expect(btn).toBeVisible({ timeout: 20_000 });
+  const box = await btn.boundingBox();
+  expect(box).toBeTruthy();
+  const cx = box!.x + box!.width / 2;
+  const cy = box!.y + box!.height / 2;
+  const top = await page.evaluate(
+    ({ x, y }) => {
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
+      if (!el) return null;
+      const tab = el.closest('[data-testid="mobile-tab-bar"]');
+      return {
+        coveredByTab: Boolean(tab),
+        hitTestId:
+          el.getAttribute('data-testid') ||
+          el.closest('[data-testid]')?.getAttribute('data-testid') ||
+          null,
+      };
+    },
+    { x: cx, y: cy }
+  );
+  expect(top?.coveredByTab).toBe(false);
+  expect(String(top?.hitTestId ?? '')).not.toMatch(/^mobile-tab/);
+}
+
 const PUBLIC_SCREENS = [
   { path: '/', id: 'home', testId: 'public-landing' },
   { path: '/organizza', id: 'organizza', roleHeading: /Organizza|Imposta|Dove|Partenza/i },
@@ -37,7 +67,7 @@ const PUBLIC_SCREENS = [
   { path: '/come-funziona', id: 'come-funziona', text: /Come funziona/i },
   { path: '/domande-frequenti', id: 'faq', text: /Domande frequenti/i },
   { path: '/regole-community', id: 'regole', text: /Regole|BOZZA/i },
-  { path: '/assistenza', id: 'assistenza', text: /Supporto|Assistenza|Placeholder/i },
+  { path: '/supporto', id: 'supporto', text: /Supporto/i },
 ] as const;
 
 for (const vp of [
@@ -64,7 +94,7 @@ for (const vp of [
           });
         }
         await assertNoHorizontalOverflow(page);
-        await shot(page, `p1-${screen.id}-${vp.name}.png`);
+        await shot(page, `v2-${screen.id}-${vp.name}.png`);
       });
     }
 
@@ -72,29 +102,142 @@ for (const vp of [
       test.skip(vp.width > 500, 'tab bar is mobile-only');
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       await expect(page.getByTestId('mobile-tab-bar')).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByTestId('mobile-tab-esplora')).toBeVisible();
-      await expect(page.getByTestId('mobile-tab-organizza')).toBeVisible();
-      await expect(page.getByTestId('mobile-tab-gruppi')).toBeVisible();
-      await expect(page.getByTestId('mobile-tab-viaggi')).toBeVisible();
-      await expect(page.getByTestId('mobile-tab-profilo')).toBeVisible();
-      await shot(page, `p1-tabbar-${vp.name}.png`);
+      await shot(page, `v2-tabbar-${vp.name}.png`);
     });
 
-    test('footer has Come funziona + Assistenza', async ({ page }) => {
+    test('footer has Come funziona + Supporto, no owner placeholder', async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       await expect(page.getByTestId('footer-logo-home')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByRole('link', { name: 'Come funziona' }).first()).toBeVisible();
       await expect(page.getByTestId('footer-supporto')).toBeVisible();
+      const footer = await page.locator('footer').innerText();
+      expect(footer).not.toMatch(/segnaposto|decisione owner|DB-\d+/i);
     });
 
-    test('home does not claim fake open departures', async ({ page }) => {
+    test('home hero H1 is white; no fake open counter', async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('public-landing')).toBeVisible({ timeout: 20_000 });
+      const h1 = page.getByTestId('public-landing').locator('h1').first();
+      await expect(h1).toBeVisible();
+      const color = await h1.evaluate((el) => getComputedStyle(el).color);
+      // rgb(255, 255, 255) or rgba(255,255,255,*)
+      expect(color.replace(/\s/g, '')).toMatch(/rgba?\(255,255,255/);
       const body = await page.locator('body').innerText();
+      expect(body).not.toMatch(/\d+\s+partenze?\s+con\s+iscrizioni\s+aperte/i);
       expect(body).not.toMatch(/Scopri 1 partenza/i);
-      await expect(page.getByTestId('home-cta-organizza')).toBeVisible();
+      await shot(page, `v2-home-hero-${vp.name}.png`);
     });
   });
 }
+
+test.describe('BLOCKING: Organizza Continua not covered @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('tab bar hidden; Continua real-click advances; Crea viaggio reachable', async ({
+    page,
+  }) => {
+    await page.goto('/organizza', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('organizza-imposta')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('mobile-tab-bar')).toHaveCount(0);
+
+    await page.getByTestId('dest-card-thailandia').click();
+    await assertNotCoveredByTabBar(page, 'organizza-continua');
+    await page.getByTestId('organizza-continua').click({ force: false });
+    await expect(page.getByTestId('organizza-partenza')).toBeVisible({ timeout: 15_000 });
+    await assertNotCoveredByTabBar(page, 'organizza-continua');
+    await shot(page, 'v2-organizza-continua-click-390.png');
+
+    // Inject a complete draft so itinerario + «Crea viaggio» are reachable without live flight search.
+    await page.evaluate(() => {
+      const offer = {
+        offerId: 'e2e-offer',
+        price: 280.82,
+        currency: 'EUR',
+        originIata: 'MXP',
+        destinationIata: 'BKK',
+        departureAt: '2026-12-10T09:00:00Z',
+        arrivalAt: '2026-12-10T22:00:00Z',
+        stops: 0,
+        durationMinutes: 600,
+        airline: 'Example Air',
+        capturedAt: Date.now(),
+      };
+      const draft = {
+        slug: 'thailandia',
+        slugs: ['thailandia'],
+        vibe: null,
+        durationDays: 10,
+        company: 'solo',
+        travelers: 1,
+        originIata: 'MXP',
+        homeReturnIata: 'MXP',
+        arrivalIata: 'BKK',
+        departureIata: 'BKK',
+        dateFrom: '2026-12-10',
+        dateTo: '2026-12-20',
+        returnHome: true,
+        tripType: 'roundtrip',
+        domesticPlan: null,
+        flightPlan: {
+          shape: 'roundtrip',
+          returnHome: true,
+          homeOriginIata: 'MXP',
+          homeReturnIata: 'MXP',
+          legs: [
+            {
+              id: 'leg-out',
+              kind: 'outbound',
+              originIata: 'MXP',
+              destinationIata: 'BKK',
+              date: '2026-12-10',
+              passengers: 1,
+              offer,
+              status: 'selected',
+              labelIt: 'Andata',
+            },
+            {
+              id: 'leg-ret',
+              kind: 'return',
+              originIata: 'BKK',
+              destinationIata: 'MXP',
+              date: '2026-12-20',
+              passengers: 1,
+              offer: { ...offer, offerId: 'e2e-offer-ret', originIata: 'BKK', destinationIata: 'MXP' },
+              status: 'selected',
+              labelIt: 'Ritorno',
+            },
+          ],
+        },
+        selectedFlight: {
+          offerId: 'e2e-offer',
+          price: 280.82,
+          currency: 'EUR',
+        },
+      };
+      localStorage.setItem(
+        'nl-organizza-draft-v4',
+        JSON.stringify({ draft, step: 'itinerario', savedAt: Date.now(), version: 4 })
+      );
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('mobile-tab-bar')).toHaveCount(0);
+    const crea = page.getByRole('button', { name: /Crea viaggio/i });
+    await expect(crea).toBeVisible({ timeout: 25_000 });
+    await crea.scrollIntoViewIfNeeded();
+    const box = await crea.boundingBox();
+    expect(box).toBeTruthy();
+    const top = await page.evaluate(
+      ({ x, y }) => {
+        const el = document.elementFromPoint(x, y) as HTMLElement | null;
+        return el?.closest('button')?.textContent?.trim() ?? el?.tagName ?? null;
+      },
+      { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 }
+    );
+    expect(String(top)).toMatch(/Crea viaggio/i);
+    await crea.click({ force: false });
+    await shot(page, 'v2-organizza-crea-viaggio-click-390.png');
+  });
+});
 
 test.describe('P1 guest auth redirects', () => {
   test.use({ viewport: { width: 390, height: 844 } });
@@ -102,12 +245,12 @@ test.describe('P1 guest auth redirects', () => {
   test('/pratiche → Accedi', async ({ page }) => {
     await page.goto('/pratiche', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/accedi/);
-    await shot(page, 'p1-pratiche-guest-390.png');
+    await shot(page, 'v2-pratiche-guest-390.png');
   });
 
   test('/profilo → Accedi', async ({ page }) => {
     await page.goto('/profilo', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/accedi.*profilo/);
-    await shot(page, 'p1-profilo-guest-390.png');
+    await shot(page, 'v2-profilo-guest-390.png');
   });
 });

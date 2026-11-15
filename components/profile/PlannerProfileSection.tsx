@@ -219,7 +219,7 @@ export function PlannerProfileSection({ initialProfile }: PlannerProfileSectionP
 
       <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/30 p-5 md:p-6">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <Sparkles className="h-4 w-4 text-accent" />
+          <Sparkles className="h-4 w-4 text-primary" />
           Note per l&apos;AI
           <span className="text-xs font-normal text-muted-foreground">(opzionale)</span>
         </div>

@@ -104,7 +104,7 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
             <Compass className="h-6 w-6 text-primary" />
             <p className="font-bold text-[var(--color-text)]">Non trovi le date giuste?</p>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              Organizza il tuo viaggio e rendilo pubblico come gruppo.
+              Organizza il tuo viaggio e invita chi vuoi.
             </p>
             <Button asChild variant="outline" className="mt-auto w-fit rounded-[10px]">
               <Link href="/organizza">Organizza</Link>

@@ -458,7 +458,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
         )}
         onClick={() => setOpen((v) => !v)}
       >
-        <MessageCircle className="h-5 w-5 text-accent" aria-hidden />
+        <MessageCircle className="h-5 w-5 text-primary" aria-hidden />
         <span className="hidden sm:inline">{open ? 'Chiudi' : 'Chat'}</span>
         {!open && badge && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#0b1220]">

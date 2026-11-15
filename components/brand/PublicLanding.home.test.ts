@@ -14,6 +14,10 @@ describe('PublicLanding home entrances', () => {
     expect(src).toContain('variant="cta"');
   });
 
+  it('hero H1 forces white text for contrast on indigo', () => {
+    expect(src).toMatch(/<h1[^>]*text-white/);
+  });
+
   it('has Come funziona section and no false open-edition counter when empty', () => {
     expect(src).toContain('Tre passi, tu decidi tutto');
     expect(src).toContain('Nessuna partenza aperta ora');
