@@ -5,9 +5,9 @@ import { HOME_HREF } from '@/lib/nav/home';
 
 export function LegalPageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh w-full min-w-0 shrink-0 bg-[#f8fafb]">
+    <div className="min-h-dvh w-full min-w-0 shrink-0 bg-[var(--color-page,#F6F7FB)]">
       <div
-        className="pointer-events-none fixed inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_90%_70%_at_50%_-10%,rgba(15,118,110,0.09),transparent_65%)]"
+        className="pointer-events-none fixed inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_90%_70%_at_50%_-10%,rgba(35,42,107,0.10),transparent_65%)]"
         aria-hidden
       />
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">

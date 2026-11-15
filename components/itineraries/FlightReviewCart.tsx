@@ -11,6 +11,8 @@ import {
   selectedLegsTotal,
   type TripFlightPlan,
 } from '@/lib/travel/trip-flight-legs';
+import { PAY_FOR_OTHERS_ENABLED } from '@/lib/itineraries/flight-booking-coverage';
+import { PricePerPersonBlock } from '@/components/ui/price';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -46,17 +48,7 @@ function LegPriceBlock({
       className="w-full min-w-0 basis-full text-left sm:w-auto sm:basis-auto sm:text-right"
       data-testid="flight-review-leg-price"
     >
-      <p className="text-sm font-extrabold tabular-nums">
-        {formatEuroExact(unit, currency) ?? '—'}
-        <span className="ml-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
-          a persona
-        </span>
-      </p>
-      {pax > 1 ? (
-        <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-text)]">
-          {formatEuroExact(party, currency)} totale tratta ({pax} persone)
-        </p>
-      ) : null}
+      <PricePerPersonBlock unit={unit} party={party} pax={pax} currency={currency} />
     </div>
   );
 }
@@ -199,6 +191,30 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
           ))}
         </ul>
       )}
+
+      {/* P0-6: no «Pago per altri» until migration 049 — Pago per me only */}
+      <div
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] px-3 py-2.5"
+        data-testid="flight-review-chi-paga"
+      >
+        <p className="text-xs font-bold text-[var(--color-text)]">Chi paga</p>
+        <span
+          className="inline-flex h-8 items-center rounded-full border border-primary bg-[var(--color-tint)] px-3 text-xs font-semibold text-primary"
+          data-testid="flight-review-pago-per-me"
+        >
+          Pago per me
+        </span>
+        {PAY_FOR_OTHERS_ENABLED ? (
+          <button
+            type="button"
+            className="inline-flex h-8 items-center rounded-full border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-text-secondary)]"
+            data-testid="flight-review-pago-per-altri"
+            disabled
+          >
+            Pago per altri
+          </button>
+        ) : null}
+      </div>
 
       <div className="rounded-xl bg-[var(--color-tint)]/60 px-3 py-2.5">
         <div className="flex items-baseline justify-between gap-2">

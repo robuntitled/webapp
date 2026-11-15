@@ -447,7 +447,8 @@ export function ProssimoPasso({
             )}
           </section>
 
-          {isPrivate ? (
+          {/* Soft-removed (P1-14): «Rendi pubblico come gruppo (Attivazione in arrivo)» */}
+          {false && isPrivate ? (
             <div className="mt-4 rounded-2xl border border-dashed border-[var(--color-border)] p-3.5">
               <p className="text-sm font-bold text-[var(--color-text)]">Rendi pubblico come gruppo</p>
               <p className="mt-1 text-xs text-[var(--color-text-secondary)]">

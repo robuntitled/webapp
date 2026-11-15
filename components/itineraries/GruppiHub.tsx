@@ -23,7 +23,7 @@ const HOW = [
   {
     n: 2,
     title: '«In arrivo» non è ancora iscrivibile',
-    body: 'Le card «In arrivo» sono solo anteprima: niente tap per iscriversi. La chat di gruppo si apre appena ti iscrivi a una partenza aperta.',
+    body: 'Le card «In arrivo» sono solo anteprima: niente tap per iscriversi. Quando una partenza è aperta puoi unirti e vedere i dettagli.',
   },
 ] as const;
 

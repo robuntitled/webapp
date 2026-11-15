@@ -34,9 +34,23 @@ export default function SupportoPage() {
             serve conferma dell&apos;owner. Intanto puoi tornare alla home o ad Accedi.
           </p>
         </div>
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          Canale:{' '}
+          <span className="nl-content-placeholder inline rounded-md bg-amber-100/90 px-1.5 py-0.5 font-mono text-[0.92em] font-semibold text-amber-950 ring-1 ring-amber-300/70">
+            {'{canale assistenza}'}
+          </span>
+          ,{' '}
+          <span className="nl-content-placeholder inline rounded-md bg-amber-100/90 px-1.5 py-0.5 font-mono text-[0.92em] font-semibold text-amber-950 ring-1 ring-amber-300/70">
+            {'{orari}'}
+          </span>
+          .
+        </p>
         <div className="flex flex-wrap gap-2">
           <Button asChild className="rounded-[10px]">
             <Link href="/">Torna alla home</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-[10px]">
+            <Link href="/domande-frequenti">Domande frequenti</Link>
           </Button>
           <Button asChild variant="outline" className="rounded-[10px]">
             <Link href="/accedi">Accedi</Link>

@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: [
-          '/accedi',
           '/api/',
           '/onboarding',
           '/completa-registrazione',
@@ -17,7 +16,8 @@ export default function robots(): MetadataRoute.Robots {
           '/pratica/',
           '/dashboard/',
           '/prenota/',
-          '/invito/',
+          '/profilo',
+          '/notifiche',
           '/dev/',
           '/dev',
         ],

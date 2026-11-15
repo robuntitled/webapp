@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { Clock3, Plane } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatEuroExact } from '@/lib/format/euro';
+import { Price } from '@/components/ui/price';
 import { cn } from '@/lib/utils';
 import {
   formatLayoversLine,
@@ -118,14 +118,6 @@ export function FlightOfferCard({
   actionLabel: string;
   onAction: () => void;
 }) {
-  const priceLabel =
-    formatEuroExact(offer.price, offer.currency) ??
-    `${offer.price.toLocaleString('it-IT', {
-      useGrouping: true,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} ${offer.currency}`;
-
   return (
     <article
       className={cn(
@@ -239,16 +231,13 @@ export function FlightOfferCard({
         </div>
 
         {/* Desktop: price column only — CTA is full-width below on all breakpoints so long labels never cover price */}
-        <div className="hidden min-w-0 text-right sm:block">
-          <p
-            className={cn(
-              'font-display text-2xl font-semibold tabular-nums',
-              dark ? 'text-white' : 'text-slate-900'
-            )}
-            data-testid="flight-offer-price"
-          >
-            {priceLabel}
-          </p>
+        <div className="hidden min-w-0 text-right sm:block" data-testid="flight-offer-price">
+          <Price
+            amount={offer.price}
+            currency={offer.currency}
+            size="lg"
+            className={cn(dark ? 'text-white' : undefined)}
+          />
           <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>
             {priceNote}
           </p>
@@ -261,16 +250,13 @@ export function FlightOfferCard({
           dark ? 'border-white/8' : 'border-slate-100'
         )}
       >
-        <div className="min-w-0 sm:hidden">
-          <p
-            className={cn(
-              'font-display text-xl font-semibold tabular-nums',
-              dark ? 'text-white' : 'text-slate-900'
-            )}
-            data-testid="flight-offer-price-mobile"
-          >
-            {priceLabel}
-          </p>
+        <div className="min-w-0 sm:hidden" data-testid="flight-offer-price-mobile">
+          <Price
+            amount={offer.price}
+            currency={offer.currency}
+            size="md"
+            className={cn(dark ? 'text-white' : undefined)}
+          />
           <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>
             {priceNote}
           </p>

@@ -15,8 +15,13 @@ type ConsentCheckboxesProps = {
   compact?: boolean;
 };
 
+/**
+ * P1-13: una sola casella obbligatoria «18+ e Termini».
+ * L'Informativa Privacy si legge (link), non si «accetta» con checkbox.
+ * Compatibilità API: la casella unica aggiorna sia terms sia privacyAccepted.
+ */
 export function ConsentCheckboxes({
-  privacyAccepted,
+  privacyAccepted: _privacyAccepted,
   termsAccepted,
   marketingAccepted,
   onPrivacyChange,
@@ -29,38 +34,38 @@ export function ConsentCheckboxes({
     <div className={cn('text-left', compact ? 'space-y-2' : 'space-y-3')}>
       <div className="flex items-start space-x-2">
         <Checkbox
-          id="privacy-consent"
-          checked={privacyAccepted}
-          onCheckedChange={(v) => onPrivacyChange(v === true)}
-        />
-        <label
-          htmlFor="privacy-consent"
-          className={cn('leading-snug text-slate-600', compact ? 'text-xs' : 'text-sm')}
-        >
-          Ho letto e accetto l&apos;
-          <Link href="/privacy" className="text-blue-600 hover:underline" target="_blank">
-            Informativa Privacy
-          </Link>{' '}
-          (obbligatorio) *
-        </label>
-      </div>
-      <div className="flex items-start space-x-2">
-        <Checkbox
-          id="terms-consent"
+          id="terms-age-consent"
           checked={termsAccepted}
-          onCheckedChange={(v) => onTermsChange(v === true)}
+          onCheckedChange={(v) => {
+            const on = v === true;
+            onTermsChange(on);
+            onPrivacyChange(on);
+          }}
+          data-testid="consent-terms-age"
         />
         <label
-          htmlFor="terms-consent"
+          htmlFor="terms-age-consent"
           className={cn('leading-snug text-slate-600', compact ? 'text-xs' : 'text-sm')}
         >
-          Ho letto e accetto i{' '}
-          <Link href="/termini" className="text-blue-600 hover:underline" target="_blank">
-            Termini di Servizio
+          Ho almeno 18 anni e accetto i{' '}
+          <Link href="/termini" className="text-primary hover:underline" target="_blank">
+            Termini di servizio
           </Link>{' '}
-          (obbligatorio) *
+          *
         </label>
       </div>
+      <p
+        className={cn(
+          'pl-6 leading-snug text-slate-500',
+          compact ? 'text-[11px]' : 'text-xs'
+        )}
+      >
+        Continuando dichiari di aver letto l&apos;
+        <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+          Informativa privacy
+        </Link>
+        .
+      </p>
       {showMarketing && (
         <div className="flex items-start space-x-2">
           <Checkbox

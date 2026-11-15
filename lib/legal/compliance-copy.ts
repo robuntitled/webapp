@@ -22,11 +22,14 @@ export const COMPLIANCE_COPY = {
   priceIsSumOfServices:
     'Stima: somma dei singoli servizi, ciascuno con contratto e fornitore propri.',
   /**
-   * Checkout voli/hotel: chi vende e chi è merchant of record.
-   * Fatti da codice/config (LiteAPI / Nuitee Connect). Ragione sociale completa: LEGAL_*.
+   * Checkout voli/hotel — riga unica sopra il widget di pagamento (P1-5).
+   * Il nome venditore esatto arriva da Nuitée (decisione D-4); finché manca usiamo il segnaposto.
+   * Nessun gergo «merchant of record».
    */
   checkoutMerchantOfRecord:
-    'Prenotazione e pagamento gestiti da LiteAPI / Nuitée (payment processor e merchant of record). Noivia agisce come intermediario.',
+    'Venduto da Nuitée, che gestisce anche il pagamento. Noivia ti aiuta a prenotare e non è il venditore.',
+  /** Volo: compagnia operativa (template; sostituire {compagnia}). */
+  operatedByTemplate: 'Volo operato da {compagnia}.',
   /**
    * Hotel: il totale mostrato include già il markup LiteAPI (LITEAPI_MARGIN / default 10%).
    * Non esporre la % al cliente; solo che il prezzo include la commissione di servizio.

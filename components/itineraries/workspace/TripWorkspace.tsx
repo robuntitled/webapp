@@ -7,6 +7,7 @@ import { BedDouble, Loader2, Plane, Users, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { joinEditionAction, renameEditionAction } from '@/actions/practices';
 import { BookingRecap } from '@/components/itineraries/BookingRecap';
+import { TripWhatsMissingCard } from '@/components/itineraries/TripWhatsMissingCard';
 import { ItineraryExplorerWidget } from '@/components/itineraries/workspace/ItineraryExplorerWidget';
 import {
   WorkspaceEmptyState,
@@ -367,6 +368,17 @@ export function TripWorkspace({
         ) : null}
 
         <WorkspaceTabs items={tabItems} value={tab} onChange={selectTab} />
+
+        {practice && stays.length > 0 ? (
+          <TripWhatsMissingCard
+            practice={practice}
+            stays={stays}
+            onChooseHotel={(idx) => {
+              setStayIdx(idx);
+              selectTab('hotel');
+            }}
+          />
+        ) : null}
 
         {tab === 'itinerario' ? (
           <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-start lg:gap-6">

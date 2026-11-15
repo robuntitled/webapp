@@ -141,10 +141,11 @@ export function PublicProfileView({
   isOwn,
   canReview,
 }: PublicProfileViewProps) {
-  const displayName =
-    [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
-    `@${profile.username}`;
-  const place = [profile.city, profile.country].filter(Boolean).join(', ');
+  // PRO-1: «Mario R.» — initial only for last name; hide city/dates from public card.
+  const displayName = profile.firstName
+    ? `${profile.firstName}${profile.lastName ? ` ${profile.lastName.charAt(0).toUpperCase()}.` : ''}`
+    : `@${profile.username}`;
+  const place = null;
   const heroSrc =
     organizedTrips[0]?.imageUrl ||
     joinedTrips[0]?.imageUrl ||
@@ -176,7 +177,7 @@ export function PublicProfileView({
     {
       label: 'Trust',
       value: profile.phoneVerified ? 'OK' : '—',
-      hint: profile.phoneVerified ? 'ID verificato' : 'Da verificare',
+      hint: profile.phoneVerified ? 'Telefono verificato' : 'Da verificare',
       icon: <Sparkles className="h-3.5 w-3.5 text-sky-700" />,
     },
   ];

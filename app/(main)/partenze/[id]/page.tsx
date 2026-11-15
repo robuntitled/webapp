@@ -76,9 +76,9 @@ export default async function PartenzeJoinPage({ params, searchParams }: PagePro
   }
 
   const edition = await getEdition(id);
-  if (!edition) redirect('/gruppi');
+  if (!edition) notFound();
   if (edition.status === 'closed' || edition.status === 'locked') {
-    redirect('/gruppi');
+    notFound();
   }
 
   const template = findItineraryTemplate(edition.template_id);

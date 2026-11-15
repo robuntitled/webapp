@@ -296,17 +296,20 @@ export function PracticeBookingHub({
                     practiceId={practice.id}
                   />
                 ) : null}
-                <details className="text-xs text-white/60">
-                  <summary className="cursor-pointer">Ho prenotato fuori da Noivia</summary>
-                  <Button
-                    variant="secondary"
-                    disabled={pending}
-                    className="mt-2 rounded-full"
-                    onClick={() => run(confirmHotelAction)}
-                  >
-                    Segna hotel come fatto
-                  </Button>
-                </details>
+                {/* Soft-removed (P1-14 / OPS): «Ho prenotato fuori» / «Segna hotel come fatto» */}
+                {false ? (
+                  <details className="text-xs text-white/60">
+                    <summary className="cursor-pointer">Ho prenotato fuori da Noivia</summary>
+                    <Button
+                      variant="secondary"
+                      disabled={pending}
+                      className="mt-2 rounded-full"
+                      onClick={() => run(confirmHotelAction)}
+                    >
+                      Segna hotel come fatto
+                    </Button>
+                  </details>
+                ) : null}
               </>
             ) : null}
           </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, subYears } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { CalendarDays, CheckCircle2, Loader2, Plane } from 'lucide-react';
+import { CalendarDays, Check, CheckCircle2, Loader2, Plane } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
 import {
@@ -25,6 +25,7 @@ import {
   isFlightPendingConfirmation,
   parseFlightStatus,
 } from '@/lib/itineraries/bookings';
+import { PAY_FOR_OTHERS_ENABLED } from '@/lib/itineraries/flight-booking-coverage';
 import { legKindLabelIt } from '@/lib/itineraries/selected-flight-display';
 import {
   clearFlightCheckoutDraft,
@@ -69,7 +70,7 @@ const TITLES: Array<{ id: Title; label: string; gender: 'M' | 'F' }> = [
   { id: 'MR', label: 'Sig. (Mr)', gender: 'M' },
   { id: 'MRS', label: 'Sig.ra (Mrs)', gender: 'F' },
   { id: 'MS', label: 'Ms', gender: 'F' },
-  { id: 'MISS', label: 'Sig.na (Miss)', gender: 'F' },
+  { id: 'MISS', label: 'Ms', gender: 'F' },
 ];
 
 type VerifyState = {
@@ -1134,15 +1135,32 @@ export function FlightCheckoutClient({
             </p>
           </div>
         ) : null}
-        <Button asChild className="w-full rounded-xl bg-primary">
+        {!needsMoreLegs && !partial && !failedAny && confirmation?.practiceId ? (
+          <Button asChild variant="cta" className="w-full rounded-[10px]" data-testid="post-purchase-hotel">
+            <Link href={`/pratica/${confirmation.practiceId}?tab=hotel`}>
+              Scegli l&apos;hotel
+            </Link>
+          </Button>
+        ) : null}
+        <Button asChild className="w-full rounded-xl bg-primary" data-testid="post-purchase-hub">
           <Link href={practiceHref}>
             {confirmation?.practiceId || legResults.length
               ? needsMoreLegs || partial
                 ? 'Completa le altre tratte sul viaggio'
-                : 'Torna al viaggio'
+                : 'Apri il viaggio'
               : 'Vai ai tuoi viaggi'}
           </Link>
         </Button>
+        <div
+          className="rounded-[12px] border border-dashed border-[var(--color-border)] px-4 py-3 text-xs text-[var(--color-text-secondary)]"
+          data-testid="post-purchase-cancel-block"
+        >
+          <p className="font-semibold text-[var(--color-text)]">Annullare o modificare</p>
+          <p className="mt-1 leading-relaxed">
+            Le regole dipendono dal fornitore del biglietto. Non ripetere il pagamento: apri il
+            viaggio o Assistenza se ti serve una mano.
+          </p>
+        </div>
       </div>
     );
   }
@@ -1199,6 +1217,39 @@ export function FlightCheckoutClient({
                 </label>
               </div>
             ) : null}
+
+            {/* P0-6: «Pago per altri» hidden until migration 049 */}
+            <section
+              className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+              data-testid="checkout-chi-paga"
+            >
+              <h3 className="text-sm font-semibold text-slate-900">Chi paga</h3>
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary bg-[var(--color-tint)] px-3.5 text-sm font-semibold text-primary"
+                  data-testid="checkout-pago-per-me"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden />
+                  Pago per me
+                </span>
+                {PAY_FOR_OTHERS_ENABLED ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-600"
+                    data-testid="checkout-pago-per-altri"
+                    disabled
+                  >
+                    Pago per altri
+                  </button>
+                ) : null}
+              </div>
+              {!PAY_FOR_OTHERS_ENABLED ? (
+                <p className="text-[11px] text-slate-500">
+                  Solo la tua quota su questa tratta. «Pago per altri» sarà disponibile dopo
+                  l&apos;aggiornamento copertura (migrazione 049).
+                </p>
+              ) : null}
+            </section>
 
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-slate-900">Contatto</h3>
@@ -1403,8 +1454,7 @@ export function FlightCheckoutClient({
               </section>
             ))}
 
-            {/* A7: Allegato B prima di passare al pagamento (Continua con hotel). */}
-            <AllegatoBLinkedNotice />
+            {/* Allegato B solo al pagamento (P1-5 / P1-6) — non in Organizza né qui nei dettagli. */}
 
             {draft ? (
               <div
@@ -1611,7 +1661,6 @@ export function FlightCheckoutClient({
             ) : null}
           </div>
           <BookingComplianceNote showMerchantOfRecord />
-          <AllegatoBLinkedNotice compact />
         </aside>
       ) : null}
     </div>

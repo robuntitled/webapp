@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { HOME_HREF, USER_AREA_HREF } from '@/lib/nav/home';
+import { PROFILE_MENU, USER_AREA_HREF } from '@/lib/brand/nav';
 import { getInitialsFromFullName } from '@/lib/utils/user';
 
 type User = Session['user'];
@@ -53,20 +53,16 @@ export function UserNav({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href={HOME_HREF}>Home</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
             <Link href={USER_AREA_HREF}>I miei viaggi</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/bacheca">Bacheca</Link>
+            <Link href="/notifiche">Notifiche</Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/profilo">Modifica profilo</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/impostazioni">Impostazioni</Link>
-          </DropdownMenuItem>
+          {PROFILE_MENU.map((item) => (
+            <DropdownMenuItem key={item.href} asChild>
+              <Link href={item.href}>{item.label}</Link>
+            </DropdownMenuItem>
+          ))}
           {showCostsDashboard ? (
             <DropdownMenuItem asChild data-testid="admin-costi-link">
               <Link href="/dashboard/costi">Costi API</Link>

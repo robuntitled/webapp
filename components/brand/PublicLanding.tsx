@@ -2,18 +2,13 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, Check, Compass, MapPin, Users } from 'lucide-react';
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { HeroBackground } from '@/components/brand/HeroBackground';
+import { BedDouble, Bell, MapPin, Plane, Route } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
-import { accediHref } from '@/lib/auth/callback-url';
 import { BRAND_NAME } from '@/lib/brand';
-import { BRAND_IMAGES } from '@/lib/brand/images';
-import { PRIMARY_NAV } from '@/lib/brand/nav';
 import { formatEuro } from '@/lib/format/euro';
-import { HOME_HREF, USER_AREA_HREF, USER_AREA_LABEL } from '@/lib/nav/home';
+import { cn } from '@/lib/utils';
 
 export type LandingDestination = {
   slug: string;
@@ -47,328 +42,201 @@ type Props = {
   isLoggedIn?: boolean;
 };
 
-const ORGANIZZA_POINTS = [
-  'Cerca voli e hotel quando vuoi, anche senza account',
-  'Esplora gli itinerari pronti e adattali alle tue date',
-  'Organizza da solo o con amici: paghi un servizio alla volta',
+const STEPS = [
+  {
+    icon: MapPin,
+    title: '1 · Scegli meta e date',
+    body: 'Da un itinerario pronto o da zero.',
+  },
+  {
+    icon: Plane,
+    title: '2 · Prenoti ogni tratta',
+    body: 'Vedi prezzo a persona e totale per tratta.',
+  },
+  {
+    icon: BedDouble,
+    title: '3 · Aggiungi hotel e attività',
+    body: 'Per ogni tappa, quando vuoi.',
+  },
 ] as const;
 
-const GRUPPI_POINTS = [
-  'Partenze di gruppo già in formazione (non è un pacchetto tour operator)',
-  'Vedi date, itinerario e quanti sono già iscritti',
-  'Chat di gruppo aperta appena ti iscrivi alla partenza',
-] as const;
-
-/** Hero home: Thailandia (Unsplash) — docs/IMAGE-LICENSES.md */
-const HOME_HERO_IMAGES = [BRAND_IMAGES.heroes.home] as const;
-
-const pathBtnClass =
-  'mt-auto h-12 w-full rounded-[10px] bg-primary font-semibold text-white hover:bg-[var(--color-primary-hover)] sm:w-auto';
-
+/**
+ * Home — layout allineato a mockup `home-m.png` / `home-d.png`.
+ * Una sola CTA corallo per schermata; niente contatore partenze se 0 iscrivibili.
+ */
 export function PublicLanding({
   featured,
-  comingSoon,
+  comingSoon: _comingSoon,
   openEditions,
   thailandia,
-  isLoggedIn = false,
+  isLoggedIn: _isLoggedIn = false,
 }: Props) {
-  const thai = featured.find((d) => d.slug === 'thailandia') ?? featured[0];
-  const groupCount = openEditions.length;
+  const joinableCount = openEditions.length;
+  const mete = featured.slice(0, 6);
 
   return (
-    <div className="overflow-x-hidden bg-white text-[var(--color-text)]">
-      <section className="relative isolate flex min-h-[min(100dvh,36rem)] flex-col overflow-hidden sm:min-h-[min(100dvh,42rem)]">
-        <HeroBackground
-          images={[...HOME_HERO_IMAGES]}
-          alt="Barche longtail su acqua turchese in Thailandia"
-          overlay="photo"
-          parallax={false}
-          intervalMs={7000}
-          forceCover
-        />
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-[rgba(14,17,38,0.55)] via-[rgba(14,17,38,0.35)] to-[rgba(14,17,38,0.7)]"
-          aria-hidden
-        />
-
-        <header className="relative z-20 flex flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-3 sm:px-8 sm:py-4">
-          <Link
-            href={HOME_HREF}
-            className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            aria-label={`${BRAND_NAME} — home`}
-            data-testid="brand-logo-home"
-          >
-            <BrandLogo
-              size={34}
-              priority
-              variant="white"
-              className="drop-shadow-[0_1px_6px_rgba(0,0,0,0.3)]"
-            />
-          </Link>
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:order-last sm:ml-0 sm:gap-2">
-            {isLoggedIn ? (
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="h-11 min-h-11 rounded-[10px] px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
-              >
-                <Link href={USER_AREA_HREF} data-testid="home-user-area">
-                  {USER_AREA_LABEL}
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="h-11 min-h-11 rounded-[10px] px-2.5 text-white/95 hover:bg-white/10 hover:text-white sm:px-3"
-                >
-                  <Link href={accediHref()}>Accedi</Link>
-                </Button>
-                {/* Unico coral della home — stile esplicito (owner: non cambiare aspetto) */}
-                <Button
-                  asChild
-                  size="sm"
-                  className="h-11 min-h-11 rounded-[10px] bg-[var(--color-cta)] px-3 font-semibold text-white hover:bg-[#A93720] sm:px-3.5"
-                >
-                  <Link href={accediHref(undefined, 'register')}>Registrati</Link>
-                </Button>
-              </>
-            )}
-          </div>
-          <nav
-            className="flex w-full items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-center"
-            aria-label="Navigazione principale"
-          >
-            {PRIMARY_NAV.filter(
-              (link) => !('auth' in link && link.auth) || Boolean(isLoggedIn)
-            ).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-white/95 hover:bg-white/10"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </header>
-
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-28 pt-6 text-center sm:pb-32">
-          <div className="max-w-3xl motion-safe:animate-[nl-landing-in_700ms_ease_forwards]">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
-              {BRAND_NAME}
-            </p>
-            <h1 className="font-display text-[clamp(1.75rem,5vw,3.25rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.25)]">
-              Il viaggio fai da te, senza fare tutto da solo.
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-[clamp(0.95rem,1.4vw,1.15rem)] leading-relaxed text-white/92">
-              Due strade chiare: organizzi tu il viaggio, oppure scopri una partenza di gruppo.
-              Nessun tour operator in mezzo — ogni servizio lo scegli e lo paghi tu, uno dopo
-              l&apos;altro.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button
-                asChild
-                size="lg"
-                className="h-12 min-h-12 min-w-[12rem] rounded-[10px] bg-white px-6 font-semibold text-primary shadow-md hover:bg-white/95"
-              >
-                <Link href="/organizza">Organizza il tuo viaggio</Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-12 min-h-12 min-w-[12rem] rounded-[10px] border-white/55 bg-transparent px-6 font-semibold text-white hover:bg-white/15 hover:text-white"
-              >
-                <Link href="/gruppi">
-                  {groupCount > 0 ? 'Parti con un gruppo' : 'Scopri le partenze'}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Due ingressi pari peso: Organizza vs Gruppi */}
-      <section className="nl-page relative z-20 -mt-16 w-full pb-6 sm:-mt-24">
-        <div className="grid gap-5 md:grid-cols-2 md:gap-6">
-          <article className="flex flex-col gap-4 rounded-[18px] border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-soft)] sm:p-7">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
-              <Compass className="h-6 w-6" aria-hidden />
-            </span>
-            <h2 className="font-display text-2xl font-extrabold tracking-tight">
-              Organizza il tuo viaggio
-            </h2>
-            <p className="text-[var(--color-text-secondary)]">
-              Viaggio autonomo: voli, hotel e itinerari. Tu scegli l&apos;ordine e paghi un
-              servizio alla volta.
-            </p>
-            <ul className="space-y-2.5">
-              {ORGANIZZA_POINTS.map((t) => (
-                <li key={t} className="flex gap-2.5 text-sm text-[var(--color-text)]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <Button asChild size="lg" className={pathBtnClass}>
-              <Link href="/organizza">Vai a Organizza →</Link>
-            </Button>
-          </article>
-
-          <article className="flex flex-col gap-4 rounded-[18px] border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-soft)] sm:p-7">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--color-tint)] text-primary">
-              <Users className="h-6 w-6" aria-hidden />
-            </span>
-            <h2 className="font-display text-2xl font-extrabold tracking-tight">
-              Parti con un gruppo
-            </h2>
-            <p className="text-[var(--color-text-secondary)]">
-              Partenze collettive in formazione. Non è un pacchetto: resti tu a prenotare i
-              servizi, insieme agli altri.
-            </p>
-            <ul className="space-y-2.5">
-              {GRUPPI_POINTS.map((t) => (
-                <li key={t} className="flex gap-2.5 text-sm text-[var(--color-text)]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <Button asChild size="lg" className={pathBtnClass}>
-              <Link href="/gruppi">
-                {groupCount > 0
-                  ? groupCount === 1
-                    ? 'Scopri 1 partenza →'
-                    : `Scopri ${groupCount} partenze →`
-                  : 'Scopri le partenze →'}
-              </Link>
-            </Button>
-          </article>
-        </div>
-      </section>
-
-      {thai ? (
-        <section className="nl-page w-full py-14 sm:py-16">
-          <p className="text-[12px] font-bold uppercase tracking-[0.09em] text-primary">
-            Disponibile ora
+    <div
+      className="overflow-x-hidden bg-[var(--color-page,#F6F7FB)] pb-24 text-[var(--color-text)] md:pb-0"
+      data-testid="public-landing"
+    >
+      <section className="nl-page w-full pt-4 sm:pt-8">
+        <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#3B4590] via-primary to-[#8A92E6] px-5 py-8 text-white shadow-[var(--shadow-soft)] sm:px-10 sm:py-12">
+          <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-white/80">
+            Viaggio fai da te
           </p>
-          <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Parti adesso per la {thai.name}
-          </h2>
-          <div className="mt-6 grid overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-white shadow-[var(--shadow-soft)] md:grid-cols-[1.25fr_1fr]">
-            <div className="relative min-h-[220px] bg-[var(--color-tint)] md:min-h-[340px]">
-              <Image
-                src={coverForDestination(thai.slug)}
-                alt={thai.name}
-                fill
-                className="object-cover"
-                sizes="(max-width:768px) 100vw, 55vw"
-                priority
-              />
-              <span className="absolute left-4 top-4 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[var(--color-success)]">
-                Itinerario disponibile
+          <h1 className="mt-2 max-w-2xl font-display text-[clamp(1.75rem,4vw,2.75rem)] font-extrabold leading-[1.12] tracking-[-0.02em]">
+            Il viaggio fai da te, senza fare tutto da solo.
+          </h1>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/90 sm:text-base">
+            Scegli la meta, componi l&apos;itinerario, prenota voli e hotel tratta per tratta.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              asChild
+              variant="cta"
+              size="lg"
+              className="h-12 min-h-12 rounded-[10px] px-5 text-[15px] font-bold"
+              data-testid="home-cta-organizza"
+            >
+              <Link href="/organizza">
+                <Route className="h-4 w-4" aria-hidden />
+                Organizza il tuo viaggio
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              className="h-12 min-h-12 rounded-[10px] border-0 bg-white px-5 text-[15px] font-bold text-primary hover:bg-white/95"
+              data-testid="home-cta-gruppi"
+            >
+              <Link href="/gruppi">Vedi le partenze di gruppo</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="nl-page w-full py-10 sm:py-14" data-testid="home-come-funziona">
+        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">
+          Come funziona
+        </p>
+        <h2 className="mt-1 font-display text-[22px] font-extrabold tracking-tight sm:text-2xl">
+          Tre passi, tu decidi tutto
+        </h2>
+        <ul className="mt-5 grid gap-3 sm:grid-cols-3">
+          {STEPS.map((s) => (
+            <li
+              key={s.title}
+              className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[var(--sh-1,0_1px_2px_rgba(20,24,46,.06))]"
+            >
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-tint)] text-primary">
+                <s.icon className="h-5 w-5" aria-hidden />
               </span>
-            </div>
-            <div className="flex flex-col justify-center gap-3.5 p-6 sm:p-9">
-              <h3 className="font-display text-2xl font-extrabold sm:text-3xl">{thai.name}</h3>
-              <p className="text-[var(--color-text-secondary)]">{thai.vibe}</p>
-              <div className="flex flex-wrap gap-2">
-                {thai.allowedDurations?.length ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-tint)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)]">
-                    <Calendar className="h-4 w-4" />
-                    {thai.allowedDurations.join(', ')} giorni
+              <p className="mt-3 text-[15px] font-bold">{s.title}</p>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{s.body}</p>
+            </li>
+          ))}
+        </ul>
+        <Link
+          href="/come-funziona"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+        >
+          Come funziona nel dettaglio →
+        </Link>
+      </section>
+
+      <section className="nl-page w-full pb-10 sm:pb-14" data-testid="home-mete">
+        <h2 className="font-display text-[22px] font-extrabold tracking-tight sm:text-2xl">
+          Mete con itinerario
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {mete.map((dest) => (
+            <Link
+              key={dest.slug}
+              href={`/organizza?slug=${dest.slug}`}
+              className="group overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-white shadow-[var(--sh-1,0_1px_2px_rgba(20,24,46,.06))] transition hover:border-primary/30"
+            >
+              <div className="relative h-40 bg-[var(--color-tint)]">
+                <Image
+                  src={coverForDestination(dest.slug)}
+                  alt={dest.name}
+                  fill
+                  className="object-cover transition group-hover:scale-[1.02]"
+                  sizes="(max-width:640px) 100vw, 33vw"
+                />
+              </div>
+              <div className="space-y-1.5 px-4 py-3.5">
+                <p className="font-display text-lg font-extrabold">{dest.name}</p>
+                {dest.slug === 'thailandia' ? (
+                  <span className="inline-flex rounded-full bg-[var(--color-tint)] px-2.5 py-0.5 text-xs font-bold text-primary">
+                    Itinerario da adattare
                   </span>
                 ) : null}
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-tint)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)]">
-                  <MapPin className="h-4 w-4" />
-                  Bangkok e Isole
-                </span>
-              </div>
-              {(thailandia?.budgetHint ?? thai.budgetHint) != null ? (
-                <span className="inline-flex w-fit rounded-full bg-[var(--color-tint)] px-3 py-1.5 text-sm font-bold text-primary">
-                  {COMPLIANCE_COPY.budgetLabel} ·{' '}
-                  {formatEuro(thailandia?.budgetHint ?? thai.budgetHint, { approx: false })}
-                  {thailandia?.durationDays
-                    ? ` · ${thailandia.durationDays} giorni`
-                    : thai.allowedDurations?.[0]
-                      ? ` · ${thai.allowedDurations[0]} giorni`
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  {dest.allowedDurations?.length
+                    ? `${dest.allowedDurations.join(', ')} giorni`
+                    : dest.vibe}
+                  {dest.budgetHint != null
+                    ? ` · ${COMPLIANCE_COPY.budgetLabel} ${formatEuro(dest.budgetHint, { approx: false })}`
+                    : thailandia && dest.slug === 'thailandia'
+                      ? ` · ${COMPLIANCE_COPY.budgetLabel} ${formatEuro(thailandia.budgetHint, { approx: false })}`
                       : ''}
-                </span>
-              ) : null}
-              <div className="mt-1 flex flex-wrap gap-2">
-                <Button
-                  asChild
-                  className="rounded-[10px] bg-primary font-semibold hover:bg-[var(--color-primary-hover)]"
-                >
-                  <Link href={`/organizza?slug=${thai.slug}`}>Organizza</Link>
-                </Button>
-                <Button asChild variant="outline" className="rounded-[10px]">
-                  <Link href="/gruppi">
-                    {groupCount > 0
-                      ? groupCount === 1
-                        ? 'Scopri 1 partenza di gruppo'
-                        : `Scopri ${groupCount} partenze di gruppo`
-                      : 'Scopri le partenze'}
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {comingSoon.length > 0 ? (
-        <section className="border-t border-[var(--color-border)] bg-[var(--color-tint)]/40 py-14 sm:py-16">
-          <div className="nl-page w-full">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-bold uppercase tracking-[0.09em] text-[var(--color-text-secondary)]">
-                  In arrivo
                 </p>
-                <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  Le prossime mete
-                </h2>
               </div>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                In arrivo. Per ora puoi partire per la Thailandia.
-              </p>
-            </div>
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {comingSoon.slice(0, 6).map((dest) => (
-                <div
-                  key={dest.slug}
-                  id={`in-arrivo-${dest.slug}`}
-                  className="overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-white"
-                >
-                  <div className="relative h-24 bg-[var(--color-tint)]">
-                    <Image
-                      src={coverForDestination(dest.slug)}
-                      alt={dest.name}
-                      fill
-                      className="object-cover saturate-75"
-                      sizes="160px"
-                    />
-                  </div>
-                  <div className="px-3 pb-3 pt-2.5">
-                    <p className="text-sm font-bold">{dest.name}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
+            </Link>
+          ))}
+        </div>
+        <Button asChild variant="outline" className="mt-5 h-11 w-full rounded-[10px] sm:w-auto">
+          <Link href="/organizza">Vedi tutte le mete</Link>
+        </Button>
+      </section>
 
-      <section className="nl-page w-full py-12 text-center sm:py-14">
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          I budget sono orientativi: i costi reali dipendono dai servizi che prenoti. {BRAND_NAME} ti
-          aiuta a pianificare il viaggio e a trovare compagni di viaggio. Ogni servizio è prenotato
-          separatamente con il fornitore indicato al momento del pagamento.
+      <section className="nl-page w-full pb-12 sm:pb-16" data-testid="home-gruppi">
+        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">
+          Partenze di gruppo
         </p>
+        {joinableCount > 0 ? (
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              {joinableCount === 1
+                ? '1 partenza con iscrizioni aperte.'
+                : `${joinableCount} partenze con iscrizioni aperte.`}
+            </p>
+            <Button asChild className="h-11 rounded-[10px]">
+              <Link href="/gruppi">Vedi le partenze</Link>
+            </Button>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              'mt-3 flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-5'
+            )}
+          >
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-tint)] text-primary">
+              <Bell className="h-5 w-5" aria-hidden />
+            </span>
+            <p className="font-bold">Nessuna partenza aperta ora</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Contiamo solo le partenze con iscrizioni aperte. Quelle «In arrivo» non sono ancora
+              iscrivibili.
+            </p>
+            <Button asChild variant="outline" className="h-11 w-full rounded-[10px] sm:w-auto">
+              <Link href="/gruppi">Vedi lo stato delle partenze</Link>
+            </Button>
+          </div>
+        )}
+      </section>
+
+      <section className="border-t border-[var(--color-border)] bg-white py-10">
+        <div className="nl-page w-full space-y-2 text-sm text-[var(--color-text-secondary)]">
+          <p className="font-display text-lg font-extrabold text-primary">{BRAND_NAME}</p>
+          <p>
+            Organizza il tuo viaggio o unisciti a una partenza di gruppo.
+          </p>
+          <p className="text-xs">
+            I budget sono orientativi. Ogni servizio è prenotato separatamente con il fornitore
+            indicato al pagamento.
+          </p>
+        </div>
       </section>
     </div>
   );

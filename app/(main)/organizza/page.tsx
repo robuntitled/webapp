@@ -8,16 +8,15 @@ import { pageOpenGraph } from '@/lib/brand/seo';
 
 export const dynamic = 'force-dynamic';
 
+const ORG_TITLE = 'Organizza il tuo viaggio fai da te — Noivia';
+const ORG_DESCRIPTION =
+  'Scegli meta, date e con chi partire. Parti da un itinerario pronto, scegli i voli e controlla il riepilogo prima di creare il viaggio.';
+
 export const metadata: Metadata = {
-  title: 'Organizza',
-  description:
-    'Organizza il viaggio: destinazione, date, compagnia, voli consigliati e riepilogo.',
+  title: { absolute: ORG_TITLE },
+  description: ORG_DESCRIPTION,
   alternates: { canonical: '/organizza' },
-  openGraph: pageOpenGraph(
-    '/organizza',
-    'Organizza',
-    'Dove, quando, con chi — poi voli e un riepilogo chiaro.'
-  ),
+  openGraph: pageOpenGraph('/organizza', ORG_TITLE, ORG_DESCRIPTION),
 };
 
 export default async function OrganizzaPage() {

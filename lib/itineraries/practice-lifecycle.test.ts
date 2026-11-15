@@ -35,6 +35,31 @@ describe('practice lifecycle', () => {
     ).toBe('booked');
   });
 
+  it('FAILED booking alone stays interested (not Prenotato)', () => {
+    expect(
+      getPracticeLifecyclePhase(
+        practice({
+          flight_bookings: [
+            {
+              bookingId: 'b',
+              bookingRef: 'r',
+              status: 'FAILED',
+              outbound: {
+                origin: 'MXP',
+                destination: 'BKK',
+                departureAt: '2026-12-01T10:00:00.000Z',
+                arrivalAt: '2026-12-01T14:00:00.000Z',
+                airline: null,
+              },
+              returnLeg: null,
+              bookedAt: '2026-11-11T00:00:00.000Z',
+            },
+          ],
+        })
+      )
+    ).toBe('interested');
+  });
+
   it('active when between date_from and date_to with flight', () => {
     const today = new Date();
     const from = new Date(today);
