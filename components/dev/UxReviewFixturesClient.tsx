@@ -200,9 +200,37 @@ export function UxReviewFixturesClient() {
             className="min-h-11 w-full rounded-full"
             data-testid="fixture-pago-per-altri"
           >
-            Pago per altri · da 790,00 € / persona
+            Pago per altri · 790,00 € / persona / tratta
           </Button>
         </div>
+      </section>
+
+      <section
+        className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/60 p-4"
+        data-testid="fixture-needs-review"
+      >
+        <h2 className="text-sm font-bold text-amber-950">P0 · Da verificare</h2>
+        <p className="font-display text-lg font-semibold text-amber-950">
+          Pagamento confermato · da verificare
+        </p>
+        <p className="text-xs text-amber-900/90">
+          Il pagamento risulta ricevuto ma la conferma del fornitore non è completa.
+          Non trattarla come biglietto confermato.
+        </p>
+        <ul className="space-y-2 text-sm">
+          <li className="rounded-xl bg-white px-3 py-2 ring-1 ring-emerald-100">
+            <p className="text-[11px] font-semibold uppercase text-slate-500">
+              Tratta 1 · MXP → BKK
+            </p>
+            <p className="font-semibold">ABC123 · Confermato</p>
+          </li>
+          <li className="rounded-xl bg-white px-3 py-2 ring-1 ring-amber-200">
+            <p className="text-[11px] font-semibold uppercase text-slate-500">
+              Tratta 2 · BKK → MXP
+            </p>
+            <p className="font-semibold text-amber-900">— · Da verificare</p>
+          </li>
+        </ul>
       </section>
 
       <section

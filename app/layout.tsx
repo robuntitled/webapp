@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
@@ -17,12 +17,7 @@ import {
   getSiteUrl,
 } from '@/lib/brand';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
+/** Plus Jakarta only — do not force Inter (P1 / PIANO-FINALE). */
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-plus-jakarta',
@@ -84,7 +79,7 @@ export default async function RootLayout({
   return (
     <html lang="it">
       <body
-        className={`${inter.variable} ${plusJakarta.variable} font-sans pb-[var(--cookie-banner-pad,0px)]`}
+        className={`${plusJakarta.variable} font-sans pb-[var(--cookie-banner-pad,0px)]`}
       >
         <BrandJsonLd />
         <Providers session={session}>

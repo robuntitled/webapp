@@ -92,7 +92,7 @@ export function FlightDateField({
   };
 
   return (
-    <div className={cn('space-y-1', className)}>
+    <div className={cn('min-w-0 space-y-1 sm:min-w-[12.5rem]', className)}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         {fieldTitle}
       </span>
@@ -101,20 +101,21 @@ export function FlightDateField({
           <button
             type="button"
             className={cn(
-              'flex h-12 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left transition',
+              'flex h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-left transition sm:gap-2.5 sm:px-3',
               'hover:border-slate-300 hover:bg-white',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',
               open && 'border-primary bg-white ring-2 ring-primary/20'
             )}
+            data-testid="flight-date-field"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <CalendarDays className="h-4 w-4" />
             </span>
-            <span className="min-w-0 flex-1">
+            <span className="min-w-0 flex-1 overflow-hidden">
               <span className="block truncate text-sm font-semibold capitalize text-slate-900">
                 {label}
               </span>
-              <span className="block text-[11px] text-slate-500">{fieldHint}</span>
+              <span className="block truncate text-[11px] text-slate-500">{fieldHint}</span>
             </span>
           </button>
         </PopoverTrigger>

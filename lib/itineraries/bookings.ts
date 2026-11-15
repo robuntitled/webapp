@@ -137,7 +137,13 @@ export function isSamePracticeFlightBooking(
 export const FLIGHT_ALREADY_BOOKED_ERROR =
   'Hai già un volo salvato su questo viaggio. Non è possibile prenotarne un secondo qui: il precedente resterebbe nascosto. Contatta l’assistenza se serve una modifica.';
 
-export type FlightStatusKind = 'pending' | 'confirmed' | 'failed' | 'cancelled' | 'unknown';
+export type FlightStatusKind =
+  | 'pending'
+  | 'confirmed'
+  | 'failed'
+  | 'cancelled'
+  | 'needs_review'
+  | 'unknown';
 
 const PENDING_STATUSES = new Set([
   'PENDING_CONFIRMATION',
@@ -149,6 +155,14 @@ const CONFIRMED_STATUSES = new Set(['CONFIRMED', 'TICKETED']);
 
 const FAILED_STATUSES = new Set(['FAILED', 'EXPIRED']);
 
+/** Paid but provider confirmation failed / eligibility failed after payment. */
+const NEEDS_REVIEW_STATUSES = new Set([
+  'NEEDS_REVIEW',
+  'FAILED_AFTER_PAYMENT',
+  'ELIGIBILITY_FAILED_AFTER_PAYMENT',
+  'PROVIDER_FAILED_AFTER_PAYMENT',
+]);
+
 const CANCELLED_STATUSES = new Set(['CANCELLED', 'CANCELLED_WITH_CHARGES']);
 
 export function parseFlightStatus(status: string | null | undefined): FlightStatusKind {
@@ -156,6 +170,7 @@ export function parseFlightStatus(status: string | null | undefined): FlightStat
   if (!s) return 'unknown';
   if (PENDING_STATUSES.has(s)) return 'pending';
   if (CONFIRMED_STATUSES.has(s)) return 'confirmed';
+  if (NEEDS_REVIEW_STATUSES.has(s)) return 'needs_review';
   if (FAILED_STATUSES.has(s)) return 'failed';
   if (CANCELLED_STATUSES.has(s)) return 'cancelled';
   return 'unknown';
@@ -190,11 +205,18 @@ export function formatFlightBookingStatus(status: string | null | undefined): {
         label: 'Confermato dalla compagnia',
         description: 'Biglietto emesso. Usa il codice per il check-in.',
       };
+    case 'needs_review':
+      return {
+        kind,
+        label: 'Da verificare',
+        description:
+          'Il pagamento risulta ricevuto ma la conferma del fornitore non è completa. Non trattarla come biglietto confermato: controlla lo stato o contatta l’assistenza.',
+      };
     case 'failed':
       return {
         kind,
         label: 'Conferma non riuscita',
-        description: 'Contattaci o riprova dalla ricerca voli.',
+        description: 'Contatta l’assistenza o riprova dalla ricerca voli.',
       };
     case 'cancelled':
       return {
@@ -205,8 +227,8 @@ export function formatFlightBookingStatus(status: string | null | undefined): {
     default:
       return {
         kind: 'unknown',
-        label: status?.trim() || 'Stato in aggiornamento',
-        description: 'Stiamo sincronizzando lo stato con la compagnia.',
+        label: 'Stato in aggiornamento',
+        description: 'Stiamo sincronizzando lo stato della prenotazione.',
       };
   }
 }

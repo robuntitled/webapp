@@ -420,8 +420,7 @@ export function TripSelectedFlightsPanel({
               id="trip-voli-separate-desc"
               className="mt-0.5 block text-[11px] leading-snug text-slate-500"
             >
-              Ogni tratta è un biglietto a sé. Di default le paghi insieme; attiva per
-              prenotare una tratta alla volta.
+              Ogni tratta è un biglietto a sé. Attiva per prenotare una tratta alla volta.
             </span>
           </span>
         </label>
@@ -530,14 +529,14 @@ export function TripSelectedFlightsPanel({
               data-testid="trip-pago-per-altri"
             >
               Pago per altri
-              {unbookedPerPerson != null ? (
+              {nextLegPerPerson != null ? (
                 <span className="ml-1 font-semibold opacity-90">
-                  · da {formatEuro(unbookedPerPerson, { approx: false })} / persona
+                  · {formatEuro(nextLegPerPerson, { approx: false })} / persona / tratta
                 </span>
               ) : null}
             </Button>
             <p className="text-center text-[11px] text-slate-500">
-              Scegli chi includere nel pagamento (puoi pagare anche per te).
+              Scegli chi includere nel pagamento (importo per tratta, non totale voli).
             </p>
           </div>
         ) : (

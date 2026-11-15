@@ -93,17 +93,24 @@ export async function searchNoiviaUsersAction(query: string): Promise<{
   if (!session?.user?.id) return { users: [], error: 'Non autenticato' };
   const q = query.trim();
   if (q.length < 2) return { users: [] };
+  // Escape PostgREST filter metacharacters — keep in-site friend selection.
+  const safe = q.replace(/[%_,.()\\]/g, '').slice(0, 64);
+  if (safe.length < 2) return { users: [] };
+  const pattern = `%${safe}%`;
 
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('id, first_name, last_name, username, image')
     .or(
-      `username.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%`
+      `username.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern}`
     )
     .neq('id', session.user.id)
     .limit(12);
 
-  if (error) return { users: [], error: error.message };
+  if (error) {
+    console.error('[searchInviteFriends]', error.message);
+    return { users: [], error: 'Ricerca non riuscita. Riprova.' };
+  }
   return {
     users: (data ?? []).map((u) => ({
       userId: u.id as string,

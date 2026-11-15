@@ -6,5 +6,7 @@ describe('formatEuro', () => {
     expect(formatEuro(1330)).toBe('~1.330 €');
     expect(formatEuro(1700, { approx: false })).toBe('1.700 €');
     expect(formatEuroExact(99.5, 'EUR')).toMatch(/99,50/);
+    expect(formatEuroExact(1166.52, 'EUR')).toMatch(/1\.166,52/);
+    expect(formatEuroExact(1166.52, 'EUR')).not.toMatch(/^1166/);
   });
 });

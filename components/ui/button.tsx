@@ -12,7 +12,7 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground hover:bg-[var(--color-primary-hover)] disabled:bg-slate-300 disabled:text-slate-600 disabled:opacity-100",
         cta:
-          "bg-[var(--color-cta)] text-white hover:bg-[#A93720] disabled:bg-slate-300 disabled:text-slate-600 disabled:opacity-100",
+          "bg-[var(--color-cta)] text-white hover:bg-[var(--color-cta-hover,#A93720)] disabled:bg-slate-300 disabled:text-slate-600 disabled:opacity-100",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:

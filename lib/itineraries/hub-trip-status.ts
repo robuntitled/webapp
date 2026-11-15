@@ -11,6 +11,7 @@ export type HubTripBadgeId =
   | 'flightPending'
   | 'booked'
   | 'toBook'
+  | 'needsReview'
   | 'carrierCancelled';
 
 export type HubTripBadge = {
@@ -25,6 +26,7 @@ function primaryFlightStatus(p: PracticeRow): FlightStatusKind | null {
   // Prefer cancelled / pending / failed signal from any leg.
   const kinds = bookings.map((b) => parseFlightStatus(b.status));
   if (kinds.includes('cancelled')) return 'cancelled';
+  if (kinds.includes('needs_review')) return 'needs_review';
   if (kinds.includes('pending')) return 'pending';
   if (kinds.includes('failed')) return 'failed';
   if (kinds.includes('confirmed')) return 'confirmed';
@@ -38,6 +40,9 @@ export function resolveHubTripBadge(p: PracticeRow): HubTripBadge {
 
   if (flightKind === 'cancelled') {
     return { id: 'carrierCancelled', label: copy.carrierCancelled, tone: 'slate' };
+  }
+  if (flightKind === 'needs_review' || flightKind === 'failed') {
+    return { id: 'needsReview', label: copy.needsReview, tone: 'amber' };
   }
   if (flightKind === 'pending') {
     return { id: 'flightPending', label: copy.flightPending, tone: 'amber' };

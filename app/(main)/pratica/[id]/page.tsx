@@ -16,8 +16,10 @@ type PageProps = {
 
 export default async function PraticaPage({ params, searchParams }: PageProps) {
   const session = await auth();
-  if (!session?.user?.id) redirect('/');
   const { id } = await params;
+  if (!session?.user?.id) {
+    redirect(`/accedi?callbackUrl=${encodeURIComponent(`/pratica/${id}`)}`);
+  }
   const { tab, step, stay } = await searchParams;
   const practiceRow = await getPractice(id, session.user.id);
   if (!practiceRow) notFound();

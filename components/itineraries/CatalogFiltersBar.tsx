@@ -75,31 +75,34 @@ export function CatalogHeroSearchBar({
   const priceLabel =
     value.priceMax != null
       ? `≤${value.priceMax >= 1000 ? `${Math.round(value.priceMax / 1000)}k` : value.priceMax}€`
-      : 'Budget orientativo';
+      : 'Budget';
 
   return (
     <form
       role="search"
       data-testid="catalog-hero-search"
-      className="flex min-h-[3.5rem] w-full min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/95 py-1 pl-2.5 pr-1 shadow-[0_6px_22px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:min-h-[3.75rem] sm:gap-2.5 sm:pl-4 sm:pr-1.5"
+      className="flex w-full min-w-0 flex-col gap-2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_6px_22px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:flex-row sm:items-center sm:gap-2.5 sm:rounded-full sm:p-1 sm:pl-4 sm:pr-1.5"
       onSubmit={(e) => {
         e.preventDefault();
         runSearch();
       }}
     >
-      <Search className="h-3.5 w-3.5 shrink-0 text-slate-400 sm:h-4 sm:w-4" strokeWidth={2.25} aria-hidden />
-      <input
-        ref={inputRef}
-        type="search"
-        value={value.query}
-        onChange={(e) => set('query', e.target.value)}
-        placeholder={placeholder}
-        className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-0.5 text-[0.875rem] text-slate-900 outline-none placeholder:text-slate-400 sm:text-[1rem]"
-        autoComplete="off"
-        aria-controls={resultsId}
-        aria-label={placeholder}
-      />
-      <div className="flex shrink-0 items-center">
+      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-1 sm:min-h-[3.25rem]">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2.25} aria-hidden />
+        <input
+          ref={inputRef}
+          type="search"
+          value={value.query}
+          onChange={(e) => set('query', e.target.value)}
+          placeholder={placeholder}
+          className="min-w-0 w-full flex-1 border-0 bg-transparent py-2 text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
+          autoComplete="off"
+          aria-controls={resultsId}
+          aria-label={placeholder}
+          data-testid="catalog-hero-search-input"
+        />
+      </div>
+      <div className="flex shrink-0 items-center justify-between gap-1 border-t border-slate-100 pt-1.5 sm:justify-end sm:border-t-0 sm:pt-0">
         <Popover>
           <PopoverTrigger
             type="button"

@@ -42,17 +42,19 @@ function LegPriceBlock({
 }) {
   const party = Math.round(unit * Math.max(1, pax) * 100) / 100;
   return (
-    <div className="shrink-0 text-right" data-testid="flight-review-leg-price">
+    <div
+      className="w-full min-w-0 basis-full text-left sm:w-auto sm:basis-auto sm:text-right"
+      data-testid="flight-review-leg-price"
+    >
       <p className="text-sm font-extrabold tabular-nums">
         {formatEuroExact(unit, currency) ?? '—'}
-      </p>
-      <p className="text-[11px] font-medium text-[var(--color-text-secondary)]">
-        a persona
+        <span className="ml-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+          a persona
+        </span>
       </p>
       {pax > 1 ? (
         <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-text)]">
-          {formatEuroExact(party, currency)} totale tratta ({pax}{' '}
-          {pax === 1 ? 'persona' : 'persone'})
+          {formatEuroExact(party, currency)} totale tratta ({pax} persone)
         </p>
       ) : null}
     </div>
@@ -162,8 +164,8 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                   : 'border-[var(--color-border)]'
               )}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
+              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                <div className="min-w-0 flex-1 basis-[12rem]">
                   <p className="text-xs font-bold text-primary">
                     Prenotazione {i + 1} · {leg.labelIt}
                   </p>
@@ -171,8 +173,10 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
                     {leg.offer!.originIata} → {leg.offer!.destinationIata}
                   </p>
                   <p className="text-[11px] text-[var(--color-text-secondary)]">
-                    Partenza {formatWhen(leg.offer!.departureAt)} · Arrivo{' '}
-                    {formatWhen(leg.offer!.arrivalAt)}
+                    Partenza {formatWhen(leg.offer!.departureAt)}
+                  </p>
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                    Arrivo {formatWhen(leg.offer!.arrivalAt)}
                   </p>
                   <p className="text-[11px] text-[var(--color-text-secondary)]">
                     {formatStopsIt(leg.offer!.stops)} ·{' '}
@@ -224,8 +228,7 @@ export function FlightReviewCart({ plan, travelers, className }: Props) {
           </p>
         )}
         <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-          Bagagli e condizioni tariffarie: disponibili solo dopo verifica offerta dal
-          fornitore (non inventiamo franchigie).
+          Bagagli e condizioni tariffarie: disponibili dopo la verifica offerta.
         </p>
       </div>
 

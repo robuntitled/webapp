@@ -49,8 +49,9 @@ function formatDuration(mins?: number | null): string {
 }
 
 function stopsLabel(stops?: number, layovers?: FlightLayover[]): string {
-  return formatLayoversLine(layovers) ?? (
-    stops == null ? '' : stops <= 0 ? 'Diretto' : stops === 1 ? '1 scalo' : `${stops} scali`
+  return (
+    formatLayoversLine(layovers) ??
+    (stops == null ? '' : stops <= 0 ? 'Diretto' : stops === 1 ? '1 scalo' : `${stops} scali`)
   );
 }
 
@@ -120,7 +121,8 @@ export function FlightOfferCard({
   const priceLabel =
     formatEuroExact(offer.price, offer.currency) ??
     `${offer.price.toLocaleString('it-IT', {
-      minimumFractionDigits: 0,
+      useGrouping: true,
+      minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })} ${offer.currency}`;
 
@@ -151,7 +153,8 @@ export function FlightOfferCard({
           {saved ? 'Salvata per il gruppo' : kicker}
         </p>
       </div>
-      <div className="grid min-w-0 gap-3 p-4 sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)_minmax(0,140px)] sm:items-center sm:gap-4 sm:p-5">
+
+      <div className="grid min-w-0 gap-3 p-4 sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)_minmax(0,132px)] sm:items-center sm:gap-4 sm:p-5">
         <AirlineBadge
           name={offer.airline}
           code={offer.airlineCode}
@@ -170,7 +173,12 @@ export function FlightOfferCard({
             >
               {formatTime(offer.departureAt)}
             </p>
-            <p className={cn('truncate text-xs font-semibold', dark ? 'text-white/50' : 'text-slate-500')}>
+            <p
+              className={cn(
+                'truncate text-xs font-semibold',
+                dark ? 'text-white/50' : 'text-slate-500'
+              )}
+            >
               {offer.origin}
             </p>
           </div>
@@ -219,45 +227,69 @@ export function FlightOfferCard({
             >
               {formatTime(offer.arrivalAt)}
             </p>
-            <p className={cn('truncate text-xs font-semibold', dark ? 'text-white/50' : 'text-slate-500')}>
+            <p
+              className={cn(
+                'truncate text-xs font-semibold',
+                dark ? 'text-white/50' : 'text-slate-500'
+              )}
+            >
               {offer.destination}
             </p>
           </div>
         </div>
 
-        <div
-          className={cn(
-            'flex min-w-0 flex-row items-center justify-between gap-3 border-t pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0',
-            dark ? 'border-white/8' : 'border-slate-100'
-          )}
-        >
-          <div className="min-w-0 text-right">
-            <p
-              className={cn(
-                'font-display text-xl font-semibold tabular-nums sm:text-2xl',
-                dark ? 'text-white' : 'text-slate-900'
-              )}
-              data-testid="flight-offer-price"
-            >
-              {priceLabel}
-            </p>
-            <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>{priceNote}</p>
-          </div>
-          <Button
-            type="button"
+        {/* Desktop: price column only — CTA is full-width below on all breakpoints so long labels never cover price */}
+        <div className="hidden min-w-0 text-right sm:block">
+          <p
             className={cn(
-              'shrink-0 px-5 font-semibold',
-              dark
-                ? saved
-                  ? 'rounded-full bg-white/12 text-white hover:bg-white/18'
-                  : 'rounded-full bg-accent text-[#0b1220] hover:bg-accent/90'
-                : 'rounded-xl bg-primary hover:bg-primary/90'
+              'font-display text-2xl font-semibold tabular-nums',
+              dark ? 'text-white' : 'text-slate-900'
             )}
-            onClick={onAction}
+            data-testid="flight-offer-price"
           >
-            {actionLabel}
-          </Button>
+            {priceLabel}
+          </p>
+          <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>
+            {priceNote}
+          </p>
         </div>
+      </div>
+
+      <div
+        className={cn(
+          'flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5',
+          dark ? 'border-white/8' : 'border-slate-100'
+        )}
+      >
+        <div className="min-w-0 sm:hidden">
+          <p
+            className={cn(
+              'font-display text-xl font-semibold tabular-nums',
+              dark ? 'text-white' : 'text-slate-900'
+            )}
+            data-testid="flight-offer-price-mobile"
+          >
+            {priceLabel}
+          </p>
+          <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>
+            {priceNote}
+          </p>
+        </div>
+        <Button
+          type="button"
+          className={cn(
+            'h-11 w-full shrink-0 whitespace-normal px-4 text-sm font-semibold leading-snug sm:ml-auto sm:w-auto sm:max-w-[16rem]',
+            dark
+              ? saved
+                ? 'rounded-full bg-white/12 text-white hover:bg-white/18'
+                : 'rounded-full bg-primary text-white hover:bg-[var(--color-primary-hover)]'
+              : 'rounded-xl bg-primary text-white hover:bg-[var(--color-primary-hover)]'
+          )}
+          onClick={onAction}
+          data-testid="flight-offer-cta"
+        >
+          {actionLabel}
+        </Button>
       </div>
     </article>
   );

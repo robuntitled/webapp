@@ -34,7 +34,10 @@ function resolveInitialStep(
   if (initialStep === 'hotel' || initialStep === 'sights' || initialStep === 'flight') {
     return initialStep;
   }
-  const flightBooked = Boolean(practice.flight_booking || practice.flight_confirmed_at);
+  const flightBooked =
+    Boolean(practice.flight_confirmed_at) ||
+    Boolean(practice.flight_booking) ||
+    (Array.isArray(practice.flight_bookings) && practice.flight_bookings.length > 0);
   if (!flightBooked) return 'flight';
   const stays = staysFromTemplate(template, String(practice.date_from).slice(0, 10));
   const stayProgress = getStayBookingProgress(stays, practice.hotel_bookings ?? []);
@@ -61,7 +64,10 @@ export function PracticeBookingHub({
   initialStep?: string | null;
   initialStay?: string | null;
 }) {
-  const flightBooked = Boolean(practice.flight_booking || practice.flight_confirmed_at);
+  const flightBooked =
+    Boolean(practice.flight_confirmed_at) ||
+    Boolean(practice.flight_booking) ||
+    (Array.isArray(practice.flight_bookings) && practice.flight_bookings.length > 0);
   const hotels = practice.hotel_bookings ?? [];
   const activities = practice.activity_bookings ?? [];
   const activityBooked = activities.length > 0 || Boolean(practice.activity_confirmed_at);

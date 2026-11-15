@@ -25,6 +25,17 @@ async function shot(page: import('@playwright/test').Page, name: string) {
   });
 }
 
+async function assertNoHorizontalOverflow(page: import('@playwright/test').Page) {
+  const overflow = await page.evaluate(() => {
+    const doc = document.documentElement;
+    return {
+      scrollWidth: doc.scrollWidth,
+      clientWidth: doc.clientWidth,
+    };
+  });
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+}
+
 test.describe('UX review fixtures (mobile 390)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -46,8 +57,13 @@ test.describe('UX review fixtures (mobile 390)', () => {
     const box = await firstCard.boundingBox();
     expect(box).toBeTruthy();
     expect(box!.width).toBeLessThanOrEqual(390);
-    // Card content should not overflow viewport width
-    await expect(firstCard.getByTestId('flight-offer-price')).toBeVisible();
+    // Mobile shows flight-offer-price-mobile; desktop shows flight-offer-price.
+    const price = firstCard.locator(
+      '[data-testid="flight-offer-price-mobile"], [data-testid="flight-offer-price"]'
+    );
+    await expect(price.filter({ visible: true }).first()).toBeVisible();
+    await expect(firstCard.getByTestId('flight-offer-cta')).toBeVisible();
+    await expect(firstCard.getByTestId('flight-offer-cta')).toContainText(/Seleziona/i);
 
     const legal = page.getByTestId('fixture-legal-ack');
     const checkbox = legal.getByTestId('fixture-legal-checkbox');
@@ -60,12 +76,14 @@ test.describe('UX review fixtures (mobile 390)', () => {
     await expect(page.getByTestId('fixture-checkout-hierarchy').getByText('Paghi ora')).toBeVisible();
     await expect(page.getByTestId('fixture-pago-per-me')).toContainText(/Pago per me/);
     await expect(page.getByTestId('fixture-pago-per-altri')).toContainText(/Pago per altri/);
+    await expect(page.getByTestId('fixture-pago-per-altri')).not.toContainText(/\bda\b/i);
+    await expect(page.getByTestId('fixture-needs-review')).toContainText(/da verificare/i);
 
+    await assertNoHorizontalOverflow(page);
     await shot(page, 'ux-review-fixtures-390.png');
   });
 
   test('mobile menu Accedi/Registrati + Esc closes', async ({ page }) => {
-    // Home (`app/page.tsx`) uses PublicLanding chrome; MobileNav lives in `(main)` layout.
     await page.goto('/gruppi', { waitUntil: 'domcontentloaded' });
     const toggle = page.getByTestId('mobile-nav-toggle');
     await expect(toggle).toBeVisible({ timeout: 20_000 });
@@ -86,36 +104,51 @@ test.describe('UX review fixtures (mobile 390)', () => {
     await shot(page, 'ux-review-pratiche-guest-390.png');
   });
 
-  test('gruppi search is full width; voli form loads', async ({ page }) => {
+  test('gruppi search full width; supporto placeholder; voli form', async ({ page }) => {
     await page.goto('/gruppi', { waitUntil: 'domcontentloaded' });
     const searchForm = page.getByTestId('catalog-hero-search');
     await expect(searchForm).toBeVisible({ timeout: 20_000 });
     const formBox = await searchForm.boundingBox();
     expect(formBox).toBeTruthy();
     expect(formBox!.width).toBeGreaterThan(300);
+    const input = page.getByTestId('catalog-hero-search-input');
+    const inputBox = await input.boundingBox();
+    expect(inputBox).toBeTruthy();
+    expect(inputBox!.width).toBeGreaterThan(140);
+    await assertNoHorizontalOverflow(page);
     await shot(page, 'ux-review-gruppi-390.png');
+
+    await page.goto('/supporto', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Supporto' })).toBeVisible();
+    await expect(page.getByText(/Placeholder/i)).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(/@noivia\.|supporto@/i);
+    await shot(page, 'ux-review-supporto-390.png');
 
     await page.goto('/prenota/voli', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText(/Partenza/i).first()).toBeVisible({
       timeout: 20_000,
     });
+    await assertNoHorizontalOverflow(page);
     await shot(page, 'ux-review-voli-390.png');
   });
 });
 
-test.describe('UX review fixtures (desktop)', () => {
-  test.use({ viewport: { width: 1280, height: 800 } });
+test.describe('UX review fixtures (desktop 1440)', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('fixtures + voli desktop field layout', async ({ page }) => {
+  test('fixtures + voli + gruppi + supporto @1440', async ({ page }) => {
     await page.goto('/dev/ux-review-fixtures', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('fixture-flight-review-cart')).toBeVisible({
       timeout: 20_000,
     });
     await expect(page.getByTestId('flight-review-party-total')).toBeVisible();
+    await expect(page.getByTestId('fixture-needs-review')).toBeVisible();
+    await assertNoHorizontalOverflow(page);
     await shot(page, 'ux-review-fixtures-desktop.png');
 
     await page.goto('/prenota/voli', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText(/Partenza/i).first()).toBeVisible({ timeout: 20_000 });
+    await assertNoHorizontalOverflow(page);
     await shot(page, 'ux-review-voli-desktop.png');
 
     await page.goto('/gruppi', { waitUntil: 'domcontentloaded' });
@@ -124,11 +157,23 @@ test.describe('UX review fixtures (desktop)', () => {
     const formBox = await searchForm.boundingBox();
     expect(formBox).toBeTruthy();
     expect(formBox!.width).toBeGreaterThan(600);
+    await assertNoHorizontalOverflow(page);
     await shot(page, 'ux-review-gruppi-desktop.png');
+
+    await page.goto('/supporto', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Supporto' })).toBeVisible();
+    await shot(page, 'ux-review-supporto-desktop.png');
   });
 
   test('/pratiche guest → Accedi on desktop', async ({ page }) => {
     await page.goto('/pratiche', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/accedi.*callbackUrl/);
+  });
+
+  test('robots disallow /dev and supporto exists', async ({ page }) => {
+    const robots = await page.request.get('/robots.txt');
+    expect(robots.ok()).toBeTruthy();
+    const body = await robots.text();
+    expect(body).toMatch(/Disallow:\s*\/dev/i);
   });
 });

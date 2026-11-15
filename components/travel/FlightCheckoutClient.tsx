@@ -23,6 +23,7 @@ import { COUNTRY_OPTIONS } from '@/lib/travel/countries';
 import {
   formatFlightBookingStatus,
   isFlightPendingConfirmation,
+  parseFlightStatus,
 } from '@/lib/itineraries/bookings';
 import { legKindLabelIt } from '@/lib/itineraries/selected-flight-display';
 import {
@@ -124,11 +125,13 @@ function formatMoney(amount: number, currency: string) {
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency: currency || 'EUR',
+      useGrouping: true,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(roundMoney(amount));
   } catch {
     return `${roundMoney(amount).toLocaleString('it-IT', {
+      useGrouping: true,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })} ${currency}`;
@@ -453,14 +456,24 @@ export function FlightCheckoutClient({
         });
         const data = (await res.json()) as {
           error?: string;
+          ok?: boolean;
+          needsReview?: boolean;
           bookingId?: string | null;
           bookingRef?: string | null;
           status?: string | null;
           practiceId?: string;
           reconciliationPending?: boolean;
           message?: string;
+          code?: string;
+          ref?: string;
         };
-        if (!res.ok) {
+        // HTTP 200 + error/needsReview = paid but provider confirm failed → never "confermata".
+        const reviewAfterPay =
+          Boolean(data.needsReview) ||
+          data.code === 'book_error' ||
+          (Boolean(data.error) && !data.bookingId && !data.bookingRef);
+        if (!res.ok || reviewAfterPay) {
+          const reviewStatus = 'NEEDS_REVIEW';
           const fail: LegCheckoutResult = {
             legId: activeLeg?.id ?? 'unknown',
             labelIt: activeLeg?.labelIt ?? 'Tratta',
@@ -468,26 +481,41 @@ export function FlightCheckoutClient({
               ? `${activeLeg.leg.origin} → ${activeLeg.leg.destination}`
               : '—',
             ok: false,
-            bookingId: null,
-            bookingRef: null,
-            status: null,
+            bookingId: data.bookingId ?? null,
+            bookingRef: data.bookingRef ?? null,
+            status: reviewAfterPay ? reviewStatus : null,
             amountEur,
-            error: data.error ?? 'Conferma prenotazione fallita',
+            error:
+              data.message ??
+              data.error ??
+              'Pagamento ricevuto · da verificare con l’assistenza',
           };
           setLegResults((prev) => {
             const next = [...prev, fail];
             const priorOk = next.some((r) => r.ok);
             setConfirmation({
-              bookingId: null,
-              bookingRef: null,
-              status: priorOk ? 'PARTIAL' : 'FAILED',
-              amountEur: 0,
-              practiceId: draft?.practiceId,
+              bookingId: data.bookingId ?? null,
+              bookingRef: data.bookingRef ?? null,
+              status: reviewAfterPay
+                ? reviewStatus
+                : priorOk
+                  ? 'PARTIAL'
+                  : 'FAILED',
+              amountEur: reviewAfterPay ? amountEur : 0,
+              practiceId: data.practiceId ?? draft?.practiceId,
+              reconciliationPending: true,
+              reconciliationMessage:
+                data.message ??
+                data.error ??
+                'Pagamento ricevuto, stiamo verificando la prenotazione.',
             });
             return next;
           });
-          toast.error(fail.error);
-          // Honest partial/fail state: keep prior successes, never claim "confermata".
+          toast.message(
+            data.message ??
+              data.error ??
+              'Pagamento ricevuto · prenotazione da verificare'
+          );
           clearFlightPaymentPending();
           setPayment(null);
           setStep('done');
@@ -950,8 +978,13 @@ export function FlightCheckoutClient({
 
   if (step === 'done' && (confirmation || legResults.length > 0)) {
     const reconciling = Boolean(confirmation?.reconciliationPending);
+    const needsReview =
+      parseFlightStatus(confirmation?.status) === 'needs_review' ||
+      legResults.some((r) => parseFlightStatus(r.status) === 'needs_review');
     const pending =
-      !reconciling && isFlightPendingConfirmation(confirmation?.status);
+      !reconciling &&
+      !needsReview &&
+      isFlightPendingConfirmation(confirmation?.status);
     const statusInfo = formatFlightBookingStatus(confirmation?.status);
     const practiceHref = confirmation?.practiceId
       ? `/pratica/${confirmation.practiceId}?tab=voli`
@@ -960,6 +993,7 @@ export function FlightCheckoutClient({
     const okAny = legResults.some((r) => r.ok);
     const partial = failedAny && okAny;
     const multiDone = legResults.length > 1;
+    const amberTone = reconciling || pending || partial || needsReview;
     const plannedLegs = Math.max(
       checkoutLegs.length,
       draft?.checkoutLegs?.length ?? 0,
@@ -973,7 +1007,7 @@ export function FlightCheckoutClient({
       <div
         className={cn(
           'mx-auto max-w-lg space-y-6 rounded-3xl border p-6 shadow-sm sm:p-8',
-          reconciling || pending || partial
+          amberTone
             ? 'border-amber-200 bg-gradient-to-b from-amber-50/80 to-white'
             : failedAny && !okAny
               ? 'border-rose-200 bg-gradient-to-b from-rose-50/80 to-white'
@@ -984,7 +1018,7 @@ export function FlightCheckoutClient({
         <div
           className={cn(
             'flex items-center gap-3',
-            reconciling || pending || partial
+            amberTone
               ? 'text-amber-800'
               : failedAny && !okAny
                 ? 'text-rose-800'
@@ -994,38 +1028,43 @@ export function FlightCheckoutClient({
           <CheckCircle2 className="h-9 w-9" />
           <div>
             <h2 className="font-display text-2xl font-semibold">
-              {failedAny && !okAny
-                ? 'Prenotazione non completata'
-                : partial
-                  ? 'Prenotazione parziale'
-                  : reconciling
-                    ? 'Prenotazione ricevuta'
-                    : pending
-                      ? 'Pagamento confermato'
-                      : multiDone
-                        ? 'Tratte prenotate'
-                        : 'Prenotazione confermata'}
+              {needsReview
+                ? 'Pagamento confermato · da verificare'
+                : failedAny && !okAny
+                  ? 'Prenotazione non completata'
+                  : partial
+                    ? 'Prenotazione parziale'
+                    : reconciling
+                      ? 'Prenotazione ricevuta'
+                      : pending
+                        ? 'Pagamento confermato · da verificare'
+                        : multiDone
+                          ? 'Tratte prenotate'
+                          : 'Prenotazione confermata'}
             </h2>
             <p
               className={cn(
                 'text-sm',
-                failedAny && !okAny
+                failedAny && !okAny && !needsReview
                   ? 'text-rose-800/90'
-                  : reconciling || pending || partial
+                  : amberTone
                     ? 'text-amber-900/80'
                     : 'text-emerald-800/80'
               )}
             >
-              {failedAny && !okAny
-                ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
-                : partial
-                  ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
-                  : reconciling
-                    ? confirmation?.reconciliationMessage ??
-                      'Prenotazione ricevuta, stiamo completando la registrazione'
-                    : pending
-                      ? statusInfo.description
-                      : 'Conserva i codici per il check-in.'}
+              {needsReview
+                ? confirmation?.reconciliationMessage ??
+                  statusInfo.description
+                : failedAny && !okAny
+                  ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
+                  : partial
+                    ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
+                    : reconciling
+                      ? confirmation?.reconciliationMessage ??
+                        'Prenotazione ricevuta, stiamo completando la registrazione'
+                      : pending
+                        ? statusInfo.description
+                        : 'Conserva i codici per il check-in.'}
             </p>
           </div>
         </div>

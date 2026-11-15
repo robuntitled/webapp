@@ -685,7 +685,9 @@ export function OrganizzaFlow({
         >
           {ORGANIZZA_STEPS.map((s, i) => {
             const current = s.id === step;
-            const complete = done.has(s.id) && !current;
+            const currentIdx = ORGANIZZA_STEPS.findIndex((x) => x.id === step);
+            // Only steps already passed can be "completato" — never future steps.
+            const complete = done.has(s.id) && !current && i < currentIdx;
             const clickable = canNavigateToOrganizzaStep(draft, s.id, step);
             return (
               <li key={s.id} className="min-w-0 flex-1">
@@ -693,7 +695,9 @@ export function OrganizzaFlow({
                   type="button"
                   disabled={!clickable}
                   aria-current={current ? 'step' : undefined}
-                  aria-label={`${i + 1}. ${s.label}${complete ? ' (completato)' : ''}`}
+                  aria-label={`${i + 1}. ${s.label}${complete ? ' (completato)' : current ? ' (attuale)' : ''}`}
+                  data-testid={`organizza-step-${s.id}`}
+                  data-complete={complete ? 'true' : 'false'}
                   onClick={() => clickable && setStep(s.id)}
                   className={cn(
                     'flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-semibold sm:justify-start sm:px-3 sm:text-sm',
