@@ -71,7 +71,7 @@ export function GruppiHub({ editions }: { editions: OfficialEditionCard[] }) {
           ))}
         </ol>
 
-        <div className="max-w-xl">
+        <div className="w-full max-w-none">
           <CatalogHeroSearchBar
             value={filters}
             onChange={setFilters}

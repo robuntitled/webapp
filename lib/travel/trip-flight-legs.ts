@@ -223,7 +223,7 @@ export function providerSearchModeForPlan(plan: TripFlightPlan): {
   return {
     canUseClosedRoundtrip: false,
     reasonIt:
-      'Tratte separate (one-way): il fornitore non emette un unico biglietto multi-tratta in questa integrazione.',
+      'Tratte separate: il fornitore non emette un unico biglietto multi-tratta in questa integrazione.',
   };
 }
 
@@ -404,28 +404,41 @@ export function reorderLegs(plan: TripFlightPlan, fromIndex: number, toIndex: nu
 }
 
 export function selectedLegsTotal(plan: TripFlightPlan): {
+  /** Party total = unit × passengers per leg, then summed. */
   amount: number | null;
+  /** Sum of unit (a persona) prices across selected legs. */
+  perPersonAmount: number | null;
   currency: string;
   selectedCount: number;
   emptyCount: number;
   staleCount: number;
+  /** Max passengers among selected legs (for labels). */
+  passengers: number;
 } {
   let amount = 0;
+  let perPersonAmount = 0;
   let currency = 'EUR';
   let selectedCount = 0;
   let emptyCount = 0;
   let staleCount = 0;
+  let passengers = 1;
   let any = false;
   for (const leg of plan.legs) {
     if (leg.status === 'selected' && leg.offer) {
-      amount += leg.offer.price;
+      const pax = Math.max(1, leg.passengers || 1);
+      perPersonAmount += leg.offer.price;
+      amount += leg.offer.price * pax;
       currency = leg.offer.currency || currency;
+      passengers = Math.max(passengers, pax);
       selectedCount += 1;
       any = true;
     } else if (leg.status === 'stale') {
       staleCount += 1;
       if (leg.offer) {
-        amount += leg.offer.price;
+        const pax = Math.max(1, leg.passengers || 1);
+        perPersonAmount += leg.offer.price;
+        amount += leg.offer.price * pax;
+        passengers = Math.max(passengers, pax);
         any = true;
       }
     } else if (leg.status === 'empty' || leg.status === 'estimated') {
@@ -434,15 +447,17 @@ export function selectedLegsTotal(plan: TripFlightPlan): {
   }
   return {
     amount: any ? Math.round(amount * 100) / 100 : null,
+    perPersonAmount: any ? Math.round(perPersonAmount * 100) / 100 : null,
     currency,
     selectedCount,
     emptyCount,
     staleCount,
+    passengers,
   };
 }
 
 export const SEPARATE_TICKETS_NOTICE_IT =
-  'Ogni tratta selezionata è un biglietto indipendente. Non c’è garanzia all-or-nothing: se una tratta cambia prezzo o non è più disponibile, le altre non sono automaticamente rimborsate. Collegamenti e scali tra biglietti separati sono a tuo rischio.';
+  'Ogni tratta è un biglietto a sé. Se una tratta cambia prezzo o non è più disponibile, le altre restano indipendenti. Collegamenti tra biglietti separati sono a tuo rischio.';
 
 export const STALE_OFFER_NOTICE_IT =
-  'Tariffa da ricontrollare: le condizioni del viaggio sono cambiate oppure l’offerta è in cache. Verifica di nuovo disponibilità e prezzo prima di procedere.';
+  'Tariffa da ricontrollare: le condizioni del viaggio sono cambiate. Verifica di nuovo disponibilità e prezzo.';

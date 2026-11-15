@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
@@ -32,6 +32,19 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   const menuBtnClass = cn(
     'h-11 w-11 rounded-full text-[var(--color-text-secondary)] transition-colors',
     'hover:bg-[var(--color-tint)] hover:text-[var(--color-brand)]',
@@ -48,6 +61,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
         aria-label={open ? 'Chiudi menu' : 'Apri menu'}
         className={menuBtnClass}
         onClick={() => setOpen(!open)}
+        data-testid="mobile-nav-toggle"
       >
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
@@ -62,6 +76,7 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
           <nav
             className="fixed inset-x-0 top-[var(--nl-nav-h,var(--nl-nav-height))] z-50 border-b border-[var(--color-border)] bg-white/88 py-3 backdrop-blur-md"
             aria-label="Navigazione mobile"
+            data-testid="mobile-nav-panel"
           >
             <div className="nl-page flex w-full flex-col gap-0.5">
               <Link
@@ -99,7 +114,35 @@ export function MobileNav({ isLoggedIn }: { isLoggedIn: boolean }) {
                       {link.label}
                     </Link>
                   ))
-                : null}
+                : (
+                    <div className="mt-2 flex flex-col gap-2 border-t border-[var(--color-border)] px-3 pt-3">
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="min-h-11 w-full justify-center rounded-[10px]"
+                      >
+                        <Link
+                          href="/accedi"
+                          onClick={() => setOpen(false)}
+                          data-testid="mobile-nav-accedi"
+                        >
+                          Accedi
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        className="min-h-11 w-full justify-center rounded-[10px] bg-primary font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+                      >
+                        <Link
+                          href="/accedi?mode=register"
+                          onClick={() => setOpen(false)}
+                          data-testid="mobile-nav-registrati"
+                        >
+                          Registrati
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
             </div>
           </nav>
         </>

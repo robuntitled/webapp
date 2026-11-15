@@ -214,7 +214,8 @@ export function buildCheckoutDraftFromLegs(input: {
 export function formatStopsIt(stops: number | null | undefined): string {
   if (stops == null) return '—';
   if (stops <= 0) return 'Diretto';
-  return `${stops} scalo/i`;
+  if (stops === 1) return '1 scalo';
+  return `${stops} scali`;
 }
 
 export function formatDurationIt(minutes: number | null | undefined): string {

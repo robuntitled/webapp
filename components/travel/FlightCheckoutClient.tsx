@@ -120,10 +120,19 @@ function roundMoney(amount: number) {
 }
 
 function formatMoney(amount: number, currency: string) {
-  return `${roundMoney(amount).toLocaleString('it-IT', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  try {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: currency || 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(roundMoney(amount));
+  } catch {
+    return `${roundMoney(amount).toLocaleString('it-IT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${currency}`;
+  }
 }
 
 function formatTime(iso?: string | null) {
@@ -1363,35 +1372,36 @@ export function FlightCheckoutClient({
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:hidden"
                 data-testid="checkout-summary-mobile"
               >
-                <div className="flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      {isMultiLeg
-                        ? `Addebito tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
-                        : 'Totale'}
-                    </p>
-                    <p className="truncate text-xs text-slate-600">
-                      {draft.adults}{' '}
-                      {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
-                      {isMultiLeg
-                        ? ` · ${activeCheckoutLeg?.leg.origin ?? ''}→${activeCheckoutLeg?.leg.destination ?? ''}`
-                        : draft.tripType === 'roundtrip'
-                          ? ' · A/R'
-                          : ' · solo andata'}
-                    </p>
-                    {isMultiLeg && planTotal !== displayPrice ? (
-                      <p className="mt-0.5 text-[10px] text-slate-500">
-                        Piano completo {formatMoney(planTotal, displayCurrency)} (altre
-                        tratte dopo)
-                      </p>
-                    ) : null}
-                  </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Paghi ora
+                    {isMultiLeg
+                      ? ` · tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
+                      : ''}
+                  </p>
                   <p
-                    className="shrink-0 font-display text-xl font-semibold tabular-nums text-slate-900"
+                    className="font-display text-2xl font-semibold tabular-nums text-slate-900"
                     data-testid="checkout-charge-now-mobile"
                   >
                     {formatMoney(displayPrice, displayCurrency)}
                   </p>
+                  <p className="text-xs text-slate-600">
+                    {adults > 1
+                      ? `${formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona · ${formatMoney(displayPrice, displayCurrency)} totale tratta (${adults} persone)`
+                      : `${draft.adults === 1 ? '1 passeggero' : `${draft.adults} passeggeri`}${
+                          isMultiLeg
+                            ? ` · ${activeCheckoutLeg?.leg.origin ?? ''}→${activeCheckoutLeg?.leg.destination ?? ''}`
+                            : draft.tripType === 'roundtrip'
+                              ? ' · A/R'
+                              : ' · solo andata'
+                        }`}
+                  </p>
+                  {isMultiLeg && planTotal !== displayPrice ? (
+                    <p className="text-[11px] text-slate-500">
+                      Totale voli {formatMoney(planTotal, displayCurrency)} (altre tratte
+                      dopo)
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -1437,17 +1447,27 @@ export function FlightCheckoutClient({
                 className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-amber-950"
                 data-testid="checkout-multi-leg-charge-note"
               >
-                <p className="font-semibold">
-                  Addebito ora (solo questa tratta):{' '}
-                  <span className="tabular-nums" data-testid="checkout-charge-now">
-                    {formatMoney(displayPrice, displayCurrency)}
-                  </span>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-800/90">
+                  Paghi ora
                 </p>
-                <p className="text-amber-900/80">
-                  Piano completo {formatMoney(planTotal, displayCurrency)} — le altre tratte
-                  si pagano dopo, una alla volta. Se una fallisce, non addebitiamo le tratte
-                  non prenotate.
+                <p
+                  className="font-display text-2xl font-semibold tabular-nums"
+                  data-testid="checkout-charge-now"
+                >
+                  {formatMoney(displayPrice, displayCurrency)}
                 </p>
+                <p className="text-amber-950">
+                  {adults > 1
+                    ? `${formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona · ${formatMoney(displayPrice, displayCurrency)} totale tratta (${adults} persone)`
+                    : 'Solo questa tratta'}
+                </p>
+                {planTotal !== displayPrice ? (
+                  <p className="text-[11px] text-amber-900/80">
+                    Totale voli {formatMoney(planTotal, displayCurrency)} — le altre tratte
+                    si pagano dopo, una alla volta. Se una fallisce, non addebitiamo le
+                    tratte non prenotate.
+                  </p>
+                ) : null}
               </div>
             ) : null}
             <AllegatoBLinkedNotice />
@@ -1523,29 +1543,33 @@ export function FlightCheckoutClient({
 
           <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
             <p className="text-[11px] uppercase tracking-wider text-white/70">
+              Paghi ora
               {isMultiLeg
-                ? `Addebito tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
-                : 'Totale'}
+                ? ` · tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
+                : ''}
             </p>
             <p className="font-display text-2xl font-semibold" data-testid="checkout-total">
               {formatMoney(displayPrice, displayCurrency)}
             </p>
-            {isMultiLeg && adults > 1 ? (
+            {adults > 1 ? (
               <p className="text-[11px] text-white/70" data-testid="checkout-unit-price">
                 {formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona
                 {' · '}
-                {adults} passeggeri
+                {formatMoney(displayPrice, displayCurrency)} totale tratta ({adults}{' '}
+                persone)
+              </p>
+            ) : (
+              <p className="text-[11px] text-white/60">
+                {draft.adults}{' '}
+                {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
+                {draft.tripType === 'roundtrip' ? ' · A/R' : ' · solo andata'}
+              </p>
+            )}
+            {isMultiLeg && planTotal !== displayPrice ? (
+              <p className="mt-1 text-[11px] text-white/55">
+                Totale voli {formatMoney(planTotal, displayCurrency)}
               </p>
             ) : null}
-            <p className="text-[11px] text-white/60">
-              {draft.adults}{' '}
-              {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
-              {isMultiLeg
-                ? ` · one-way (piano ${formatMoney(planTotal, displayCurrency)})`
-                : draft.tripType === 'roundtrip'
-                  ? ' · A/R'
-                  : ' · solo andata'}
-            </p>
           </div>
           <BookingComplianceNote showMerchantOfRecord />
           <AllegatoBLinkedNotice compact />

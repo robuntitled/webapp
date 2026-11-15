@@ -1318,11 +1318,16 @@ export function OrganizzaFlow({
 
               <SeparateTicketsNotice />
 
-              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50">
+              <div
+                className="rounded-2xl border border-amber-200/80 bg-amber-50/50"
+                data-testid="organizza-legal-ack"
+              >
                 <button
                   type="button"
                   className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-amber-950"
                   onClick={() => setLegalOpen((v) => !v)}
+                  aria-expanded={legalOpen}
+                  data-testid="organizza-legal-toggle"
                 >
                   Informazioni importanti
                   {legalOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1330,20 +1335,21 @@ export function OrganizzaFlow({
                 {legalOpen ? (
                   <div className="space-y-3 border-t border-amber-200/80 px-3 py-3">
                     <AllegatoBLinkedNotice />
-                    <label className="flex min-h-11 cursor-pointer items-start gap-3 text-xs text-amber-950">
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4 accent-primary"
-                        checked={draft.legalAck}
-                        onChange={(e) => update({ legalAck: e.target.checked })}
-                      />
-                      <span>
-                        Ho letto le informazioni importanti (BOZZA Allegato B). Le
-                        confermerò di nuovo prima di qualsiasi pagamento.
-                      </span>
-                    </label>
                   </div>
                 ) : null}
+                <label className="flex min-h-11 cursor-pointer items-start gap-3 border-t border-amber-200/80 px-4 py-3 text-xs text-amber-950">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 accent-primary"
+                    checked={draft.legalAck}
+                    onChange={(e) => update({ legalAck: e.target.checked })}
+                    data-testid="organizza-legal-checkbox"
+                  />
+                  <span>
+                    Ho letto le informazioni importanti. Le confermerò di nuovo prima di
+                    qualsiasi pagamento.
+                  </span>
+                </label>
               </div>
             </div>
           ) : null}

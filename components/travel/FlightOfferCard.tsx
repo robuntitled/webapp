@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { Clock3, Plane } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatEuroExact } from '@/lib/format/euro';
 import { cn } from '@/lib/utils';
 import {
   formatLayoversLine,
@@ -116,16 +117,24 @@ export function FlightOfferCard({
   actionLabel: string;
   onAction: () => void;
 }) {
+  const priceLabel =
+    formatEuroExact(offer.price, offer.currency) ??
+    `${offer.price.toLocaleString('it-IT', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })} ${offer.currency}`;
+
   return (
     <article
       className={cn(
-        'overflow-hidden rounded-2xl ring-1 transition',
+        'w-full min-w-0 rounded-2xl ring-1 transition',
         dark
           ? saved
             ? 'bg-accent/12 ring-accent/50'
             : 'bg-[#161d2b] ring-[#2a3344] hover:bg-[#1c2436] hover:ring-[#3a4558]'
           : 'rounded-3xl bg-slate-50/80 ring-slate-100 hover:bg-white hover:ring-slate-200'
       )}
+      data-testid="flight-offer-card"
     >
       <div
         className={cn(
@@ -142,7 +151,7 @@ export function FlightOfferCard({
           {saved ? 'Salvata per il gruppo' : kicker}
         </p>
       </div>
-      <div className="grid gap-4 p-4 sm:grid-cols-[200px_1fr_150px] sm:items-center sm:p-5">
+      <div className="grid min-w-0 gap-3 p-4 sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)_minmax(0,140px)] sm:items-center sm:gap-4 sm:p-5">
         <AirlineBadge
           name={offer.airline}
           code={offer.airlineCode}
@@ -151,30 +160,30 @@ export function FlightOfferCard({
           dark={dark}
         />
 
-        <div className="flex items-center gap-3 sm:gap-5">
-          <div className="min-w-[64px] text-center">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+          <div className="min-w-0 flex-1 text-center">
             <p
               className={cn(
-                'font-display text-2xl font-semibold tabular-nums',
+                'font-display text-xl font-semibold tabular-nums sm:text-2xl',
                 dark ? 'text-white' : 'text-slate-900'
               )}
             >
               {formatTime(offer.departureAt)}
             </p>
-            <p className={cn('text-xs font-semibold', dark ? 'text-white/50' : 'text-slate-500')}>
+            <p className={cn('truncate text-xs font-semibold', dark ? 'text-white/50' : 'text-slate-500')}>
               {offer.origin}
             </p>
           </div>
 
-          <div className="min-w-[96px] flex-1 px-1">
+          <div className="min-w-0 flex-[1.2] px-0.5">
             <p
               className={cn(
                 'mb-1 flex items-center justify-center gap-1 text-[11px]',
                 dark ? 'text-white/45' : 'text-slate-500'
               )}
             >
-              <Clock3 className="h-3 w-3" />
-              {formatDuration(offer.durationMinutes)}
+              <Clock3 className="h-3 w-3 shrink-0" />
+              <span className="truncate">{formatDuration(offer.durationMinutes)}</span>
             </p>
             <div className={cn('relative h-px', dark ? 'bg-white/15' : 'bg-slate-200')}>
               <Plane
@@ -186,7 +195,7 @@ export function FlightOfferCard({
             </div>
             <p
               className={cn(
-                'mt-1 text-center text-[11px] font-medium',
+                'mt-1 truncate text-center text-[11px] font-medium',
                 hasLongLayover(offer.layovers)
                   ? dark
                     ? 'text-amber-300'
@@ -201,16 +210,16 @@ export function FlightOfferCard({
             </p>
           </div>
 
-          <div className="min-w-[64px] text-center">
+          <div className="min-w-0 flex-1 text-center">
             <p
               className={cn(
-                'font-display text-2xl font-semibold tabular-nums',
+                'font-display text-xl font-semibold tabular-nums sm:text-2xl',
                 dark ? 'text-white' : 'text-slate-900'
               )}
             >
               {formatTime(offer.arrivalAt)}
             </p>
-            <p className={cn('text-xs font-semibold', dark ? 'text-white/50' : 'text-slate-500')}>
+            <p className={cn('truncate text-xs font-semibold', dark ? 'text-white/50' : 'text-slate-500')}>
               {offer.destination}
             </p>
           </div>
@@ -218,36 +227,26 @@ export function FlightOfferCard({
 
         <div
           className={cn(
-            'flex flex-row items-center justify-between gap-3 border-t pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0',
+            'flex min-w-0 flex-row items-center justify-between gap-3 border-t pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0',
             dark ? 'border-white/8' : 'border-slate-100'
           )}
         >
-          <div className="text-right">
+          <div className="min-w-0 text-right">
             <p
               className={cn(
-                'font-display text-2xl font-semibold tabular-nums',
+                'font-display text-xl font-semibold tabular-nums sm:text-2xl',
                 dark ? 'text-white' : 'text-slate-900'
               )}
+              data-testid="flight-offer-price"
             >
-              {offer.price.toLocaleString('it-IT', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              })}
-              <span
-                className={cn(
-                  'ml-1 text-sm font-medium',
-                  dark ? 'text-white/50' : 'text-slate-500'
-                )}
-              >
-                {offer.currency}
-              </span>
+              {priceLabel}
             </p>
             <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>{priceNote}</p>
           </div>
           <Button
             type="button"
             className={cn(
-              'px-5 font-semibold',
+              'shrink-0 px-5 font-semibold',
               dark
                 ? saved
                   ? 'rounded-full bg-white/12 text-white hover:bg-white/18'

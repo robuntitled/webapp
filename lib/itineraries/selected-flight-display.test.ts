@@ -28,7 +28,8 @@ const base: SelectedFlightLegSnapshot = {
 describe('selected-flight-display', () => {
   it('formats stops and duration in Italian', () => {
     expect(formatStopsIt(0)).toBe('Diretto');
-    expect(formatStopsIt(1)).toBe('1 scalo/i');
+    expect(formatStopsIt(1)).toBe('1 scalo');
+    expect(formatStopsIt(2)).toBe('2 scali');
     expect(formatDurationIt(215)).toBe('3 h 35 min');
   });
 

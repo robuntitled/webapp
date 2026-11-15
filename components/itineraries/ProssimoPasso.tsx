@@ -364,7 +364,9 @@ export function ProssimoPasso({
                               ? '—'
                               : leg.stops === 0
                                 ? 'Diretto'
-                                : `${leg.stops} scalo/i`}
+                                : leg.stops === 1
+                                  ? '1 scalo'
+                                  : `${leg.stops} scali`}
                             {leg.durationMinutes != null
                               ? ` · ${Math.round(leg.durationMinutes / 60)} h`
                               : ''}

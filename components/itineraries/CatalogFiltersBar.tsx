@@ -80,6 +80,7 @@ export function CatalogHeroSearchBar({
   return (
     <form
       role="search"
+      data-testid="catalog-hero-search"
       className="flex min-h-[3.5rem] w-full min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/95 py-1 pl-2.5 pr-1 shadow-[0_6px_22px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:min-h-[3.75rem] sm:gap-2.5 sm:pl-4 sm:pr-1.5"
       onSubmit={(e) => {
         e.preventDefault();

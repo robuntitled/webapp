@@ -649,7 +649,7 @@ export function FlightSearchPanel({
             ))}
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_1.15fr_auto_auto] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_auto_minmax(0,1.35fr)_minmax(12rem,1.1fr)_5.75rem_auto] lg:items-end">
             <AirportPlaceInput
               label="Partenza"
               value={originQuery}
@@ -658,6 +658,7 @@ export function FlightSearchPanel({
               onClearSelection={() => setOriginPlace(null)}
               onSelect={setOriginPlace}
               placeholder="Da dove parti? Es. Milano o MXP"
+              className="min-w-0"
             />
 
             <div className="flex justify-center lg:pb-1">
@@ -679,6 +680,7 @@ export function FlightSearchPanel({
               onClearSelection={() => setDestinationPlace(null)}
               onSelect={setDestinationPlace}
               placeholder="Tokyo, Giappone, NRT…"
+              className="min-w-0"
             />
 
             <FlightDateField
@@ -689,7 +691,7 @@ export function FlightSearchPanel({
               onEndDateChange={setEndDate}
             />
 
-            <label className="space-y-1.5">
+            <label className="min-w-0 space-y-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Passeggeri
               </span>
@@ -701,7 +703,7 @@ export function FlightSearchPanel({
                   max={9}
                   value={adults}
                   onChange={(e) => setAdults(Number(e.target.value) || 1)}
-                  className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-9"
+                  className="h-12 w-full rounded-xl border-slate-200 bg-slate-50 pl-9"
                 />
               </div>
             </label>
@@ -712,7 +714,7 @@ export function FlightSearchPanel({
                 onClick={() => void search()}
                 disabled={loading}
                 className={cn(
-                  'h-12 w-full px-6 text-base font-semibold text-white lg:w-auto',
+                  'h-12 w-full px-6 text-base font-semibold text-white disabled:bg-slate-300 disabled:text-slate-600 disabled:opacity-100 lg:w-auto',
                   composer
                     ? 'rounded-full bg-[#0b1220] hover:bg-[#0b1220]/90'
                     : 'rounded-xl bg-primary hover:bg-primary/90'
