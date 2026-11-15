@@ -158,7 +158,7 @@ export function ProssimoPasso({
 
   function inviteFriend(userId: string) {
     if (!editionId) {
-      toast.error('Invito in-app disponibile solo per viaggi con edizione.');
+      toast.error('Invito in-app disponibile solo per le partenze di gruppo.');
       return;
     }
     setInvitingId(userId);
@@ -169,7 +169,7 @@ export function ProssimoPasso({
         toast.error(res.error);
         return;
       }
-      toast.success('Invito inviato in-app (notifica). Nessun messaggio esterno.');
+      toast.success('Invito inviato.');
       setFriendQuery('');
       setFriendHits([]);
     });
@@ -210,7 +210,7 @@ export function ProssimoPasso({
               {title} · {formatEditionDateRange(dateFrom, dateTo)} ·{' '}
               <span className="font-semibold text-[var(--color-text)]">{privacyLabel}</span>
             </p>
-            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
               Prossimi passi · {completedSteps} di 3 completati
             </p>
             <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-[var(--color-tint)]">
@@ -224,7 +224,7 @@ export function ProssimoPasso({
           <ol className="mt-6 space-y-2.5">
             {showInviteStep ? (
               <li className="rounded-2xl border-2 border-primary bg-white p-3.5 sm:p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-primary">
                   Ora · Passo 1 — Invita gli amici
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -312,7 +312,7 @@ export function ProssimoPasso({
                   ) : null}
                   {!inviteEmailEnabled ? (
                     <p
-                      className="text-[11px] text-[var(--color-text-secondary)]"
+                      className="text-xs text-[var(--color-text-secondary)]"
                       data-testid="invite-email-disabled"
                     >
                       {DASHBOARD_VIAGGI_COPY.invite.emailDisabled}
@@ -322,7 +322,7 @@ export function ProssimoPasso({
               </li>
             ) : (
               <li className="rounded-2xl border border-[var(--color-border)] p-3.5 sm:p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-primary">
                   Passo 1 — Il viaggio è tuo
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -403,18 +403,33 @@ export function ProssimoPasso({
                   Passo 3 — Scegli l&apos;hotel
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                  Si sblocca dopo il volo, così le date coincidono con l&apos;arrivo.
+                  {participants.some((p) => p.flightsBought)
+                    ? 'Date allineate al volo: scegli l’alloggio per la prima tappa.'
+                    : 'Si sblocca dopo il volo, così le date coincidono con l’arrivo.'}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled
-                className="min-h-10 shrink-0 rounded-[10px]"
-              >
-                <Lock className="h-4 w-4" />
-                Dopo il volo
-              </Button>
+              {participants.some((p) => p.flightsBought) ? (
+                <Button
+                  asChild
+                  variant="cta"
+                  className="min-h-10 shrink-0 rounded-[10px]"
+                  data-testid="prossimo-scegli-hotel"
+                >
+                  <Link href={`/pratica/${practiceId}?tab=hotel`}>
+                    Scegli l&apos;hotel
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled
+                  className="min-h-10 shrink-0 rounded-[10px]"
+                >
+                  <Lock className="h-4 w-4" />
+                  Dopo il volo
+                </Button>
+              )}
             </li>
           </ol>
 
@@ -447,7 +462,8 @@ export function ProssimoPasso({
             )}
           </section>
 
-          {isPrivate ? (
+          {/* Soft-removed (P1-14): «Rendi pubblico come gruppo (Attivazione in arrivo)» */}
+          {false && isPrivate ? (
             <div className="mt-4 rounded-2xl border border-dashed border-[var(--color-border)] p-3.5">
               <p className="text-sm font-bold text-[var(--color-text)]">Rendi pubblico come gruppo</p>
               <p className="mt-1 text-xs text-[var(--color-text-secondary)]">

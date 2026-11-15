@@ -306,7 +306,7 @@ export function PrenotaAttractionsClient({
 
       {destinationName && results && (
         <p className="text-xs text-muted-foreground">
-          Destinazione Viator:{' '}
+          Destinazione:{' '}
           <span className="font-medium text-foreground">{destinationName}</span>
           {' · '}
           {cards?.length ?? 0} risultati

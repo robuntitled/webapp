@@ -39,13 +39,13 @@ const DOCS: {
 const KIND_RING: Record<LegalDocumentKind, string> = {
   privacy: 'hover:ring-primary/25 group-hover:text-primary',
   terms: 'hover:ring-slate-400/30 group-hover:text-slate-900',
-  cookie: 'hover:ring-accent/30 group-hover:text-accent',
+  cookie: 'hover:ring-primary/30 group-hover:text-primary',
 };
 
 const KIND_ICON: Record<LegalDocumentKind, string> = {
   privacy: 'bg-primary/10 text-primary',
   terms: 'bg-slate-900/[0.06] text-slate-800',
-  cookie: 'bg-accent/12 text-accent',
+  cookie: 'bg-primary/12 text-primary',
 };
 
 export function LegalRelatedDocs({ current }: { current: LegalDocumentKind }) {

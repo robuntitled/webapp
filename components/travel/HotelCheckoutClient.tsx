@@ -460,7 +460,7 @@ export function HotelCheckoutClient({
               />
             </label>
             <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                 Ospite in camera (se diverso)
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -478,7 +478,6 @@ export function HotelCheckoutClient({
                 />
               </div>
             </div>
-            <AllegatoBLinkedNotice />
             <Button
               type="button"
               disabled={submitting}
@@ -527,7 +526,7 @@ export function HotelCheckoutClient({
         <aside className="h-fit space-y-3 rounded-3xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-24">
           <div className="flex items-center gap-2">
             <BedDouble className="h-4 w-4 text-primary" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Riepilogo
             </p>
           </div>
@@ -578,24 +577,23 @@ export function HotelCheckoutClient({
             </p>
           </div>
           <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
-            <p className="text-[11px] uppercase tracking-wider text-white/70">
+            <p className="text-xs uppercase tracking-wider text-white/70">
               Totale
             </p>
             <p className="font-display text-2xl font-semibold">
               {formatMoney(displayPrice, displayCurrency)}
             </p>
-            <p className="mt-1 text-[11px] text-white/70">
+            <p className="mt-1 text-xs text-white/70">
               {COMPLIANCE_COPY.hotelServiceFeeIncluded}
             </p>
             <HotelRateDisclosures
-              className="mt-2 space-y-1 text-[11px] leading-relaxed text-white/80"
+              className="mt-2 space-y-1 text-xs leading-relaxed text-white/80"
               taxesAndFees={draft?.taxesAndFees ?? null}
               refundable={draft?.freeCancellation ?? draft?.refundable}
               freeCancellationUntil={draft?.freeCancellationUntil ?? null}
             />
           </div>
           <BookingComplianceNote showMerchantOfRecord showHotelServiceFee />
-          <AllegatoBLinkedNotice compact />
         </aside>
       ) : null}
     </div>

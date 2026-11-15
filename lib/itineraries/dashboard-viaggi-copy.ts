@@ -13,8 +13,12 @@ export const DASHBOARD_VIAGGI_COPY = {
     draft: 'Bozza',
     flightPending: 'Volo in conferma',
     booked: 'Prenotato',
+    bookedPartial: 'Prenotato in parte',
+    bookedPartialOf: (booked: number, total: number) =>
+      `Prenotato in parte: ${booked} di ${total} voli`,
     toBook: 'Da prenotare',
     needsReview: 'Da verificare',
+    failed: 'Prenotazione non riuscita',
     carrierCancelled: 'Volo annullato dal vettore',
   },
 
@@ -49,7 +53,7 @@ export const DASHBOARD_VIAGGI_COPY = {
     ageRequired: 'Per unirti conferma di avere almeno 18 anni.',
     whatsapp: 'Invita su WhatsApp',
     friends: 'Invita amici',
-    emailDisabled: 'Invito email non disponibile (in attesa di verifica Legale).',
+    emailDisabled: 'Per ora invita con il link o WhatsApp.',
   },
 
   fields: {

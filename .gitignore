@@ -61,3 +61,4 @@ brand-names-*.txt
 
 # supabase cli temp
 supabase/.temp/
+uploads/

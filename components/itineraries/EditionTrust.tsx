@@ -1,17 +1,18 @@
 import Link from 'next/link';
-import { BadgeCheck, Star } from 'lucide-react';
+import { BadgeCheck } from 'lucide-react';
 import { UserProfileLink } from '@/components/profile/UserProfileLink';
 import type { EditionHost } from '@/lib/data/editions';
 import { profilePath } from '@/lib/profile/paths';
 
 export function CuratedEditionBadge() {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-accent/25 bg-accent/5 p-4">
-      <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+    <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-[var(--color-tint)] p-4">
+      <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
       <div>
-        <p className="text-sm font-semibold text-foreground">Partenza ufficiale curata</p>
+        <p className="text-sm font-semibold text-foreground">Partenza in arrivo</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          La chat del gruppo si apre appena ti iscrivi alla partenza.
+          Le partenze di gruppo sono organizzate da un tour operator autorizzato quando
+          disponibili. Finché sono «In arrivo» non ci si può ancora iscrivere.
         </p>
       </div>
     </div>
@@ -23,7 +24,7 @@ export function EditionHostCard({ host }: { host: EditionHost }) {
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Organizzatore
+        Creato da
       </p>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <UserProfileLink
@@ -34,19 +35,10 @@ export function EditionHostCard({ host }: { host: EditionHost }) {
           image={host.image}
         />
         <div className="text-right">
-          {host.ratingAvg != null && host.ratingCount > 0 ? (
-            <p className="flex items-center justify-end gap-1 text-sm font-semibold text-foreground">
-              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              {host.ratingAvg.toFixed(1)}
-              <span className="font-normal text-muted-foreground">
-                ({host.ratingCount})
-              </span>
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">Nuovo organizer</p>
-          )}
+          {/* Stelle tra persone nascoste (Legale PRO) — solo «Nuovo su Noivia» */}
+          <p className="text-xs text-muted-foreground">Nuovo su Noivia</p>
           {path ? (
-            <Link href={path} className="text-xs font-semibold text-accent hover:underline">
+            <Link href={path} className="text-xs font-semibold text-primary hover:underline">
               Vedi profilo
             </Link>
           ) : null}
@@ -56,18 +48,10 @@ export function EditionHostCard({ host }: { host: EditionHost }) {
   );
 }
 
-export function MemberRatingBadge({
-  avg,
-  count,
-}: {
+/** Stelle tra persone nascoste (Legale PRO) — componente no-op. */
+export function MemberRatingBadge(_props: {
   avg: number | null;
   count: number;
 }) {
-  if (avg == null || count <= 0) return null;
-  return (
-    <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-700">
-      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-      {avg.toFixed(1)}
-    </span>
-  );
+  return null;
 }

@@ -54,7 +54,7 @@ function Leg({ label, leg }: { label: string; leg: FlightLegRecap }) {
     leg.stops == null ? null : leg.stops === 0 ? 'Diretto' : `${leg.stops} scalo${leg.stops > 1 ? 'i' : ''}`;
   return (
     <div className="rounded-2xl bg-[#0b1220] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">{label}</p>
       <p className="mt-1 font-display text-lg font-semibold text-white">
         {leg.origin} → {leg.destination}
       </p>
@@ -151,7 +151,7 @@ export function FlightBookingCard({
   return (
     <section className="space-y-3 rounded-3xl bg-[#161d2b] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           <Plane className="h-3.5 w-3.5" />
           Volo prenotato
         </p>
@@ -181,7 +181,7 @@ export function HotelBookingCard({ hotel }: { hotel: HotelBookingRecap }) {
   return (
     <section className="space-y-2 rounded-3xl bg-[#161d2b] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           <Hotel className="h-3.5 w-3.5" />
           Hotel prenotato
         </p>
@@ -206,9 +206,9 @@ export function ActivityBookingCard({ activity }: { activity: ActivityBookingRec
   return (
     <section className="space-y-2 rounded-3xl bg-[#161d2b] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           <Ticket className="h-3.5 w-3.5" />
-          {activity.provider === 'attractions' ? 'Attrazione' : 'Viator'}
+          {activity.provider === 'attractions' ? 'Attrazione' : 'Attività'}
         </p>
         {activity.bookingRef ? <CopyRef value={activity.bookingRef} /> : null}
       </div>
@@ -219,9 +219,9 @@ export function ActivityBookingCard({ activity }: { activity: ActivityBookingRec
           href={activity.bookingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-accent"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
         >
-          Apri su Viator
+          Apri prenotazione
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       ) : null}
@@ -270,7 +270,7 @@ export function BookingRecap({
         (activities.length
           ? `${activities.length} attività`
           : practice.activity_confirmed_at
-            ? 'Viator'
+            ? 'Attività'
             : null),
     ].filter(Boolean);
     if (!bits.length) return null;

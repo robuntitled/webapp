@@ -92,12 +92,13 @@ export function SettingsPrivacySection({ privacyEmail }: { privacyEmail: string 
       <SettingsSection
         icon={ShieldAlert}
         title="Eliminazione account"
-        description="Cancella definitivamente il tuo account e tutti i dati associati (art. 17 GDPR)."
+        description="Anonimizza il profilo e scollega i viaggi (art. 17 GDPR). Le prenotazioni presso i fornitori restano."
       >
         <div className="rounded-2xl border border-red-200/80 dark:border-red-900/60 bg-red-50/60 dark:bg-red-950/20 p-5 space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Verranno eliminati profilo, viaggi creati, preferiti e partecipazioni. Questa azione è
-            irreversibile.
+            Il profilo verrà anonimizzato. Le prenotazioni già pagate restano nei sistemi dei
+            fornitori (non le cancelliamo noi). I viaggi creati e le partecipazioni non restano
+            collegati al tuo account. Questa azione è irreversibile.
           </p>
           <AlertDialog>
             <AlertDialogTrigger asChild>

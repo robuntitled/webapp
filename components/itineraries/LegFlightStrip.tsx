@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Loader2, Plane } from 'lucide-react';
 import { SmartFlightCalendar } from '@/components/itineraries/SmartFlightCalendar';
-import { formatEuro } from '@/lib/format/euro';
+import { formatEuro, formatEuroExact } from '@/lib/format/euro';
 import {
   flightOfferCacheKey,
   getInflightOfferSearch,
@@ -337,9 +337,13 @@ export function LegFlightStrip({
                 const perPerson = Math.round(leg.offer.price * 100) / 100;
                 const total = Math.round(perPerson * pax * 100) / 100;
                 const perLabel =
-                  formatEuro(perPerson, { approx: false }) ?? `${perPerson} €`;
+                  formatEuroExact(perPerson, leg.offer.currency) ??
+                  formatEuro(perPerson, { approx: false }) ??
+                  `${perPerson} €`;
                 const totalLabel =
-                  formatEuro(total, { approx: false }) ?? `${total} €`;
+                  formatEuroExact(total, leg.offer.currency) ??
+                  formatEuro(total, { approx: false }) ??
+                  `${total} €`;
                 return (
                   <>
                     <p className="text-sm font-extrabold" data-testid="leg-price-per-person">
@@ -347,16 +351,16 @@ export function LegFlightStrip({
                     </p>
                     {pax > 1 ? (
                       <p
-                        className="text-[11px] font-semibold text-[var(--color-text)]"
+                        className="text-xs font-semibold text-[var(--color-text)]"
                         data-testid="leg-price-total"
                       >
-                        {totalLabel} totale ({pax} pax)
+                        {totalLabel} totale tratta ({pax} persone)
                       </p>
                     ) : null}
                   </>
                 );
               })()}
-              <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+              <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                 {leg.offer.stops === 0
                   ? 'Diretto'
                   : leg.offer.stops === 1

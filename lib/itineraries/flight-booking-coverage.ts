@@ -1,7 +1,11 @@
 /**
  * Who-pays model for selected group flights (migration 049).
  * One booker can cover multiple beneficiaries in a single checkout.
+ *
+ * Until migration 049 is applied in production, hide «Pago per altri»
+ * (PIANO-FINALE P0-6 / OPS D-9). Checkout stays «Pago per me» only.
  */
+export const PAY_FOR_OTHERS_ENABLED = false;
 
 export type FlightCoverageStatus = 'pending' | 'booked' | 'covered';
 

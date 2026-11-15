@@ -186,7 +186,7 @@ export function CreatePostComposer({
               onDark ? 'bg-white/5 text-white/85' : 'bg-muted text-foreground'
             )}
           >
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span className="min-w-0 flex-1 truncate">
               {geo.label
                 ? geo.label
@@ -199,7 +199,7 @@ export function CreatePostComposer({
             </span>
             <button
               type="button"
-              className="text-[11px] font-medium text-accent hover:underline"
+              className="text-[11px] font-medium text-primary hover:underline"
               onClick={() => setShowPlaceSearch(true)}
             >
               Correggi
@@ -301,7 +301,7 @@ export function CreatePostComposer({
       )}
     >
       <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
-        <Sparkles className="h-3.5 w-3.5 text-accent" />
+        <Sparkles className="h-3.5 w-3.5 text-primary" />
         Foto e testo
       </div>
 
@@ -357,11 +357,11 @@ export function CreatePostComposer({
           className={cn(
             'flex min-h-[140px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-6 text-center transition',
             dragOver
-              ? 'border-accent bg-accent/15 text-white'
-              : 'border-white/25 bg-white/5 text-white/80 hover:border-accent/70 hover:bg-white/8'
+              ? 'border-accent bg-primary/15 text-white'
+              : 'border-white/25 bg-white/5 text-white/80 hover:border-primary/70 hover:bg-white/8'
           )}
         >
-          <ImagePlus className="h-7 w-7 text-accent" />
+          <ImagePlus className="h-7 w-7 text-primary" />
           <span className="text-sm font-semibold text-white">Aggiungi una foto</span>
           <span className="text-xs text-white/50">Clicca o trascina. Poi un testo, se vuoi.</span>
         </button>

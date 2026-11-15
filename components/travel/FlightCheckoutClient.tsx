@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, subYears } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { CalendarDays, CheckCircle2, Loader2, Plane } from 'lucide-react';
+import { CalendarDays, Check, Loader2, Plane } from 'lucide-react';
 import { toast } from 'sonner';
 import { LiteApiPaymentWidget } from '@/components/travel/LiteApiPaymentWidget';
 import {
@@ -15,7 +15,10 @@ import {
 } from '@/components/travel/CheckoutUi';
 import { BookingComplianceNote } from '@/components/commerce/BookingComplianceNote';
 import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
+import { PostPurchase } from '@/components/booking/PostPurchase';
 import { Button } from '@/components/ui/button';
+import { COMPLIANCE_COPY } from '@/lib/legal/compliance-copy';
+import { SEPARATE_TICKETS_NOTICE_IT } from '@/lib/travel/trip-flight-legs';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -25,6 +28,7 @@ import {
   isFlightPendingConfirmation,
   parseFlightStatus,
 } from '@/lib/itineraries/bookings';
+import { PAY_FOR_OTHERS_ENABLED } from '@/lib/itineraries/flight-booking-coverage';
 import { legKindLabelIt } from '@/lib/itineraries/selected-flight-display';
 import {
   clearFlightCheckoutDraft,
@@ -69,7 +73,7 @@ const TITLES: Array<{ id: Title; label: string; gender: 'M' | 'F' }> = [
   { id: 'MR', label: 'Sig. (Mr)', gender: 'M' },
   { id: 'MRS', label: 'Sig.ra (Mrs)', gender: 'F' },
   { id: 'MS', label: 'Ms', gender: 'F' },
-  { id: 'MISS', label: 'Sig.na (Miss)', gender: 'F' },
+  { id: 'MISS', label: 'Ms', gender: 'F' },
 ];
 
 type VerifyState = {
@@ -167,7 +171,7 @@ function DatePickerField({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         {label}
       </span>
       <Popover open={open} onOpenChange={setOpen}>
@@ -227,7 +231,7 @@ function CountrySelect({
 }) {
   return (
     <label className="space-y-1.5 block">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         {label}
       </span>
       <select
@@ -280,19 +284,19 @@ function LegSummary({
       data-testid="checkout-leg-summary"
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
           {title}
         </p>
         {status === 'paid' ? (
-          <span className="text-[11px] font-semibold text-emerald-700">Prenotato</span>
+          <span className="text-xs font-semibold text-emerald-700">Prenotato</span>
         ) : status === 'confirming' ? (
-          <span className="text-[11px] font-semibold text-amber-800">
+          <span className="text-xs font-semibold text-amber-800">
             Volo in conferma
           </span>
         ) : status === 'failed' ? (
-          <span className="text-[11px] font-semibold text-rose-700">Fallito</span>
+          <span className="text-xs font-semibold text-rose-700">Fallito</span>
         ) : status === 'active' ? (
-          <span className="text-[11px] font-semibold text-primary">In pagamento</span>
+          <span className="text-xs font-semibold text-primary">In pagamento</span>
         ) : null}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
@@ -303,7 +307,7 @@ function LegSummary({
           <p className="text-xs font-semibold text-slate-500">{leg.origin}</p>
         </div>
         <div className="min-w-0 flex-1 px-2 text-center">
-          <p className="truncate text-[11px] text-slate-500">
+          <p className="truncate text-xs text-slate-500">
             {leg.airline || leg.airlineCode || 'Volo'}
             {leg.flightNumber ? ` · ${leg.flightNumber}` : ''}
           </p>
@@ -318,7 +322,7 @@ function LegSummary({
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
         {leg.departureAt ? (
-          <p className="text-[11px] capitalize text-slate-500">
+          <p className="text-xs capitalize text-slate-500">
             {format(parseISO(leg.departureAt.slice(0, 10)), 'EEEE d MMMM', {
               locale: it,
             })}
@@ -1003,71 +1007,57 @@ export function FlightCheckoutClient({
     const remainingLegs = Math.max(0, plannedLegs - okLegs);
     const needsMoreLegs = isMultiLeg && okAny && remainingLegs > 0;
 
+    const postTone =
+      needsReview || pending || reconciling
+        ? ('review' as const)
+        : failedAny && !okAny
+          ? ('failed' as const)
+          : partial
+            ? ('partial' as const)
+            : ('ok' as const);
+    const postTitle = needsReview
+      ? 'Pagamento ricevuto · da verificare'
+      : failedAny && !okAny
+        ? 'Prenotazione non completata'
+        : partial
+          ? 'Prenotazione parziale'
+          : reconciling
+            ? 'Prenotazione ricevuta'
+            : pending
+              ? 'Pagamento ricevuto · da verificare'
+              : multiDone
+                ? 'Tratte prenotate'
+                : 'Prenotazione confermata';
+    const postBody = needsReview
+      ? confirmation?.reconciliationMessage ?? statusInfo.description
+      : failedAny && !okAny
+        ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
+        : partial
+          ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
+          : reconciling
+            ? confirmation?.reconciliationMessage ??
+              'Prenotazione ricevuta, stiamo completando la registrazione'
+            : pending
+              ? statusInfo.description
+              : 'Conserva i codici per il check-in.';
+
     return (
-      <div
-        className={cn(
-          'mx-auto max-w-lg space-y-6 rounded-3xl border p-6 shadow-sm sm:p-8',
-          amberTone
-            ? 'border-amber-200 bg-gradient-to-b from-amber-50/80 to-white'
-            : failedAny && !okAny
-              ? 'border-rose-200 bg-gradient-to-b from-rose-50/80 to-white'
-              : 'border-emerald-200 bg-gradient-to-b from-emerald-50/80 to-white'
-        )}
-        data-testid="checkout-done"
-      >
-        <div
-          className={cn(
-            'flex items-center gap-3',
-            amberTone
-              ? 'text-amber-800'
-              : failedAny && !okAny
-                ? 'text-rose-800'
-                : 'text-emerald-700'
-          )}
-        >
-          <CheckCircle2 className="h-9 w-9" />
-          <div>
-            <h2 className="font-display text-2xl font-semibold">
-              {needsReview
-                ? 'Pagamento confermato · da verificare'
-                : failedAny && !okAny
-                  ? 'Prenotazione non completata'
-                  : partial
-                    ? 'Prenotazione parziale'
-                    : reconciling
-                      ? 'Prenotazione ricevuta'
-                      : pending
-                        ? 'Pagamento confermato · da verificare'
-                        : multiDone
-                          ? 'Tratte prenotate'
-                          : 'Prenotazione confermata'}
-            </h2>
-            <p
-              className={cn(
-                'text-sm',
-                failedAny && !okAny && !needsReview
-                  ? 'text-rose-800/90'
-                  : amberTone
-                    ? 'text-amber-900/80'
-                    : 'text-emerald-800/80'
-              )}
-            >
-              {needsReview
-                ? confirmation?.reconciliationMessage ??
-                  statusInfo.description
-                : failedAny && !okAny
-                  ? 'La conferma non è andata a buon fine. Controlla il messaggio sotto e riprova dalla scheda Voli.'
-                  : partial
-                    ? 'Alcune tratte sono andate a buon fine, altre no. Controlla lo stato sotto e sul viaggio.'
-                    : reconciling
-                      ? confirmation?.reconciliationMessage ??
-                        'Prenotazione ricevuta, stiamo completando la registrazione'
-                      : pending
-                        ? statusInfo.description
-                        : 'Conserva i codici per il check-in.'}
-            </p>
-          </div>
-        </div>
+      <div className="mx-auto max-w-lg space-y-4" data-testid="checkout-done">
+        <PostPurchase
+          tone={postTone}
+          title={postTitle}
+          body={postBody}
+          bookingCode={
+            confirmation?.bookingRef || confirmation?.bookingId || legResults.find((r) => r.ok)?.bookingRef
+          }
+          practiceHref={practiceHref}
+          hotelHref={
+            !needsMoreLegs && !partial && !failedAny && confirmation?.practiceId
+              ? `/pratica/${confirmation.practiceId}?tab=hotel`
+              : null
+          }
+          hotelLabel="Scegli l'hotel"
+        />
 
         {legResults.length > 0 ? (
           <ul className="space-y-2" data-testid="checkout-leg-results">
@@ -1079,7 +1069,7 @@ export function FlightCheckoutClient({
                   r.ok ? 'ring-emerald-100' : 'ring-rose-100'
                 )}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   {r.labelIt}
                 </p>
                 <p className="mt-0.5 font-semibold text-slate-900">{r.route}</p>
@@ -1106,7 +1096,7 @@ export function FlightCheckoutClient({
               reconciling || pending ? 'ring-amber-100' : 'ring-emerald-100'
             )}
           >
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {pending ? 'Codice prenotazione (valido)' : 'Codice prenotazione'}
             </p>
             <p className="mt-1 font-display text-3xl font-semibold tracking-wide text-slate-900">
@@ -1132,17 +1122,11 @@ export function FlightCheckoutClient({
               Hai pagato solo le tratte confermate sopra. Torna al viaggio → Voli e
               completa il rientro (addebito separato, solo quella tratta).
             </p>
+            <Button asChild className="mt-3 w-full rounded-[10px]">
+              <Link href={practiceHref}>Completa le altre tratte</Link>
+            </Button>
           </div>
         ) : null}
-        <Button asChild className="w-full rounded-xl bg-primary">
-          <Link href={practiceHref}>
-            {confirmation?.practiceId || legResults.length
-              ? needsMoreLegs || partial
-                ? 'Completa le altre tratte sul viaggio'
-                : 'Torna al viaggio'
-              : 'Vai ai tuoi viaggi'}
-          </Link>
-        </Button>
       </div>
     );
   }
@@ -1200,11 +1184,43 @@ export function FlightCheckoutClient({
               </div>
             ) : null}
 
+            {/* P0-6: «Pago per altri» hidden until migration 049 */}
+            <section
+              className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+              data-testid="checkout-chi-paga"
+            >
+              <h3 className="text-sm font-semibold text-slate-900">Chi paga</h3>
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary bg-[var(--color-tint)] px-3.5 text-sm font-semibold text-primary"
+                  data-testid="checkout-pago-per-me"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden />
+                  Pago per me
+                </span>
+                {PAY_FOR_OTHERS_ENABLED ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-600"
+                    data-testid="checkout-pago-per-altri"
+                    disabled
+                  >
+                    Pago per altri
+                  </button>
+                ) : null}
+              </div>
+              {!PAY_FOR_OTHERS_ENABLED ? (
+                <p className="text-xs text-slate-500">
+                  Solo la tua quota su questa tratta.
+                </p>
+              ) : null}
+            </section>
+
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-slate-900">Contatto</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1.5 sm:col-span-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Email
                   </span>
                   <Input
@@ -1218,7 +1234,7 @@ export function FlightCheckoutClient({
                   />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Nome
                   </span>
                   <Input
@@ -1230,7 +1246,7 @@ export function FlightCheckoutClient({
                   />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Cognome
                   </span>
                   <Input
@@ -1242,7 +1258,7 @@ export function FlightCheckoutClient({
                   />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Prefisso
                   </span>
                   <Input
@@ -1258,7 +1274,7 @@ export function FlightCheckoutClient({
                   />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Telefono
                   </span>
                   <Input
@@ -1282,14 +1298,14 @@ export function FlightCheckoutClient({
                   <h3 className="text-sm font-semibold text-slate-900">
                     Passeggero {idx + 1}
                   </h3>
-                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
+                  <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
                     Adulto
                   </span>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Titolo
                     </span>
                     <select
@@ -1309,7 +1325,7 @@ export function FlightCheckoutClient({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Nome
                     </span>
                     <Input
@@ -1321,7 +1337,7 @@ export function FlightCheckoutClient({
                     />
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Cognome
                     </span>
                     <Input
@@ -1354,7 +1370,7 @@ export function FlightCheckoutClient({
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Documento
                     </span>
                     <select
@@ -1369,7 +1385,7 @@ export function FlightCheckoutClient({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Numero documento
                     </span>
                     <Input
@@ -1403,8 +1419,7 @@ export function FlightCheckoutClient({
               </section>
             ))}
 
-            {/* A7: Allegato B prima di passare al pagamento (Continua con hotel). */}
-            <AllegatoBLinkedNotice />
+            {/* Allegato B solo al pagamento (P1-5 / P1-6) — non in Organizza né qui nei dettagli. */}
 
             {draft ? (
               <div
@@ -1412,7 +1427,7 @@ export function FlightCheckoutClient({
                 data-testid="checkout-summary-mobile"
               >
                 <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Paghi ora
                     {isMultiLeg
                       ? ` · tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
@@ -1436,7 +1451,7 @@ export function FlightCheckoutClient({
                         }`}
                   </p>
                   {isMultiLeg && planTotal !== displayPrice ? (
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       Totale voli {formatMoney(planTotal, displayCurrency)} (altre tratte
                       dopo)
                     </p>
@@ -1486,7 +1501,7 @@ export function FlightCheckoutClient({
                 className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-amber-950"
                 data-testid="checkout-multi-leg-charge-note"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-800/90">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/90">
                   Paghi ora
                 </p>
                 <p
@@ -1501,7 +1516,7 @@ export function FlightCheckoutClient({
                     : 'Solo questa tratta'}
                 </p>
                 {planTotal !== displayPrice ? (
-                  <p className="text-[11px] text-amber-900/80">
+                  <p className="text-xs text-amber-900/80">
                     Totale voli {formatMoney(planTotal, displayCurrency)} — le altre tratte
                     si pagano dopo, una alla volta. Se una fallisce, non addebitiamo le
                     tratte non prenotate.
@@ -1535,7 +1550,7 @@ export function FlightCheckoutClient({
         >
           <div className="flex items-center gap-2">
             <Plane className="h-4 w-4 text-primary" aria-hidden />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               Riepilogo
             </p>
           </div>
@@ -1580,8 +1595,40 @@ export function FlightCheckoutClient({
             </>
           )}
 
+          <div
+            className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+            data-testid="checkout-price-breakdown"
+          >
+            <p className="text-xs font-bold text-slate-900">Prezzo di questa tratta</p>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Totale tutto compreso</span>
+              <span className="font-semibold tabular-nums">
+                {formatMoney(displayPrice, displayCurrency)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">A persona</span>
+              <span className="tabular-nums">
+                {formatMoney(roundMoney(displayPrice / Math.max(1, adults)), displayCurrency)}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Il fornitore non espone tariffa e tasse separate: il totale include tutto.
+            </p>
+            {draft.outbound.airline ? (
+              <p className="text-xs text-slate-600">
+                {COMPLIANCE_COPY.operatedByTemplate.replace(
+                  '{compagnia}',
+                  draft.outbound.airline
+                )}
+              </p>
+            ) : null}
+            <p className="text-xs font-medium text-amber-900" data-testid="checkout-separate-tickets">
+              {SEPARATE_TICKETS_NOTICE_IT}
+            </p>
+          </div>
           <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
-            <p className="text-[11px] uppercase tracking-wider text-white/70">
+            <p className="text-xs uppercase tracking-wider text-white/70">
               Paghi ora
               {isMultiLeg
                 ? ` · tratta ${activeLegIndex + 1}/${checkoutLegs.length}`
@@ -1591,27 +1638,26 @@ export function FlightCheckoutClient({
               {formatMoney(displayPrice, displayCurrency)}
             </p>
             {adults > 1 ? (
-              <p className="text-[11px] text-white/70" data-testid="checkout-unit-price">
+              <p className="text-xs text-white/70" data-testid="checkout-unit-price">
                 {formatMoney(roundMoney(displayPrice / adults), displayCurrency)} a persona
                 {' · '}
                 {formatMoney(displayPrice, displayCurrency)} totale tratta ({adults}{' '}
                 persone)
               </p>
             ) : (
-              <p className="text-[11px] text-white/60">
+              <p className="text-xs text-white/60">
                 {draft.adults}{' '}
                 {draft.adults === 1 ? 'passeggero' : 'passeggeri'}
                 {draft.tripType === 'roundtrip' ? ' · A/R' : ' · solo andata'}
               </p>
             )}
             {isMultiLeg && planTotal !== displayPrice ? (
-              <p className="mt-1 text-[11px] text-white/55">
+              <p className="mt-1 text-xs text-white/55">
                 Totale voli {formatMoney(planTotal, displayCurrency)}
               </p>
             ) : null}
           </div>
           <BookingComplianceNote showMerchantOfRecord />
-          <AllegatoBLinkedNotice compact />
         </aside>
       ) : null}
     </div>

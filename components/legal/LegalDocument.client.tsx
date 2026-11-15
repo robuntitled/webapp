@@ -41,7 +41,7 @@ const KIND_META: Record<
     heroMesh: 'from-accent/[0.08] via-white to-white',
     iconBg: 'bg-accent text-white shadow-[0_4px_14px_-4px_rgba(249,115,22,0.45)]',
     accentBar: 'from-accent to-accent/40',
-    numberBg: 'bg-accent/12 text-accent',
+    numberBg: 'bg-primary/12 text-primary',
   },
 };
 

@@ -45,7 +45,7 @@ export default async function InvitoPage({ params }: PageProps) {
 
   return (
     <div className="nl-page w-full space-y-4 py-12">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
         Invito privato
       </p>
       <h1 className="font-display text-3xl font-semibold">{destination}</h1>

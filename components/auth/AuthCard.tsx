@@ -458,6 +458,7 @@ export function AuthCard() {
                   isRegisterMode ? 'h-10' : 'h-11'
                 )}
               />
+              {/* Password reset: no in-app Supabase reset flow yet — hide until wired (no emails in QA). */}
             </div>
 
             {isRegisterMode && (

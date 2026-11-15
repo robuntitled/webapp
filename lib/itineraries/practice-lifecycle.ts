@@ -1,5 +1,7 @@
 /** Fase utente: interessato → volo prenotato → viaggio attivo → passato */
 
+import { parseFlightStatus } from '@/lib/itineraries/bookings';
+import { listPracticeFlightBookings } from '@/lib/itineraries/practice-flights';
 import type { PracticeRow } from '@/lib/itineraries/types';
 
 export type PracticeLifecyclePhase = 'interested' | 'booked' | 'active' | 'past';
@@ -15,12 +17,24 @@ export function isInTrip(dateFrom: string, dateTo: string): boolean {
   return now >= from && now <= to;
 }
 
+/**
+ * True only for held/confirmed seats (T1/T2/T3).
+ * FAILED bookings must not unlock «Prenotato» / hotel (P0-7).
+ */
 export function hasFlightBooked(
   p: Pick<PracticeRow, 'flight_confirmed_at' | 'flight_booking' | 'flight_bookings'>
 ): boolean {
-  if (p.flight_confirmed_at) return true;
-  if (p.flight_booking) return true;
-  return Array.isArray(p.flight_bookings) && p.flight_bookings.length > 0;
+  const bookings = listPracticeFlightBookings(p);
+  if (
+    bookings.some((b) => {
+      const kind = parseFlightStatus(b.status);
+      return kind === 'confirmed' || kind === 'pending' || kind === 'needs_review';
+    })
+  ) {
+    return true;
+  }
+  if (p.flight_confirmed_at && bookings.length === 0) return true;
+  return false;
 }
 
 export function getPracticeLifecyclePhase(p: PracticeRow): PracticeLifecyclePhase {

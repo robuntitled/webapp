@@ -33,7 +33,7 @@ export function getGetTransferApiBaseUrl(): string {
 
 /** Hint when sandbox returns route info without book_now offers. */
 export const SANDBOX_NO_OFFERS_HINT =
-  'In sandbox prova tratte note (es. Heathrow→Londra, IST→Istanbul, Madrid→Barcellona, aeroporto BCN→centro). Altre destinazioni possono non avere book_now.';
+  'Nessuna offerta su questa tratta. Prova aeroporto→città note (es. Fiumicino→Roma, Heathrow→Londra) o date diverse.';
 
 export function isGetTransferSandbox(): boolean {
   const env = process.env.GETTRANSFER_ENV?.trim().toLowerCase();

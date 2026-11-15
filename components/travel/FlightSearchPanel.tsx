@@ -808,7 +808,7 @@ export function FlightSearchPanel({
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   )}
                 >
-                  <ArrowDownWideNarrow className={cn('h-3.5 w-3.5', darkUi ? 'text-accent' : 'text-primary')} />
+                  <ArrowDownWideNarrow className={cn('h-3.5 w-3.5', darkUi ? 'text-primary' : 'text-primary')} />
                   {sortLabel}
                   <ChevronDown className={cn('h-3.5 w-3.5', darkUi ? 'text-white/40' : 'text-slate-400')} />
                 </button>
@@ -846,7 +846,7 @@ export function FlightSearchPanel({
           )}
         >
           <div className="flex items-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin text-accent" />
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
             {loadingHint ?? 'Cerchiamo i voli migliori…'}
           </div>
           <p className="max-w-xs text-center text-xs opacity-70">

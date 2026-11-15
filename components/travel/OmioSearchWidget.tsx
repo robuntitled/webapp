@@ -10,6 +10,7 @@ import {
   type OmioTransportMode,
 } from '@/lib/omio/config';
 import { mountOmioNemoWidget } from '@/lib/omio/widget-loader';
+import { toUserFacingError } from '@/lib/user-facing-error';
 import './omio-nemo-shell.css';
 
 const MODE_COPY: Record<
@@ -91,7 +92,10 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
       .catch((e) => {
         if (cancelled) return;
         setError(
-          e instanceof Error ? e.message : 'Impossibile caricare il widget Omio'
+          toUserFacingError(
+            e instanceof Error ? e.message : null,
+            'Impossibile caricare la ricerca. Riprova.'
+          )
         );
         setReady(false);
       });
@@ -159,11 +163,8 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
           {configured ? (
             <div className="border-t border-border/30 px-4 py-2 sm:px-5">
               <p className="text-[10px] leading-relaxed text-muted-foreground/75">
-                Ricerca su Noivia · checkout su{' '}
-                <span className="text-muted-foreground">Omio</span>
+                Ricerca su Noivia · checkout sul sito del fornitore
                 <ExternalLink className="ml-0.5 inline h-2.5 w-2.5 align-text-bottom opacity-60" />
-                {' · '}
-                partner Impact
               </p>
             </div>
           ) : null}
@@ -175,7 +176,7 @@ export function OmioSearchWidget({ mode }: OmioSearchWidgetProps) {
           <div className="flex gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
             <div className="space-y-2">
-              <p className="font-medium text-foreground">Widget Omio non caricato</p>
+              <p className="font-medium text-foreground">Ricerca non disponibile</p>
               <p className="text-muted-foreground">{error}</p>
               <button
                 type="button"
@@ -198,12 +199,9 @@ function OmioSetupBanner() {
       <div className="flex gap-2">
         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="space-y-2">
-          <p className="font-medium text-foreground">Widget Omio non configurato</p>
+          <p className="font-medium text-foreground">Ricerca non disponibile</p>
           <p className="text-muted-foreground">
-            Imposta{' '}
-            <code className="text-xs">NEXT_PUBLIC_OMIO_PARTNER_ID</code> e{' '}
-            <code className="text-xs">NEXT_PUBLIC_OMIO_REDIRECT_URL</code> (codice Impact /
-            widget di ricerca Omio).
+            Il servizio bus/treni non è attivo in questa versione. Riprova più tardi.
           </p>
         </div>
       </div>

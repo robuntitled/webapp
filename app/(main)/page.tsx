@@ -10,21 +10,25 @@ import {
   publishedDestinations,
   wizardDestinationCards,
 } from '@/lib/itineraries/catalog';
-import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE, getSiteUrl } from '@/lib/brand';
+import { BRAND_NAME, getSiteUrl } from '@/lib/brand';
 import { BRAND_IMAGES } from '@/lib/brand/images';
 
 const siteUrl = getSiteUrl();
 const HOME_OG = BRAND_IMAGES.heroes.home;
 
+const HOME_TITLE = `${BRAND_NAME}: organizza il viaggio o unisciti a un gruppo`;
+const HOME_DESCRIPTION =
+  'Organizza il viaggio da solo o con amici e prenota voli e hotel servizio per servizio, oppure unisciti a una partenza di gruppo.';
+
 export const metadata: Metadata = {
   title: {
-    absolute: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    absolute: HOME_TITLE,
   },
-  description: BRAND_DESCRIPTION,
+  description: HOME_DESCRIPTION,
   alternates: { canonical: siteUrl },
   openGraph: {
-    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
-    description: BRAND_DESCRIPTION,
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
     url: siteUrl,
     siteName: BRAND_NAME,
     locale: 'it_IT',
@@ -40,8 +44,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
-    description: BRAND_DESCRIPTION,
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
     images: [HOME_OG],
   },
 };
@@ -99,8 +103,9 @@ export default async function HomePage() {
         }
       : null;
 
+  // Conta solo partenze davvero iscrivibili (non «In arrivo» / coming_soon).
   const openEditions = editions
-    .filter((e) => e.edition_type !== 'private')
+    .filter((e) => e.edition_type !== 'private' && !e.coming_soon)
     .slice(0, 6)
     .map((e) => {
       const tpl = findItineraryTemplate(e.template_id);

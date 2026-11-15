@@ -43,7 +43,7 @@ export async function createChatReport(input: {
     if (missingRelation(error)) {
       return {
         ok: false,
-        error: 'Segnalazioni non ancora attive (migrazione 044 da applicare).',
+        error: 'Segnalazioni non ancora disponibili. Riprova più tardi.',
         needsMigration: true,
       };
     }
@@ -72,7 +72,7 @@ export async function blockUser(input: {
     if (missingRelation(error)) {
       return {
         ok: false,
-        error: 'Blocco non ancora attivo (migrazione 044 da applicare).',
+        error: 'Blocco non ancora disponibile. Riprova più tardi.',
         needsMigration: true,
       };
     }
@@ -95,7 +95,7 @@ export async function unblockUser(input: {
     if (missingRelation(error)) {
       return {
         ok: false,
-        error: 'Blocco non ancora attivo (migrazione 044 da applicare).',
+        error: 'Blocco non ancora disponibile. Riprova più tardi.',
         needsMigration: true,
       };
     }

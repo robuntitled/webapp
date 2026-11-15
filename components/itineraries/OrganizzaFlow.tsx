@@ -31,7 +31,6 @@ import {
 } from '@/components/itineraries/FlightLegsPanel';
 import { FlightReviewCart } from '@/components/itineraries/FlightReviewCart';
 import { LegFlightStrip } from '@/components/itineraries/LegFlightStrip';
-import { AllegatoBLinkedNotice } from '@/components/legal/AllegatoBLinkedNotice';
 import { AirportPlaceInput } from '@/components/travel/AirportPlaceInput';
 import { coverForDestination } from '@/lib/composer/destination-covers';
 import { findCatalogDestination } from '@/lib/catalog/destinations';
@@ -99,6 +98,7 @@ import { formatEuro } from '@/lib/format/euro';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'nl-organizza-draft-v4';
+const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const DEST_PREVIEW = 6;
 
 function formatDateIt(iso: string | null | undefined): string | null {
@@ -126,6 +126,7 @@ function loadDraft(): { draft: OrganizzaDraft; step: OrganizzaStepId } | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw =
+      localStorage.getItem(STORAGE_KEY) ??
       sessionStorage.getItem(STORAGE_KEY) ??
       sessionStorage.getItem('nl-organizza-draft-v3') ??
       sessionStorage.getItem('nl-organizza-draft-v2');
@@ -133,8 +134,22 @@ function loadDraft(): { draft: OrganizzaDraft; step: OrganizzaStepId } | null {
     const parsed = JSON.parse(raw) as {
       draft: OrganizzaDraft & { company?: string | null };
       step: string;
+      savedAt?: number;
+      version?: number;
     };
     if (!parsed?.draft) return null;
+    if (
+      typeof parsed.savedAt === 'number' &&
+      Date.now() - parsed.savedAt > DRAFT_MAX_AGE_MS
+    ) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
     const company = normalizeOrganizzaCompany(parsed.draft.company);
     return {
       draft: patchOrganizzaDraft(EMPTY_ORGANIZZA_DRAFT, {
@@ -222,7 +237,6 @@ export function OrganizzaFlow({
   const [destShowAll, setDestShowAll] = useState(false);
   const [stopsOpen, setStopsOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
-  const [legalOpen, setLegalOpen] = useState(false);
   const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(null);
   const [returnPlace, setReturnPlace] = useState<PlaceSuggestion | null>(null);
   const [originText, setOriginText] = useState('');
@@ -274,7 +288,14 @@ export function OrganizzaFlow({
   useEffect(() => {
     if (!hydrated) return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ draft, step }));
+      const payload = JSON.stringify({
+        draft,
+        step,
+        savedAt: Date.now(),
+        version: 4,
+      });
+      localStorage.setItem(STORAGE_KEY, payload);
+      sessionStorage.setItem(STORAGE_KEY, payload);
     } catch {
       /* ignore */
     }
@@ -569,11 +590,7 @@ export function OrganizzaFlow({
       toast.error('Completa destinazione, date e compagnia.');
       return;
     }
-    if (!draft.legalAck) {
-      toast.error('Apri e conferma le informazioni importanti prima di creare.');
-      setLegalOpen(true);
-      return;
-    }
+    // P1-6: Allegato B / legal ack only at checkout (acquisto), not when creating a trip.
     if (!companyCreatesPrivateTrip(draft.company)) {
       toast.error('Scelta non valida.');
       return;
@@ -769,7 +786,7 @@ export function OrganizzaFlow({
                 <h3 className="text-sm font-bold text-[var(--color-text)]">
                   Scegli la destinazione
                 </h3>
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
+                <p className="text-xs text-[var(--color-text-secondary)]">
                   Tocca più paesi per un viaggio multi-meta (ordine 1, 2, 3…). Tocca di
                   nuovo per togliere.
                 </p>
@@ -809,7 +826,7 @@ export function OrganizzaFlow({
                         {selectedSlugs.map((s, i) => (
                           <span
                             key={s}
-                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white px-2 py-1 text-[11px] font-semibold"
+                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white px-2 py-1 text-xs font-semibold"
                           >
                             {i + 1}. {getMaster(s)?.nameIt ?? s}
                             <button
@@ -827,7 +844,7 @@ export function OrganizzaFlow({
                     ) : null}
                     {unverifiedMulti ? (
                       <p
-                        className="text-[11px] text-amber-900"
+                        className="text-xs text-amber-900"
                         data-testid="unverified-combo-note"
                       >
                         Collegamenti da verificare tra i paesi selezionati.
@@ -999,7 +1016,7 @@ export function OrganizzaFlow({
                         setDates(from, to);
                       }}
                     />
-                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]">
                       {formatDateIt(draft.dateFrom) ?? 'gg/mm/aaaa'}
                     </span>
                   </label>
@@ -1016,7 +1033,7 @@ export function OrganizzaFlow({
                         setDates(draft.dateFrom, e.target.value);
                       }}
                     />
-                    <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-secondary)]">
+                    <span className="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]">
                       {formatDateIt(draft.dateTo) ?? 'gg/mm/aaaa'}
                     </span>
                   </label>
@@ -1058,7 +1075,7 @@ export function OrganizzaFlow({
                       data-testid={`company-${opt.id}`}
                     >
                       <p className="text-sm font-bold">{opt.label}</p>
-                      <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                         {opt.hint}
                       </p>
                     </button>
@@ -1239,7 +1256,7 @@ export function OrganizzaFlow({
               {draft.domesticPlan && draft.domesticPlan.legs.length > 0 ? (
                 <div className="space-y-2 rounded-2xl border border-[var(--color-border)] p-4">
                   <h3 className="text-sm font-bold">Voli domestici suggeriti</h3>
-                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     Solo se l’itinerario lo richiede (es. HAN→SGN). Le tratte tra paesi
                     sono già nei voli principali.
                   </p>
@@ -1321,52 +1338,23 @@ export function OrganizzaFlow({
               ) : null}
 
               <SeparateTicketsNotice />
-
-              <div
-                className="rounded-2xl border border-amber-200/80 bg-amber-50/50"
-                data-testid="organizza-legal-ack"
-              >
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-amber-950"
-                  onClick={() => setLegalOpen((v) => !v)}
-                  aria-expanded={legalOpen}
-                  data-testid="organizza-legal-toggle"
-                >
-                  Informazioni importanti
-                  {legalOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </button>
-                {legalOpen ? (
-                  <div className="space-y-3 border-t border-amber-200/80 px-3 py-3">
-                    <AllegatoBLinkedNotice />
-                  </div>
-                ) : null}
-                <label className="flex min-h-11 cursor-pointer items-start gap-3 border-t border-amber-200/80 px-4 py-3 text-xs text-amber-950">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 accent-primary"
-                    checked={draft.legalAck}
-                    onChange={(e) => update({ legalAck: e.target.checked })}
-                    data-testid="organizza-legal-checkbox"
-                  />
-                  <span>
-                    Ho letto le informazioni importanti. Le confermerò di nuovo prima di
-                    qualsiasi pagamento.
-                  </span>
-                </label>
-              </div>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Creare il viaggio non è un acquisto. Le condizioni del servizio compaiono al
+                pagamento del primo servizio.
+              </p>
             </div>
           ) : null}
         </div>
 
         <div
-          className="fixed inset-x-0 z-30 border-t border-[var(--color-border)] bg-white/95 backdrop-blur-md"
+          className="fixed inset-x-0 z-30 border-t border-[var(--color-border)] bg-white/95 backdrop-blur-md lg:static lg:mt-4 lg:rounded-[16px] lg:border lg:shadow-[var(--shadow-soft)] lg:backdrop-blur-none"
           style={{
             bottom: 'var(--cookie-banner-pad, 0px)',
             paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
           }}
+          data-testid="organizza-action-bar"
         >
-          <div className="nl-page flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="nl-page flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 lg:px-4">
             <div className="min-w-0">
               <p className="hidden items-center gap-1.5 text-xs font-medium text-[var(--color-success)] sm:inline-flex">
                 <Check className="h-3.5 w-3.5" aria-hidden />
@@ -1375,11 +1363,6 @@ export function OrganizzaFlow({
               {step === 'voli' && !canContinue ? (
                 <p className="text-xs font-medium text-amber-800" role="status">
                   Completa le tratte per continuare
-                </p>
-              ) : null}
-              {step === 'itinerario' && !draft.legalAck ? (
-                <p className="text-xs font-medium text-amber-800">
-                  Conferma le informazioni importanti
                 </p>
               ) : null}
             </div>
@@ -1404,9 +1387,9 @@ export function OrganizzaFlow({
                   variant="cta"
                   size="lg"
                   className="min-h-11 w-full rounded-[10px] sm:w-auto"
-                  disabled={pending || !draft.legalAck}
+                  disabled={pending}
                   onClick={createTrip}
-                  aria-disabled={pending || !draft.legalAck}
+                  aria-disabled={pending}
                 >
                   {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Crea viaggio

@@ -1,24 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { HOME_HREF, PRIMARY_NAV, USER_AREA_HREF } from '@/lib/brand/nav';
+import { HOME_HREF, MOBILE_TAB_NAV, PRIMARY_NAV, USER_AREA_HREF } from '@/lib/brand/nav';
 
 describe('PRIMARY_NAV', () => {
-  it('espone Organizza, Gruppi, Bacheca e I miei viaggi (auth)', () => {
+  it('espone Esplora, Organizza, Gruppi e Viaggi (auth)', () => {
     expect(PRIMARY_NAV.map((i) => i.label)).toEqual([
+      'Esplora',
       'Organizza',
       'Gruppi',
-      'Bacheca',
-      'I miei viaggi',
+      'Viaggi',
     ]);
     expect(PRIMARY_NAV.map((i) => i.href)).toEqual([
+      '/',
       '/organizza',
       '/gruppi',
-      '/bacheca',
       '/pratiche',
     ]);
     const mine = PRIMARY_NAV.find((i) => i.href === '/pratiche');
     expect(mine && 'auth' in mine && mine.auth).toBe(true);
-    const board = PRIMARY_NAV.find((i) => i.href === '/bacheca');
-    expect(board && 'auth' in board && board.auth).toBe(true);
   });
 
   it('keeps home and user area distinct', () => {
@@ -28,13 +26,25 @@ describe('PRIMARY_NAV', () => {
   });
 
   it('match pathname coerenti', () => {
-    const org = PRIMARY_NAV[0];
+    const org = PRIMARY_NAV.find((i) => i.href === '/organizza')!;
     expect(org.match('/organizza')).toBe(true);
     expect(org.match('/itinerario/x')).toBe(true);
     expect(org.match('/gruppi')).toBe(false);
 
-    const groups = PRIMARY_NAV[1];
+    const groups = PRIMARY_NAV.find((i) => i.href === '/gruppi')!;
     expect(groups.match('/gruppi')).toBe(true);
     expect(groups.match('/partenze/1')).toBe(true);
+  });
+});
+
+describe('MOBILE_TAB_NAV', () => {
+  it('ha 5 tab Esplora→Profilo', () => {
+    expect(MOBILE_TAB_NAV.map((t) => t.label)).toEqual([
+      'Esplora',
+      'Organizza',
+      'Gruppi',
+      'Viaggi',
+      'Profilo',
+    ]);
   });
 });

@@ -6,6 +6,7 @@
 import {
   FLIGHT_ALREADY_BOOKED_ERROR,
   isSamePracticeFlightBooking,
+  parseFlightStatus,
   type FlightBookingRecap,
 } from '@/lib/itineraries/bookings';
 import type { PracticeRow } from '@/lib/itineraries/types';
@@ -29,14 +30,38 @@ export function primaryPracticeFlight(
   return listPracticeFlightBookings(practice)[0] ?? null;
 }
 
+/**
+ * True when at least one booking is T1/T2/T3 (pending / confirmed / needs_review).
+ * FAILED / CANCELLED alone never count — avoids «Prenotato» on failed legs (P0-7).
+ */
+export function practiceHasSuccessfulFlightBooking(
+  practice: Pick<
+    PracticeRow,
+    'flight_confirmed_at' | 'flight_booking' | 'flight_bookings'
+  >
+): boolean {
+  const bookings = listPracticeFlightBookings(practice);
+  const anyHeld = bookings.some((b) => {
+    const kind = parseFlightStatus(b.status);
+    return kind === 'confirmed' || kind === 'pending' || kind === 'needs_review';
+  });
+  if (anyHeld) return true;
+  // Legacy row with confirmed_at and no usable booking rows.
+  if (practice.flight_confirmed_at && bookings.length === 0) return true;
+  return false;
+}
+
+/**
+ * @deprecated Prefer `practiceHasSuccessfulFlightBooking` — FAILED no longer counts.
+ * Kept as alias so existing call sites stop treating FAILED as booked.
+ */
 export function practiceHasFlightBooked(
   practice: Pick<
     PracticeRow,
     'flight_confirmed_at' | 'flight_booking' | 'flight_bookings'
   >
 ): boolean {
-  if (practice.flight_confirmed_at) return true;
-  return listPracticeFlightBookings(practice).length > 0;
+  return practiceHasSuccessfulFlightBooking(practice);
 }
 
 /**

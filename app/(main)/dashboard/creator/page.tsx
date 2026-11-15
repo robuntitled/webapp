@@ -15,7 +15,7 @@ export default async function CreatorPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
       <div className="container mx-auto max-w-3xl px-4 py-16">
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Per i creator</p>
+        <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">Per i creator</p>
         <h1 className="mt-3 font-display text-4xl font-semibold text-foreground md:text-5xl">
           Lancia tu. Il gruppo fa il resto.
         </h1>

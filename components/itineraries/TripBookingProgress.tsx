@@ -22,7 +22,7 @@ export function TripBookingProgress({
 
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
         Il tuo viaggio in 3 passi
       </p>
       <ol className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">

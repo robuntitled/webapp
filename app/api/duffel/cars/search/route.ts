@@ -72,10 +72,10 @@ export async function POST(request: Request) {
   if ('error' in gate) return gate.error;
 
   if (!isDuffelConfigured()) {
+    console.error('[duffel cars search] missing access token');
     return NextResponse.json(
       {
-        error:
-          'API Duffel non configurata. Crea un token su https://app.duffel.com e imposta DUFFEL_ACCESS_TOKEN. Per le auto: Dashboard → Request access to Duffel Cars.',
+        error: 'Noleggio auto non disponibile al momento.',
         code: 'missing_token',
         configured: false,
       },
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       rates,
       hint:
         testMode && rates.length === 0
-          ? 'Token di test: Duffel Cars sandbox spesso risponde su Londra (LHR) o altre città UK. In live serve “Request access to Cars”.'
+          ? 'Nessuna auto in questa zona. Prova un aeroporto (es. Fiumicino) o altre date.'
           : undefined,
     });
   } catch (e) {
@@ -163,8 +163,7 @@ export async function POST(request: Request) {
       if (duffelUnavailable(e)) {
         return NextResponse.json(
           {
-            error:
-              'Duffel Cars non è ancora attivo su questo account. In dashboard Duffel: More → Developers, crea un test token e richiedi accesso a Cars.',
+            error: 'Noleggio auto non disponibile al momento.',
             code: 'cars_not_enabled',
             configured: true,
           },

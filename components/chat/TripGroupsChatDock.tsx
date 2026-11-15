@@ -194,7 +194,10 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
     unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : String(unreadTotal)) : null;
 
   return (
-    <div className="fixed bottom-5 right-4 z-[55] flex flex-col items-end gap-3 pb-[max(0px,calc(env(safe-area-inset-bottom)+var(--cookie-banner-pad,0px)))] sm:right-5">
+    <div
+      className="fixed bottom-5 right-4 z-[55] flex flex-col items-end gap-3 pb-[max(0px,calc(env(safe-area-inset-bottom)+var(--cookie-banner-pad,0px)))] max-md:bottom-[calc(68px+1rem+env(safe-area-inset-bottom))] sm:right-5"
+      data-testid="trip-groups-chat-dock"
+    >
       <div className="flex flex-col items-end gap-3">
       <AnimatePresence>
         {open && (
@@ -458,7 +461,7 @@ export function TripGroupsChatDock({ currentUserId }: TripGroupsChatDockProps) {
         )}
         onClick={() => setOpen((v) => !v)}
       >
-        <MessageCircle className="h-5 w-5 text-accent" aria-hidden />
+        <MessageCircle className="h-5 w-5 text-primary" aria-hidden />
         <span className="hidden sm:inline">{open ? 'Chiudi' : 'Chat'}</span>
         {!open && badge && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#0b1220]">

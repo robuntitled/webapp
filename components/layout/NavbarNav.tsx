@@ -25,15 +25,21 @@ export function NavbarNav({ isLoggedIn }: { isLoggedIn: boolean }) {
     >
       {PRIMARY_NAV.filter((link) => !('auth' in link && link.auth) || isLoggedIn).map((link) => {
         const active = link.match(pathname);
+        const href =
+          'auth' in link && link.auth && !isLoggedIn && 'guestHref' in link
+            ? (link.guestHref as string)
+            : link.href;
+        const label =
+          'desktopLabel' in link && link.desktopLabel ? link.desktopLabel : link.label;
         return (
           <Link
             key={link.href}
-            href={link.href}
+            href={href}
             prefetch={link.href === '/organizza' || link.href === '/gruppi' ? false : undefined}
             className={cn(navLinkClass(active), 'no-underline')}
             aria-current={active ? 'page' : undefined}
           >
-            {link.label}
+            {label}
           </Link>
         );
       })}

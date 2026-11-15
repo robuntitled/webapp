@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { Clock3, Plane } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatEuroExact } from '@/lib/format/euro';
+import { Price } from '@/components/ui/price';
 import { cn } from '@/lib/utils';
 import {
   formatLayoversLine,
@@ -118,21 +118,13 @@ export function FlightOfferCard({
   actionLabel: string;
   onAction: () => void;
 }) {
-  const priceLabel =
-    formatEuroExact(offer.price, offer.currency) ??
-    `${offer.price.toLocaleString('it-IT', {
-      useGrouping: true,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} ${offer.currency}`;
-
   return (
     <article
       className={cn(
         'w-full min-w-0 rounded-2xl ring-1 transition',
         dark
           ? saved
-            ? 'bg-accent/12 ring-accent/50'
+            ? 'bg-primary/12 ring-accent/50'
             : 'bg-[#161d2b] ring-[#2a3344] hover:bg-[#1c2436] hover:ring-[#3a4558]'
           : 'rounded-3xl bg-slate-50/80 ring-slate-100 hover:bg-white hover:ring-slate-200'
       )}
@@ -197,7 +189,7 @@ export function FlightOfferCard({
               <Plane
                 className={cn(
                   'absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-90',
-                  dark ? 'text-accent' : 'text-primary'
+                  dark ? 'text-primary' : 'text-primary'
                 )}
               />
             </div>
@@ -239,16 +231,13 @@ export function FlightOfferCard({
         </div>
 
         {/* Desktop: price column only — CTA is full-width below on all breakpoints so long labels never cover price */}
-        <div className="hidden min-w-0 text-right sm:block">
-          <p
-            className={cn(
-              'font-display text-2xl font-semibold tabular-nums',
-              dark ? 'text-white' : 'text-slate-900'
-            )}
-            data-testid="flight-offer-price"
-          >
-            {priceLabel}
-          </p>
+        <div className="hidden min-w-0 text-right sm:block" data-testid="flight-offer-price">
+          <Price
+            amount={offer.price}
+            currency={offer.currency}
+            size="lg"
+            className={cn(dark ? 'text-white' : undefined)}
+          />
           <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>
             {priceNote}
           </p>
@@ -261,16 +250,13 @@ export function FlightOfferCard({
           dark ? 'border-white/8' : 'border-slate-100'
         )}
       >
-        <div className="min-w-0 sm:hidden">
-          <p
-            className={cn(
-              'font-display text-xl font-semibold tabular-nums',
-              dark ? 'text-white' : 'text-slate-900'
-            )}
-            data-testid="flight-offer-price-mobile"
-          >
-            {priceLabel}
-          </p>
+        <div className="min-w-0 sm:hidden" data-testid="flight-offer-price-mobile">
+          <Price
+            amount={offer.price}
+            currency={offer.currency}
+            size="md"
+            className={cn(dark ? 'text-white' : undefined)}
+          />
           <p className={cn('text-[11px]', dark ? 'text-white/40' : 'text-slate-400')}>
             {priceNote}
           </p>

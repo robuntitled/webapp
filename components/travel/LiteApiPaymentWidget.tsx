@@ -34,7 +34,7 @@ function loadStripeJs(): Promise<NonNullable<Window['Stripe']>> {
   return new Promise((resolve, reject) => {
     const onReady = () => {
       if (window.Stripe) resolve(window.Stripe);
-      else reject(new Error('Stripe.js non disponibile'));
+      else reject(new Error('Pagamento non disponibile. Ricarica la pagina.'));
     };
     if (existing) {
       if (window.Stripe) onReady();
@@ -45,7 +45,7 @@ function loadStripeJs(): Promise<NonNullable<Window['Stripe']>> {
     script.src = STRIPE_JS;
     script.async = true;
     script.onload = onReady;
-    script.onerror = () => reject(new Error('Stripe.js load failed'));
+    script.onerror = () => reject(new Error('Pagamento non disponibile. Ricarica la pagina.'));
     document.head.appendChild(script);
   });
 }
@@ -99,7 +99,7 @@ export function LiteApiPaymentWidget({
     void (async () => {
       try {
         const pk = await fetchLiteApiStripePublishableKey(paymentEnv);
-        if (!pk) throw new Error('Chiave pagamento LiteAPI non disponibile.');
+        if (!pk) throw new Error('Pagamento non disponibile al momento. Riprova più tardi.');
         const StripeCtor = await loadStripeJs();
         if (cancelled) return;
         const stripe = StripeCtor(pk, { apiVersion: '2023-10-16' });

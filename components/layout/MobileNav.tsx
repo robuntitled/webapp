@@ -9,8 +9,10 @@ import { PRIMARY_NAV } from '@/lib/brand/nav';
 import { HOME_HREF } from '@/lib/nav/home';
 import { cn } from '@/lib/utils';
 
+/** Preferiti page soft-removed from nav (P1-14 / Cosa togliere) — hub in I miei viaggi later. */
 const EXTRA_AUTH_LINKS = [
-  { href: '/dashboard/preferiti', label: 'Preferiti' },
+  { href: '/profilo', label: 'Profilo' },
+  { href: '/notifiche', label: 'Notifiche' },
 ] as const;
 
 function mobileLinkClass(active: boolean) {

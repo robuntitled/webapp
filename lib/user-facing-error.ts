@@ -4,10 +4,10 @@
  */
 
 const PROVIDER_LEAK =
-  /\b(liteapi|nuit[eé]e|duffel|stripe|supabase|postgrest|vercel|oauth|turnstile|cloudflare)\b/gi;
+  /\b(liteapi|nuit[eé]e|duffel|gettransfer|travelpayouts|viator|omio|stripe|supabase|postgrest|vercel|oauth|turnstile|cloudflare)\b/gi;
 
 const INTERNAL_LEAK =
-  /\b(migration\s*\d+|TODO\s*LEGAL|stack\s*trace|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|prisma|psql)\b/gi;
+  /\b(migration\s*\d+|migrazione\s*\d+|TODO\s*LEGAL|stack\s*trace|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|prisma|psql|NEXT_PUBLIC_|ACCESS_TOKEN|\.env)\b/gi;
 
 export function toUserFacingError(
   raw: string | null | undefined,

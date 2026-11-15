@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { HOME_HREF } from '@/lib/nav/home';
+
+export const metadata: Metadata = {
+  title: 'Pagina non trovata',
+  robots: { index: false, follow: false },
+};
 
 export default function NotFound() {
   return (

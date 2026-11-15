@@ -130,14 +130,14 @@ export function PracticeBookingHub({
       amountEur: null,
       currency: 'EUR',
     });
-    toast.message(`Cerca «${activity.title}» su Viator, poi salva il codice qui.`);
+    toast.message(`Cerca «${activity.title}» sul sito del fornitore, poi salva il codice qui.`);
   }
 
   function saveActivity() {
     const last = loadLastActivityDraft();
     const title = activityTitle.trim() || last?.title || '';
     if (!title) {
-      toast.error('Apri un’attività su Viator o scrivi il titolo.');
+      toast.error('Apri un’attività sul sito del fornitore o scrivi il titolo.');
       return;
     }
     startTransition(async () => {
@@ -296,17 +296,20 @@ export function PracticeBookingHub({
                     practiceId={practice.id}
                   />
                 ) : null}
-                <details className="text-xs text-white/60">
-                  <summary className="cursor-pointer">Ho prenotato fuori da Noivia</summary>
-                  <Button
-                    variant="secondary"
-                    disabled={pending}
-                    className="mt-2 rounded-full"
-                    onClick={() => run(confirmHotelAction)}
-                  >
-                    Segna hotel come fatto
-                  </Button>
-                </details>
+                {/* Soft-removed (P1-14 / OPS): «Ho prenotato fuori» / «Segna hotel come fatto» */}
+                {false ? (
+                  <details className="text-xs text-white/60">
+                    <summary className="cursor-pointer">Ho prenotato fuori da Noivia</summary>
+                    <Button
+                      variant="secondary"
+                      disabled={pending}
+                      className="mt-2 rounded-full"
+                      onClick={() => run(confirmHotelAction)}
+                    >
+                      Segna hotel come fatto
+                    </Button>
+                  </details>
+                ) : null}
               </>
             ) : null}
           </div>
@@ -358,7 +361,7 @@ export function PracticeBookingHub({
                 </div>
                 <div className="space-y-2 rounded-3xl bg-[#161d2b] p-4">
                   <p className="text-sm text-white/80">
-                    Dopo Viator, salva titolo e codice — resta nel recap del viaggio.
+                    Dopo la prenotazione, salva titolo e codice — resta nel recap del viaggio.
                   </p>
                   <Input
                     value={activityTitle}

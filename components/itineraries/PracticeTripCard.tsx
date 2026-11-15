@@ -25,10 +25,8 @@ import {
 import { uniqueCover } from '@/lib/composer/destination-covers';
 import { findItineraryTemplate } from '@/lib/itineraries/catalog';
 import { formatItDate } from '@/lib/itineraries/dates';
-import {
-  hubBadgeClassName,
-  resolveHubTripBadge,
-} from '@/lib/itineraries/hub-trip-status';
+import { StatusBadge } from '@/components/itineraries/StatusBadge';
+import { resolveHubTripBadge } from '@/lib/itineraries/hub-trip-status';
 import { DASHBOARD_VIAGGI_COPY } from '@/lib/itineraries/dashboard-viaggi-copy';
 import { parseFlightStatus } from '@/lib/itineraries/bookings';
 import { listPracticeFlightBookings } from '@/lib/itineraries/practice-flights';
@@ -143,15 +141,15 @@ export function PracticeTripCard({
           </DropdownMenu>
         </div>
 
-        <span
+        <StatusBadge
+          tone={badge.statusTone}
           className={cn(
-            'absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
-            hubBadgeClassName(badge.tone)
+            'absolute left-3 top-3 max-w-[calc(100%-3.5rem)] truncate text-[10px] uppercase tracking-[0.08em]'
           )}
           data-testid={`pratiche-badge-${practice.id}`}
         >
           {badge.label}
-        </span>
+        </StatusBadge>
       </div>
 
       <div className="space-y-2 px-4 py-4">

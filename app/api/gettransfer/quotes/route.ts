@@ -86,10 +86,10 @@ export async function POST(request: Request) {
   if ('error' in gate) return gate.error;
 
   if (!isGetTransferApiConfigured()) {
+    console.error('[gettransfer quotes] missing access token');
     return NextResponse.json(
       {
-        error:
-          'API GetTransfer non configurata. Richiedi il token X-ACCESS-TOKEN a support@travelpayouts.com e imposta GETTRANSFER_ACCESS_TOKEN.',
+        error: 'Transfer non disponibile al momento.',
         code: 'missing_token',
         configured: false,
       },

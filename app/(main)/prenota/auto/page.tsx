@@ -13,7 +13,6 @@ export default async function PrenotaAutoPage() {
     <PrenotaPageShell
       title="Noleggio auto"
       subtitle="Città o aeroporto, tariffe chiare, pagamento al ritiro."
-      badge="Duffel"
     >
       <PrenotaCarsClient
         defaultEmail={session.user.email ?? ''}

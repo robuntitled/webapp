@@ -12,6 +12,7 @@ import {
   coverageStatusLabelIt,
   parseFlightBookingCoverage,
   participantFlightUiStatus,
+  PAY_FOR_OTHERS_ENABLED,
 } from '@/lib/itineraries/flight-booking-coverage';
 import { isFlightPendingConfirmation } from '@/lib/itineraries/bookings';
 import {
@@ -517,29 +518,35 @@ export function TripSelectedFlightsPanel({
               </>
             ) : (
               <p className="text-[11px] text-slate-500" data-testid="trip-voli-separate-hint">
-                Usa Prenota su ogni tratta qui sopra, oppure Pago per altri per includere più
-                persone su una tratta.
+                Usa Prenota su ogni tratta qui sopra
+                {PAY_FOR_OTHERS_ENABLED
+                  ? ', oppure Pago per altri per includere più persone su una tratta.'
+                  : '.'}
               </p>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11 w-full rounded-full disabled:bg-slate-100 disabled:text-slate-400 disabled:opacity-100"
-              onClick={openPayOthers}
-              data-testid="trip-pago-per-altri"
-            >
-              Pago per altri
-              {nextLegPerPerson != null ? (
-                <span className="ml-1 font-semibold opacity-90">
-                  · {formatEuro(nextLegPerPerson, { approx: false })} / persona / tratta
-                </span>
-              ) : null}
-            </Button>
-            <p className="text-center text-[11px] text-slate-500">
-              Scegli chi includere nel pagamento (importo per tratta, non totale voli).
-            </p>
+            {PAY_FOR_OTHERS_ENABLED ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11 w-full rounded-full disabled:bg-slate-100 disabled:text-slate-400 disabled:opacity-100"
+                  onClick={openPayOthers}
+                  data-testid="trip-pago-per-altri"
+                >
+                  Pago per altri
+                  {nextLegPerPerson != null ? (
+                    <span className="ml-1 font-semibold opacity-90">
+                      · {formatEuro(nextLegPerPerson, { approx: false })} / persona / tratta
+                    </span>
+                  ) : null}
+                </Button>
+                <p className="text-center text-[11px] text-slate-500">
+                  Scegli chi includere nel pagamento (importo per tratta, non totale voli).
+                </p>
+              </>
+            ) : null}
           </div>
-        ) : (
+        ) : PAY_FOR_OTHERS_ENABLED ? (
           <div className="space-y-3" data-testid="trip-pago-per-altri-panel">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
               <p className="text-xs text-slate-500">
@@ -681,7 +688,7 @@ export function TripSelectedFlightsPanel({
               </ul>
             )}
           </div>
-        )}
+        ) : null}
       </section>
 
       {plan ? (

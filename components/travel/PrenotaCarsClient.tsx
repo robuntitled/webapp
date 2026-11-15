@@ -28,6 +28,7 @@ import {
 } from '@/lib/travel/search-form-cache';
 import type { PlaceSuggestion } from '@/lib/travel/airport-catalog';
 import { paymentTypeLabel, type CarRateHit } from '@/lib/duffel/cars-map';
+import { toUserFacingError } from '@/lib/user-facing-error';
 import { cn } from '@/lib/utils';
 
 type FormCache = {
@@ -334,19 +335,19 @@ export function PrenotaCarsClient({
       if (res.status === 503 && data.code === 'missing_token') {
         setApiUnavailable(true);
         setUnavailableCode('missing_token');
-        toast.message('Duffel non configurato', {
-          description: 'Aggiungi DUFFEL_ACCESS_TOKEN (token test va bene).',
+        toast.message('Noleggio auto non disponibile', {
+          description: 'Il servizio non è attivo in questa versione. Riprova più tardi.',
         });
         return;
       }
       if (res.status === 403 && data.code === 'cars_not_enabled') {
         setApiUnavailable(true);
         setUnavailableCode('cars_not_enabled');
-        toast.error(data.error ?? 'Duffel Cars non attivo');
+        toast.error('Noleggio auto non disponibile al momento.');
         return;
       }
       if (!res.ok) {
-        toast.error(data.error ?? 'Ricerca fallita');
+        toast.error(toUserFacingError(data.error, 'Ricerca fallita'));
         return;
       }
       setRates(data.rates ?? []);
@@ -354,7 +355,11 @@ export function PrenotaCarsClient({
       setHint(data.hint ?? null);
       if (!(data.rates ?? []).length) {
         toast.message('Nessuna auto trovata', {
-          description: data.hint ?? 'Prova un aeroporto (es. Fiumicino, Heathrow) o altre date.',
+          description:
+            toUserFacingError(
+              data.hint,
+              'Prova un aeroporto (es. Fiumicino, Heathrow) o altre date.'
+            ),
         });
       }
     } catch {
@@ -378,7 +383,7 @@ export function PrenotaCarsClient({
       });
       const data = (await res.json()) as QuoteResponse;
       if (!res.ok || !data.quote) {
-        toast.error(data.error ?? 'Preventivo non disponibile');
+        toast.error(toUserFacingError(data.error, 'Preventivo non disponibile'));
         return;
       }
       setQuote(data.quote);
@@ -432,7 +437,7 @@ export function PrenotaCarsClient({
       });
       const data = (await res.json()) as BookResponse;
       if (!res.ok) {
-        toast.error(data.error ?? 'Prenotazione fallita');
+        toast.error(toUserFacingError(data.error, 'Prenotazione fallita'));
         return;
       }
       setConfirmed({
@@ -613,9 +618,9 @@ export function PrenotaCarsClient({
             </div>
           ) : null}
 
-          <p className="mt-2.5 text-[11px] text-muted-foreground">
-            Partner: <span className="font-medium text-foreground">Duffel Cars</span>
-            {testMode ? ' · ambiente test' : ''} · prenotazione in-app, pagamento al ritiro
+          <p className="mt-2.5 text-xs text-muted-foreground">
+            Prenotazione in-app · pagamento al ritiro
+            {testMode ? ' · ambiente di prova' : ''}
           </p>
         </div>
       </div>
@@ -625,29 +630,11 @@ export function PrenotaCarsClient({
           <div className="flex gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <div className="space-y-1 text-muted-foreground">
-              <p className="font-medium text-foreground">
-                {unavailableCode === 'cars_not_enabled'
-                  ? 'Duffel Cars non ancora abilitato'
-                  : 'Token Duffel mancante'}
+              <p className="font-medium text-foreground">Noleggio auto non disponibile</p>
+              <p>
+                Il servizio non è attivo in questa versione. Torna più tardi o scegli un altro
+                mezzo.
               </p>
-              <ol className="list-decimal space-y-1 pl-4">
-                <li>
-                  Account su{' '}
-                  <a
-                    href="https://app.duffel.com"
-                    className="font-medium text-foreground underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    app.duffel.com
-                  </a>
-                </li>
-                <li>Developers → Access tokens → token di test (`duffel_test_…`)</li>
-                <li>Richiedi accesso a Duffel Cars</li>
-                <li>
-                  Imposta <code className="text-xs">DUFFEL_ACCESS_TOKEN</code> su Vercel / .env.local
-                </li>
-              </ol>
             </div>
           </div>
         </div>
@@ -708,7 +695,7 @@ export function PrenotaCarsClient({
 
           {!quote.bookableWithoutCard ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm">
-              Questa tariffa richiede una carta (Duffel Payments). Scegli un’auto{' '}
+              Questa tariffa richiede una carta. Scegli un&apos;auto{' '}
               <strong>Paga al ritiro</strong>.
             </p>
           ) : null}

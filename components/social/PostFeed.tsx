@@ -34,7 +34,7 @@ export function PostFeed({
         <div
           className={cn(
             'flex h-12 w-12 items-center justify-center rounded-2xl',
-            tone === 'onDark' ? 'bg-white/8 text-accent' : 'bg-muted text-primary'
+            tone === 'onDark' ? 'bg-white/8 text-primary' : 'bg-muted text-primary'
           )}
         >
           <Images className="h-5 w-5" />
