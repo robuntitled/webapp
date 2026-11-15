@@ -51,24 +51,47 @@ export async function loadPrebookQuote(
   return { ok: true, quote };
 }
 
-/** Resolve amount: book response → stored prebook → null (never client). */
+/**
+ * Resolve amount: book response → stored prebook → client fallback (last resort).
+ * Incident 2026-11-12: quote missing on serverless + book price null → amountEur null.
+ */
 export function resolveBookedAmount(input: {
   bookPrice?: number | null;
   bookCurrency?: string | null;
   quote?: PrebookQuote | null;
+  /** Last resort from checkout (prebook price / leg price). Prefer server. */
+  clientAmountEur?: number | null;
+  clientCurrency?: string | null;
 }): { amountEur: number | null; currency: string | null; offerId: string | null } {
   const amount =
     input.bookPrice != null && Number.isFinite(input.bookPrice)
       ? input.bookPrice
       : input.quote?.price != null && Number.isFinite(input.quote.price)
         ? input.quote.price
-        : null;
+        : input.clientAmountEur != null &&
+            Number.isFinite(input.clientAmountEur) &&
+            input.clientAmountEur > 0
+          ? input.clientAmountEur
+          : null;
   const currency =
     input.bookCurrency?.trim() ||
     input.quote?.currency?.trim() ||
+    input.clientCurrency?.trim() ||
     null;
-  if (amount == null && !input.quote) {
-    console.warn('[prebook-store] no server amount available');
+  if (amount == null) {
+    console.warn('[prebook-store] no server amount available', {
+      hasQuote: Boolean(input.quote),
+      bookPrice: input.bookPrice ?? null,
+      clientAmountEur: input.clientAmountEur ?? null,
+    });
+  } else if (
+    (input.bookPrice == null || !Number.isFinite(input.bookPrice)) &&
+    (input.quote?.price == null || !Number.isFinite(input.quote.price)) &&
+    input.clientAmountEur != null
+  ) {
+    console.warn('[prebook-store] using client amount fallback', {
+      clientAmountEur: input.clientAmountEur,
+    });
   }
   return {
     amountEur: amount,

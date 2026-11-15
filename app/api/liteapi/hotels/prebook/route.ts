@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import {
-  PREVIEW_PAYMENTS_DISABLED_IT,
   areLivePaymentsBlockedOnThisDeploy,
   getLiteApiPaymentEnv,
   isLiteApiConfigured,
+  previewPaymentsBlockedResponseBody,
 } from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { prebookHotel } from '@/lib/liteapi/hotel-booking';
@@ -37,13 +37,7 @@ export async function POST(request: Request) {
     );
   }
   if (areLivePaymentsBlockedOnThisDeploy()) {
-    return NextResponse.json(
-      {
-        error: PREVIEW_PAYMENTS_DISABLED_IT,
-        code: 'PREVIEW_PAYMENTS_DISABLED',
-      },
-      { status: 403 }
-    );
+    return NextResponse.json(previewPaymentsBlockedResponseBody(), { status: 403 });
   }
 
   let body: unknown;

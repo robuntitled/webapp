@@ -274,7 +274,11 @@ export function HotelCheckoutClient({
         currency?: string | null;
       };
       if (!res.ok) {
-        toast.error(data.error ?? 'Impossibile riservare l’hotel');
+        toast.error(
+          data.code === 'PREVIEW_PAYMENTS_DISABLED'
+            ? data.error ?? 'Anteprima: pagamenti disattivati'
+            : data.error ?? 'Impossibile riservare l’hotel'
+        );
         if (data.code === 'offer_expired') {
           clearHotelOfferDraft();
           router.push(
@@ -288,6 +292,16 @@ export function HotelCheckoutClient({
         return;
       }
       const paymentEnv = data.paymentEnv ?? 'sandbox';
+      if (
+        paymentEnv === 'live' &&
+        typeof window !== 'undefined' &&
+        window.location.hostname.endsWith('.vercel.app') &&
+        (window.location.hostname.includes('-git-') ||
+          /webapp-.+-webapp\d+\.vercel\.app$/i.test(window.location.hostname))
+      ) {
+        toast.error('Anteprima: pagamenti live bloccati sul client.');
+        return;
+      }
       const pending = {
         prebookId: data.prebookId,
         transactionId: data.transactionId,

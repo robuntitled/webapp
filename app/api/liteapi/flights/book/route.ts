@@ -1,7 +1,11 @@
 import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { isLiteApiConfigured } from '@/lib/liteapi/config';
+import {
+  areLivePaymentsBlockedOnThisDeploy,
+  isLiteApiConfigured,
+  previewPaymentsBlockedResponseBody,
+} from '@/lib/liteapi/config';
 import { LiteApiError } from '@/lib/liteapi/client';
 import { bookFlight } from '@/lib/liteapi/flight-booking';
 import { confirmParticipantFlight } from '@/lib/data/trip-commitments';
@@ -44,7 +48,7 @@ const schema = z.object({
   transactionId: z.string().trim().min(4).max(200),
   tripId: z.string().uuid().optional(),
   practiceId: z.string().uuid().optional(),
-  /** Ignored — server amount from prebook store / book response (A2). */
+  /** Fallback only when server/prebook amount missing (never preferred over server). */
   amountEur: z.number().finite().nonnegative().max(1_000_000).optional(),
   snapshot: z
     .object({
@@ -78,6 +82,10 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
+  // Defense in depth: never complete a live book on preview/dev without sand_ key.
+  if (areLivePaymentsBlockedOnThisDeploy()) {
+    return NextResponse.json(previewPaymentsBlockedResponseBody(), { status: 403 });
+  }
 
   let body: unknown;
   try {
@@ -91,7 +99,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Parametri booking non validi' }, { status: 400 });
   }
 
-  const { prebookId, transactionId, practiceId, tripId, snapshot } = parsed.data;
+  const {
+    prebookId,
+    transactionId,
+    practiceId,
+    tripId,
+    snapshot,
+    amountEur: clientAmountEur,
+  } = parsed.data;
   const quoteLoad = await loadPrebookQuote('flight', prebookId, session.user.id);
   if (quoteLoad.ok === false && quoteLoad.reason === 'forbidden') {
     return NextResponse.json({ error: 'Sessione prebook non valida.' }, { status: 403 });
@@ -136,6 +151,8 @@ export async function POST(request: Request) {
       bookPrice: result.price,
       bookCurrency: result.currency,
       quote,
+      clientAmountEur: clientAmountEur ?? null,
+      clientCurrency: snapshot?.currency ?? null,
     });
 
     let reconciliationPending = false;
@@ -359,7 +376,11 @@ export async function POST(request: Request) {
       ...(savedPracticeId ? { practiceId: savedPracticeId } : {}),
     });
   } catch (e) {
-    const amounts = resolveBookedAmount({ quote });
+    const amounts = resolveBookedAmount({
+      quote,
+      clientAmountEur: clientAmountEur ?? null,
+      clientCurrency: snapshot?.currency ?? null,
+    });
     if (e instanceof LiteApiError) {
       console.error('[flights/book]', e.status, e.message, e.body);
       if (e.status === 409) {

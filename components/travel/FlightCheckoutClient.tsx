@@ -39,6 +39,14 @@ import {
 import { ensureFlightPracticeOnCheckout } from '@/lib/travel/ensure-trip-for-checkout';
 import { cn } from '@/lib/utils';
 
+/** Client belt: never init live SDK on Vercel preview hosts. */
+function isLikelyVercelPreviewHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  if (!h.endsWith('.vercel.app')) return false;
+  return h.includes('-git-') || /webapp-.+-webapp\d+\.vercel\.app$/i.test(h);
+}
+
 type LegCheckoutResult = {
   legId: string;
   labelIt: string;
@@ -234,7 +242,7 @@ function LegSummary({
   leg: FlightLegDraft;
   price?: number | null;
   currency?: string | null;
-  status?: 'pending' | 'paid' | 'failed' | 'active' | null;
+  status?: 'pending' | 'paid' | 'confirming' | 'failed' | 'active' | null;
 }) {
   return (
     <div
@@ -242,6 +250,8 @@ function LegSummary({
         'rounded-2xl border p-3',
         status === 'paid'
           ? 'border-emerald-200 bg-emerald-50/70'
+          : status === 'confirming'
+            ? 'border-amber-200 bg-amber-50/70'
           : status === 'failed'
             ? 'border-rose-200 bg-rose-50/70'
             : status === 'active'
@@ -256,6 +266,10 @@ function LegSummary({
         </p>
         {status === 'paid' ? (
           <span className="text-[11px] font-semibold text-emerald-700">Prenotato</span>
+        ) : status === 'confirming' ? (
+          <span className="text-[11px] font-semibold text-amber-800">
+            Volo in conferma
+          </span>
         ) : status === 'failed' ? (
           <span className="text-[11px] font-semibold text-rose-700">Fallito</span>
         ) : status === 'active' ? (
@@ -498,6 +512,8 @@ export function FlightCheckoutClient({
           setDraft(nextDraft);
           clearFlightPaymentPending();
           setPayment(null);
+          // Leave "In pagamento" only while a live payment session exists.
+          setStep('details');
           toast.success(
             `Tratta ${idx + 1}/${legs.length} ok — continuo con la successiva`
           );
@@ -787,8 +803,10 @@ export function FlightCheckoutClient({
             ? data.error ?? 'Anteprima: pagamenti disattivati'
             : data.error ?? 'Impossibile riservare il volo'
         );
+        clearFlightPaymentPending();
+        setPayment(null);
         if (legs && legs.length > 1 && legResults.length > 0) {
-          // Partial success already saved — show honest done state.
+          // Partial success already saved — never leave infinite "In pagamento".
           setConfirmation({
             bookingId: legResults[legResults.length - 1]?.bookingId ?? null,
             bookingRef: legResults[legResults.length - 1]?.bookingRef ?? null,
@@ -797,6 +815,8 @@ export function FlightCheckoutClient({
             practiceId: working.practiceId,
           });
           setStep('done');
+        } else {
+          setStep('details');
         }
         if (data.code === 'offer_expired') {
           if (!(legs && legs.length > 1 && legResults.length > 0)) {
@@ -806,6 +826,13 @@ export function FlightCheckoutClient({
             );
           }
         }
+        return;
+      }
+      if (data.paymentEnv === 'live' && isLikelyVercelPreviewHost()) {
+        toast.error('Anteprima: pagamenti live bloccati sul client.');
+        clearFlightPaymentPending();
+        setPayment(null);
+        setStep(legResults.length > 0 ? 'done' : 'details');
         return;
       }
       if (!data.prebookId || !data.transactionId || !data.secretKey) {
@@ -829,6 +856,20 @@ export function FlightCheckoutClient({
       setStep('payment');
     } catch {
       toast.error('Errore di rete');
+      clearFlightPaymentPending();
+      setPayment(null);
+      if (legResults.length > 0) {
+        setConfirmation({
+          bookingId: legResults[legResults.length - 1]?.bookingId ?? null,
+          bookingRef: legResults[legResults.length - 1]?.bookingRef ?? null,
+          status: 'PARTIAL',
+          amountEur: legResults.reduce((s, r) => s + (r.ok ? r.amountEur : 0), 0),
+          practiceId: draft?.practiceId,
+        });
+        setStep('done');
+      } else {
+        setStep('details');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1396,10 +1437,12 @@ export function FlightCheckoutClient({
               const failed = legResults.find((r) => r.legId === item.id && !r.ok);
               const status =
                 paid
-                  ? 'paid'
+                  ? isFlightPendingConfirmation(paid.status)
+                    ? 'confirming'
+                    : 'paid'
                   : failed
                     ? 'failed'
-                    : step === 'payment' && i === activeLegIndex
+                    : step === 'payment' && payment && i === activeLegIndex
                       ? 'active'
                       : 'pending';
               return (

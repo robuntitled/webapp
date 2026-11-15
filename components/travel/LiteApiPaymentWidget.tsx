@@ -61,6 +61,13 @@ type LiteApiPaymentWidgetProps = {
  * Carta + wallet sul PaymentIntent LiteAPI.
  * Usa Stripe.js v3 (come il wrapper Nuitee), non @stripe/stripe-js v9 / Checkout Sessions.
  */
+function isLikelyVercelPreviewHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  if (!h.endsWith('.vercel.app')) return false;
+  return h.includes('-git-') || /webapp-.+-webapp\d+\.vercel\.app$/i.test(h);
+}
+
 export function LiteApiPaymentWidget({
   secretKey,
   paymentEnv,
@@ -78,6 +85,15 @@ export function LiteApiPaymentWidget({
   useEffect(() => {
     let cancelled = false;
     setReady(false);
+    // Never init live Stripe/LiteAPI SDK on preview hosts (belt after server guard).
+    if (paymentEnv === 'live' && isLikelyVercelPreviewHost()) {
+      setError(
+        'Anteprima: pagamenti live disattivati. Usa una chiave sandbox (sand_).'
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
     setError(null);
 
     void (async () => {

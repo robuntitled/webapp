@@ -48,29 +48,50 @@ export function getLiteApiBaseUrl(): string {
   );
 }
 
+/** True only when the configured LiteAPI key is clearly a sandbox key. */
+export function isLiteApiKeySandbox(): boolean {
+  const key = getLiteApiKey() ?? '';
+  return key.startsWith('sand_') || /^sand[_-]/i.test(key);
+}
+
 /** Ambiente payment SDK LiteAPI (`sandbox` | `live`) — deve matchare la API key. */
 export function getLiteApiPaymentEnv(): 'sandbox' | 'live' {
+  // Key wins: never report sandbox SDK mode for a live key.
+  if (!isLiteApiKeySandbox()) {
+    const forced = process.env.LITEAPI_PAYMENT_ENV?.trim().toLowerCase();
+    if (forced === 'live') return 'live';
+    return 'live';
+  }
   const forced = process.env.LITEAPI_PAYMENT_ENV?.trim().toLowerCase();
   if (forced === 'sandbox' || forced === 'live') return forced;
-  const key = getLiteApiKey() ?? '';
-  if (key.startsWith('sand_') || /sandbox/i.test(key)) return 'sandbox';
-  return 'live';
+  return 'sandbox';
 }
 
 /**
  * Preview/dev must not charge real (live) payments with shared prod keys.
- * Allowed only when payment env resolves to sandbox (sand_ key or
- * LITEAPI_PAYMENT_ENV=sandbox). Production deploys unchanged.
+ *
+ * Incident 2026-11-12: LITEAPI_PAYMENT_ENV=sandbox with a live LITEAPI_KEY
+ * made the old guard return false, so preview charged a real flight.
+ * Rule now: non-production allows payments ONLY when the API key itself is
+ * sandbox (`sand_…`). Never trust LITEAPI_PAYMENT_ENV alone.
+ * Production deploys unchanged.
  */
 export function areLivePaymentsBlockedOnThisDeploy(): boolean {
   const vercelEnv = process.env.VERCEL_ENV?.trim();
   if (vercelEnv === 'production') return false;
-  // Local / preview / undefined: block unless sandbox is explicit.
-  return getLiteApiPaymentEnv() !== 'sandbox';
+  return !isLiteApiKeySandbox();
 }
 
 export const PREVIEW_PAYMENTS_DISABLED_IT =
-  'Anteprima: pagamenti disattivati. Usa un ambiente sandbox dedicato per testare i pagamenti.';
+  'Anteprima: pagamenti disattivati. Usa un ambiente sandbox dedicato (chiave sand_) per testare i pagamenti.';
+
+/** Shared 403 payload for every payment-creating route. */
+export function previewPaymentsBlockedResponseBody() {
+  return {
+    error: PREVIEW_PAYMENTS_DISABLED_IT,
+    code: 'PREVIEW_PAYMENTS_DISABLED' as const,
+  };
+}
 
 /**
  * Publishable key Stripe di LiteAPI (opzionale override).
